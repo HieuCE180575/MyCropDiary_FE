@@ -4,7 +4,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   return (
     <section>
       <div className="page-heading">
-        <div><span className="eyebrow">{module.ucRange}</span><h1>{module.title}</h1></div>
+        <div><h1>{module.title}</h1></div>
         <button className="primary-button">+ Thêm mới</button>
       </div>
       <div className="panel empty-state">

@@ -18,7 +18,6 @@ export function DashboardPage() {
         <div className="module-grid">
           {moduleDefinitions.map((module) => (
             <article key={module.key} className="module-card">
-              <span className="module-code">{module.ucRange}</span>
               <h3>{module.title}</h3>
               <p>Đã có route và vị trí module để phát triển màn hình, API và quyền truy cập.</p>
             </article>

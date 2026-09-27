@@ -11,9 +11,11 @@ export function AppLayout() {
         </div>
         <nav className="nav-list" aria-label="Điều hướng chính">
           <NavLink to="/dashboard">Tổng quan</NavLink>
-          {moduleDefinitions.map((module) => (
-            <NavLink key={module.key} to={`/${module.path}`}>{module.title}</NavLink>
-          ))}
+          {moduleDefinitions
+            .filter((module) => module.key !== 'knowledge')
+            .map((module) => (
+              <NavLink key={module.key} to={`/${module.path}`}>{module.title}</NavLink>
+            ))}
         </nav>
       </aside>
       <main className="main-area">
