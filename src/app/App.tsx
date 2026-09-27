@@ -3,8 +3,9 @@ import { AppLayout } from './layouts/AppLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { moduleDefinitions } from './routes/moduleDefinitions';
 import { DashboardPage } from '../pages/DashboardPage';
-import { KnowledgePage } from '../pages/KnowledgePage';
+import { FarmInfoPage } from '../pages/FarmInfoPage';
 import { FarmRegistrationPage } from '../pages/FarmRegistrationPage';
+import { KnowledgePage } from '../pages/KnowledgePage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ModulePage } from '../pages/ModulePage';
@@ -37,6 +38,7 @@ export function App() {
           />
 
           <Route path="/farm-registration" element={<FarmRegistrationPage />} />
+          <Route path="/farm" element={<FarmInfoPage />} />
 
           {moduleDefinitions.map((module) => (
             <Route

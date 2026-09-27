@@ -4,3 +4,4 @@ export * from './types';
 export * from './constants';
 export * from './validation';
 export { fetchMyLatestRegistration, submitFarmRegistration, cancelFarmRegistration } from './registrationService';
+export { fetchMyFarm } from './farmService';

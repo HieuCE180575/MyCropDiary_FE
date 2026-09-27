@@ -1,5 +1,5 @@
 import type { BadgeTone } from '../../shared/components/StatusBadge';
-import type { FarmRegistrationStatus } from './types';
+import type { FarmRegistrationStatus, FarmStatus } from './types';
 
 export const FARM_REGISTRATION_STATUS_LABEL: Record<FarmRegistrationStatus, string> = {
   pending: 'Đang chờ duyệt',
@@ -13,4 +13,16 @@ export const FARM_REGISTRATION_STATUS_TONE: Record<FarmRegistrationStatus, Badge
   approved: 'success',
   rejected: 'danger',
   cancelled: 'neutral',
+};
+
+export const FARM_STATUS_LABEL: Record<FarmStatus, string> = {
+  active: 'Đang hoạt động',
+  suspended: 'Tạm ngưng',
+  closed: 'Đã đóng',
+};
+
+export const FARM_STATUS_TONE: Record<FarmStatus, BadgeTone> = {
+  active: 'success',
+  suspended: 'warning',
+  closed: 'danger',
 };

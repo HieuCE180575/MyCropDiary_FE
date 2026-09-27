@@ -32,3 +32,19 @@ export interface FarmRegistrationFormValues {
 }
 
 export type FarmRegistrationFormErrors = Partial<Record<keyof FarmRegistrationFormValues, string>>;
+
+export type FarmStatus = 'active' | 'suspended' | 'closed';
+
+/** Thông tin chung của trang trại — hiển thị cho chủ trang trại (bảng Farm). */
+export interface Farm {
+  farmId: string;
+  farmRegistrationId: string;
+  farmCode: string;
+  farmName: string;
+  address: string;
+  phoneNumber?: string;
+  description?: string;
+  status: FarmStatus;
+  createdAt: string;
+  updatedAt?: string;
+}
