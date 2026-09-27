@@ -4,6 +4,7 @@ import { PublicLayout } from './layouts/PublicLayout';
 import { moduleDefinitions } from './routes/moduleDefinitions';
 import { DashboardPage } from '../pages/DashboardPage';
 import { KnowledgePage } from '../pages/KnowledgePage';
+import { FarmRegistrationPage } from '../pages/FarmRegistrationPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ModulePage } from '../pages/ModulePage';
@@ -34,6 +35,8 @@ export function App() {
             path="/dashboard"
             element={<DashboardPage />}
           />
+
+          <Route path="/farm-registration" element={<FarmRegistrationPage />} />
 
           {moduleDefinitions.map((module) => (
             <Route
