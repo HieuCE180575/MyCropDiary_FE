@@ -14,9 +14,9 @@ import { ModuleAccess } from '../features/auth/ModuleAccess';
 import { AdminPage } from '../features/admin/AdminPage';
 import { ProductionAreaListPage } from '../pages/production-area/ProductionAreaListPage';
 import { ProductionAreaFormPage } from '../pages/production-area/ProductionAreaFormPage';
-// import { PlotDetailPage } from '../pages/PlotDetailPage';
-// import { PlotFormPage } from '../pages/PlotFormPage';
-// import { PlotsListPage } from '../pages/PlotsListPage';
+import { PlotDetailPage } from '../pages/PlotDetailPage';
+import { PlotFormPage } from '../pages/PlotFormPage';
+import { PlotsListPage } from '../pages/PlotsListPage';
 // import { StaffPage } from '../pages/StaffPage';
 
 
@@ -24,9 +24,9 @@ export function App() {
   return (
     <Routes>
       {/* Public pages */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/knowledge" element={<KnowledgePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/knowledge" element={<KnowledgePage />} />
 
       {/* Protected pages */}
       <Route element={<ProtectedRoute />}>
@@ -48,6 +48,10 @@ export function App() {
           <Route path="/production-areas/:plotId" element={<PlotDetailPage />} />
           <Route path="/production-areas/:plotId/edit" element={<PlotFormPage mode="edit" />} />
           <Route path="/members" element={<StaffPage />} /> */}
+          <Route path="/land-plots" element={<PlotsListPage />} />
+          <Route path="/land-plots/new" element={<PlotFormPage mode="create" />} />
+          <Route path="/land-plots/:plotId" element={<PlotDetailPage />} />
+          <Route path="/land-plots/:plotId/edit" element={<PlotFormPage mode="edit" />} />
           {moduleDefinitions.map((module) => (
             <Route
               key={module.key}
