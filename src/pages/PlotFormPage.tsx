@@ -94,13 +94,13 @@ export function PlotFormPage({ mode }: PlotFormPageProps) {
     <section>
       <PlotForm
         title={mode === 'edit' ? 'Chỉnh sửa lô đất' : 'Thêm lô đất'}
-        breadcrumbLabel={mode === 'edit' && plot ? `${plot.plotName} › Chỉnh sửa` : 'Thêm lô đất'}
+        breadcrumbLabel={mode === 'edit' && plot ? `Chỉnh sửa` : 'Thêm lô đất'}
         initialValues={mode === 'edit' && plot ? plotToFormValues(plot) : undefined}
         initialCoverImageUrl={plot?.coverImageUrl}
         submitting={submitting}
         submitError={submitError}
         submitLabel={mode === 'edit' ? 'Lưu thay đổi' : 'Lưu lô đất'}
-        cancelHref={mode === 'edit' && plotId ? `/land-plots/${plotId}` : '/land-plots'}
+        cancelHref={mode === 'edit' && plotId ? `/land-plots` : '/land-plots'}
         onSubmit={handleSubmit}
       />
     </section>

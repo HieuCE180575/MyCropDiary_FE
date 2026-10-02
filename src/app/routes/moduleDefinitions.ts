@@ -8,7 +8,7 @@ export const moduleDefinitions: ModuleDefinition[] = [
   { key: 'farm', path: 'farm', title: 'Thông tin trang trại', ucRange: 'UC-13', group: 'farm' },
   { key: 'members', path: 'members', title: 'Nhân sự & phân công', ucRange: 'UC-14–15, 33–34', group: 'farm' },
   { key: 'production', path: 'production-areas', title: 'Khu sản xuất & lô', ucRange: 'UC-16', group: 'production' },
-  { key: 'plot', path: 'land-plots', title: 'Thửa đất', ucRange: 'UC-17', group: 'production' },
+  { key: 'plot', path: 'land-plots', title: 'Lô đất', ucRange: 'UC-17', group: 'production' },
   { key: 'environment', path: 'environment', title: 'Điều kiện & môi trường', ucRange: 'UC-18–21', group: 'production' },
   { key: 'seasons', path: 'crop-seasons', title: 'Mùa vụ', ucRange: 'UC-22', group: 'operations' },
   { key: 'tasks', path: 'tasks', title: 'Công việc', ucRange: 'UC-23', group: 'operations' },

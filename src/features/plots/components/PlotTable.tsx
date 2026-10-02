@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { PLOT_STATUS_LABEL, PLOT_STATUS_TONE } from '../constants';
 import type { Plot, PlotSortField, SortDirection } from '../types';
+import { PencilSparkles, Eye, Archive, Undo2 } from 'lucide-react';
 
 interface PlotTableProps {
   plots: Plot[];
@@ -63,68 +64,68 @@ export function PlotTable({
         <tbody>
           {loading
             ? Array.from({ length: 5 }).map((_, idx) => (
-                <tr key={idx} aria-hidden="true">
-                  <td colSpan={COLUMNS.length + 1}>
-                    <div className="skeleton-line" />
-                  </td>
-                </tr>
-              ))
+              <tr key={idx} aria-hidden="true">
+                <td colSpan={COLUMNS.length + 1}>
+                  <div className="skeleton-line" />
+                </td>
+              </tr>
+            ))
             : plots.map((plot) => (
-                <tr key={plot.plotId}>
-                  <td>
-                    <Link to={`/land-plots/${plot.plotId}`} className="table-link">
-                      {plot.plotName}
+              <tr key={plot.plotId}>
+                <td>
+                  <Link to={`/land-plots/${plot.plotId}`} className="table-link">
+                    {plot.plotName}
+                  </Link>
+                </td>
+                <td>{formatArea(plot.areaHectares)}</td>
+                <td>{plot.locationDescription}</td>
+                <td>
+                  <StatusBadge label={PLOT_STATUS_LABEL[plot.status]} tone={PLOT_STATUS_TONE[plot.status]} />
+                </td>
+                <td>{formatDate(plot.createdAt)}</td>
+                <td>
+                  <div className="table-actions">
+                    <Link
+                      to={`/land-plots/${plot.plotId}`}
+                      className="icon-button view-button"
+                      aria-label={`Xem ${plot.plotName}`}
+                      title="Xem chi tiết"
+                    >
+                      <Eye size={16} strokeWidth={1.5} />
                     </Link>
-                  </td>
-                  <td>{formatArea(plot.areaHectares)}</td>
-                  <td>{plot.locationDescription}</td>
-                  <td>
-                    <StatusBadge label={PLOT_STATUS_LABEL[plot.status]} tone={PLOT_STATUS_TONE[plot.status]} />
-                  </td>
-                  <td>{formatDate(plot.createdAt)}</td>
-                  <td>
-                    <div className="table-actions">
-                      <Link
-                        to={`/land-plots/${plot.plotId}`}
+                    <Link
+                      to={`/land-plots/${plot.plotId}/edit`}
+                      className="icon-button edit-button"
+                      aria-label={`Sửa ${plot.plotName}`}
+                      title="Chỉnh sửa"
+                    >
+                      <PencilSparkles size={16} strokeWidth={1.5} />
+                    </Link>
+                    {plot.status === 'archived' ? (
+                      <button
+                        type="button"
                         className="icon-button"
-                        aria-label={`Xem ${plot.plotName}`}
-                        title="Xem chi tiết"
+                        aria-label={`Khôi phục ${plot.plotName}`}
+                        title="Khôi phục"
+                        onClick={() => onRestore(plot)}
                       >
-                        👁
-                      </Link>
-                      <Link
-                        to={`/land-plots/${plot.plotId}/edit`}
-                        className="icon-button"
-                        aria-label={`Sửa ${plot.plotName}`}
-                        title="Chỉnh sửa"
+                        <Undo2 size={16} strokeWidth={1.5} />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="icon-button delete-button"
+                        aria-label={`Lưu trữ ${plot.plotName}`}
+                        title="Lưu trữ"
+                        onClick={() => onArchive(plot)}
                       >
-                        ✏️
-                      </Link>
-                      {plot.status === 'archived' ? (
-                        <button
-                          type="button"
-                          className="icon-button"
-                          aria-label={`Khôi phục ${plot.plotName}`}
-                          title="Khôi phục"
-                          onClick={() => onRestore(plot)}
-                        >
-                          ↺
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="icon-button"
-                          aria-label={`Lưu trữ ${plot.plotName}`}
-                          title="Lưu trữ"
-                          onClick={() => onArchive(plot)}
-                        >
-                          🗄
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <Archive size={16} strokeWidth={1.5} />
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>
