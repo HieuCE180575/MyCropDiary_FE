@@ -152,10 +152,9 @@ export function StaffPage() {
     <section>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">UC-14–15</span>
           <h1>Nhân sự &amp; phân công</h1>
           <p className="page-subtitle">
-            Quản lý danh sách nhân viên (vai trò staff): xem, tìm kiếm, lọc, thêm mới, chỉnh sửa và vô hiệu hoá.
+            Quản lý danh sách nhân viên: xem, tìm kiếm, lọc, thêm mới, chỉnh sửa và vô hiệu hoá.
           </p>
         </div>
         <button type="button" className="primary-button" onClick={openCreateModal}>

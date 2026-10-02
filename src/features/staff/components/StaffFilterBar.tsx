@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react';
 import { STAFF_STATUS_FILTER_OPTIONS } from '../constants';
 import type { StaffMemberStatus } from '../types';
 
@@ -12,7 +13,9 @@ export function StaffFilterBar({ searchValue, onSearchChange, status, onStatusCh
   return (
     <div className="list-filter-bar">
       <div className="search-input">
-        <span className="search-icon" aria-hidden="true">🔍</span>
+        <span className="search-icon" aria-hidden="true">
+          <Search size={16} color="#2a8ca7" strokeWidth={1.5} />
+        </span>
         <input
           type="search"
           value={searchValue}
@@ -20,11 +23,6 @@ export function StaffFilterBar({ searchValue, onSearchChange, status, onStatusCh
           placeholder="Tìm theo tên, email hoặc số điện thoại..."
           aria-label="Tìm kiếm nhân viên"
         />
-        {searchValue ? (
-          <button type="button" className="search-clear" aria-label="Xoá tìm kiếm" onClick={() => onSearchChange('')}>
-            ✕
-          </button>
-        ) : null}
       </div>
 
       <label className="status-select">

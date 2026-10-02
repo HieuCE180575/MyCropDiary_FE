@@ -1,3 +1,4 @@
+import { CircleMinus, PencilSparkles, Undo2 } from 'lucide-react';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { STAFF_STATUS_LABEL, STAFF_STATUS_TONE } from '../constants';
 import type { SortDirection, StaffMember, StaffSortField } from '../types';
@@ -64,57 +65,57 @@ export function StaffTable({
         <tbody>
           {loading
             ? Array.from({ length: 5 }).map((_, idx) => (
-                <tr key={idx} aria-hidden="true">
-                  <td colSpan={COLUMNS.length + 1}>
-                    <div className="skeleton-line" />
-                  </td>
-                </tr>
-              ))
+              <tr key={idx} aria-hidden="true">
+                <td colSpan={COLUMNS.length + 1}>
+                  <div className="skeleton-line" />
+                </td>
+              </tr>
+            ))
             : staff.map((member) => (
-                <tr key={member.farmMemberId}>
-                  <td className="table-cell-strong">{member.fullName}</td>
-                  <td>{member.email}</td>
-                  <td>{member.phoneNumber ?? '—'}</td>
-                  <td>
-                    <StatusBadge label={STAFF_STATUS_LABEL[member.status]} tone={STAFF_STATUS_TONE[member.status]} />
-                  </td>
-                  <td>{formatDate(member.joinedAt)}</td>
-                  <td>
-                    <div className="table-actions">
+              <tr key={member.farmMemberId}>
+                <td className="table-cell-strong">{member.fullName}</td>
+                <td>{member.email}</td>
+                <td>{member.phoneNumber ?? '—'}</td>
+                <td>
+                  <StatusBadge label={STAFF_STATUS_LABEL[member.status]} tone={STAFF_STATUS_TONE[member.status]} />
+                </td>
+                <td>{formatDate(member.joinedAt)}</td>
+                <td>
+                  <div className="table-actions">
+                    <button
+                      type="button"
+                      className="icon-button edit-button"
+                      aria-label={`Sửa ${member.fullName}`}
+                      title="Chỉnh sửa"
+                      onClick={() => onEdit(member)}
+                    >
+                      <PencilSparkles size={16} strokeWidth={1.5} />
+                    </button>
+                    {member.status === 'suspended' ? (
                       <button
                         type="button"
                         className="icon-button"
-                        aria-label={`Sửa ${member.fullName}`}
-                        title="Chỉnh sửa"
-                        onClick={() => onEdit(member)}
+                        aria-label={`Kích hoạt ${member.fullName}`}
+                        title="Kích hoạt lại"
+                        onClick={() => onActivate(member)}
                       >
-                        ✏️
+                        <Undo2 size={16} strokeWidth={1.5} />
                       </button>
-                      {member.status === 'suspended' ? (
-                        <button
-                          type="button"
-                          className="icon-button"
-                          aria-label={`Kích hoạt ${member.fullName}`}
-                          title="Kích hoạt lại"
-                          onClick={() => onActivate(member)}
-                        >
-                          ↺
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="icon-button"
-                          aria-label={`Vô hiệu hoá ${member.fullName}`}
-                          title="Vô hiệu hoá"
-                          onClick={() => onSuspend(member)}
-                        >
-                          🚫
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    ) : (
+                      <button
+                        type="button"
+                        className="icon-button delete-button"
+                        aria-label={`Vô hiệu hoá ${member.fullName}`}
+                        title="Vô hiệu hoá"
+                        onClick={() => onSuspend(member)}
+                      >
+                        <CircleMinus size={16} strokeWidth={1.5}/>
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>

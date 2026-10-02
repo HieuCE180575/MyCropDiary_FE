@@ -439,6 +439,44 @@ p {
   background: #f1f8f3;
 }
 
+/* Edit */
+.edit-button {
+  background-color: #e8f5e9;
+  color: #2aa743;
+}
+
+.edit-button:hover {
+  background-color: #53e26f;
+  color: white;
+}
+
+.primary-button:hover {
+  background-color: #044d13;
+  color: white;
+}
+
+/* Delete */
+.delete-button {
+  background-color: #ffebee;
+  color: #e53935;
+}
+
+.delete-button:hover {
+  background-color: #e53935;
+  color: white;
+}
+
+/* View */
+.view-button {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.view-button:hover {
+  background-color: #1976d2;
+  color: white;
+}
+
 /* ---------- Generic list filter toolbar + table cell emphasis (staff, etc.) ---------- */
 .list-filter-bar {
   display: flex;
