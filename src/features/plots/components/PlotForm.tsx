@@ -10,6 +10,7 @@ import {
 import { hasPlotFormErrors, validatePlotForm } from '../validation';
 import type { PlotFormErrors, PlotFormValues } from '../types';
 import { ImagePlus } from 'lucide-react';
+import PlotMap from './PlotMap';
 
 const EMPTY_VALUES: PlotFormValues = {
   plotName: '',
@@ -20,6 +21,7 @@ const EMPTY_VALUES: PlotFormValues = {
   status: 'active',
   notes: '',
   coverImage: null,
+  boundary: [],
 };
 
 interface PlotFormProps {
@@ -221,6 +223,13 @@ export function PlotForm({
           />
           {errors.notes ? <small className="field-error">{errors.notes}</small> : null}
         </label>
+
+        <PlotMap
+          boundary={values.boundary}
+          onBoundaryChange={(newBoundary) =>
+            updateField('boundary', newBoundary)
+          }
+        />
 
         <div className="form-field">
           <span>Ảnh minh hoạ (không bắt buộc)</span>

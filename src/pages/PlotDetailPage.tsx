@@ -8,6 +8,7 @@ import { PLOT_STATUS_LABEL, PLOT_STATUS_TONE } from '../features/plots/constants
 import { fetchPlotById, fetchPlotSeasons, restorePlot } from '../features/plots/plotService';
 import type { Plot, PlotSeasonSummary } from '../features/plots/types';
 import { Archive, SquarePen, Undo2 } from 'lucide-react';
+import PlotMap from '../features/plots/components/PlotMap';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
@@ -122,7 +123,7 @@ export function PlotDetailPage() {
           </Link>
           {plot.status === 'archived' ? (
             <button type="button" className="primary-button edit-button" onClick={handleRestore}>
-              Khôi phục <Undo2 size={16} strokeWidth={1.5} style={{ marginBottom: "-3px" }}/>
+              Khôi phục <Undo2 size={16} strokeWidth={1.5} style={{ marginBottom: "-3px" }} />
             </button>
           ) : (
             <button type="button" className="danger-button delete-button" onClick={() => requestArchive(plot)}>
@@ -182,9 +183,18 @@ export function PlotDetailPage() {
             ) : null}
           </dl>
 
-          {plot.coverImageUrl ? (
-            <img src={plot.coverImageUrl} alt={`Ảnh lô đất ${plot.plotName}`} className="plot-detail-image" />
+          {plot.boundary ? (
+            <div className="plot-map-section">
+              <h3>Vị trí lô đất</h3>
+              <PlotMap boundary={plot.boundary} />
+            </div>
           ) : null}
+
+          <img
+            src={plot.coverImageUrl || '/images/default-plot.png'}
+            alt={`Ảnh lô đất ${plot.plotName}`}
+            className="plot-detail-image"
+          />
         </div>
       </div>
 

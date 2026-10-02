@@ -12,6 +12,7 @@ export interface Plot {
   status: PlotStatus;
   notes?: string;
   coverImageUrl?: string;
+  boundary: [number, number][];
   createdAt: string;
   updatedAt?: string;
 }
@@ -34,6 +35,7 @@ export interface PlotFormValues {
   status: Exclude<PlotStatus, 'archived'>;
   notes: string;
   coverImage: File | null;
+  boundary: [number, number][];
 }
 
 export type PlotFormErrors = Partial<Record<keyof Omit<PlotFormValues, 'coverImage'> | 'coverImage', string>>;
