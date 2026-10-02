@@ -1,5 +1,7 @@
 # MyCropDiary Frontend
 
+Hướng dẫn kết nối backend và đăng nhập hiện tại: [API-INTEGRATION.md](./API-INTEGRATION.md).
+
 Khung React 19 + TypeScript + Vite, chia module theo các Use Case MyCropDiary.
 
 ## Cấu trúc

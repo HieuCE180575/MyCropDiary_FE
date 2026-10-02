@@ -6,4 +6,7 @@ export interface ModuleDefinition {
   title: string;
   ucRange: string;
   group: ModuleGroup;
+  access: 'account' | 'user' | 'farm' | 'owner' | 'admin';
+  icon: string;
+  description: string;
 }
