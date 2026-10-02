@@ -13,6 +13,11 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from '../features/auth';
 import { ModuleAccess } from '../features/auth/ModuleAccess';
 import { AdminPage } from '../features/admin/AdminPage';
+// import { PlotDetailPage } from '../pages/PlotDetailPage';
+// import { PlotFormPage } from '../pages/PlotFormPage';
+// import { PlotsListPage } from '../pages/PlotsListPage';
+// import { StaffPage } from '../pages/StaffPage';
+
 
 export function App() {
   return (
@@ -39,7 +44,11 @@ export function App() {
 
           <Route path="/farm-registration" element={<FarmRegistrationPage />} />
           <Route path="/farm" element={<FarmInfoPage />} />
-
+          {/* <Route path="/production-areas" element={<PlotsListPage />} />
+          <Route path="/production-areas/new" element={<PlotFormPage mode="create" />} />
+          <Route path="/production-areas/:plotId" element={<PlotDetailPage />} />
+          <Route path="/production-areas/:plotId/edit" element={<PlotFormPage mode="edit" />} />
+          <Route path="/members" element={<StaffPage />} /> */}
           {moduleDefinitions.map((module) => (
             <Route
               key={module.key}
