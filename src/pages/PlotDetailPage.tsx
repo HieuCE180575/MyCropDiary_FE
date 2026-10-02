@@ -7,6 +7,7 @@ import { useArchivePlot } from '../features/plots/hooks/useArchivePlot';
 import { PLOT_STATUS_LABEL, PLOT_STATUS_TONE } from '../features/plots/constants';
 import { fetchPlotById, fetchPlotSeasons, restorePlot } from '../features/plots/plotService';
 import type { Plot, PlotSeasonSummary } from '../features/plots/types';
+import { Archive, SquarePen, Undo2 } from 'lucide-react';
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
@@ -109,23 +110,23 @@ export function PlotDetailPage() {
       <div className="page-heading">
         <div>
           <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link to="/land-plots">Khu sản xuất &amp; lô</Link>
+            <Link to="/land-plots">Lô đất</Link>
             <span>›</span>
             <span>{plot.plotName}</span>
           </nav>
           <h1>Chi tiết lô đất</h1>
         </div>
         <div className="farm-registration-actions">
-          <Link to={`/land-plots/${plot.plotId}/edit`} className="ghost-button">
-            ✏️ Chỉnh sửa
+          <Link to={`/land-plots/${plot.plotId}/edit`} className="ghost-button edit-button">
+            Chỉnh sửa <SquarePen style={{ marginBottom: "-3px" }} size={16} strokeWidth={1.5} />
           </Link>
           {plot.status === 'archived' ? (
-            <button type="button" className="primary-button" onClick={handleRestore}>
-              ↺ Khôi phục
+            <button type="button" className="primary-button edit-button" onClick={handleRestore}>
+              Khôi phục <Undo2 size={16} strokeWidth={1.5} style={{ marginBottom: "-3px" }}/>
             </button>
           ) : (
-            <button type="button" className="danger-button" onClick={() => requestArchive(plot)}>
-              🗄 Lưu trữ
+            <button type="button" className="danger-button delete-button" onClick={() => requestArchive(plot)}>
+              Lưu trữ <Archive size={16} style={{ marginBottom: "-3px" }} strokeWidth={1.5} />
             </button>
           )}
         </div>

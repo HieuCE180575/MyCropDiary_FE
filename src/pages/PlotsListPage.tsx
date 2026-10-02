@@ -107,7 +107,7 @@ export function PlotsListPage() {
     <section>
       <div className="page-heading">
         <div>
-          <h1>Khu sản xuất &amp; lô</h1>
+          <h1>Quản lý lô đất</h1>
           <p className="page-subtitle">Quản lý danh sách lô đất: xem, tìm kiếm, lọc, tạo mới, chỉnh sửa và lưu trữ.</p>
         </div>
         <Link to="/land-plots/new" className="primary-button">

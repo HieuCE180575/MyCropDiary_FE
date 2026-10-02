@@ -9,6 +9,7 @@ import {
 } from '../constants';
 import { hasPlotFormErrors, validatePlotForm } from '../validation';
 import type { PlotFormErrors, PlotFormValues } from '../types';
+import { ImagePlus } from 'lucide-react';
 
 const EMPTY_VALUES: PlotFormValues = {
   plotName: '',
@@ -115,7 +116,7 @@ export function PlotForm({
   return (
     <>
       <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link to="/land-plots">Khu sản xuất &amp; lô</Link>
+        <Link to="/land-plots">Lô đất</Link>
         <span>›</span>
         <span>{breadcrumbLabel}</span>
       </nav>
@@ -232,7 +233,7 @@ export function PlotForm({
               className="file-input-hidden"
             />
             <label htmlFor="plot-cover-image-input" className="file-dropzone-label">
-              <span>🖼️ Chọn ảnh lô đất</span>
+              <span><ImagePlus size={16} strokeWidth={1.5} style={{ marginBottom: "-3px" }} /> Chọn ảnh lô đất</span>
               <span className="file-dropzone-hint">
                 Tối đa {MAX_PLOT_COVER_IMAGE_SIZE_MB}MB ({ACCEPTED_PLOT_IMAGE_EXTENSIONS.join(', ')})
               </span>
