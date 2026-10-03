@@ -13,6 +13,8 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from '../features/auth';
 import { ModuleAccess } from '../features/auth/ModuleAccess';
 import { AdminPage } from '../features/admin/AdminPage';
+import { ProductionAreaListPage } from '../pages/production-area/ProductionAreaListPage';
+import { ProductionAreaFormPage } from '../pages/production-area/ProductionAreaFormPage';
 // import { PlotDetailPage } from '../pages/PlotDetailPage';
 // import { PlotFormPage } from '../pages/PlotFormPage';
 // import { PlotsListPage } from '../pages/PlotsListPage';

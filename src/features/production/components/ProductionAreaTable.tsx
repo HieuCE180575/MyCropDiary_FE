@@ -76,7 +76,7 @@ export function ProductionAreaTable({
             : areas.map((area) => (
               <tr key={area.productionAreaId}>
                 <td>
-                  <Link to={`/production-zones/${area.productionAreaId}`} className="table-link">
+                  <Link to={`/production-areas/${area.productionAreaId}`} className="table-link">
                     {area.areaName}
                   </Link>
                 </td>
@@ -92,7 +92,7 @@ export function ProductionAreaTable({
                 <td>
                   <div className="table-actions">
                     <Link
-                      to={`/production-zones/${area.productionAreaId}`}
+                      to={`/production-areas/${area.productionAreaId}`}
                       className="icon-button"
                       aria-label={`Xem ${area.areaName}`}
                       title="Xem chi tiết"
@@ -100,7 +100,7 @@ export function ProductionAreaTable({
                       👁
                     </Link>
                     <Link
-                      to={`/production-zones/${area.productionAreaId}/edit`}
+                      to={`/production-areas/${area.productionAreaId}/edit`}
                       className="icon-button"
                       aria-label={`Sửa ${area.areaName}`}
                       title="Chỉnh sửa"
