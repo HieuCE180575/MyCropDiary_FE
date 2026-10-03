@@ -1895,7 +1895,7 @@ p {
   .knowledge-toolbar {
     display: grid;
     gap: 16px;
-    margin-bottom: 20px;
+    margin: 20px;
   }
 
   .search-input {

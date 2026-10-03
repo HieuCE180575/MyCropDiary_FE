@@ -8,6 +8,8 @@ import { KnowledgeDetailModal } from '../features/knowledge/components/Knowledge
 import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
 import { KNOWLEDGE_PAGE_SIZE } from '../features/knowledge/constants';
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeSort, PagedResult } from '../features/knowledge/types';
+import { Link } from 'react-router-dom';
+import { Icon } from '../shared/components/Icon';
 
 const EMPTY_RESULT: PagedResult<KnowledgeArticle> = {
   items: [],
@@ -83,16 +85,22 @@ export function KnowledgePage() {
   }
 
   return (
-    <section>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">Thư viện công khai</span>
-          <h1>Kiến thức VietGAP</h1>
-          <p className="page-subtitle">
-            Tìm hiểu quy trình, tiêu chuẩn và kinh nghiệm thực hành nông nghiệp tốt trước khi bắt đầu với MyCropDiary.
-          </p>
+    <section style={{backgroundColor: "white"}}>
+      <header className="public-header">
+        <div className="public-header-inner">
+          <Link className="login-brand" to="/" aria-label="Trang chủ MyCropDiary">
+            <Icon name="leaf" /><strong>MyCropDiary</strong>
+          </Link>
+          <nav className="public-navigation" aria-label="Điều hướng chính">
+            <Link to="/">Trang chủ</Link>
+            <Link to="/knowledge">Kiến thức</Link>
+            <a href="#footer-brand-heading">Giới thiệu</a>
+            <button type="button" disabled>Liên hệ</button>
+            <a href="/login" aria-current="page">Đăng nhập</a>
+            <Link className="public-sign-up" to="/register">Đăng ký</Link>
+          </nav>
         </div>
-      </div>
+      </header>
 
       <div className="panel knowledge-toolbar">
         <KnowledgeSearchBar value={searchInput} onChange={setSearchInput} />
@@ -126,12 +134,45 @@ export function KnowledgePage() {
           />
 
           {!loading ? (
-            <Pagination page={result.page} totalPages={result.totalPages} onChange={setPage} />
+            <div style={{
+              justifySelf: "center",
+              marginBottom: "20px",
+            }}>
+              <Pagination page={result.page} totalPages={result.totalPages} onChange={setPage} />
+            </div>
           ) : null}
         </>
-      )}
+      )
+      }
 
       <KnowledgeDetailModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
-    </section>
+      <footer className="login-footer">
+        <div className="login-footer-content">
+          <section className="login-footer-about" aria-labelledby="footer-brand-heading">
+            <h2 id="footer-brand-heading">MyCropDiary</h2>
+            <p>Đồng hành cùng nhà nông quản lý nhật ký canh tác, chi phí sản xuất và thông tin trang trại theo định hướng VietGAP.</p>
+          </section>
+          <nav aria-labelledby="footer-explore-heading">
+            <h2 id="footer-explore-heading">Khám phá</h2>
+            <ul>
+              <li><Link to="/">Trang chủ</Link></li>
+              <li><Link to="/knowledge">Kiến thức nông nghiệp</Link></li>
+              <li><a href="#footer-brand-heading">Về MyCropDiary</a></li>
+            </ul>
+          </nav>
+          <nav aria-labelledby="footer-resources-heading">
+            <h2 id="footer-resources-heading">Tài nguyên</h2>
+            <ul>
+              <li><Link to="/knowledge">Kiến thức VietGAP</Link></li>
+              <li><Link to="/ai">Trợ lý AI</Link></li>
+              <li><span className="login-footer-pending" aria-disabled="true">Trợ giúp &amp; Hỗ trợ</span></li>
+            </ul>
+          </nav>
+        </div>
+        <div className="login-footer-bottom">
+          <small>© 2026 MyCropDiary. Bảo lưu mọi quyền.</small>
+        </div>
+      </footer>
+    </section >
   );
 }
