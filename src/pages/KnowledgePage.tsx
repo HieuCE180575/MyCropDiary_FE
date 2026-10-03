@@ -93,10 +93,10 @@ export function KnowledgePage() {
           </Link>
           <nav className="public-navigation" aria-label="Điều hướng chính">
             <Link to="/">Trang chủ</Link>
-            <Link to="/knowledge">Kiến thức</Link>
+            <Link to="/knowledge"  aria-current="page">Kiến thức</Link>
             <a href="#footer-brand-heading">Giới thiệu</a>
             <button type="button" disabled>Liên hệ</button>
-            <a href="/login" aria-current="page">Đăng nhập</a>
+            <a href="/login">Đăng nhập</a>
             <Link className="public-sign-up" to="/register">Đăng ký</Link>
           </nav>
         </div>
