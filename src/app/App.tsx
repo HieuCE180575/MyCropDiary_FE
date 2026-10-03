@@ -1,6 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
-import { PublicLayout } from './layouts/PublicLayout';
 import { moduleDefinitions } from './routes/moduleDefinitions';
 import { DashboardPage } from '../pages/DashboardPage';
 import { FarmInfoPage } from '../pages/FarmInfoPage';
@@ -25,11 +24,9 @@ export function App() {
   return (
     <Routes>
       {/* Public pages */}
-      <Route element={<PublicLayout />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
-      </Route>
 
       {/* Protected pages */}
       <Route element={<ProtectedRoute />}>
