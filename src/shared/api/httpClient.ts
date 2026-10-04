@@ -52,7 +52,7 @@ export async function apiRequest<T>(path: string, options: RequestInit & { anony
   }
   if (!response.ok) {
     const serverMessage = data && typeof data === 'object' && 'message' in data && typeof data.message === 'string' ? data.message : undefined;
-    const message = (response.status < 500 && serverMessage) || (response.status === 401 ? 'Email hoặc mật khẩu không đúng, hoặc phiên đăng nhập đã hết hạn.'
+    const message = serverMessage || (response.status === 401 ? 'Email hoặc mật khẩu không đúng, hoặc phiên đăng nhập đã hết hạn.'
       : response.status === 403 ? 'Bạn không có quyền truy cập dữ liệu này.'
       : response.status >= 500 ? 'Máy chủ gặp lỗi. Vui lòng thử lại sau.'
       : `Yêu cầu không thành công (${response.status}).`);

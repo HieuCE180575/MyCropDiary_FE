@@ -83,55 +83,59 @@ export function KnowledgePage() {
   }
 
   return (
-    <section>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">Thư viện công khai</span>
-          <h1>Kiến thức VietGAP</h1>
-          <p className="page-subtitle">
-            Tìm hiểu quy trình, tiêu chuẩn và kinh nghiệm thực hành nông nghiệp tốt trước khi bắt đầu với MyCropDiary.
-          </p>
-        </div>
+    <div className="public-knowledge-view">
+      <div className="public-container">
+        <section className="knowledge-page-content">
+          <div className="page-heading">
+            <div>
+              <span className="eyebrow">Thư viện công khai</span>
+              <h1>Kiến thức VietGAP</h1>
+              <p className="page-subtitle">
+                Tìm hiểu quy trình, tiêu chuẩn và kinh nghiệm thực hành nông nghiệp tốt trước khi bắt đầu với MyCropDiary.
+              </p>
+            </div>
+          </div>
+
+          <div className="panel knowledge-toolbar">
+            <KnowledgeSearchBar value={searchInput} onChange={setSearchInput} />
+            <KnowledgeFilterBar
+              category={category}
+              onCategoryChange={handleCategoryChange}
+              sort={sort}
+              onSortChange={handleSortChange}
+            />
+          </div>
+
+          {error ? (
+            <div className="panel empty-state">
+              <div className="empty-icon">⚠️</div>
+              <h2>Đã có lỗi xảy ra</h2>
+              <p>{error}</p>
+              <button type="button" className="primary-button" onClick={() => setReloadToken((t) => t + 1)}>
+                Thử lại
+              </button>
+            </div>
+          ) : (
+            <>
+              {resultSummary && !loading ? <p className="knowledge-result-summary">{resultSummary}</p> : null}
+
+              <KnowledgeList
+                articles={result.items}
+                loading={loading}
+                hasActiveFilters={hasActiveFilters}
+                onOpen={setSelectedArticle}
+                onResetFilters={handleResetFilters}
+              />
+
+              {!loading ? (
+                <Pagination page={result.page} totalPages={result.totalPages} onChange={setPage} />
+              ) : null}
+            </>
+          )}
+
+          <KnowledgeDetailModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
+        </section>
       </div>
-
-      <div className="panel knowledge-toolbar">
-        <KnowledgeSearchBar value={searchInput} onChange={setSearchInput} />
-        <KnowledgeFilterBar
-          category={category}
-          onCategoryChange={handleCategoryChange}
-          sort={sort}
-          onSortChange={handleSortChange}
-        />
-      </div>
-
-      {error ? (
-        <div className="panel empty-state">
-          <div className="empty-icon">⚠️</div>
-          <h2>Đã có lỗi xảy ra</h2>
-          <p>{error}</p>
-          <button type="button" className="primary-button" onClick={() => setReloadToken((t) => t + 1)}>
-            Thử lại
-          </button>
-        </div>
-      ) : (
-        <>
-          {resultSummary && !loading ? <p className="knowledge-result-summary">{resultSummary}</p> : null}
-
-          <KnowledgeList
-            articles={result.items}
-            loading={loading}
-            hasActiveFilters={hasActiveFilters}
-            onOpen={setSelectedArticle}
-            onResetFilters={handleResetFilters}
-          />
-
-          {!loading ? (
-            <Pagination page={result.page} totalPages={result.totalPages} onChange={setPage} />
-          ) : null}
-        </>
-      )}
-
-      <KnowledgeDetailModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
-    </section>
+    </div>
   );
 }

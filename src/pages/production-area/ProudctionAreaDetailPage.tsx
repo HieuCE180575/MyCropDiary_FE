@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { StatusBadge } from '../../shared/components/StatusBadge';
-import { StaffAssignmentsTable } from '../../features/production/components/StaffAssignmentTable';
 import { useArchiveProductionArea } from '../../features/production/hooks/useArchiveProductionArea';
 import { PRODUCTION_AREA_STATUS_LABEL, PRODUCTION_AREA_STATUS_TONE } from '../../features/production/constants';
 import { fetchProductionAreaById, restoreProductionArea } from '../../features/production/productionAreaService';
 import type { ProductionArea } from '../../features/production/types';
 import { Archive, SquarePen, Undo2 } from 'lucide-react';
+
+interface PlotSeasonSummary {
+  id: number;
+  name: string;
+}
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
@@ -17,13 +21,26 @@ function formatArea(hectares: number): string {
   return `${hectares.toLocaleString('vi-VN', { maximumFractionDigits: 4 })} ha`;
 }
 
+function PlotSeasonsTable({ seasons, loading }: { seasons: PlotSeasonSummary[]; loading: boolean }) {
+  if (loading) return <p className="table-loading-note">Đang tải danh sách mùa vụ...</p>;
+  if (seasons.length === 0) return <p className="table-empty-note">Chưa có mùa vụ nào gắn với khu vực canh tác này.</p>;
+  return (
+    <ul className="season-summary-list">
+      {seasons.map((s) => (
+        <li key={s.id}>{s.name}</li>
+      ))}
+    </ul>
+  );
+}
+
 export function PlotDetailPage() {
-  const { productionAreaId } = useParams<{ plotId: string }>();
+  const { plotId } = useParams<{ plotId: string }>();
+  const productionAreaId = plotId;
 
   const [productionArea, setProductionArea] = useState<ProductionArea | null>(null);
   const [seasons, setSeasons] = useState<PlotSeasonSummary[]>([]);
   const [loading, setLoading] = useState(true);
-  const [seasonsLoading, setSeasonsLoading] = useState(true);
+  const [seasonsLoading, setSeasonsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
@@ -36,29 +53,20 @@ export function PlotDetailPage() {
     fetchProductionAreaById(productionAreaId)
       .then((data) => {
         if (ignore) return;
-        if (!data) setError('Không tìm thấy lô đất.');
+        if (!data) setError('Không tìm thấy vùng canh tác.');
         setProductionArea(data);
       })
       .catch(() => {
-        if (!ignore) setError('Không thể tải thông tin lô đất.');
+        if (!ignore) setError('Không thể tải thông tin vùng canh tác.');
       })
       .finally(() => {
         if (!ignore) setLoading(false);
       });
 
-    setSeasonsLoading(true);
-    fetchPlotSeasons(plotId)
-      .then((data) => {
-        if (!ignore) setSeasons(data);
-      })
-      .finally(() => {
-        if (!ignore) setSeasonsLoading(false);
-      });
-
     return () => {
       ignore = true;
     };
-  }, [plotId]);
+  }, [productionAreaId]);
 
   const {
     target: archiveTarget,
@@ -67,16 +75,16 @@ export function PlotDetailPage() {
     confirmArchive,
     archiving,
     error: archiveError,
-  } = useArchivePlot((updated) => setPlot(updated));
+  } = useArchiveProductionArea((updated) => setProductionArea(updated));
 
   async function handleRestore() {
-    if (!plot) return;
+    if (!productionArea) return;
     setRestoreError(null);
     try {
-      const updated = await restorePlot(plot.plotId);
-      setPlot(updated);
+      const updated = await restoreProductionArea(productionArea.productionAreaId);
+      setProductionArea(updated);
     } catch (err) {
-      setRestoreError(err instanceof Error ? err.message : 'Khôi phục lô đất thất bại. Vui lòng thử lại.');
+      setRestoreError(err instanceof Error ? err.message : 'Khôi phục vùng canh tác thất bại. Vui lòng thử lại.');
     }
   }
 
@@ -85,20 +93,20 @@ export function PlotDetailPage() {
       <section>
         <div className="panel empty-state">
           <div className="empty-icon">⏳</div>
-          <h2>Đang tải thông tin lô đất...</h2>
+          <h2>Đang tải thông tin vùng canh tác...</h2>
         </div>
       </section>
     );
   }
 
-  if (error || !plot) {
+  if (error || !productionArea) {
     return (
       <section>
         <div className="panel empty-state">
           <div className="empty-icon">⚠️</div>
-          <h2>{error ?? 'Không tìm thấy lô đất.'}</h2>
-          <Link to="/land-plots" className="primary-button">
-            Về danh sách lô đất
+          <h2>{error ?? 'Không tìm thấy vùng canh tác.'}</h2>
+          <Link to="/production-areas" className="primary-button">
+            Về danh sách vùng canh tác
           </Link>
         </div>
       </section>
@@ -110,23 +118,23 @@ export function PlotDetailPage() {
       <div className="page-heading">
         <div>
           <nav className="breadcrumb" aria-label="Breadcrumb">
-            <Link to="/land-plots">Lô đất</Link>
+            <Link to="/production-areas">Vùng canh tác</Link>
             <span>›</span>
-            <span>{plot.plotName}</span>
+            <span>{productionArea.areaName}</span>
           </nav>
-          <h1>Chi tiết lô đất</h1>
+          <h1>Chi tiết vùng canh tác</h1>
         </div>
         <div className="farm-registration-actions">
-          <Link to={`/land-plots/${plot.plotId}/edit`} className="ghost-button edit-button">
-            Chỉnh sửa <SquarePen style={{ marginBottom: "-3px" }} size={16} strokeWidth={1.5} />
+          <Link to={`/production-areas/${productionArea.productionAreaId}/edit`} className="ghost-button edit-button">
+            Chỉnh sửa <SquarePen style={{ marginBottom: '-3px' }} size={16} strokeWidth={1.5} />
           </Link>
-          {plot.status === 'archived' ? (
+          {productionArea.status === 'archived' ? (
             <button type="button" className="primary-button edit-button" onClick={handleRestore}>
-              Khôi phục <Undo2 size={16} strokeWidth={1.5} style={{ marginBottom: "-3px" }}/>
+              Khôi phục <Undo2 size={16} strokeWidth={1.5} style={{ marginBottom: '-3px' }} />
             </button>
           ) : (
-            <button type="button" className="danger-button delete-button" onClick={() => requestArchive(plot)}>
-              Lưu trữ <Archive size={16} style={{ marginBottom: "-3px" }} strokeWidth={1.5} />
+            <button type="button" className="danger-button delete-button" onClick={() => requestArchive(productionArea)}>
+              Lưu trữ <Archive size={16} style={{ marginBottom: '-3px' }} strokeWidth={1.5} />
             </button>
           )}
         </div>
@@ -138,53 +146,39 @@ export function PlotDetailPage() {
       <div className="panel plot-detail-panel">
         <div className="panel-title">
           <div>
-            <span className="eyebrow">{plot.plotCode}</span>
-            <h2>Thông tin lô đất</h2>
+            <span className="eyebrow">{productionArea.areaCode}</span>
+            <h2>Thông tin vùng canh tác</h2>
           </div>
-          <StatusBadge label={PLOT_STATUS_LABEL[plot.status]} tone={PLOT_STATUS_TONE[plot.status]} />
+          <StatusBadge label={PRODUCTION_AREA_STATUS_LABEL[productionArea.status]} tone={PRODUCTION_AREA_STATUS_TONE[productionArea.status]} />
         </div>
 
         <div className="plot-detail-body">
           <dl className="detail-list">
             <div>
-              <dt>Tên lô đất</dt>
-              <dd>{plot.plotName}</dd>
+              <dt>Tên vùng canh tác</dt>
+              <dd>{productionArea.areaName}</dd>
             </div>
             <div>
               <dt>Diện tích</dt>
-              <dd>{formatArea(plot.areaHectares)}</dd>
+              <dd>{formatArea(productionArea.areaHectares)}</dd>
             </div>
-            <div>
-              <dt>Vị trí / Địa chỉ</dt>
-              <dd>{plot.locationDescription}</dd>
-            </div>
-            {plot.soilType ? (
+            {productionArea.locationDescription ? (
               <div>
-                <dt>Loại đất</dt>
-                <dd>{plot.soilType}</dd>
-              </div>
-            ) : null}
-            {plot.notes ? (
-              <div>
-                <dt>Ghi chú</dt>
-                <dd>{plot.notes}</dd>
+                <dt>Địa điểm / Vị trí</dt>
+                <dd>{productionArea.locationDescription}</dd>
               </div>
             ) : null}
             <div>
               <dt>Ngày tạo</dt>
-              <dd>{formatDateTime(plot.createdAt)}</dd>
+              <dd>{formatDateTime(productionArea.createdAt)}</dd>
             </div>
-            {plot.updatedAt ? (
+            {productionArea.updatedAt ? (
               <div>
                 <dt>Cập nhật lần cuối</dt>
-                <dd>{formatDateTime(plot.updatedAt)}</dd>
+                <dd>{formatDateTime(productionArea.updatedAt)}</dd>
               </div>
             ) : null}
           </dl>
-
-          {plot.coverImageUrl ? (
-            <img src={plot.coverImageUrl} alt={`Ảnh lô đất ${plot.plotName}`} className="plot-detail-image" />
-          ) : null}
         </div>
       </div>
 
@@ -199,10 +193,10 @@ export function PlotDetailPage() {
 
       <ConfirmDialog
         open={archiveTarget !== null}
-        title="Lưu trữ lô đất?"
+        title="Lưu trữ vùng canh tác?"
         description={
           archiveTarget
-            ? `Lô đất "${archiveTarget.plotName}" sẽ không thể dùng để tạo mùa vụ mới, nhưng lịch sử dữ liệu vẫn được giữ lại.`
+            ? `Vùng canh tác "${archiveTarget.areaName}" sẽ không thể dùng để tạo mùa vụ mới, nhưng lịch sử dữ liệu vẫn được giữ lại.`
             : undefined
         }
         confirmLabel="Lưu trữ"
