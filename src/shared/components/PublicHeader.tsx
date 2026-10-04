@@ -4,9 +4,10 @@ import { useAuth } from '../../features/auth';
 import { Icon } from './Icon';
 
 export function PublicHeader() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, signOut } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const displayName = user?.fullName?.trim() || user?.email || 'Tài khoản của bạn';
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -27,8 +28,8 @@ export function PublicHeader() {
 
         <nav className="public-nav-desktop" aria-label="Điều hướng chính">
           <Link
-            to="/login"
-            className={`nav-link ${isActive('/login') || isActive('/') ? 'is-active' : ''}`}
+            to={isAuthenticated ? '/dashboard' : '/login'}
+            className={`nav-link ${isActive('/login') || isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
           >
             Trang chủ
           </Link>
@@ -48,11 +49,35 @@ export function PublicHeader() {
 
         <div className="public-header-actions">
           {isAuthenticated ? (
-            <Link to="/dashboard" className="btn-portal-entry">
-              <Icon name="home" />
-              <span>Vào trang quản lý</span>
-              <Icon name="arrow" className="btn-icon-right" />
-            </Link>
+            <div className="public-auth-logged-in">
+              <Link to="/dashboard" className="btn-portal-entry">
+                <Icon name="home" />
+                <span>Vào trang quản lý</span>
+              </Link>
+              <Link
+                className="account-profile"
+                to="/profile"
+                title="Xem hồ sơ cá nhân"
+                aria-label="Hồ sơ cá nhân"
+              >
+                <span className="avatar">
+                  <Icon name="user" />
+                </span>
+                <div className="account-profile-info">
+                  <strong title={displayName}>{displayName}</strong>
+                  <small className="account-sub-label">Hồ sơ cá nhân</small>
+                </div>
+              </Link>
+              <button
+                className="account-logout"
+                type="button"
+                onClick={signOut}
+                title="Đăng xuất khỏi hệ thống"
+              >
+                <Icon name="logout" />
+                <span>Đăng xuất</span>
+              </button>
+            </div>
           ) : (
             <div className="auth-btn-group">
               <Link
@@ -88,8 +113,8 @@ export function PublicHeader() {
         <div className="public-mobile-drawer" role="dialog" aria-modal="true">
           <div className="mobile-drawer-inner">
             <Link
-              to="/login"
-              className={`mobile-nav-link ${isActive('/login') || isActive('/') ? 'is-active' : ''}`}
+              to={isAuthenticated ? '/dashboard' : '/login'}
+              className={`mobile-nav-link ${isActive('/login') || isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
               Trang chủ
@@ -118,14 +143,42 @@ export function PublicHeader() {
 
             <div className="mobile-drawer-auth">
               {isAuthenticated ? (
-                <Link
-                  to="/dashboard"
-                  className="btn-portal-entry full-width"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Icon name="home" />
-                  <span>Vào trang quản lý ({user?.fullName || 'Tài khoản'})</span>
-                </Link>
+                <div className="mobile-auth-logged-in">
+                  <Link
+                    to="/profile"
+                    className="account-profile mobile-profile"
+                    onClick={() => setMobileMenuOpen(false)}
+                    title="Xem hồ sơ cá nhân"
+                    aria-label="Hồ sơ cá nhân"
+                  >
+                    <span className="avatar">
+                      <Icon name="user" />
+                    </span>
+                    <div className="account-profile-info">
+                      <strong>{displayName}</strong>
+                      <small className="account-sub-label">Hồ sơ cá nhân</small>
+                    </div>
+                  </Link>
+                  <Link
+                    to="/dashboard"
+                    className="btn-portal-entry full-width"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <Icon name="home" />
+                    <span>Vào trang quản lý</span>
+                  </Link>
+                  <button
+                    type="button"
+                    className="account-logout full-width"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      signOut();
+                    }}
+                  >
+                    <Icon name="logout" />
+                    <span>Đăng xuất</span>
+                  </button>
+                </div>
               ) : (
                 <div className="mobile-auth-stack">
                   <Link
