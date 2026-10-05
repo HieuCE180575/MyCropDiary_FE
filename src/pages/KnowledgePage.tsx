@@ -85,94 +85,59 @@ export function KnowledgePage() {
   }
 
   return (
-    <section style={{backgroundColor: "white"}}>
-      <header className="public-header">
-        <div className="public-header-inner">
-          <Link className="login-brand" to="/" aria-label="Trang chủ MyCropDiary">
-            <Icon name="leaf" /><strong>MyCropDiary</strong>
-          </Link>
-          <nav className="public-navigation" aria-label="Điều hướng chính">
-            <Link to="/">Trang chủ</Link>
-            <Link to="/knowledge"  aria-current="page">Kiến thức</Link>
-            <a href="#footer-brand-heading">Giới thiệu</a>
-            <button type="button" disabled>Liên hệ</button>
-            <a href="/login">Đăng nhập</a>
-            <Link className="public-sign-up" to="/register">Đăng ký</Link>
-          </nav>
-        </div>
-      </header>
-
-      <div className="panel knowledge-toolbar">
-        <KnowledgeSearchBar value={searchInput} onChange={setSearchInput} />
-        <KnowledgeFilterBar
-          category={category}
-          onCategoryChange={handleCategoryChange}
-          sort={sort}
-          onSortChange={handleSortChange}
-        />
-      </div>
-
-      {error ? (
-        <div className="panel empty-state">
-          <div className="empty-icon">⚠️</div>
-          <h2>Đã có lỗi xảy ra</h2>
-          <p>{error}</p>
-          <button type="button" className="primary-button" onClick={() => setReloadToken((t) => t + 1)}>
-            Thử lại
-          </button>
-        </div>
-      ) : (
-        <>
-          {resultSummary && !loading ? <p className="knowledge-result-summary">{resultSummary}</p> : null}
-
-          <KnowledgeList
-            articles={result.items}
-            loading={loading}
-            hasActiveFilters={hasActiveFilters}
-            onOpen={setSelectedArticle}
-            onResetFilters={handleResetFilters}
-          />
-
-          {!loading ? (
-            <div style={{
-              justifySelf: "center",
-              marginBottom: "20px",
-            }}>
-              <Pagination page={result.page} totalPages={result.totalPages} onChange={setPage} />
+    <div className="public-knowledge-view">
+      <div className="public-container">
+        <section className="knowledge-page-content">
+          <div className="page-heading">
+            <div>
+              <span className="eyebrow">Thư viện công khai</span>
+              <h1>Kiến thức VietGAP</h1>
+              <p className="page-subtitle">
+                Tìm hiểu quy trình, tiêu chuẩn và kinh nghiệm thực hành nông nghiệp tốt trước khi bắt đầu với MyCropDiary.
+              </p>
             </div>
-          ) : null}
-        </>
-      )
-      }
+          </div>
 
-      <KnowledgeDetailModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
-      <footer className="login-footer">
-        <div className="login-footer-content">
-          <section className="login-footer-about" aria-labelledby="footer-brand-heading">
-            <h2 id="footer-brand-heading">MyCropDiary</h2>
-            <p>Đồng hành cùng nhà nông quản lý nhật ký canh tác, chi phí sản xuất và thông tin trang trại theo định hướng VietGAP.</p>
-          </section>
-          <nav aria-labelledby="footer-explore-heading">
-            <h2 id="footer-explore-heading">Khám phá</h2>
-            <ul>
-              <li><Link to="/">Trang chủ</Link></li>
-              <li><Link to="/knowledge">Kiến thức nông nghiệp</Link></li>
-              <li><a href="#footer-brand-heading">Về MyCropDiary</a></li>
-            </ul>
-          </nav>
-          <nav aria-labelledby="footer-resources-heading">
-            <h2 id="footer-resources-heading">Tài nguyên</h2>
-            <ul>
-              <li><Link to="/knowledge">Kiến thức VietGAP</Link></li>
-              <li><Link to="/ai">Trợ lý AI</Link></li>
-              <li><span className="login-footer-pending" aria-disabled="true">Trợ giúp &amp; Hỗ trợ</span></li>
-            </ul>
-          </nav>
-        </div>
-        <div className="login-footer-bottom">
-          <small>© 2026 MyCropDiary. Bảo lưu mọi quyền.</small>
-        </div>
-      </footer>
-    </section >
+          <div className="panel knowledge-toolbar">
+            <KnowledgeSearchBar value={searchInput} onChange={setSearchInput} />
+            <KnowledgeFilterBar
+              category={category}
+              onCategoryChange={handleCategoryChange}
+              sort={sort}
+              onSortChange={handleSortChange}
+            />
+          </div>
+
+          {error ? (
+            <div className="panel empty-state">
+              <div className="empty-icon">⚠️</div>
+              <h2>Đã có lỗi xảy ra</h2>
+              <p>{error}</p>
+              <button type="button" className="primary-button" onClick={() => setReloadToken((t) => t + 1)}>
+                Thử lại
+              </button>
+            </div>
+          ) : (
+            <>
+              {resultSummary && !loading ? <p className="knowledge-result-summary">{resultSummary}</p> : null}
+
+              <KnowledgeList
+                articles={result.items}
+                loading={loading}
+                hasActiveFilters={hasActiveFilters}
+                onOpen={setSelectedArticle}
+                onResetFilters={handleResetFilters}
+              />
+
+              {!loading ? (
+                <Pagination page={result.page} totalPages={result.totalPages} onChange={setPage} />
+              ) : null}
+            </>
+          )}
+
+          <KnowledgeDetailModal article={selectedArticle} onClose={() => setSelectedArticle(null)} />
+        </section>
+      </div>
+    </div>
   );
 }

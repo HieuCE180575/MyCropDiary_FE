@@ -6,6 +6,7 @@ import { moduleDefinitions } from '../routes/moduleDefinitions';
 import { canAccessModule, farmRole } from '../../features/auth/accessPolicy';
 import { FarmWorkspaceProvider, useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 import { AdminProvider, AdminNotice } from '../../features/admin/AdminProvider';
+import { PublicFooter } from '../../shared/components/PublicFooter';
 
 export function AppLayout() {
   const { user } = useAuth();
@@ -47,12 +48,19 @@ function WorkspaceLayout() {
         <div className="topbar-actions">
           <div className="notification-wrap"><button className="icon-button" aria-label="Thông báo" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen(!notificationsOpen)}><Icon name="bell" /></button>{notificationsOpen && <div className="notification-popover" role="status"><strong>Thông báo</strong><p>Bạn chưa có thông báo mới.</p></div>}</div>
           <div className="account-menu">
-              <Link className="account-profile" to="/profile"><span className="avatar"><Icon name="user" /></span><strong title={displayName}>{displayName}</strong></Link>
-              <button className="account-logout" type="button" onClick={signOut}><Icon name="logout" />Đăng xuất</button>
+              <Link className="account-profile" to="/profile" title="Xem hồ sơ cá nhân" aria-label="Hồ sơ cá nhân">
+                <span className="avatar"><Icon name="user" /></span>
+                <div className="account-profile-info">
+                  <strong title={displayName}>{displayName}</strong>
+                  <small className="account-sub-label">Hồ sơ cá nhân</small>
+                </div>
+              </Link>
+              <button className="account-logout" type="button" onClick={signOut} title="Đăng xuất khỏi hệ thống"><Icon name="logout" />Đăng xuất</button>
           </div>
         </div>
       </header>
       <main className="page-content">{isAdmin && pathname.startsWith('/admin') && <AdminNotice />}<Outlet /></main>
+      {!isAdmin && <PublicFooter />}
     </div>
   </div>;
 }

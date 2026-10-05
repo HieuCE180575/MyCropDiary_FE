@@ -4,6 +4,7 @@ import {
   ChevronDown, LogOut, TriangleAlert, Droplet, History, MessageSquare,
   LockKeyhole, Search, Eye, EyeOff, Mail, Globe, LogIn, X, Hand, Menu,
   LoaderCircle, CircleHelp, Pencil, RotateCcw, Save, UserRoundPlus, ShieldCheck,
+  Phone, Check,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -18,6 +19,7 @@ const icons: Record<string, LucideIcon> = {
   mail: Mail, globe: Globe, login: LogIn, close: X, hand: Hand,
   loader: LoaderCircle, edit: Pencil, refresh: RotateCcw, save: Save,
   'user-plus': UserRoundPlus, shield: ShieldCheck, menu: Menu,
+  phone: Phone, 'check-circle': Check,
 };
 
 export function Icon({ name, className, ...props }: LucideProps & { name: string }) {

@@ -167,7 +167,7 @@ export function ProductionAreaListPage() {
             />
           )}
 
-          {!loading ? <Pagination page={result.page} totalPages={result.totalPages} onPageChange={setPage} /> : null}
+          {!loading ? <Pagination page={result.page} totalPages={result.totalPages} onChange={setPage} /> : null}
         </div>
       )}
 
