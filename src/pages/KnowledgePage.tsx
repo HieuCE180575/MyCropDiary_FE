@@ -5,6 +5,7 @@ import { KnowledgeSearchBar } from '../features/knowledge/components/KnowledgeSe
 import { KnowledgeFilterBar } from '../features/knowledge/components/KnowledgeFilterBar';
 import { KnowledgeList } from '../features/knowledge/components/KnowledgeList';
 import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
+import { KnowledgeDynamicBanner } from '../features/knowledge/components/KnowledgeDynamicBanner';
 import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
 import { KNOWLEDGE_PAGE_SIZE } from '../features/knowledge/constants';
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeSort, PagedResult } from '../features/knowledge/types';
@@ -86,15 +87,7 @@ export function KnowledgePage() {
     <div className="public-knowledge-view">
       <div className="public-container">
         <section className="knowledge-page-content">
-          <div className="page-heading">
-            <div>
-              <span className="eyebrow">Thư viện công khai</span>
-              <h1>Kiến thức VietGAP</h1>
-              <p className="page-subtitle">
-                Tìm hiểu quy trình, tiêu chuẩn và kinh nghiệm thực hành nông nghiệp tốt trước khi bắt đầu với MyCropDiary.
-              </p>
-            </div>
-          </div>
+          <KnowledgeDynamicBanner onSelectCategory={handleCategoryChange} />
 
           <div className="panel knowledge-toolbar">
             <KnowledgeSearchBar value={searchInput} onChange={setSearchInput} />
