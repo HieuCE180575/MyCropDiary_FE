@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 import { createElement, act } from 'react';
+import axios from 'axios';
 
 test('admin preview supports reviewing, editing, filtering, pagination and feedback without sending network writes', async () => {
   const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', { url: 'http://localhost:5173' });
@@ -11,8 +12,12 @@ test('admin preview supports reviewing, editing, filtering, pagination and feedb
   for (const [key, value] of Object.entries(replacements)) Object.defineProperty(globalThis, key, { value, writable: true, configurable: true });
   dom.window.HTMLDialogElement.prototype.showModal = function () { this.open = true; };
   dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
-  const oldFetch = globalThis.fetch;
-  globalThis.fetch = async () => { throw new Error('Preview must not make API calls.'); };
+  const oldAdapter = axios.defaults.adapter;
+  let requestCount = 0;
+  axios.defaults.adapter = async () => {
+    requestCount += 1;
+    throw new Error('Preview must not make API calls.');
+  };
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom' });
   let root;
   try {
@@ -113,11 +118,12 @@ test('admin preview supports reviewing, editing, filtering, pagination and feedb
     assert.ok(document.body.textContent.includes('Tháng bắt đầu không được sau tháng kết thúc'));
     await set('.admin-stat-filters label:last-of-type input', '2027-02');
     assert.ok(document.body.textContent.includes('Chưa có số liệu trong khoảng thời gian này'));
+    assert.equal(requestCount, 0, 'Admin preview must not make API calls.');
   } finally {
     if (root) await act(async () => root.unmount());
     await server.close();
     dom.window.close();
-    globalThis.fetch = oldFetch;
+    axios.defaults.adapter = oldAdapter;
     for (const [key, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; }
   }
 });

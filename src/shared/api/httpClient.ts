@@ -1,7 +1,21 @@
 import { clearAccessToken, getAccessToken } from '../../features/auth/authStorage';
-
+import axios, { AxiosHeaders, type AxiosRequestConfig, type AxiosResponse, type RawAxiosHeaders,} from 'axios';
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1').replace(/\/$/, '');
 
+const httpClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    Accept: 'application/json',
+  },
+});
+
+export type ApiRequestOptions = Pick<
+  AxiosRequestConfig,
+  'method' | 'data' | 'signal'
+> & {
+  headers?: AxiosHeaders | RawAxiosHeaders;
+  anonymous?: boolean;
+};
 export class ApiError extends Error {
   constructor(public readonly status: number, message: string) {
     super(message);
@@ -9,7 +23,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, options: RequestInit & { anonymous?: boolean } = {}): Promise<T> {
+export async function apiRequest<T>( path: string, options: ApiRequestOptions = {}, ): Promise<T> {
   const { anonymous = false, ...init } = options;
   const token = anonymous ? null : getAccessToken();
   // This backend can return 403 for expired JWTs; detect expiry before sending.
@@ -24,33 +38,51 @@ export async function apiRequest<T>(path: string, options: RequestInit & { anony
     clearAccessToken();
     throw new ApiError(401, 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
   }
-  const headers = new Headers(init.headers);
-  headers.set('Accept', 'application/json');
-  if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
-  }
-  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
-      ...init,
-      headers,
-    });
-  } catch (error) {
-    if (init.signal?.aborted) throw error;
-    throw new ApiError(0, 'Không kết nối được máy chủ. Hãy kiểm tra backend và kết nối mạng.');
-  }
+const headers = AxiosHeaders.from(init.headers);
+
+if (
+  init.data != null &&
+  !(init.data instanceof FormData) &&
+  !headers.has('Content-Type')
+) {
+  headers.set('Content-Type', 'application/json');
+}
+
+if (token && !headers.has('Authorization')) {
+  headers.set('Authorization', `Bearer ${token}`);
+}
+
+let response: AxiosResponse<string>;
+
+try {
+  response = await httpClient.request<string>({
+    ...init,
+    url: path,
+    headers,
+    responseType: 'text',
+    transformResponse: [(data) => data],
+    validateStatus: () => true,
+  });
+} catch (error) {
+  if (init.signal?.aborted || axios.isCancel(error)) throw error;
+
+  throw new ApiError(
+    0,
+    'Không kết nối được máy chủ. Hãy kiểm tra backend và kết nối mạng.',
+  );
+}
 
   if (response.status === 401) {
     if (token && headers.get('Authorization') === `Bearer ${token}` && getAccessToken() === token) clearAccessToken();
   }
 
-  const body = await response.text();
-  let data: unknown;
+const body = response.data;
+const responseOk = response.status >= 200 && response.status < 300;
+let data: unknown;
   try { data = body ? JSON.parse(body) : undefined; } catch {
-    if (response.ok) throw new ApiError(response.status, 'Máy chủ trả về dữ liệu không hợp lệ.');
+    if (responseOk) throw new ApiError(response.status, 'Máy chủ trả về dữ liệu không hợp lệ.');
   }
-  if (!response.ok) {
+  if (!responseOk) {
     const serverMessage = data && typeof data === 'object' && 'message' in data && typeof data.message === 'string' ? data.message : undefined;
     const message = serverMessage || (response.status === 401 ? 'Email hoặc mật khẩu không đúng, hoặc phiên đăng nhập đã hết hạn.'
       : response.status === 403 ? 'Bạn không có quyền truy cập dữ liệu này.'

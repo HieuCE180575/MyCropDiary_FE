@@ -16,7 +16,7 @@ export async function authenticate(email: string, password: string): Promise<Aut
   if (!email.trim() || !password) throw new Error('Vui lòng nhập email và mật khẩu.');
   const result = await apiRequest<ApiResponse<AuthResponse>>('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email: email.trim(), password }),
+    data: { email: email.trim(), password },
     anonymous: true,
   });
   return readAuthSession(result);
@@ -24,7 +24,7 @@ export async function authenticate(email: string, password: string): Promise<Aut
 
 function readAuthSession(result: ApiResponse<AuthResponse>): AuthSession {
   if (!result?.success || !result.data || typeof result.data.accessToken !== 'string'
-      || !result.data.accessToken.trim() || result.data.tokenType !== 'Bearer') {
+    || !result.data.accessToken.trim() || result.data.tokenType !== 'Bearer') {
     throw new Error('Không xác minh được đăng nhập: máy chủ chưa trả về access token hợp lệ.');
   }
   const { accessToken, userId, email, fullName, systemRole } = result.data;
@@ -41,14 +41,24 @@ export interface RegisterRequest {
 export async function registerAccount(request: RegisterRequest): Promise<void> {
   const result = await apiRequest<ApiResponse<{ email: string }>>('/auth/register', {
     method: 'POST', anonymous: true,
-    body: JSON.stringify({ ...request, fullName: request.fullName.trim(), email: request.email.trim(), phoneNumber: request.phoneNumber?.trim() || null }),
+    data: {
+      ...request,
+      fullName: request.fullName.trim(),
+      email: request.email.trim(),
+      phoneNumber: request.phoneNumber?.trim() || null,
+    },
   });
   if (!result?.success) throw new Error(result?.message || 'Không đăng ký được tài khoản.');
 }
 
 export async function verifyOtp(email: string, otp: string): Promise<AuthSession> {
   const result = await apiRequest<ApiResponse<AuthResponse>>('/auth/verify-otp', {
-    method: 'POST', anonymous: true, body: JSON.stringify({ email: email.trim(), otp: otp.trim() }),
+    method: 'POST',
+    anonymous: true,
+    data: {
+      email: email.trim(),
+      otp: otp.trim(),
+    },
   });
   return readAuthSession(result);
 }

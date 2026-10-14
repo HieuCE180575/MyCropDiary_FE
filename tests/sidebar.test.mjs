@@ -4,13 +4,25 @@ import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 import { createElement, act } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 test('sidebar toggles for Admin, User, Owner and Staff without changing URL, content or permissions', async () => {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost:5173' });
   const globals = { window: dom.window, document: dom.window.document, navigator: dom.window.navigator, Event: dom.window.Event, localStorage: dom.window.localStorage, IS_REACT_ACT_ENVIRONMENT: true };
   const originals = new Map(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
-  const oldFetch = globalThis.fetch;
+  const oldAdapter = axios.defaults.adapter;
+  let currentFarmRole = null;
+  axios.defaults.adapter = async (config) => ({
+    status: 200,
+    statusText: 'OK',
+    headers: {},
+    config,
+    data: JSON.stringify({ success: true, data: {
+      items: currentFarmRole ? [{ id: 1, farmCode: 'F1', farmName: 'Test Farm', currentUserRole: currentFarmRole, status: 'ACTIVE' }] : [],
+      page: 0, size: 12, totalPages: 1, totalElements: currentFarmRole ? 1 : 0, last: true,
+    } }),
+  });
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom' });
   let root;
   try {
@@ -21,7 +33,7 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
     function Location() { return createElement('output', { id: 'test-location' }, useLocation().pathname); }
     for (const role of ['ADMIN', 'USER', 'OWNER', 'STAFF']) {
       const farmRole = ['OWNER', 'STAFF'].includes(role) ? role : null;
-      globalThis.fetch = async () => new Response(JSON.stringify({ success: true, data: { items: farmRole ? [{ id: 1, farmCode: 'F1', farmName: 'Test Farm', currentUserRole: farmRole, status: 'ACTIVE' }] : [], page: 0, size: 12, totalPages: 1, totalElements: farmRole ? 1 : 0, last: true } }), { headers: { 'Content-Type': 'application/json' } });
+      currentFarmRole = farmRole;
       storage.saveAccessToken('test-session', { userId: role, email: 'test@example.com', fullName: 'Test', systemRole: role === 'ADMIN' ? 'ADMIN' : 'USER' });
       root = createRoot(document.getElementById('root'));
       await act(async () => root.render(createElement(MemoryRouter, { initialEntries: [role === 'ADMIN' ? '/admin/registrations' : '/dashboard'] }, createElement(AuthProvider, null, createElement(App), createElement(Location)))));
@@ -57,7 +69,7 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
   } finally {
     if (root) await act(async () => root.unmount());
     await server.close();
-    globalThis.fetch = oldFetch;
+    axios.defaults.adapter = oldAdapter;
     dom.window.close();
     for (const [key, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; }
   }
