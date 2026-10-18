@@ -4,29 +4,6 @@ import { useAuth } from '../features/auth';
 import { authenticate } from '../features/auth/authApi';
 import { Icon } from '../shared/components/Icon';
 
-const features = [
-  {
-    icon: 'book',
-    title: 'Nhật ký canh tác số',
-    desc: 'Ghi chép chi tiết từng lần bón phân, tưới nước, phun thuốc theo chuẩn VietGAP.',
-  },
-  {
-    icon: 'box',
-    title: 'Quản lý vật tư & kho',
-    desc: 'Kiểm soát số lượng hạt giống, phân bón, thuốc BVTV nhập - xuất chính xác.',
-  },
-  {
-    icon: 'money',
-    title: 'Theo dõi chi phí vụ mùa',
-    desc: 'Hạch toán chi phí đầu vào, nhân công và ước tính lợi nhuận thu hoạch.',
-  },
-  {
-    icon: 'report',
-    title: 'Báo cáo & Xuất dữ liệu',
-    desc: 'Sẵn sàng dữ liệu cho cơ quan kiểm tra và truy xuất nguồn gốc nông sản.',
-  },
-];
-
 export function LoginPage() {
   const { isAuthenticated, user, setSession } = useAuth();
   const location = useLocation();
@@ -66,55 +43,7 @@ export function LoginPage() {
   };
 
   return (
-    <main className="auth-page login-page-root" id="login-form">
-      {/* Cột trái: Showcase thương hiệu & tính năng */}
-      <section className="auth-showcase" aria-labelledby="showcase-title">
-        <div className="showcase-inner">
-          <div className="showcase-badge">
-            <Icon name="leaf" />
-            <span>Nền tảng Nông nghiệp Số Thông minh</span>
-          </div>
-
-          <div className="showcase-content">
-            <h1 id="showcase-title">
-              Nhật ký canh tác số.<br />
-              <span className="gradient-text">Minh bạch chi phí.</span><br />
-              Tối ưu mùa vụ.
-            </h1>
-            <p className="showcase-desc">
-              Đồng hành cùng nhà nông Việt Nam quản lý thông tin trang trại, chuẩn hoá quy trình sản xuất theo tiêu chuẩn VietGAP và nâng cao giá trị nông sản.
-            </p>
-          </div>
-
-          <div className="feature-grid" id="features-section">
-            {features.map((feature) => (
-              <article className="feature-card" key={feature.title}>
-                <div className="feature-icon-wrapper">
-                  <Icon name={feature.icon} className="feature-icon" />
-                </div>
-                <div className="feature-body">
-                  <strong>{feature.title}</strong>
-                  <p>{feature.desc}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <div className="showcase-highlight-card">
-            <div className="highlight-stat">
-              <span className="stat-number">100%</span>
-              <span className="stat-label">Tuân thủ tiêu chuẩn VietGAP</span>
-            </div>
-            <div className="highlight-divider" />
-            <div className="highlight-stat">
-              <span className="stat-number">24/7</span>
-              <span className="stat-label">Truy cập mọi lúc, mọi nơi</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Cột phải: Form Đăng nhập hiện đại */}
+    <main className="login-page-root">
       <section className="auth-panel" aria-label="Đăng nhập tài khoản">
         <div className="auth-card">
           <div className="auth-card-header">
@@ -160,14 +89,12 @@ export function LoginPage() {
             <div className="form-group">
               <div className="label-with-action">
                 <label htmlFor="login-password">Mật khẩu</label>
-                <button
-                  type="button"
+                <Link
+                  to="/forgot-password"
                   className="link-forgot-password"
-                  disabled
-                  title="Tính năng đang được phát triển"
                 >
                   Quên mật khẩu?
-                </button>
+                </Link>
               </div>
               <div className="input-with-icon">
                 <span className="input-lead-icon">

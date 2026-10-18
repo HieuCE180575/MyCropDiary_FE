@@ -28,8 +28,8 @@ export function PublicHeader() {
 
         <nav className="public-nav-desktop" aria-label="Điều hướng chính">
           <Link
-            to={isAuthenticated ? '/dashboard' : '/login'}
-            className={`nav-link ${isActive('/login') || isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
+            to={isAuthenticated ? '/dashboard' : '/'}
+            className={`nav-link ${isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
           >
             Trang chủ
           </Link>
@@ -39,7 +39,7 @@ export function PublicHeader() {
           >
             Kiến thức VietGAP
           </Link>
-          <a href="#features-section" className="nav-link">
+          <a href="/#features-section" className="nav-link">
             Tính năng nổi bật
           </a>
           <a href="#footer-brand-heading" className="nav-link">
@@ -113,8 +113,8 @@ export function PublicHeader() {
         <div className="public-mobile-drawer" role="dialog" aria-modal="true">
           <div className="mobile-drawer-inner">
             <Link
-              to={isAuthenticated ? '/dashboard' : '/login'}
-              className={`mobile-nav-link ${isActive('/login') || isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
+              to={isAuthenticated ? '/dashboard' : '/'}
+              className={`mobile-nav-link ${isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
               Trang chủ
@@ -127,7 +127,7 @@ export function PublicHeader() {
               Kiến thức VietGAP
             </Link>
             <a
-              href="#features-section"
+              href="/#features-section"
               className="mobile-nav-link"
               onClick={() => setMobileMenuOpen(false)}
             >

@@ -308,6 +308,11 @@
 
 /* ---------- Left Column: Showcase Hero ---------- */
 
+.home-page > .auth-showcase,
+.login-page-root > .auth-panel {
+  min-height: calc(100vh - 72px);
+}
+
 .auth-showcase {
   position: relative;
   display: flex;
@@ -490,6 +495,14 @@
   justify-content: center;
   padding: clamp(36px, 5vw, 64px) clamp(24px, 4vw, 48px);
   background: #f8fafc;
+}
+
+.forgot-password-page {
+  min-height: calc(100vh - 72px);
+}
+
+.forgot-password-page .auth-card-header p {
+  overflow-wrap: anywhere;
 }
 
 .auth-card {

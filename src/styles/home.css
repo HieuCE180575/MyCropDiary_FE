@@ -1,0 +1,121 @@
+.home-page > .auth-showcase {
+  min-height: auto;
+  padding: 48px clamp(24px, 4vw, 64px);
+}
+
+.home-hero-layout {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: 48px;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.home-page .showcase-inner {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  gap: 24px;
+}
+
+.home-register-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #15803d;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.home-register-link:hover {
+  background: #ecfdf5;
+}
+
+.home-register-link:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 4px;
+}
+
+.home-hero-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+}
+
+.home-features {
+  padding: 32px clamp(24px, 4vw, 64px);
+  background: #ffffff;
+  scroll-margin-top: 88px;
+}
+
+.home-features .feature-grid {
+  max-width: 1280px;
+  margin: 0 auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.home-features .feature-card {
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: #ffffff;
+  border-color: #e2e8f0;
+  backdrop-filter: none;
+  transition: none;
+}
+
+.home-features .feature-card:hover {
+  transform: none;
+}
+
+.home-features .feature-icon-wrapper {
+  background: #ecfdf5;
+  color: #15803d;
+}
+
+.home-features .feature-body strong {
+  color: #0f172a;
+  font-size: 15px;
+}
+
+.home-features .feature-body p {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  .home-hero-layout {
+    gap: 28px;
+  }
+
+  .home-features .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .home-hero-layout,
+  .home-features .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-page .showcase-badge {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}

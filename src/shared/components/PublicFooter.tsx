@@ -33,13 +33,13 @@ export function PublicFooter() {
             <h3 id="footer-explore-heading">Khám phá &amp; Học tập</h3>
             <ul className="footer-nav-list">
               <li>
-                <Link to="/login">Trang chủ &amp; Giới thiệu</Link>
+                <Link to="/">Trang chủ &amp; Giới thiệu</Link>
               </li>
               <li>
                 <Link to="/knowledge">Thư viện kiến thức VietGAP</Link>
               </li>
               <li>
-                <a href="#features-section">Tính năng nổi bật</a>
+                <a href="/#features-section">Tính năng nổi bật</a>
               </li>
               <li>
                 <Link to="/register">Đăng ký tài khoản mới</Link>

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { moduleDefinitions } from './routes/moduleDefinitions';
@@ -7,6 +7,8 @@ import { FarmInfoPage } from '../pages/FarmInfoPage';
 import { FarmRegistrationPage } from '../pages/FarmRegistrationPage';
 import { KnowledgePage } from '../pages/KnowledgePage';
 import { LoginPage } from '../pages/LoginPage';
+import { HomePage } from '../pages/HomePage';
+import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ModulePage } from '../pages/ModulePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -26,7 +28,9 @@ export function App() {
     <Routes>
       {/* Public pages wrapped in shared PublicLayout */}
       <Route element={<PublicLayout />}>
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
       </Route>
@@ -34,11 +38,6 @@ export function App() {
       {/* Protected pages */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route
-            index
-            element={<Navigate to="/dashboard" replace />}
-          />
-
           <Route
             path="/dashboard"
             element={<DashboardPage />}

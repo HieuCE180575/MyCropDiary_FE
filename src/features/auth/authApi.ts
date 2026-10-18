@@ -69,3 +69,19 @@ export async function resendOtp(email: string): Promise<void> {
   });
   if (!result?.success) throw new Error(result?.message || 'Không gửi lại được mã OTP.');
 }
+
+export async function forgotPassword(email: string): Promise<void> {
+  const result = await apiRequest<ApiResponse<unknown>>('/auth/forgot-password', {
+    method: 'POST', anonymous: true,
+    data: { email: email.trim() },
+  });
+  if (!result?.success) throw new Error(result?.message || 'Không gửi được mã đặt lại mật khẩu.');
+}
+
+export async function resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
+  const result = await apiRequest<ApiResponse<unknown>>('/auth/reset-password', {
+    method: 'POST', anonymous: true,
+    data: { email: email.trim(), otp: otp.trim(), newPassword },
+  });
+  if (!result?.success) throw new Error(result?.message || 'Không đặt lại được mật khẩu.');
+}

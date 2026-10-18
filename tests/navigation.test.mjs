@@ -15,6 +15,16 @@ test('rendered navigation and direct routes respect the personal User and Admin 
     const { App } = await server.ssrLoadModule('/src/app/App.tsx');
     const { AuthProvider } = await server.ssrLoadModule('/src/features/auth/AuthProvider.tsx');
     const storage = await server.ssrLoadModule('/src/features/auth/authStorage.ts');
+    const renderPublic = path => renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] }, createElement(AuthProvider, null, createElement(App))));
+    storage.clearAccessToken();
+    const home = renderPublic('/');
+    assert.ok(home.includes('id="showcase-title"'));
+    assert.ok(!home.includes('id="login-email"'));
+    assert.ok(home.includes('href="/login"'));
+    const login = renderPublic('/login');
+    assert.ok(login.includes('id="login-email"'));
+    assert.ok(!login.includes('id="showcase-title"'));
+    assert.ok(login.includes('href="/forgot-password"'));
     const render = (path, systemRole) => {
       storage.saveAccessToken('test-session', { userId: 1, email: 'test@example.com', fullName: 'Test User', systemRole });
       return renderToStaticMarkup(createElement(MemoryRouter, { initialEntries: [path] }, createElement(AuthProvider, null, createElement(App))));

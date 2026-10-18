@@ -56,6 +56,35 @@ async function client(transport) {
 const reply = (body, status = 200) => ({ status, data: JSON.stringify(body) });
 const ok = (data) => reply({ success: true, message: 'OK', data, timestamp: new Date().toISOString() });
 
+test('password recovery sends backend DTOs anonymously without changing the session', async () => {
+  const calls = [];
+  const app = await client(async config => { calls.push(config); return ok(null); });
+  app.storage.saveAccessToken('existing.jwt.token');
+  await app.auth.forgotPassword(' farmer@example.com ');
+  await app.auth.resetPassword(' farmer@example.com ', ' 012345 ', ' password123 ');
+  assert.equal(calls[0].url, 'http://localhost:8080/api/v1/auth/forgot-password');
+  assert.deepEqual(JSON.parse(calls[0].data), { email: 'farmer@example.com' });
+  assert.equal(calls[1].url, 'http://localhost:8080/api/v1/auth/reset-password');
+  assert.deepEqual(JSON.parse(calls[1].data), {
+    email: 'farmer@example.com', otp: '012345', newPassword: ' password123 ',
+  });
+  for (const call of calls) {
+    assert.equal(call.method, 'post');
+    assert.equal(call.headers.has('Authorization'), false);
+  }
+  assert.equal(app.storage.getAccessToken(), 'existing.jwt.token');
+});
+
+test('password recovery propagates backend errors without authenticating', async () => {
+  const app = await client(async () => reply({ success: false, message: 'Mã OTP đã hết hạn.' }, 400));
+  await assert.rejects(app.auth.resetPassword('farmer@example.com', '012345', 'password123'), /Mã OTP đã hết hạn/);
+  await assert.rejects(app.auth.forgotPassword('farmer@example.com'), /Mã OTP đã hết hạn/);
+  assert.equal(app.storage.getAccessToken(), null);
+  const failed = await client(async () => reply({ success: false, message: 'Không gửi được email.' }));
+  await assert.rejects(failed.auth.forgotPassword('farmer@example.com'), /Không gửi được email/);
+  await assert.rejects(failed.auth.resetPassword('farmer@example.com', '012345', 'password123'), /Không gửi được email/);
+});
+
 test('login and OTP preserve account identity and clear it when the session ends', async () => {
   for (const method of ['authenticate', 'verifyOtp']) {
     let unauthorized = false;
