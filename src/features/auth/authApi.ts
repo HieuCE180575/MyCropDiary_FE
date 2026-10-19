@@ -28,7 +28,8 @@ function readAuthSession(result: ApiResponse<AuthResponse>): AuthSession {
     throw new Error('Không xác minh được đăng nhập: máy chủ chưa trả về access token hợp lệ.');
   }
   const { accessToken, userId, email, fullName, systemRole } = result.data;
-  return { accessToken, user: { userId, email, fullName, systemRole } };
+  const normalizedRole = (systemRole || 'USER').trim().toUpperCase();
+  return { accessToken, user: { userId, email, fullName, systemRole: normalizedRole } };
 }
 
 export interface RegisterRequest {
@@ -84,4 +85,26 @@ export async function resetPassword(email: string, otp: string, newPassword: str
     data: { email: email.trim(), otp: otp.trim(), newPassword },
   });
   if (!result?.success) throw new Error(result?.message || 'Không đặt lại được mật khẩu.');
+}
+
+export async function refreshToken(token: string): Promise<AuthSession> {
+  const result = await apiRequest<ApiResponse<AuthResponse>>('/auth/refresh-token', {
+    method: 'POST',
+    anonymous: true,
+    data: { refreshToken: token },
+  });
+  return readAuthSession(result);
+}
+
+export async function logoutUser(token?: string): Promise<void> {
+  if (token) {
+    try {
+      await apiRequest<ApiResponse<void>>('/auth/logout', {
+        method: 'POST',
+        data: { refreshToken: token },
+      });
+    } catch {
+      // ignore silent logout network errors
+    }
+  }
 }

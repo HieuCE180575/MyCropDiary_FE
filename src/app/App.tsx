@@ -17,10 +17,7 @@ import { ModuleAccess } from '../features/auth/ModuleAccess';
 import { AdminPage } from '../features/admin/AdminPage';
 import { ProductionAreaListPage } from '../pages/production-area/ProductionAreaListPage';
 import { ProductionAreaFormPage } from '../pages/production-area/ProductionAreaFormPage';
-// import { PlotDetailPage } from '../pages/PlotDetailPage';
-// import { PlotFormPage } from '../pages/PlotFormPage';
-// import { PlotsListPage } from '../pages/PlotsListPage';
-// import { StaffPage } from '../pages/StaffPage';
+import { ProudctionAreaDetailPage } from '../pages/production-area/ProudctionAreaDetailPage';
 
 
 export function App() {
@@ -45,11 +42,10 @@ export function App() {
 
           <Route path="/farm-registration" element={<FarmRegistrationPage />} />
           <Route path="/farm" element={<FarmInfoPage />} />
-          {/* <Route path="/production-areas" element={<PlotsListPage />} />
-          <Route path="/production-areas/new" element={<PlotFormPage mode="create" />} />
-          <Route path="/production-areas/:plotId" element={<PlotDetailPage />} />
-          <Route path="/production-areas/:plotId/edit" element={<PlotFormPage mode="edit" />} />
-          <Route path="/members" element={<StaffPage />} /> */}
+          <Route path="/production-areas" element={<ProductionAreaListPage />} />
+          <Route path="/production-areas/new" element={<ProductionAreaFormPage mode="create" />} />
+          <Route path="/production-areas/:productionAreaId" element={<ProudctionAreaDetailPage />} />
+          <Route path="/production-areas/:productionAreaId/edit" element={<ProductionAreaFormPage mode="edit" />} />
           {moduleDefinitions.map((module) => (
             <Route
               key={module.key}

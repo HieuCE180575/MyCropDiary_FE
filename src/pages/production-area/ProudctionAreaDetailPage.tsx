@@ -34,8 +34,8 @@ function PlotSeasonsTable({ seasons, loading }: { seasons: PlotSeasonSummary[]; 
 }
 
 export function PlotDetailPage() {
-  const { plotId } = useParams<{ plotId: string }>();
-  const productionAreaId = plotId;
+  const { plotId, productionAreaId: paramAreaId } = useParams<{ plotId?: string; productionAreaId?: string }>();
+  const productionAreaId = plotId || paramAreaId;
 
   const [productionArea, setProductionArea] = useState<ProductionArea | null>(null);
   const [seasons, setSeasons] = useState<PlotSeasonSummary[]>([]);
@@ -209,3 +209,5 @@ export function PlotDetailPage() {
     </section>
   );
 }
+
+export { PlotDetailPage as ProudctionAreaDetailPage };

@@ -17,8 +17,9 @@ const WorkspaceContext = createContext<Workspace | null>(null);
 export function FarmWorkspaceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [selectedId, setSelectedId] = useState<number | null>(null);
+
   const load = useCallback(async (signal: AbortSignal) => {
-    if (user?.systemRole !== 'USER') return [];
+    if (user?.systemRole?.toUpperCase() !== 'USER') return [];
     const farms: FarmSummary[] = [];
     // Roles are returned only for active memberships by the farms API.
     for (let page = 0; ; page++) {
@@ -28,10 +29,33 @@ export function FarmWorkspaceProvider({ children }: { children: ReactNode }) {
     }
     return farms;
   }, [user?.userId, user?.systemRole]);
+
   const { data, loading, error, retry } = useApiData(load);
   const farms = !loading && !error ? data ?? [] : [];
-  const selectedFarm = farms.find((farm) => farm.id === selectedId) ?? null;
-  return <WorkspaceContext.Provider value={{ farms, selectedFarm, selectFarm: setSelectedId, loading, error, retry }}>{children}</WorkspaceContext.Provider>;
+
+  // When a user has farms: auto-select primary farm, or use chosen farm
+  const selectedFarm = selectedId !== null
+    ? (selectedId > 0 ? (farms.find((farm) => farm.id === selectedId) ?? null) : null)
+    : (farms.length > 0 ? farms[0] : null);
+
+  const selectFarm = (id: number | null) => {
+    setSelectedId(id ?? 0);
+  };
+
+  return (
+    <WorkspaceContext.Provider
+      value={{
+        farms,
+        selectedFarm,
+        selectFarm,
+        loading,
+        error,
+        retry,
+      }}
+    >
+      {children}
+    </WorkspaceContext.Provider>
+  );
 }
 
 export function useFarmWorkspace() {

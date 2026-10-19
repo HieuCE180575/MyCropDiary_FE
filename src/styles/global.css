@@ -3205,3 +3205,69 @@ button:disabled {
     min-height: 82px;
   }
 }
+
+/* ========================================================
+   SIDEBAR NAVIGATION ENHANCEMENTS & ROLE BADGES
+   ======================================================== */
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sidebar-nav-caption {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin: 18px 12px 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sidebar-role-indicator {
+  padding: 0 6px 10px;
+}
+
+.badge-role {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 750;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.badge-role.admin {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.badge-role.owner {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-role.staff {
+  background: #fefce8;
+  color: #a16207;
+  border: 1px solid #fef08a;
+}
+
+.badge-role.user {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.admin-shell .sidebar-nav-caption {
+  color: #64748b;
+}

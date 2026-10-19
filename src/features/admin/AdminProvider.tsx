@@ -13,7 +13,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState(createAdminDemo);
   const [notice, setNotice] = useState('');
   const execute = (command: AdminCommand) => {
-    if (user?.systemRole !== 'ADMIN') throw new Error('Bạn không có quyền thực hiện thao tác quản trị.');
+    if (user?.systemRole?.toUpperCase() !== 'ADMIN') throw new Error('Bạn không có quyền thực hiện thao tác quản trị.');
     const next = applyAdminCommand(state, command, { id: crypto.randomUUID(), actor: user.fullName || 'Quản trị viên', now: new Date().toISOString() });
     setState(next);
     setNotice('Đã cập nhật dữ liệu minh họa. Thao tác này không thay đổi dữ liệu thật.');

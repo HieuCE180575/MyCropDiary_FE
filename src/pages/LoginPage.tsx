@@ -15,7 +15,8 @@ export function LoginPage() {
 
   if (isAuthenticated) {
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
-    const destination = user?.systemRole === 'ADMIN' ? '/admin'
+    const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
+    const destination = isAdmin ? '/admin'
       : /^\/admin(?:\/|$)/i.test(from) ? '/dashboard' : from;
     return <Navigate to={destination} replace />;
   }
