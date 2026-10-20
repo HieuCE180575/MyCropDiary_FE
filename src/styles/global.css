@@ -2055,8 +2055,10 @@ p {
   margin: 18px 0;
 }
 
-/* ---------- Tables & Production Area Styles ---------- */
+/* ---------- Tables & Production Area Styles (Zone & Block) ---------- */
 
+.zone-table-wrap,
+.block-table-wrap,
 .plot-table-wrap {
   overflow-x: auto;
   border: 1px solid #e2e8f0;
@@ -2064,6 +2066,20 @@ p {
   background: #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   margin-bottom: 24px;
+}
+
+.zone-form,
+.block-form,
+.plot-form {
+  margin-bottom: 24px;
+}
+
+.zone-form-grid,
+.block-form-grid,
+.plot-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
 }
 
 .data-table {
@@ -3180,16 +3196,22 @@ button:disabled {
     width: auto;
   }
 
+  .zones-empty,
+  .blocks-empty,
   .plots-empty {
     padding: 16px;
     gap: 14px;
   }
 
+  .zone-illustration,
+  .block-illustration,
   .plot-illustration {
     width: 60px;
     height: 70px;
   }
 
+  .zones-empty h3,
+  .blocks-empty h3,
   .plots-empty h3 {
     font-size: 12px;
   }

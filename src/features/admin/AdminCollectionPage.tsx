@@ -11,7 +11,7 @@ type DialogState = { mode: 'detail' | 'edit' | 'create'; id?: string } | { mode:
 const initialFilters = { query: '', status: '', from: '', to: '', extra: '' };
 
 export function AdminCollectionPage({ collection }: { collection: Collection }) {
-  const { state, registrationsLoading, registrationsError, reloadRegistrations } = useAdmin();
+  const { state, registrationsLoading, registrationsError, reloadRegistrations, usersLoading, usersError, reloadUsers } = useAdmin();
   const config = adminConfigs[collection];
   const [filters, setFilters] = useState(initialFilters);
   const [page, setPage] = useState(1);
@@ -29,11 +29,15 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
     <AdminPageHeading title={config.title} description={config.description} />
     {registrationsLoading ? <p role="status">Đang tải hồ sơ...</p> : <div className="admin-panel"><p role="alert">{registrationsError}</p><button className="action-button" onClick={reloadRegistrations}>Thử lại</button></div>}
   </section>;
+  if (collection === 'users' && (usersLoading || usersError)) return <section className="admin-page">
+    <AdminPageHeading title={config.title} description={config.description} />
+    {usersLoading ? <p role="status">Đang tải danh sách tài khoản...</p> : <div className="admin-panel"><p role="alert">{usersError}</p><button className="action-button" onClick={reloadUsers}>Thử lại</button></div>}
+  </section>;
   return <section className="admin-page">
     <AdminPageHeading title={config.title} description={config.description}>{config.createLabel && <button className="action-button solid" onClick={() => setDialog({ mode: 'create' })}><Icon name="plus" />{config.createLabel}</button>}</AdminPageHeading>
     <div className="admin-status-cards">{Object.entries(config.statuses).map(([status, label]) => <button key={status} className={filters.status === status ? 'selected' : ''} aria-pressed={filters.status === status} onClick={() => filter('status', filters.status === status ? '' : status)}><span>{label}</span><strong>{state[collection].filter(item => item.status === status).length}</strong></button>)}</div>
     <section className="admin-panel" aria-label={`Danh sách ${config.singular}`}>
-      <div className="admin-list-heading"><h2>Danh sách {config.singular}<span>{records.length}</span></h2>{collection === 'registrations' ? <button className="action-button" onClick={reloadRegistrations}>Tải lại</button> : <span className="admin-subtle">Dữ liệu minh họa</span>}</div>
+      <div className="admin-list-heading"><h2>Danh sách {config.singular}<span>{records.length}</span></h2>{collection === 'registrations' ? <button className="action-button" onClick={reloadRegistrations}>Tải lại</button> : collection === 'users' ? <button className="action-button" onClick={reloadUsers}>Tải lại</button> : <span className="admin-subtle">Dữ liệu minh họa</span>}</div>
       <div className="admin-filters">
         <label className="admin-search"><Icon name="search" /><input aria-label={`Tìm kiếm ${config.singular}`} placeholder="Tìm theo tên, mã hoặc nội dung…" value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
         <label><span>Trạng thái</span><select value={filters.status} onChange={(event) => filter('status', event.target.value)}><option value="">Tất cả trạng thái</option>{Object.entries(config.statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
@@ -86,7 +90,7 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
     const danger = ['REJECTED', 'LOCKED', 'INACTIVE', 'ARCHIVED'].includes(dialog.status);
     return <AdminModal title={label} close={() => { if (!submitting) close(); }}><form onSubmit={(event) => { event.preventDefault(); if (collection === 'registrations') submit({ type: 'review', collection, id: record.id, status: dialog.status as 'APPROVED' | 'REJECTED', reason }); else if (collection === 'users' || collection === 'crops' || collection === 'rules' || collection === 'articles') submit({ type: 'status', collection, id: record.id, status: dialog.status }); }}><div className="admin-modal-body"><p>Bạn muốn <strong>{label.toLocaleLowerCase('vi-VN')}</strong> đối với <strong>{record.name}</strong>?</p>
       {collection === 'registrations' && !reject && <p className="admin-inline-note">Theo quy trình chính thức, duyệt hồ sơ sẽ kích hoạt trang trại và cấp quyền chủ trang trại cho người đăng ký. Trang trại và quyền chủ trang trại được tạo trên hệ thống sau khi duyệt thành công.</p>}
-      {collection === 'users' && <p className="admin-inline-note">Khóa tài khoản ngăn đăng nhập; mở khóa không thay đổi các điều kiện xác thực còn lại. Tài khoản trong bản xem trước là dữ liệu minh họa.</p>}
+      {collection === 'users' && <p className="admin-inline-note">Khóa tài khoản sẽ chặn quyền đăng nhập vào hệ thống; mở khóa sẽ cho phép tài khoản tiếp tục hoạt động bình thường.</p>}
       {(collection === 'crops' || collection === 'rules') && <p className="admin-inline-note">Dữ liệu lịch sử đã tham chiếu đến {config.singular} này được giữ nguyên.</p>}
       {reject && <AdminField field={{ key: 'reason', label: 'Lý do từ chối', type: 'textarea', required: true, maxLength: 1000 }} value={reason} onChange={setReason} />}
       {error && <p role="alert" className="admin-form-error">{error}</p>}
