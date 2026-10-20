@@ -22,7 +22,7 @@ export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }:
   }
 
   return (
-    <div className="plot-table-wrap">
+    <div className="zone-table-wrap">
       <table className="data-table">
         <thead>
           <tr>

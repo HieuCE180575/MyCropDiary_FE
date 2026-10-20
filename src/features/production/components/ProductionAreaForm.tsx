@@ -67,7 +67,7 @@ export function ProductionAreaForm({
         <span>{breadcrumbLabel}</span>
       </nav>
 
-      <form className="panel plot-form" onSubmit={handleSubmit} noValidate>
+      <form className="panel zone-form" onSubmit={handleSubmit} noValidate>
         <div className="panel-title">
           <div>
             <h2>{title}</h2>
@@ -76,7 +76,7 @@ export function ProductionAreaForm({
 
         {submitError ? <p className="form-error-banner">{submitError}</p> : null}
 
-        <div className="plot-form-grid">
+        <div className="zone-form-grid">
           <label className="form-field">
             <span>Tên khu sản xuất *</span>
             <input

@@ -19,10 +19,21 @@ test('admin uses registration APIs while other modules keep their existing behav
   let rejectWrite = true;
   let failRead = false;
   const writes = [];
+  let userFixtures = [
+    { userId: 1, fullName: 'Nguyễn Minh An', email: 'minhan@example.com', phone: '0912345678', systemRole: 'USER', accountStatus: 'ACTIVE', emailVerifiedAt: '2026-09-01T00:00:00Z', createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z' }
+  ];
   axios.defaults.adapter = async config => {
     requestCount += 1;
-    assert.ok(config.url.startsWith('/admin/farm-registrations'));
     assert.equal(config.headers.get('Authorization'), 'Bearer preview-test-session');
+    if (config.url.startsWith('/admin/users')) {
+      if (config.method === 'get') {
+        return { status: 200, data: JSON.stringify({ success: true, data: { items: userFixtures, last: true, totalPages: 1 } }), config, headers: {} };
+      }
+      const statusReq = JSON.parse(config.data);
+      userFixtures = userFixtures.map(u => ({ ...u, accountStatus: statusReq.status }));
+      return { status: 200, data: JSON.stringify({ success: true, data: userFixtures[0] }), config, headers: {} };
+    }
+    assert.ok(config.url.startsWith('/admin/farm-registrations'));
     if (failRead) return { config, status: 503, headers: {}, data: JSON.stringify({ success: false, message: 'Không tải được hồ sơ từ backend.' }) };
     let data;
     if (config.method === 'get') data = { items: fixtures, last: true, totalPages: 1 };
@@ -156,7 +167,7 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(document.body.textContent.includes('Tháng bắt đầu không được sau tháng kết thúc'));
     await set('.admin-stat-filters label:last-of-type input', '2027-02');
     assert.ok(document.body.textContent.includes('Chưa có số liệu trong khoảng thời gian này'));
-    assert.equal(requestCount, 3, 'Only registration list and review requests should reach the backend.');
+    assert.equal(requestCount, 5, 'Only registration and user requests should reach the backend.');
     await navigate('/admin/registrations');
     await button('Tải lại', '.admin-list-heading');
     await checkRegistrationDetails();
