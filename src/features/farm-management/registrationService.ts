@@ -1,81 +1,85 @@
-import type { FarmRegistration, FarmRegistrationFormValues } from './types';
+﻿import { apiRequest } from '../../shared/api/httpClient';
+import type { ApiResponse } from '../../shared/types/api';
+import type { PageResponse } from './api';
+import type { FarmRegistration, FarmRegistrationFormValues, FarmRegistrationStatus } from './types';
 
-// Khi backend UC-09 sẵn sàng, thay thế các hàm dưới đây bằng lời gọi qua
-// `apiRequest<ApiResponse<...>>` tới các endpoint tương ứng, ví dụ:
-//   GET    /farm-registrations/me
-//   POST   /farm-registrations            (multipart/form-data kèm các tệp minh chứng)
-//   PATCH  /farm-registrations/:id/cancel
-// Backend thật sẽ tải các tệp lên storage (S3/GCS...) trước, sau đó lưu mảng
-// {name, url, sizeKB, type} vào cột EvidenceFiles (jsonb). Ở đây ta chỉ lưu metadata
-// (không có url thật) vì chưa có nơi lưu trữ tệp thật sự.
-// Dữ liệu được lưu tạm trong bộ nhớ (mất khi tải lại trang) để mô phỏng hành vi API.
-
-let registrations: FarmRegistration[] = [];
-let nextId = 1;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export interface RegistrationResponse {
+  registrationId: number;
+  farmName: string;
+  addressLine: string;
+  description: string | null;
+  status: string;
+  submittedAt: string;
+  handledAt: string | null;
+  rejectionReason: string | null;
+  applicantFullName?: string | null;
+  applicantEmail?: string | null;
+  handlerFullName?: string | null;
+  province?: string | null;
+  district?: string | null;
+  ward?: string | null;
+  documentUrl?: string | null;
 }
 
-/** Lấy đăng ký gần nhất của người dùng (nếu có). */
-export async function fetchMyLatestRegistration(userId: string): Promise<FarmRegistration | null> {
-  await delay(250);
-
-  const mine = registrations.filter((r) => r.submittedByUserId === userId);
-  if (mine.length === 0) return null;
-
-  return [...mine].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())[0];
+async function request<T>(path: string, options: Parameters<typeof apiRequest>[1] = {}): Promise<T> {
+  const result = await apiRequest<ApiResponse<T>>(path, options);
+  if (!result?.success || result.data == null) throw new Error(result?.message || 'Không tải được hồ sơ đăng ký.');
+  return result.data;
 }
 
-export async function submitFarmRegistration(
-  userId: string,
-  values: FarmRegistrationFormValues,
-): Promise<FarmRegistration> {
-  await delay(400);
-
-  const hasPending = registrations.some((r) => r.submittedByUserId === userId && r.status === 'pending');
-  if (hasPending) {
-    throw new Error('Bạn đã có một đăng ký đang chờ duyệt. Vui lòng hủy đăng ký hiện tại trước khi gửi mới.');
-  }
-
-  const record: FarmRegistration = {
-    farmRegistrationId: `freg-${nextId++}`,
-    submittedByUserId: userId,
-    proposedFarmName: values.proposedFarmName.trim(),
-    address: values.address.trim(),
-    contactPhone: values.contactPhone.trim(),
-    description: values.description.trim() || undefined,
-    evidenceFiles: values.evidenceFiles.map((file) => ({
-      name: file.name,
-      sizeKB: Math.max(1, Math.round(file.size / 1024)),
-      type: file.type || 'application/octet-stream',
-    })),
-    status: 'pending',
-    submittedAt: new Date().toISOString(),
+function toRegistration(data: RegistrationResponse): FarmRegistration {
+  return {
+    farmRegistrationId: String(data.registrationId),
+    proposedFarmName: data.farmName,
+    address: data.addressLine,
+    province: data.province ?? undefined,
+    district: data.district ?? undefined,
+    ward: data.ward ?? undefined,
+    documentUrl: data.documentUrl ?? undefined,
+    description: data.description ?? undefined,
+    status: data.status.toLowerCase() as FarmRegistrationStatus,
+    submittedAt: data.submittedAt,
+    reviewedAt: data.handledAt ?? undefined,
+    reviewComment: data.status.toUpperCase() === 'REJECTED' ? data.rejectionReason ?? undefined : undefined,
   };
-
-  registrations = [...registrations, record];
-  return record;
 }
 
-/** Người nộp đơn tự hủy đăng ký của mình — chỉ được phép khi đang ở trạng thái "chờ duyệt". */
-export async function cancelFarmRegistration(registrationId: string, userId: string): Promise<FarmRegistration> {
-  await delay(300);
+export async function fetchMyLatestRegistration(signal?: AbortSignal): Promise<FarmRegistration | null> {
+  const page = await request<PageResponse<RegistrationResponse>>('/farm-registrations?page=0&size=1&sort=createdAt,desc&sort=id,desc', { signal });
+  if (!Array.isArray(page.items)) throw new Error('Danh sách hồ sơ không hợp lệ.');
+  if (!page.items.length) return null;
+  return toRegistration(await request<RegistrationResponse>(`/farm-registrations/${page.items[0].registrationId}`, { signal }));
+}
 
-  const record = registrations.find((r) => r.farmRegistrationId === registrationId && r.submittedByUserId === userId);
-  if (!record) {
-    throw new Error('Không tìm thấy đăng ký cần hủy.');
-  }
-  if (record.status !== 'pending') {
-    throw new Error('Chỉ có thể hủy đăng ký khi đang ở trạng thái chờ duyệt.');
-  }
+export async function submitFarmRegistration(values: FarmRegistrationFormValues): Promise<FarmRegistration> {
+  return toRegistration(await request<RegistrationResponse>('/farm-registrations', {
+    method: 'POST',
+    data: {
+      farmName: values.proposedFarmName.trim(), addressLine: values.address.trim(),
+      province: values.province?.trim() || null, district: values.district?.trim() || null,
+      ward: values.ward?.trim() || null, description: values.description.trim() || null,
+      documentUrl: values.documentUrl?.trim() || null,
+    },
+  }));
+}
 
-  const updated: FarmRegistration = {
-    ...record,
-    status: 'cancelled',
-    reviewedAt: new Date().toISOString(),
-    reviewComment: 'Người nộp đơn đã tự hủy đăng ký.',
-  };
-  registrations = registrations.map((r) => (r.farmRegistrationId === registrationId ? updated : r));
-  return updated;
+export async function cancelFarmRegistration(registrationId: string): Promise<FarmRegistration> {
+  return toRegistration(await request<RegistrationResponse>(`/farm-registrations/${registrationId}/cancel`, { method: 'PATCH' }));
+}
+
+export async function getAdminRegistrations(signal?: AbortSignal): Promise<RegistrationResponse[]> {
+  const records: RegistrationResponse[] = [];
+  for (let page = 0; ; page++) {
+    const data = await request<PageResponse<RegistrationResponse>>(`/admin/farm-registrations?page=${page}&size=100&sort=createdAt,desc&sort=id,desc`, { signal });
+    if (!Array.isArray(data.items)) throw new Error('Danh sách hồ sơ không hợp lệ.');
+    records.push(...data.items);
+    if (data.last || page + 1 >= data.totalPages) return records;
+  }
+}
+
+export function handleFarmRegistration(id: string, action: 'APPROVED' | 'REJECTED', reason: string) {
+  if (action === 'REJECTED' && !reason.trim()) throw new Error('Vui lòng nhập lý do từ chối.');
+  return request<RegistrationResponse>(`/admin/farm-registrations/${id}/handle`, {
+    method: 'PUT', data: { action, rejectionReason: action === 'REJECTED' ? reason.trim() : null },
+  });
 }

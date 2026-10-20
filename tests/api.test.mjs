@@ -44,7 +44,10 @@ async function client(transport) {
   await auth.evaluate();
   const farms = await load(resolve('src/features/farm-management/api.ts'));
   await farms.evaluate();
+  const registrations = await load(resolve('src/features/farm-management/registrationService.ts'));
+  await registrations.evaluate();
   return {
+    registrations: registrations.namespace,
     auth: auth.namespace,
     http: modules.get(resolve('src/shared/api/httpClient.ts')).namespace,
     storage: modules.get(resolve('src/features/auth/authStorage.ts')).namespace,
@@ -225,4 +228,59 @@ test('empty farms are valid and aborted requests remain Axios cancellation error
   const cancelled = await client(async () => { called = true; return ok(null); });
   await assert.rejects(cancelled.farms.getFarms(controller.signal), axios.isCancel);
   assert.equal(called, false);
+});
+
+test('farm registration uses authenticated backend DTOs and reloads the saved detail', async () => {
+  const calls = [];
+  const record = { registrationId: 17, farmName: 'Vườn Xanh', addressLine: 'Cần Thơ', description: 'Rau sạch', status: 'PENDING', submittedAt: '2026-10-20T10:00:00', handledAt: null, rejectionReason: 'Rau sạch' };
+  const app = await client(async config => {
+    calls.push(config);
+    if (config.url.includes('?')) return ok({ items: [{ registrationId: 17 }], last: true, totalPages: 1 });
+    return ok(config.url.endsWith('/cancel') ? { ...record, status: 'CANCELLED' } : record);
+  });
+  app.storage.saveAccessToken('user.jwt');
+  const created = await app.registrations.submitFarmRegistration({ proposedFarmName: ' Vườn Xanh ', address: ' Cần Thơ ', description: ' Rau sạch ' });
+  assert.deepEqual(JSON.parse(calls[0].data), { farmName: 'Vườn Xanh', addressLine: 'Cần Thơ', description: 'Rau sạch', province: null, district: null, ward: null, documentUrl: null });
+  assert.equal(created.farmRegistrationId, '17');
+  assert.equal(created.status, 'pending');
+  assert.equal(created.reviewComment, undefined, 'Backend aliases description as rejectionReason for pending applications');
+  assert.equal((await app.registrations.fetchMyLatestRegistration()).description, 'Rau sạch');
+  assert.ok(calls[1].url.includes('sort=createdAt,desc'));
+  assert.ok(calls[2].url.endsWith('/farm-registrations/17'));
+  assert.equal((await app.registrations.cancelFarmRegistration('17')).status, 'cancelled');
+  assert.equal(calls[3].method, 'patch');
+  for (const call of calls) assert.equal(call.headers.get('Authorization'), 'Bearer user.jwt');
+});
+
+test('admin registration API reads every page and submits backend review actions', async () => {
+  const calls = [];
+  const record = { registrationId: 18, farmName: 'Vườn', status: 'APPROVED' };
+  const app = await client(async config => {
+    calls.push(config);
+    if (config.method === 'put') return ok(record);
+    const last = config.url.includes('page=1');
+    return ok({ items: [record], last, totalPages: 2 });
+  });
+  app.storage.saveAccessToken('admin.jwt');
+  assert.equal((await app.registrations.getAdminRegistrations()).length, 2);
+  assert.ok(calls[0].url.includes('/admin/farm-registrations?page=0'));
+  assert.ok(calls[1].url.includes('page=1'));
+  assert.throws(() => app.registrations.handleFarmRegistration('18', 'REJECTED', '  '), /lý do từ chối/);
+  assert.equal(calls.length, 2);
+  await app.registrations.handleFarmRegistration('18', 'APPROVED', '');
+  assert.equal(calls[2].method, 'put');
+  assert.ok(calls[2].url.endsWith('/18/handle'));
+  assert.deepEqual(JSON.parse(calls[2].data), { action: 'APPROVED', rejectionReason: null });
+  await app.registrations.handleFarmRegistration('18', 'REJECTED', ' Thiếu thông tin ');
+  assert.deepEqual(JSON.parse(calls[3].data), { action: 'REJECTED', rejectionReason: 'Thiếu thông tin' });
+});
+
+test('registration APIs distinguish empty results from failures and propagate conflicts', async () => {
+  const empty = await client(async () => ok({ items: [], last: true, totalPages: 0 }));
+  assert.equal(await empty.registrations.fetchMyLatestRegistration(), null);
+  const failed = await client(async () => reply({ success: false, message: 'Hồ sơ đã được xử lý.' }, 409));
+  await assert.rejects(failed.registrations.fetchMyLatestRegistration(), /Hồ sơ đã được xử lý/);
+  await assert.rejects(failed.registrations.handleFarmRegistration('18', 'APPROVED', ''), /Hồ sơ đã được xử lý/);
+  const unsuccessful = await client(async () => reply({ success: false, message: 'Không lưu được hồ sơ.' }));
+  await assert.rejects(unsuccessful.registrations.submitFarmRegistration({ proposedFarmName: 'Vườn', address: 'Cần Thơ', description: '' }), /Không lưu được hồ sơ/);
 });

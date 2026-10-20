@@ -14,7 +14,7 @@ export const adminConfigs: Record<Collection, CollectionConfig> = {
     title: 'Duyệt đăng ký trang trại', description: 'Kiểm tra hồ sơ và xét duyệt yêu cầu mở trang trại của người dùng.', icon: 'plots', singular: 'hồ sơ đăng ký',
     statuses: { PENDING: 'Chờ duyệt', APPROVED: 'Đã duyệt', REJECTED: 'Đã từ chối', CANCELLED: 'Đã hủy' },
     columns: [{ key: 'name', label: 'Trang trại' }, { key: 'applicant', label: 'Người đăng ký' }, { key: 'province', label: 'Tỉnh / thành phố' }, { key: 'createdAt', label: 'Ngày gửi' }], fields: [],
-    details: [{ key: 'applicant', label: 'Người đăng ký' }, { key: 'email', label: 'Email liên hệ' }, { key: 'address', label: 'Địa chỉ trang trại' }, { key: 'province', label: 'Tỉnh / thành phố' }, { key: 'description', label: 'Mô tả trang trại' }, { key: 'document', label: 'Tài liệu kèm theo' }, { key: 'reason', label: 'Lý do từ chối' }, { key: 'reviewer', label: 'Người xử lý' }, { key: 'reviewedAt', label: 'Ngày xử lý' }],
+    details: [{ key: 'applicant', label: 'Người đăng ký' }, { key: 'email', label: 'Email liên hệ' }, { key: 'address', label: 'Địa chỉ trang trại' }, { key: 'province', label: 'Tỉnh / thành phố' }, { key: 'district', label: 'Quận / huyện' }, { key: 'ward', label: 'Phường / xã' }, { key: 'description', label: 'Mô tả trang trại' }, { key: 'document', label: 'Tài liệu kèm theo' }, { key: 'reason', label: 'Lý do từ chối' }, { key: 'reviewer', label: 'Người xử lý' }, { key: 'reviewedAt', label: 'Ngày xử lý' }],
   },
   users: {
     title: 'Quản lý tài khoản', description: 'Tra cứu thông tin tài khoản và kiểm soát trạng thái truy cập hệ thống.', icon: 'user', singular: 'tài khoản',
