@@ -7,7 +7,7 @@ import { FarmInfoPage } from './FarmInfoPage';
 import { FarmRegistrationPage } from './FarmRegistrationPage';
 import { KnowledgePage } from './KnowledgePage';
 import { StaffManagementPage } from '../features/staff/StaffManagementPage';
-import { ProductionAreaListPage } from './production-area/ProductionAreaListPage';
+import { ZoneListPage } from './zone';
 import { FarmingActivitiesPage } from '../features/operations/FarmingActivitiesPage';
 import { MaterialUsagePage } from '../features/operations/MaterialUsagePage';
 import { HarvestPage } from '../features/operations/HarvestPage';
@@ -25,7 +25,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'farm-registration') return <FarmRegistrationPage />;
   if (module.key === 'knowledge') return <KnowledgePage />;
   if (module.key === 'workers' || module.key === 'members') return <StaffManagementPage />;
-  if (module.key === 'production') return <ProductionAreaListPage />;
+  if (module.key === 'production') return <ZoneListPage />;
   if (module.key === 'activities') return <FarmingActivitiesPage />;
   if (module.key === 'materials') return <MaterialUsagePage />;
   if (module.key === 'harvests') return <HarvestPage />;

@@ -15,9 +15,7 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from '../features/auth';
 import { ModuleAccess } from '../features/auth/ModuleAccess';
 import { AdminPage } from '../features/admin/AdminPage';
-import { ProductionAreaListPage } from '../pages/production-area/ProductionAreaListPage';
-import { ProductionAreaFormPage } from '../pages/production-area/ProductionAreaFormPage';
-import { ProudctionAreaDetailPage } from '../pages/production-area/ProudctionAreaDetailPage';
+import { ZoneListPage, ZoneFormPage, ZoneDetailPage } from '../pages/zone';
 
 
 export function App() {
@@ -42,10 +40,15 @@ export function App() {
 
           <Route path="/farm-registration" element={<FarmRegistrationPage />} />
           <Route path="/farm" element={<FarmInfoPage />} />
-          <Route path="/production-areas" element={<ProductionAreaListPage />} />
-          <Route path="/production-areas/new" element={<ProductionAreaFormPage mode="create" />} />
-          <Route path="/production-areas/:productionAreaId" element={<ProudctionAreaDetailPage />} />
-          <Route path="/production-areas/:productionAreaId/edit" element={<ProductionAreaFormPage mode="edit" />} />
+          <Route path="/zones" element={<ZoneListPage />} />
+          <Route path="/zones/new" element={<ZoneFormPage mode="create" />} />
+          <Route path="/zones/:zoneId" element={<ZoneDetailPage />} />
+          <Route path="/zones/:zoneId/edit" element={<ZoneFormPage mode="edit" />} />
+
+          <Route path="/production-areas" element={<ZoneListPage />} />
+          <Route path="/production-areas/new" element={<ZoneFormPage mode="create" />} />
+          <Route path="/production-areas/:productionAreaId" element={<ZoneDetailPage />} />
+          <Route path="/production-areas/:productionAreaId/edit" element={<ZoneFormPage mode="edit" />} />
           {moduleDefinitions.map((module) => (
             <Route
               key={module.key}
