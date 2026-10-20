@@ -58,7 +58,10 @@ function validateField(field: keyof FormValues, value: string, values: FormValue
     case 'password': {
       if (!value) return 'Vui lòng nhập mật khẩu.';
       if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự.';
-      if (new TextEncoder().encode(value).length > 72) return 'Mật khẩu quá dài. Vui lòng dùng tối đa 72 byte ký tự.';
+      if (value.length > 100) return 'Mật khẩu không được vượt quá 100 ký tự.';
+      if (!/[A-Z]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 chữ in hoa.';
+      if (!/[a-z]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 chữ in thường.';
+      if (!/[^a-zA-Z0-9]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.';
       return '';
     }
     case 'confirmation': {
@@ -204,6 +207,11 @@ export function RegisterPage() {
       setNotice('Đã tạo tài khoản thành công! Vui lòng kiểm tra email và thư rác để lấy mã OTP.');
     });
   }
+
+  const hasMinLength = values.password.length >= 8 && values.password.length <= 100;
+  const hasUpperCase = /[A-Z]/.test(values.password);
+  const hasLowerCase = /[a-z]/.test(values.password);
+  const hasSpecialChar = /[^a-zA-Z0-9]/.test(values.password);
 
   return (
     <main className="auth-page register-page-root">
@@ -407,8 +415,8 @@ export function RegisterPage() {
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       minLength={8}
-                      maxLength={72}
-                      placeholder="Ít nhất 8 ký tự"
+                      maxLength={100}
+                      placeholder="Từ 8 đến 100 ký tự"
                       required
                       value={values.password}
                       onChange={(e) => handleChange('password', e.target.value)}
@@ -432,11 +440,75 @@ export function RegisterPage() {
                       <Icon name="warning" className="field-error-icon" />
                       <span>{errors.password}</span>
                     </small>
-                  ) : (
-                    <small id="password-hint" className="field-hint">
-                      Mật khẩu tối thiểu 8 ký tự bảo mật.
-                    </small>
-                  )}
+                  ) : null}
+
+                  <div
+                    id="password-hint"
+                    className="password-rules-box"
+                    style={{
+                      marginTop: '8px',
+                      padding: '10px 12px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <span style={{ fontWeight: 650, color: '#334155', marginBottom: '2px' }}>
+                      Yêu cầu mật khẩu an toàn:
+                    </span>
+                    <span
+                      style={{
+                        color: hasMinLength ? '#16a34a' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: hasMinLength ? 600 : 400,
+                      }}
+                    >
+                      <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />
+                      Từ 8 đến 100 ký tự
+                    </span>
+                    <span
+                      style={{
+                        color: hasUpperCase ? '#16a34a' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: hasUpperCase ? 600 : 400,
+                      }}
+                    >
+                      <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />
+                      Có ít nhất 1 chữ in hoa (A-Z)
+                    </span>
+                    <span
+                      style={{
+                        color: hasLowerCase ? '#16a34a' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: hasLowerCase ? 600 : 400,
+                      }}
+                    >
+                      <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />
+                      Có ít nhất 1 chữ in thường (a-z)
+                    </span>
+                    <span
+                      style={{
+                        color: hasSpecialChar ? '#16a34a' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontWeight: hasSpecialChar ? 600 : 400,
+                      }}
+                    >
+                      <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />
+                      Có ít nhất 1 ký tự đặc biệt (!@#$%^&*...)
+                    </span>
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -453,7 +525,7 @@ export function RegisterPage() {
                       type={showConfirmation ? 'text' : 'password'}
                       autoComplete="new-password"
                       minLength={8}
-                      maxLength={72}
+                      maxLength={100}
                       placeholder="Nhập lại chính xác mật khẩu"
                       required
                       value={values.confirmation}
