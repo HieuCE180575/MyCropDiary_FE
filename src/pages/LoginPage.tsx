@@ -4,6 +4,29 @@ import { useAuth } from '../features/auth';
 import { authenticate } from '../features/auth/authApi';
 import { Icon } from '../shared/components/Icon';
 
+const loginBenefits = [
+  {
+    icon: 'leaf',
+    title: 'Nhật ký canh tác số VietGAP',
+    desc: 'Ghi chép đợt gieo trồng, bón phân, tưới tiêu và cách ly minh bạch, chính xác từng ngày.',
+  },
+  {
+    icon: 'plots',
+    title: 'Quản trị Phân khu & Lô thửa',
+    desc: 'Cấu trúc Zone & Block đồng bộ, giám sát thổ nhưỡng và điều kiện môi trường thực tế.',
+  },
+  {
+    icon: 'shield',
+    title: 'Bảo mật & Phân quyền',
+    desc: 'Kiểm soát truy cập chặt chẽ cho Quản trị viên, Chủ nông trại và Kỹ thuật viên.',
+  },
+  {
+    icon: 'bot',
+    title: 'Trợ lý AI & Báo cáo thông minh',
+    desc: 'Tư vấn phòng trừ sâu bệnh, cảnh báo rủi ro cách ly và tự động tổng hợp hồ sơ thẩm định.',
+  },
+];
+
 export function LoginPage() {
   const { isAuthenticated, user, setSession } = useAuth();
   const location = useLocation();
@@ -44,7 +67,55 @@ export function LoginPage() {
   };
 
   return (
-    <main className="login-page-root">
+    <main className="auth-page login-page-root">
+      {/* Cột trái: Showcase banner thương hiệu chuẩn phong cách Register */}
+      <section className="auth-showcase" aria-labelledby="login-showcase-title">
+        <div className="showcase-inner">
+          <div className="showcase-badge">
+            <Icon name="shield" />
+            <span>Nông nghiệp Thông minh &amp; Bền vững</span>
+          </div>
+
+          <div className="showcase-content">
+            <h1 id="login-showcase-title">
+              Chào mừng trở lại<br />
+              <span className="gradient-text">Hệ thống MyCropDiary</span><br />
+              Nhật ký số VietGAP.
+            </h1>
+            <p className="showcase-desc">
+              Đăng nhập để tiếp tục quản lý mùa vụ, cập nhật nhật ký canh tác theo Zone &amp; Block và đồng bộ hồ sơ truy xuất nguồn gốc.
+            </p>
+          </div>
+
+          <div className="feature-grid">
+            {loginBenefits.map((item) => (
+              <article className="feature-card" key={item.title}>
+                <div className="feature-icon-wrapper">
+                  <Icon name={item.icon} className="feature-icon" />
+                </div>
+                <div className="feature-body">
+                  <strong>{item.title}</strong>
+                  <p>{item.desc}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div className="showcase-highlight-card">
+            <div className="highlight-stat">
+              <span className="stat-number">10,000+</span>
+              <span className="stat-label">Bản ghi nhật ký đã tạo</span>
+            </div>
+            <div className="highlight-divider" />
+            <div className="highlight-stat">
+              <span className="stat-number">100%</span>
+              <span className="stat-label">Chuẩn hóa VietGAP</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Cột phải: Form Đăng nhập */}
       <section className="auth-panel" aria-label="Đăng nhập tài khoản">
         <div className="auth-card">
           <div className="auth-card-header">

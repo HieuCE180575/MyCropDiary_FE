@@ -1,12 +1,25 @@
 import { Icon } from '../../shared/components/Icon';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { getAdminRegistrations, handleFarmRegistration, type RegistrationResponse } from '../farm-management/registrationService';
+import { getAdminUsers, updateAdminUserStatus, type AdminUserResponse } from './adminUserService';
 import { useAuth } from '../auth';
 import { createAdminDemo } from './adminDemo';
 import { applyAdminCommand } from './adminModel';
 import type { AdminCommand, AdminState, AdminRecord } from './adminTypes';
 
-interface AdminContextValue { state: AdminState; execute: (command: AdminCommand) => Promise<void>; notice: string; noticeId: number; dismissNotice: () => void; registrationsLoading: boolean; registrationsError: string; reloadRegistrations: () => void }
+interface AdminContextValue {
+  state: AdminState;
+  execute: (command: AdminCommand) => Promise<void>;
+  notice: string;
+  noticeId: number;
+  dismissNotice: () => void;
+  registrationsLoading: boolean;
+  registrationsError: string;
+  reloadRegistrations: () => void;
+  usersLoading: boolean;
+  usersError: string;
+  reloadUsers: () => void;
+}
 const AdminContext = createContext<AdminContextValue | null>(null);
 
 function toRecord(data: RegistrationResponse): AdminRecord {
@@ -18,9 +31,22 @@ function toRecord(data: RegistrationResponse): AdminRecord {
     reason: data.status.toUpperCase() === 'REJECTED' ? data.rejectionReason ?? '' : '' };
 }
 
+function userToRecord(data: AdminUserResponse): AdminRecord {
+  return {
+    id: String(data.userId),
+    name: data.fullName,
+    email: data.email,
+    phone: data.phone ?? '',
+    role: data.systemRole.toUpperCase(),
+    status: data.accountStatus.toUpperCase(),
+    createdAt: data.createdAt,
+    verified: data.emailVerifiedAt ? 'Đã xác thực' : 'Chưa xác thực',
+  };
+}
+
 export function AdminProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const [state, setState] = useState<AdminState>(() => ({ ...createAdminDemo(), registrations: [] }));
+  const [state, setState] = useState<AdminState>(() => ({ ...createAdminDemo(), registrations: [], users: [] }));
   const [notice, setNotice] = useState('');
   const [noticeId, setNoticeId] = useState(0);
   const showNotice = (message: string) => {
@@ -32,10 +58,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => setNotice(''), 5000);
     return () => window.clearTimeout(timer);
   }, [notice, noticeId]);
+
   const [registrationsLoading, setRegistrationsLoading] = useState(true);
   const [registrationsError, setRegistrationsError] = useState('');
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [usersError, setUsersError] = useState('');
   const [revision, setRevision] = useState(0);
+
   const reloadRegistrations = useCallback(() => setRevision(value => value + 1), []);
+  const reloadUsers = useCallback(() => setRevision(value => value + 1), []);
+
   useEffect(() => {
     const controller = new AbortController();
     setRegistrationsLoading(true);
@@ -48,6 +80,20 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }).finally(() => { if (!controller.signal.aborted) setRegistrationsLoading(false); });
     return () => controller.abort();
   }, [user?.userId, revision]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setUsersLoading(true);
+    setUsersError('');
+    setState(previous => ({ ...previous, users: [] }));
+    getAdminUsers(controller.signal).then(records => {
+      if (!controller.signal.aborted) setState(previous => ({ ...previous, users: records.map(userToRecord) }));
+    }).catch(error => {
+      if (!controller.signal.aborted) setUsersError(error instanceof Error ? error.message : 'Không tải được danh sách tài khoản.');
+    }).finally(() => { if (!controller.signal.aborted) setUsersLoading(false); });
+    return () => controller.abort();
+  }, [user?.userId, revision]);
+
   const execute = async (command: AdminCommand) => {
     if (user?.systemRole?.toUpperCase() !== 'ADMIN') throw new Error('Bạn không có quyền thực hiện thao tác quản trị.');
     if (command.type === 'review') {
@@ -56,11 +102,38 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       showNotice(command.status === 'APPROVED' ? 'Đã duyệt hồ sơ và tạo trang trại.' : 'Đã từ chối hồ sơ.');
       return;
     }
+    if (command.type === 'status' && command.collection === 'users') {
+      const updated = userToRecord(await updateAdminUserStatus(command.id, command.status));
+      setState(previous => ({
+        ...previous,
+        users: previous.users.map(record => record.id === updated.id ? updated : record),
+      }));
+      showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt tài khoản thành công.' : 'Đã khóa tài khoản thành công.');
+      return;
+    }
     const next = applyAdminCommand(state, command, { id: crypto.randomUUID(), actor: user.fullName || 'Quản trị viên', now: new Date().toISOString() });
     setState(next);
     showNotice('Đã cập nhật dữ liệu minh họa. Thao tác này không thay đổi dữ liệu thật.');
   };
-  return <AdminContext.Provider value={{ state, execute, notice, noticeId, dismissNotice: () => setNotice(''), registrationsLoading, registrationsError, reloadRegistrations }}>{children}</AdminContext.Provider>;
+  return (
+    <AdminContext.Provider
+      value={{
+        state,
+        execute,
+        notice,
+        noticeId,
+        dismissNotice: () => setNotice(''),
+        registrationsLoading,
+        registrationsError,
+        reloadRegistrations,
+        usersLoading,
+        usersError,
+        reloadUsers,
+      }}
+    >
+      {children}
+    </AdminContext.Provider>
+  );
 }
 export function useAdmin() {
   const value = useContext(AdminContext);
