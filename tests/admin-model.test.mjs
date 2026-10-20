@@ -1,3 +1,4 @@
+import { registrationFixtures } from './fixtures/admin-registrations.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -18,7 +19,7 @@ const demo = await load(resolve('src/features/admin/adminDemo.ts'));
 await model.evaluate();
 await demo.evaluate();
 const { applyAdminCommand, filterRecords } = model.namespace;
-const { createAdminDemo } = demo.namespace;
+const createAdminDemo = () => ({ ...demo.namespace.createAdminDemo(), registrations: structuredClone(registrationFixtures) });
 const meta = { id: 'new-record', actor: 'Quản trị viên kiểm thử', now: '2026-09-30T10:00:00.000Z' };
 
 test('registration review requires a rejection reason, accepts only pending applications and records an audit entry', () => {

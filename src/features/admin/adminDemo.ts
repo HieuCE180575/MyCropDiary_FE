@@ -4,14 +4,7 @@ import type { AdminRecord, AdminState } from './adminTypes';
 const record = (id: string, name: string, status: string, extra: Record<string, string> = {}): AdminRecord => ({ id, name, status, createdAt: '2026-09-20', updatedAt: '2026-09-28', ...extra });
 export function createAdminDemo(): AdminState {
   return {
-    registrations: [
-      record('DK-008', 'Vườn rau An Nhiên', 'PENDING', { applicant: 'Nguyễn Minh An', email: 'minhan@example.com', province: 'Cần Thơ', address: 'Khu vực Bình An, Cần Thơ', description: 'Mô hình trồng rau ăn lá theo hướng VietGAP.', document: 'Bản mô tả khu sản xuất (minh họa)', createdAt: '2026-09-29' }),
-      record('DK-007', 'Trang trại Bình Minh', 'PENDING', { applicant: 'Trần Ngọc Bình', email: 'ngocbinh@example.com', province: 'Vĩnh Long', address: 'Khu vực Bình Minh, Vĩnh Long', description: 'Sản xuất dưa leo và rau ăn quả.', document: 'Chưa đính kèm', createdAt: '2026-09-28' }),
-      record('DK-006', 'Vườn Xanh Miền Tây', 'PENDING', { applicant: 'Lê Hoài Phương', email: 'hoaiphuong@example.com', province: 'Đồng Tháp', address: 'Khu vực Cao Lãnh, Đồng Tháp', description: 'Trang trại rau gia vị và rau ăn lá.', document: 'Sơ đồ khu đất (minh họa)', createdAt: '2026-09-26' }),
-      record('DK-005', 'Nông trại Hương Đất', 'APPROVED', { applicant: 'Phạm Thanh Hà', email: 'thanhha@example.com', province: 'Cần Thơ', address: 'Khu vực Phong Điền, Cần Thơ', description: 'Mô hình canh tác rau ngắn ngày.', reviewer: 'Quản trị viên mẫu', reviewedAt: '2026-09-23', createdAt: '2026-09-21' }),
-      record('DK-004', 'Vườn rau Thuận Phát', 'REJECTED', { applicant: 'Võ Đức Thành', email: 'ducthanh@example.com', province: 'An Giang', address: 'Khu vực Long Xuyên, An Giang', description: 'Vườn rau gia đình.', reason: 'Vui lòng bổ sung địa chỉ và mô tả phạm vi khu sản xuất.', reviewer: 'Quản trị viên mẫu', reviewedAt: '2026-09-19', createdAt: '2026-09-18' }),
-      record('DK-003', 'Vườn nhà Mai', 'CANCELLED', { applicant: 'Đặng Ngọc Mai', email: 'ngocmai@example.com', province: 'Vĩnh Long', address: 'Khu vực Trà Ôn, Vĩnh Long', description: 'Người đăng ký đã hủy yêu cầu.', createdAt: '2026-09-15' }),
-    ],
+    registrations: [],
     users: [
       record('ND-001', 'Nguyễn Minh An', 'ACTIVE', { email: 'minhan@example.com', role: 'USER', phone: 'Chưa cập nhật', verified: 'Đã xác thực', createdAt: '2026-04-08' }),
       record('ND-002', 'Trần Ngọc Bình', 'ACTIVE', { email: 'ngocbinh@example.com', role: 'USER', phone: 'Chưa cập nhật', verified: 'Đã xác thực', createdAt: '2026-05-12' }),

@@ -352,7 +352,24 @@
   font-weight: 500;
   line-height: 1.6;
   border-left: 5px solid #10b981;
+  overflow: hidden;
+  isolation: isolate;
   animation: slideToast 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-toast::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: #047857;
+  transform-origin: left;
+  animation: fillAdminToast 5s linear forwards;
+}
+
+@keyframes fillAdminToast {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
 @keyframes slideToast {
@@ -1388,6 +1405,23 @@ a.admin-summary-card:hover {
   width: min(880px, calc(100% - 32px));
 }
 
+.admin-modal[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-modal > form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.admin-modal-heading,
+.admin-modal-footer {
+  flex-shrink: 0;
+}
+
 .admin-modal::backdrop {
   background: rgba(15, 23, 42, 0.65);
   backdrop-filter: blur(8px);
@@ -1434,6 +1468,9 @@ a.admin-summary-card:hover {
 }
 
 .admin-modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 28px 30px;
   font-size: 14.5px;
   line-height: 1.7;
