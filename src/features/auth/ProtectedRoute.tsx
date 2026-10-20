@@ -9,7 +9,7 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (user?.systemRole !== 'ADMIN' && /^\/admin(?:\/|$)/i.test(location.pathname)) {
+  if (user?.systemRole?.toUpperCase() !== 'ADMIN' && /^\/admin(?:\/|$)/i.test(location.pathname)) {
     return <Navigate to="/dashboard" replace />;
   }
 

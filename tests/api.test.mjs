@@ -2,30 +2,52 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
-import { createContext, SourceTextModule } from 'node:vm';
+import { createContext, SourceTextModule, SyntheticModule } from 'node:vm';
 import { stripTypeScriptTypes } from 'node:module';
+import axios, { AxiosHeaders } from 'axios';
 
 // Execute the actual TypeScript modules with browser globals and a controlled transport.
-async function client(fetch) {
+async function client(transport) {
   const stored = new Map();
   const events = new EventTarget();
-  const context = createContext({ fetch, Headers, FormData, TextEncoder, btoa, atob, Event,
+  const context = createContext({ FormData, TextEncoder, btoa, atob, Event,
     window: events, localStorage: { removeItem: (key) => stored.delete(key), setItem: (key, value) => stored.set(key, value) } });
   const modules = new Map();
+  // Keep Axios serialization, headers and cancellation; replace only network I/O.
+  const axiosModule = new SyntheticModule(['default', 'AxiosHeaders'], function () {
+    this.setExport('default', {
+      create: (defaults) => axios.create({
+        ...defaults,
+        adapter: async (config) => ({
+          ...await transport({ ...config, url: axios.getUri(config) }),
+          config,
+          headers: new AxiosHeaders(),
+          statusText: '',
+        }),
+      }),
+      isCancel: axios.isCancel,
+    });
+    this.setExport('AxiosHeaders', AxiosHeaders);
+  }, { context });
   async function load(file) {
     if (modules.has(file)) return modules.get(file);
     const source = await readFile(file, 'utf8');
     const js = stripTypeScriptTypes(source, { mode: 'transform' });
     const mod = new SourceTextModule(js, { context, identifier: file, initializeImportMeta(meta) { meta.env = {}; } });
     modules.set(file, mod);
-    await mod.link((name, parent) => load(resolve(dirname(parent.identifier), `${name}.ts`)));
+    await mod.link((name, parent) => name === 'axios'
+      ? axiosModule
+      : load(resolve(dirname(parent.identifier), `${name}.ts`)));
     return mod;
   }
   const auth = await load(resolve('src/features/auth/authApi.ts'));
   await auth.evaluate();
   const farms = await load(resolve('src/features/farm-management/api.ts'));
   await farms.evaluate();
+  const registrations = await load(resolve('src/features/farm-management/registrationService.ts'));
+  await registrations.evaluate();
   return {
+    registrations: registrations.namespace,
     auth: auth.namespace,
     http: modules.get(resolve('src/shared/api/httpClient.ts')).namespace,
     storage: modules.get(resolve('src/features/auth/authStorage.ts')).namespace,
@@ -34,13 +56,43 @@ async function client(fetch) {
   };
 }
 
-const ok = (data) => Response.json({ success: true, message: 'OK', data, timestamp: new Date().toISOString() });
+const reply = (body, status = 200) => ({ status, data: JSON.stringify(body) });
+const ok = (data) => reply({ success: true, message: 'OK', data, timestamp: new Date().toISOString() });
+
+test('password recovery sends backend DTOs anonymously without changing the session', async () => {
+  const calls = [];
+  const app = await client(async config => { calls.push(config); return ok(null); });
+  app.storage.saveAccessToken('existing.jwt.token');
+  await app.auth.forgotPassword(' farmer@example.com ');
+  await app.auth.resetPassword(' farmer@example.com ', ' 012345 ', ' password123 ');
+  assert.equal(calls[0].url, 'http://localhost:8080/api/v1/auth/forgot-password');
+  assert.deepEqual(JSON.parse(calls[0].data), { email: 'farmer@example.com' });
+  assert.equal(calls[1].url, 'http://localhost:8080/api/v1/auth/reset-password');
+  assert.deepEqual(JSON.parse(calls[1].data), {
+    email: 'farmer@example.com', otp: '012345', newPassword: ' password123 ',
+  });
+  for (const call of calls) {
+    assert.equal(call.method, 'post');
+    assert.equal(call.headers.has('Authorization'), false);
+  }
+  assert.equal(app.storage.getAccessToken(), 'existing.jwt.token');
+});
+
+test('password recovery propagates backend errors without authenticating', async () => {
+  const app = await client(async () => reply({ success: false, message: 'Mã OTP đã hết hạn.' }, 400));
+  await assert.rejects(app.auth.resetPassword('farmer@example.com', '012345', 'password123'), /Mã OTP đã hết hạn/);
+  await assert.rejects(app.auth.forgotPassword('farmer@example.com'), /Mã OTP đã hết hạn/);
+  assert.equal(app.storage.getAccessToken(), null);
+  const failed = await client(async () => reply({ success: false, message: 'Không gửi được email.' }));
+  await assert.rejects(failed.auth.forgotPassword('farmer@example.com'), /Không gửi được email/);
+  await assert.rejects(failed.auth.resetPassword('farmer@example.com', '012345', 'password123'), /Không gửi được email/);
+});
 
 test('login and OTP preserve account identity and clear it when the session ends', async () => {
   for (const method of ['authenticate', 'verifyOtp']) {
     let unauthorized = false;
     const user = { userId: 12, fullName: 'Nguyễn Thanh Trân', email: 'tran@example.com', systemRole: 'USER' };
-    const app = await client(async () => unauthorized ? new Response(null, { status: 401 }) : ok({
+    const app = await client(async () => unauthorized ? { status: 401, data: '' } : ok({
       ...user, accessToken: 'account.jwt.token', tokenType: 'Bearer', refreshToken: 'private-refresh-token',
     }));
     const session = await app.auth[method](user.email, '123456');
@@ -61,11 +113,11 @@ test('login and OTP preserve account identity and clear it when the session ends
 });
 
 test('registration sends backend DTO without authenticating the pending account', async () => {
-  const app = await client(async (url, init) => {
-    assert.equal(url, 'http://localhost:8080/api/v1/auth/register');
-    assert.equal(init.method, 'POST');
-    assert.equal(init.headers.has('Authorization'), false);
-    assert.deepEqual(JSON.parse(init.body), { fullName: 'Farmer', email: 'farmer@example.com', phoneNumber: null, password: 'password123' });
+  const app = await client(async (config) => {
+    assert.equal(config.url, 'http://localhost:8080/api/v1/auth/register');
+    assert.equal(config.method, 'post');
+    assert.equal(config.headers.has('Authorization'), false);
+    assert.deepEqual(JSON.parse(config.data), { fullName: 'Farmer', email: 'farmer@example.com', phoneNumber: null, password: 'password123' });
     return ok({ email: 'farmer@example.com' });
   });
   await app.auth.registerAccount({ fullName: ' Farmer ', email: 'farmer@example.com ', password: 'password123' });
@@ -73,28 +125,28 @@ test('registration sends backend DTO without authenticating the pending account'
 });
 
 test('OTP verification preserves leading zero and returns the access token', async () => {
-  const app = await client(async (url, init) => {
-    assert.equal(url, 'http://localhost:8080/api/v1/auth/verify-otp');
-    assert.equal(init.method, 'POST');
-    assert.equal(init.headers.has('Authorization'), false);
-    assert.deepEqual(JSON.parse(init.body), { email: 'farmer@example.com', otp: '012345' });
+  const app = await client(async (config) => {
+    assert.equal(config.url, 'http://localhost:8080/api/v1/auth/verify-otp');
+    assert.equal(config.method, 'post');
+    assert.equal(config.headers.has('Authorization'), false);
+    assert.deepEqual(JSON.parse(config.data), { email: 'farmer@example.com', otp: '012345' });
     return ok({ accessToken: 'verified.jwt.token', tokenType: 'Bearer' });
   });
   assert.equal((await app.auth.verifyOtp('farmer@example.com', '012345')).accessToken, 'verified.jwt.token');
 });
 
 test('resend OTP uses encoded query parameter with POST', async () => {
-  const app = await client(async (url, init) => {
-    assert.equal(url, 'http://localhost:8080/api/v1/auth/resend-otp?email=farmer%2Btest%40example.com');
-    assert.equal(init.method, 'POST');
-    assert.equal(init.body, undefined);
+  const app = await client(async (config) => {
+    assert.equal(config.url, 'http://localhost:8080/api/v1/auth/resend-otp?email=farmer%2Btest%40example.com');
+    assert.equal(config.method, 'post');
+    assert.equal(config.data, undefined);
     return ok({ email: 'farmer+test@example.com' });
   });
   await app.auth.resendOtp('farmer+test@example.com');
 });
 
 test('registration and OTP errors propagate without creating a session', async () => {
-  const app = await client(async () => Response.json({ success: false, message: 'Email trùng hoặc OTP không hợp lệ.' }, { status: 400 }));
+  const app = await client(async () => reply({ success: false, message: 'Email trùng hoặc OTP không hợp lệ.' }, 400));
   await assert.rejects(app.auth.registerAccount({ fullName: 'Farmer', email: 'farmer@example.com', password: 'password123' }), /Email trùng/);
   await assert.rejects(app.auth.verifyOtp('farmer@example.com', '000000'), /OTP không hợp lệ/);
   assert.equal(app.storage.getAccessToken(), null);
@@ -112,9 +164,9 @@ test('expired JWT clears session before a protected request', async () => {
 });
 
 test('login omits stale tokens and preserves backend activation errors', async () => {
-  const app = await client(async (url, init) => {
-    assert.equal(init.headers.has('Authorization'), false);
-    return Response.json({ success: false, message: 'Tài khoản chưa được kích hoạt.' }, { status: 403 });
+  const app = await client(async (config) => {
+    assert.equal(config.headers.has('Authorization'), false);
+    return reply({ success: false, message: 'Tài khoản chưa được kích hoạt.' }, 403);
   });
   app.storage.saveAccessToken('old.jwt.token');
   await assert.rejects(app.auth.authenticate('farmer@example.com', 'password'), /chưa được kích hoạt/);
@@ -122,7 +174,7 @@ test('login omits stale tokens and preserves backend activation errors', async (
 
 test('login posts email/password and farms use Bearer JWT with pagination', async () => {
   const calls = [];
-  const app = await client(async (url, init) => { calls.push({ url, init }); return ok(url.endsWith('/auth/login') ? { accessToken: 'test.jwt.token', tokenType: 'Bearer' } : { items: [{ id: 1, farmCode: 'F1', farmName: 'Farm', status: 'ACTIVE' }], page: 0, size: 12, totalElements: 1, totalPages: 1, last: true }); });
+  const app = await client(async (config) => { calls.push(config); return ok(config.url.endsWith('/auth/login') ? { accessToken: 'test.jwt.token', tokenType: 'Bearer' } : { items: [{ id: 1, farmCode: 'F1', farmName: 'Farm', status: 'ACTIVE' }], page: 0, size: 12, totalElements: 1, totalPages: 1, last: true }); });
   const session = await app.auth.authenticate('farmer@example.com', 'test-password');
   const credential = session.accessToken;
   assert.equal(credential, 'test.jwt.token');
@@ -130,11 +182,11 @@ test('login posts email/password and farms use Bearer JWT with pagination', asyn
   app.storage.saveAccessToken(credential);
   assert.equal((await app.farms.getFarms()).items[0].farmCode, 'F1');
   assert.equal(calls[0].url, 'http://localhost:8080/api/v1/auth/login');
-  assert.equal(calls[1].init.headers.get('Authorization'), 'Bearer ' + credential);
-  assert.equal(calls[0].init.method, 'POST');
-  assert.deepEqual(JSON.parse(calls[0].init.body), { email: 'farmer@example.com', password: 'test-password' });
-  assert.equal(calls[0].init.headers.get('Content-Type'), 'application/json');
-  assert.equal(calls[0].init.headers.has('Authorization'), false);
+  assert.equal(calls[1].headers.get('Authorization'), 'Bearer ' + credential);
+  assert.equal(calls[0].method, 'post');
+  assert.deepEqual(JSON.parse(calls[0].data), { email: 'farmer@example.com', password: 'test-password' });
+  assert.equal(calls[0].headers.get('Content-Type'), 'application/json');
+  assert.equal(calls[0].headers.has('Authorization'), false);
   assert.equal(calls[1].url, 'http://localhost:8080/api/v1/farms?page=0&size=12');
   assert.equal(app.stored.size, 0);
   app.storage.clearAccessToken();
@@ -142,14 +194,14 @@ test('login posts email/password and farms use Bearer JWT with pagination', asyn
 });
 
 test('invalid login is rejected and never creates a session', async () => {
-  const app = await client(async () => new Response(null, { status: 401 }));
+  const app = await client(async () => ({ status: 401, data: '' }));
   await assert.rejects(app.auth.authenticate('farmer@example.com', 'wrong'), (error) => error.status === 401);
   assert.equal(app.storage.getAccessToken(), null);
 });
 
 test('expired credentials clear the session, forbidden requests do not', async () => {
   let status = 403;
-  const app = await client(async () => new Response(null, { status }));
+  const app = await client(async () => ({ status, data: '' }));
   app.storage.saveAccessToken('test.jwt.token');
   await assert.rejects(app.farms.getFarms(), (error) => error.status === 403);
   assert.equal(app.storage.getAccessToken(), 'test.jwt.token');
@@ -159,19 +211,76 @@ test('expired credentials clear the session, forbidden requests do not', async (
 });
 
 test('network errors and malformed responses produce readable errors', async () => {
-  const offline = await client(async () => { throw new TypeError('Failed to fetch'); });
+  const offline = await client(async () => { throw new Error('Network Error'); });
   await assert.rejects(offline.farms.getFarms(), (error) => error.status === 0);
-  const malformed = await client(async () => new Response('<html>Not JSON</html>'));
+  const malformed = await client(async () => ({ status: 200, data: '<html>Not JSON</html>' }));
   await assert.rejects(malformed.farms.getFarms(), /không hợp lệ/);
   const skeleton = await client(async () => ok(null));
   await assert.rejects(skeleton.auth.authenticate('farmer@example.com', 'password'), /Không xác minh/);
 });
 
-test('empty farms are valid and aborted requests remain abort errors', async () => {
+test('empty farms are valid and aborted requests remain Axios cancellation errors', async () => {
   const app = await client(async () => ok({ items: [], page: 0, size: 12, totalElements: 0, totalPages: 0, last: true }));
   assert.equal((await app.farms.getFarms()).items.length, 0);
   const controller = new AbortController();
   controller.abort();
-  const cancelled = await client(async () => { throw controller.signal.reason; });
-  await assert.rejects(cancelled.farms.getFarms(controller.signal), { name: 'AbortError' });
+  let called = false;
+  const cancelled = await client(async () => { called = true; return ok(null); });
+  await assert.rejects(cancelled.farms.getFarms(controller.signal), axios.isCancel);
+  assert.equal(called, false);
+});
+
+test('farm registration uses authenticated backend DTOs and reloads the saved detail', async () => {
+  const calls = [];
+  const record = { registrationId: 17, farmName: 'Vườn Xanh', addressLine: 'Cần Thơ', description: 'Rau sạch', status: 'PENDING', submittedAt: '2026-10-20T10:00:00', handledAt: null, rejectionReason: 'Rau sạch' };
+  const app = await client(async config => {
+    calls.push(config);
+    if (config.url.includes('?')) return ok({ items: [{ registrationId: 17 }], last: true, totalPages: 1 });
+    return ok(config.url.endsWith('/cancel') ? { ...record, status: 'CANCELLED' } : record);
+  });
+  app.storage.saveAccessToken('user.jwt');
+  const created = await app.registrations.submitFarmRegistration({ proposedFarmName: ' Vườn Xanh ', address: ' Cần Thơ ', description: ' Rau sạch ' });
+  assert.deepEqual(JSON.parse(calls[0].data), { farmName: 'Vườn Xanh', addressLine: 'Cần Thơ', description: 'Rau sạch', province: null, district: null, ward: null, documentUrl: null });
+  assert.equal(created.farmRegistrationId, '17');
+  assert.equal(created.status, 'pending');
+  assert.equal(created.reviewComment, undefined, 'Backend aliases description as rejectionReason for pending applications');
+  assert.equal((await app.registrations.fetchMyLatestRegistration()).description, 'Rau sạch');
+  assert.ok(calls[1].url.includes('sort=createdAt,desc'));
+  assert.ok(calls[2].url.endsWith('/farm-registrations/17'));
+  assert.equal((await app.registrations.cancelFarmRegistration('17')).status, 'cancelled');
+  assert.equal(calls[3].method, 'patch');
+  for (const call of calls) assert.equal(call.headers.get('Authorization'), 'Bearer user.jwt');
+});
+
+test('admin registration API reads every page and submits backend review actions', async () => {
+  const calls = [];
+  const record = { registrationId: 18, farmName: 'Vườn', status: 'APPROVED' };
+  const app = await client(async config => {
+    calls.push(config);
+    if (config.method === 'put') return ok(record);
+    const last = config.url.includes('page=1');
+    return ok({ items: [record], last, totalPages: 2 });
+  });
+  app.storage.saveAccessToken('admin.jwt');
+  assert.equal((await app.registrations.getAdminRegistrations()).length, 2);
+  assert.ok(calls[0].url.includes('/admin/farm-registrations?page=0'));
+  assert.ok(calls[1].url.includes('page=1'));
+  assert.throws(() => app.registrations.handleFarmRegistration('18', 'REJECTED', '  '), /lý do từ chối/);
+  assert.equal(calls.length, 2);
+  await app.registrations.handleFarmRegistration('18', 'APPROVED', '');
+  assert.equal(calls[2].method, 'put');
+  assert.ok(calls[2].url.endsWith('/18/handle'));
+  assert.deepEqual(JSON.parse(calls[2].data), { action: 'APPROVED', rejectionReason: null });
+  await app.registrations.handleFarmRegistration('18', 'REJECTED', ' Thiếu thông tin ');
+  assert.deepEqual(JSON.parse(calls[3].data), { action: 'REJECTED', rejectionReason: 'Thiếu thông tin' });
+});
+
+test('registration APIs distinguish empty results from failures and propagate conflicts', async () => {
+  const empty = await client(async () => ok({ items: [], last: true, totalPages: 0 }));
+  assert.equal(await empty.registrations.fetchMyLatestRegistration(), null);
+  const failed = await client(async () => reply({ success: false, message: 'Hồ sơ đã được xử lý.' }, 409));
+  await assert.rejects(failed.registrations.fetchMyLatestRegistration(), /Hồ sơ đã được xử lý/);
+  await assert.rejects(failed.registrations.handleFarmRegistration('18', 'APPROVED', ''), /Hồ sơ đã được xử lý/);
+  const unsuccessful = await client(async () => reply({ success: false, message: 'Không lưu được hồ sơ.' }));
+  await assert.rejects(unsuccessful.registrations.submitFarmRegistration({ proposedFarmName: 'Vườn', address: 'Cần Thơ', description: '' }), /Không lưu được hồ sơ/);
 });

@@ -16,10 +16,6 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-function formatFileSize(sizeKB: number): string {
-  return sizeKB < 1024 ? `${sizeKB} KB` : `${(sizeKB / 1024).toFixed(1)} MB`;
-}
-
 export function FarmRegistrationStatus({
   registration,
   cancelling,
@@ -50,29 +46,18 @@ export function FarmRegistrationStatus({
           <dt>Địa chỉ</dt>
           <dd>{registration.address}</dd>
         </div>
-        <div>
-          <dt>Số điện thoại</dt>
-          <dd>{registration.contactPhone}</dd>
-        </div>
+        {([
+          ['province', 'Tỉnh / thành phố'], ['district', 'Quận / huyện'], ['ward', 'Phường / xã'],
+        ] as const).map(([field, label]) => registration[field] ? (
+          <div key={field}><dt>{label}</dt><dd>{registration[field]}</dd></div>
+        ) : null)}
+        {registration.documentUrl && /^https?:\/\//i.test(registration.documentUrl) && (
+          <div><dt>Tài liệu minh chứng</dt><dd><a href={registration.documentUrl} target="_blank" rel="noreferrer">Mở tài liệu minh chứng</a></dd></div>
+        )}
         {registration.description ? (
           <div>
             <dt>Mô tả</dt>
             <dd>{registration.description}</dd>
-          </div>
-        ) : null}
-        {registration.evidenceFiles.length > 0 ? (
-          <div>
-            <dt>Tài liệu đính kèm</dt>
-            <dd>
-              <ul className="file-list file-list--readonly">
-                {registration.evidenceFiles.map((file) => (
-                  <li key={file.name} className="file-list-item">
-                    <span className="file-list-name">📄 {file.name}</span>
-                    <span className="file-list-size">{formatFileSize(file.sizeKB)}</span>
-                  </li>
-                ))}
-              </ul>
-            </dd>
           </div>
         ) : null}
         <div>

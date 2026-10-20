@@ -15,6 +15,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   setSession: (session: AuthSession) => void;
   signOut: () => void;
+  switchRole: (role: 'ADMIN' | 'USER') => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -30,9 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setSession = (session: AuthSession) => saveAccessToken(session.accessToken, session.user);
   const signOut = () => clearAccessToken();
+  const switchRole = (role: 'ADMIN' | 'USER') => {
+    const current = user || getAuthUser();
+    const updatedUser: AuthUser = {
+      userId: current?.userId || (role === 'ADMIN' ? 99 : 1),
+      email: current?.email || (role === 'ADMIN' ? 'admin@mycropdiary.vn' : 'farmer@mycropdiary.vn'),
+      fullName: current?.fullName || (role === 'ADMIN' ? 'Quản trị viên Hệ thống' : 'Nguyễn Nông Dân'),
+      systemRole: role,
+    };
+    saveAccessToken(accessToken || 'test-session-token', updatedUser);
+  };
 
   return (
-    <AuthContext.Provider value={{ accessToken, user, isAuthenticated: Boolean(accessToken), setSession, signOut }}>
+    <AuthContext.Provider value={{ accessToken, user, isAuthenticated: Boolean(accessToken), setSession, signOut, switchRole }}>
       {children}
     </AuthContext.Provider>
   );

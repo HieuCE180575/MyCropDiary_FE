@@ -55,14 +55,14 @@ export function validateAssignStaffForm(values: AssignStaffFormValues): AssignSt
     errors.farmMemberId = 'Vui lòng chọn nhân viên cần phân công.';
   }
 
-  const startsAt = values.startsAt.trim();
+  const startsAt = (values.startsAt || '').trim();
   if (!startsAt) {
     errors.startsAt = 'Vui lòng chọn ngày bắt đầu.';
   } else if (!isValidDateString(startsAt)) {
     errors.startsAt = 'Ngày bắt đầu không hợp lệ.';
   }
 
-  if (values.notes.trim().length > 500) {
+  if ((values.notes || '').trim().length > 500) {
     errors.notes = 'Ghi chú không vượt quá 500 ký tự.';
   }
 

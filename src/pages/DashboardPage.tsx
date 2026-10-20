@@ -9,7 +9,7 @@ import { Icon } from '../shared/components/Icon';
 export function DashboardPage() {
   const { user } = useAuth();
   const { selectedFarm, farms, loading, error, retry } = useFarmWorkspace();
-  const isAdmin = user?.systemRole === 'ADMIN';
+  const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
   if (isAdmin) return <Navigate to="/admin" replace />;
   const name = user?.fullName?.trim() || 'bạn';
   const shortcuts = moduleDefinitions.filter((module) =>
@@ -30,7 +30,20 @@ export function DashboardPage() {
       </div>
     </section>}
     {!isAdmin && <div className="workspace-status">
-      {loading ? <p role="status">Đang tải các trang trại bạn tham gia…</p> : error ? <div role="alert"><p>Chưa tải được thông tin trang trại. Bạn vẫn có thể sử dụng các chức năng cá nhân.</p><button className="action-button" onClick={retry}>Thử lại</button></div> : selectedFarm ? <p><Icon name="plots" />Bạn đang làm việc tại <strong>{selectedFarm.farmName}</strong>. Quyền truy cập áp dụng cho trang trại này.</p> : farms.length ? <p><Icon name="plots" />Bạn đang tham gia <strong>{farms.length} trang trại</strong>. Chọn trang trại ở thanh trên để mở chức năng được cấp quyền.</p> : <p><Icon name="lock" />Các chức năng canh tác sẽ mở khi bạn có tư cách thành viên đang hoạt động trong trang trại. Chủ trang trại được cấp quyền sau khi yêu cầu đăng ký được duyệt.</p>}
+      {loading ? (
+        <p role="status">Đang tải các trang trại bạn tham gia…</p>
+      ) : error ? (
+        <div role="alert">
+          <p>Chưa tải được thông tin trang trại. Bạn vẫn có thể sử dụng các chức năng cá nhân.</p>
+          <button className="action-button" onClick={retry}>Thử lại</button>
+        </div>
+      ) : selectedFarm ? (
+        <p><Icon name="plots" />Bạn đang làm việc tại <strong>{selectedFarm.farmName}</strong>. Quyền truy cập áp dụng cho trang trại này.</p>
+      ) : farms.length ? (
+        <p><Icon name="plots" />Bạn đang tham gia <strong>{farms.length} trang trại</strong>. Chọn trang trại ở thanh trên để mở chức năng được cấp quyền.</p>
+      ) : (
+        <p><Icon name="lock" />Các chức năng canh tác sẽ mở khi bạn có tư cách thành viên đang hoạt động trong trang trại. Chủ trang trại được cấp quyền sau khi yêu cầu đăng ký được duyệt.</p>
+      )}
     </div>}
     <div className="personal-section-heading"><h2>{selectedFarm ? 'Công việc trong trang trại' : 'Tiện ích của bạn'}</h2><p>{selectedFarm ? 'Các chức năng phù hợp với vai trò của bạn tại trang trại đang chọn.' : 'Truy cập nhanh các chức năng dành cho tài khoản của bạn.'}</p></div>
     <div className="personal-shortcuts">{shortcuts.map((module) => <Link className={'personal-shortcut shortcut-' + module.key} to={'/' + module.path} key={module.key}>

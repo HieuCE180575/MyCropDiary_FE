@@ -1,7 +1,7 @@
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import type { StaffAreaAssignment } from '../types';
 
-function formatDate(iso?: string): string {
+function formatDate(iso?: string | null): string {
   return iso ? new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
 }
 

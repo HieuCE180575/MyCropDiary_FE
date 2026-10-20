@@ -10,9 +10,9 @@ interface ProductionFormPageProps {
 
 function productionAreaToFormValues(productionArea: ProductionArea): ProductionAreaFormValues {
   return {
-    areaName: productionArea.areaName,
-    areaHectares: String(productionArea.areaHectares),
-    locationDescription: productionArea.locationDescription ?? '',
+    areaName: productionArea.areaName || productionArea.zoneName || '',
+    areaHectares: String(productionArea.areaHectares ?? productionArea.areaValue ?? 0),
+    locationDescription: productionArea.locationDescription ?? productionArea.description ?? '',
   };
 }
 
