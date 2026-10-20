@@ -23,7 +23,7 @@ export function useArchiveProductionArea(onArchived: (area: ProductionArea) => v
     setArchiving(true);
     setError(null);
     try {
-      const updated = await archiveProductionArea(target.productionAreaId);
+      const updated = await archiveProductionArea(target.productionAreaId || String(target.zoneId));
       onArchived(updated);
       setTarget(null);
     } catch (err) {

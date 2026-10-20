@@ -31,7 +31,7 @@ export async function fetchAssignmentsForArea(productionAreaId: string): Promise
   await delay(220);
   return assignments
     .filter((assignment) => assignment.productionAreaId === productionAreaId)
-    .sort((a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime());
+    .sort((a, b) => new Date(b.startsAt || '').getTime() - new Date(a.startsAt || '').getTime());
 }
 
 export async function assignStaffToArea(
@@ -61,8 +61,8 @@ export async function assignStaffToArea(
     farmMemberId: staff.farmMemberId,
     staffName: staff.fullName,
     staffEmail: staff.email,
-    startsAt: new Date(`${values.startsAt}T08:00:00.000Z`).toISOString(),
-    notes: values.notes.trim() || undefined,
+    startsAt: new Date(`${values.startsAt || ''}T08:00:00.000Z`).toISOString(),
+    notes: (values.notes || '').trim() || undefined,
     createdAt: new Date().toISOString(),
   };
 
