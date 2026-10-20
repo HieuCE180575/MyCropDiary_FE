@@ -31,7 +31,28 @@ phát triển. Backend hiện có thêm API bài viết, tạo/sửa trang trạ
 thành viên và vùng sản xuất; những màn hình này chưa được triển khai trong lần
 sửa các lời gọi API hiện có này. Không chỉnh sửa code backend.
 
-## Kiểm tra
+## Đăng ký trang trại và xét duyệt
+
+- User: `GET /farm-registrations` và `GET /farm-registrations/{id}` lấy hồ sơ mới nhất;
+  `POST /farm-registrations` gửi `{ farmName, addressLine, province, district, ward, description, documentUrl }`;
+  `PATCH /farm-registrations/{id}/cancel` hủy hồ sơ chờ duyệt.
+- Admin: `GET /admin/farm-registrations` tải hồ sơ có phân trang;
+  `PUT /admin/farm-registrations/{id}/handle` gửi `{ action, rejectionReason }`.
+  `action` là `APPROVED` hoặc `REJECTED`; từ chối bắt buộc có lý do.
+- Dùng chung HTTP client và JWT hiện có. Backend xác định người nộp qua phiên đăng nhập.
+  Duyệt thành công do backend tạo Farm và gán OWNER. Bấm “Cập nhật trạng thái” ở User
+  để tải lại hồ sơ và danh sách trang trại sau khi admin xử lý.
+- Form có đủ 7 trường backend hiện lưu thật: tên (tối đa 160 ký tự theo DB),
+  địa chỉ (300), tỉnh/thành, quận/huyện, phường/xã (mỗi trường 100), mô tả (1000),
+  link tài liệu (1000, http/https). Chỉ tên và địa chỉ bắt buộc.
+  Các trường tùy chọn để trống được gửi là null. Tài liệu dùng link có sẵn, chưa upload file.
+  Backend đã tách registration_note (mô tả) và rejection_reason (lý do từ chối).
+  Frontend đọc description và rejectionReason riêng; khi xử lý hồ sơ chỉ gửi action/rejectionReason.
+  DB đang chạy cần có các cột province, district, ward, document_url như entity/script SQL mới.
+- Riêng hồ sơ đăng ký và số liệu hồ sơ trên tổng quan admin dùng API thật;
+  các module admin khác giữ hành vi hiện có. Không thay đổi backend hoặc schema DB.
+
+## Kiểm tra tích hợp
 
 `npm test` kiểm tra body đăng nhập, JWT Bearer, phân trang và xử lý lỗi bằng
 transport mô phỏng. `npm run build` kiểm tra TypeScript và build ứng dụng.
