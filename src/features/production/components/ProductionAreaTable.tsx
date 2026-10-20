@@ -77,15 +77,15 @@ export function ProductionAreaTable({
               <tr key={area.productionAreaId}>
                 <td>
                   <Link to={`/production-areas/${area.productionAreaId}`} className="table-link">
-                    {area.areaName}
+                    {area.areaName || area.zoneName}
                   </Link>
                 </td>
-                <td>{formatArea(area.areaHectares)}</td>
-                <td>{area.locationDescription ?? '—'}</td>
+                <td>{formatArea(area.areaHectares ?? (area.areaUnit === 'ha' ? area.areaValue : (area.areaValue || 0) / 10000))}</td>
+                <td>{area.locationDescription ?? area.description ?? '—'}</td>
                 <td>
                   <StatusBadge
-                    label={PRODUCTION_AREA_STATUS_LABEL[area.status]}
-                    tone={PRODUCTION_AREA_STATUS_TONE[area.status]}
+                    label={PRODUCTION_AREA_STATUS_LABEL[area.status === 'archived' ? 'archived' : 'active']}
+                    tone={PRODUCTION_AREA_STATUS_TONE[area.status === 'archived' ? 'archived' : 'active']}
                   />
                 </td>
                 <td>{formatDate(area.createdAt)}</td>
