@@ -3,6 +3,8 @@ import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
+import { toast } from 'sonner';
+import { ChevronDown, FunnelX, Search } from 'lucide-react';
 
 interface FarmingActivity {
   id: number;
@@ -22,11 +24,12 @@ export function FarmingActivitiesPage() {
   const { selectedFarm } = useFarmWorkspace();
   const [activities, setActivities] = useState<FarmingActivity[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterType, setFilterType] = useState('ALL');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [seasonId, setSeasonId] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<FarmingActivity | null>(null);
-  const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isTypeFilterOpen, setIsTypeFilterOpen] = useState(false);
 
   // Form states
   const [actType, setActType] = useState('Bón phân');
@@ -38,13 +41,13 @@ export function FarmingActivitiesPage() {
   const [weatherNotes, setWeatherNotes] = useState('Trời nắng nhẹ, độ ẩm 75%');
   const [saving, setSaving] = useState(false);
 
+
   useEffect(() => {
     loadActivities();
   }, [seasonId, selectedFarm?.id]);
 
   const loadActivities = async () => {
     setLoading(true);
-    setNotification(null);
     try {
       const res = await apiRequest<ApiResponse<{ items: FarmingActivity[] }>>(
         `/farming-activities?cropSeasonId=${seasonId}&size=50`
@@ -52,65 +55,9 @@ export function FarmingActivitiesPage() {
 
       if (res?.data?.items && Array.isArray(res.data.items) && res.data.items.length > 0) {
         setActivities(res.data.items);
-      } else {
-        // Fallback seed data
-        setActivities([
-          {
-            id: 1,
-            cropSeasonId: seasonId,
-            activityType: 'Làm đất',
-            activityName: 'Cày bừa và bón vôi xử lý đất',
-            startedAt: '2026-03-01T07:30',
-            endedAt: '2026-03-01T11:30',
-            description: 'Phơi đất khử chua bằng vôi bột 30kg/sào, cày ải sâu 25cm.',
-            resultNotes: 'Đất tơi xốp, độ pH đo được 6.2 đạt chuẩn.',
-            weatherNotes: 'Trời nắng ráo, nhiệt độ 28°C.',
-            recorderName: 'Kỹ sư An',
-            workerCount: 4,
-          },
-          {
-            id: 2,
-            cropSeasonId: seasonId,
-            activityType: 'Gieo cấy',
-            activityName: 'Gieo hạt giống dưa lưới F1 chuẩn VietGAP',
-            startedAt: '2026-03-05T08:00',
-            endedAt: '2026-03-05T16:30',
-            description: 'Hạt giống ngâm ủ nứt nanh, gieo vào khay bầu giá thể xơ dừa đã xử lý nấm.',
-            resultNotes: 'Tỷ lệ nảy mầm đạt 96%.',
-            weatherNotes: 'Trời mát mẻ, có gió nhẹ.',
-            recorderName: 'Nguyễn Văn An',
-            workerCount: 6,
-          },
-          {
-            id: 3,
-            cropSeasonId: seasonId,
-            activityType: 'Bón phân',
-            activityName: 'Bón lót phân hữu cơ vi sinh trùn quế',
-            startedAt: '2026-03-12T06:30',
-            endedAt: '2026-03-12T10:00',
-            description: 'Bón phân trùn quế 500kg/ha quanh rãnh luống.',
-            resultNotes: 'Cây con bén rễ nhanh, lá xanh mướt.',
-            weatherNotes: 'Trời râm mát.',
-            recorderName: 'Trần Thị Bích',
-            workerCount: 3,
-          },
-          {
-            id: 4,
-            cropSeasonId: seasonId,
-            activityType: 'Tưới nước',
-            activityName: 'Tưới nhỏ giọt bổ sung dinh dưỡng sinh học',
-            startedAt: '2026-03-20T16:00',
-            endedAt: '2026-03-20T17:30',
-            description: 'Hệ thống tưới tự động Israel kiểm soát EC 1.4, pH 6.0.',
-            resultNotes: 'Độ ẩm gốc duy trì 70-75%.',
-            weatherNotes: 'Trời chiều không mưa.',
-            recorderName: 'Lê Văn Cường',
-            workerCount: 2,
-          },
-        ]);
       }
     } catch {
-      setNotification({ text: 'Lỗi nạp nhật ký canh tác từ máy chủ.', type: 'error' });
+      toast.error('Lỗi không thể lấy nhật ký canh tác từ máy chủ.');
     } finally {
       setLoading(false);
     }
@@ -131,50 +78,59 @@ export function FarmingActivitiesPage() {
       weatherNotes: weatherNotes.trim(),
     };
 
+
     try {
-      const res = await apiRequest<ApiResponse<FarmingActivity>>('/farming-activities', {
-        method: 'POST',
-        data: newActPayload,
-      });
-      if (res?.data) {
-        setActivities((prev) => [res.data, ...prev]);
-      } else {
-        throw new Error('Fallback');
+      const res = await apiRequest<ApiResponse<FarmingActivity>>(
+        '/farming-activities',
+        {
+          method: 'POST',
+          data: newActPayload,
+        }
+      );
+
+      if (!res?.data) {
+        throw new Error('Không nhận được dữ liệu từ máy chủ.');
       }
-      setNotification({ text: 'Đã lưu nhật ký canh tác thành công!', type: 'success' });
+
+      // Update the list with the activity returned by the backend
+      setActivities((prev) => [res.data, ...prev]);
+
+      toast.success('Đã lưu nhật ký canh tác thành công!');
+
+
       setIsModalOpen(false);
       resetForm();
-    } catch {
-      // Offline / Local simulation
-      const mockItem: FarmingActivity = {
-        id: Date.now(),
-        cropSeasonId: seasonId,
-        activityType: actType,
-        activityName: actName.trim(),
-        startedAt,
-        endedAt,
-        description,
-        resultNotes,
-        weatherNotes,
-        recorderName: 'Tôi (Nhật ký số)',
-        workerCount: 3,
-      };
-      setActivities((prev) => [mockItem, ...prev]);
-      setNotification({ text: 'Đã lưu nhật ký canh tác (chế độ nhanh)!', type: 'success' });
-      setIsModalOpen(false);
-      resetForm();
+    } catch (error) {
+      // Handle API or server errors
+      console.error('Failed to save farming activity:', error);
+
+      toast.error('Đã lưu nhật ký canh tác thành công!');
     } finally {
+      // Always stop the loading state
       setSaving(false);
     }
-  };
+  }
 
   const resetForm = () => {
     setActName('');
     setDescription('');
     setResultNotes('');
   };
+  const filteredActivities = activities.filter((activity) => {
+    const matchesSeason = activity.cropSeasonId === seasonId;
 
-  const filtered = activities.filter((a) => filterType === 'ALL' || a.activityType === filterType);
+    const matchesType =
+      selectedTypes.length === 0 ||
+      selectedTypes.includes(activity.activityType);
+
+    const keyword = searchTerm.trim().toLowerCase();
+
+    const matchesSearch =
+      activity.activityName.toLowerCase().includes(keyword) ||
+      (activity.description ?? '').toLowerCase().includes(keyword);
+
+    return matchesSeason && matchesType && matchesSearch;
+  });
 
   return (
     <section className="farming-activities-page">
@@ -192,12 +148,6 @@ export function FarmingActivitiesPage() {
         </div>
       </div>
 
-      {notification && (
-        <div className={`notification-popover ${notification.type === 'error' ? 'form-error-banner' : ''}`} style={{ marginBottom: '16px', position: 'static' }}>
-          <strong>{notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo'}:</strong> {notification.text}
-        </div>
-      )}
-
       {/* Control bar */}
       <div className="panel" style={{ padding: '16px 20px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -212,29 +162,169 @@ export function FarmingActivitiesPage() {
           </select>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <label style={{ fontSize: '13.5px', fontWeight: 600, color: '#475569' }}>Phân loại:</label>
-          {['ALL', 'Làm đất', 'Gieo cấy', 'Bón phân', 'Tưới nước', 'Phun thuốc', 'Thu hoạch'].map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setFilterType(type)}
+        <div
+          style={{
+            position: 'relative',
+            width: '280px',
+          }}
+        >
+          <Search
+            size={18}
+            color="#64748b"
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none',
+            }}
+          />
+
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Tìm kiếm hoạt động..."
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              padding: '10px 12px 10px 38px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              fontSize: '13px',
+              outline: 'none',
+              background: '#ffffff',
+              color: '#334155',
+            }}
+          />
+        </div>
+
+        <div style={{ position: 'relative', minWidth: '220px' }}>
+          <button
+            type="button"
+            onClick={() => setIsTypeFilterOpen(prev => !prev)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 12px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              background: '#ffffff',
+              color: '#334155',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            <span>
+              {selectedTypes.length === 0
+                ? 'Tất cả loại hoạt động'
+                : `Đã chọn ${selectedTypes.length} loại`}
+            </span>
+
+            <ChevronDown
+              size={16}
               style={{
-                padding: '6px 12px',
-                borderRadius: '20px',
-                border: '1px solid',
-                fontSize: '12.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                background: filterType === type ? '#10b981' : '#ffffff',
-                borderColor: filterType === type ? '#10b981' : '#cbd5e1',
-                color: filterType === type ? '#ffffff' : '#475569',
-                transition: 'all 0.15s ease',
+                transform: isTypeFilterOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+              }}
+            />
+          </button>
+
+          {isTypeFilterOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '6px',
+                padding: '10px',
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                zIndex: 20,
               }}
             >
-              {type === 'ALL' ? 'Tất cả' : type}
-            </button>
-          ))}
+              {[
+                'Làm đất',
+                'Gieo cấy',
+                'Bón phân',
+                'Tưới nước',
+                'Phun thuốc',
+                'Thu hoạch',
+              ].map(type => (
+                <label
+                  key={type}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 4px',
+                    fontSize: '13px',
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedTypes.includes(type)}
+                    onChange={() =>
+                      setSelectedTypes(prev =>
+                        prev.includes(type)
+                          ? prev.filter(item => item !== type)
+                          : [...prev, type]
+                      )
+                    }
+                  />
+                  {type}
+                </label>
+              ))}
+
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  borderTop: '1px solid #e2e8f0',
+                  marginTop: '6px',
+                  paddingTop: '10px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedTypes([])}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                  }}
+                >
+                  Xóa lựa chọn
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsTypeFilterOpen(false)}
+                  style={{
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  }}
+                >
+                  Xong
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -244,7 +334,7 @@ export function FarmingActivitiesPage() {
           <div className="empty-icon">⏳</div>
           <h2>Đang tải dòng thời gian nhật ký...</h2>
         </div>
-      ) : filtered.length === 0 ? (
+      ) : filteredActivities.length === 0 ? (
         <div className="panel empty-state">
           <div className="empty-icon">📖</div>
           <h2>Chưa có nhật ký nào trong vụ mùa này</h2>
@@ -255,23 +345,23 @@ export function FarmingActivitiesPage() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {filtered.map((act) => {
+          {filteredActivities.map((act) => {
             const badgeBg =
               act.activityType === 'Bón phân'
                 ? '#fef3c7'
                 : act.activityType === 'Phun thuốc'
-                ? '#fee2e2'
-                : act.activityType === 'Thu hoạch'
-                ? '#dcfce7'
-                : '#e0f2fe';
+                  ? '#fee2e2'
+                  : act.activityType === 'Thu hoạch'
+                    ? '#dcfce7'
+                    : '#e0f2fe';
             const badgeColor =
               act.activityType === 'Bón phân'
                 ? '#b45309'
                 : act.activityType === 'Phun thuốc'
-                ? '#b91c1c'
-                : act.activityType === 'Thu hoạch'
-                ? '#15803d'
-                : '#0369a1';
+                  ? '#b91c1c'
+                  : act.activityType === 'Thu hoạch'
+                    ? '#15803d'
+                    : '#0369a1';
 
             return (
               <div
@@ -358,8 +448,9 @@ export function FarmingActivitiesPage() {
                     <option value="Bón phân">Bón lót & Bón thúc phân bón</option>
                     <option value="Tưới nước">Tưới tiêu & Châm phân</option>
                     <option value="Phun thuốc">Phun thuốc BVTV sinh học</option>
-                    <option value="Làm cỏ">Làm cỏ & Tỉa cành</option>
                     <option value="Thu hoạch">Thu hoạch nông sản</option>
+
+                    <>'Làm đất', 'Gieo cấy', 'Bón phân', 'Tưới nước', 'Phun thuốc', 'Thu hoạch'</>
                   </select>
                 </div>
                 <div>
