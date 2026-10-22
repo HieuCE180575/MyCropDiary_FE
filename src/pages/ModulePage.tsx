@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth';
 import { Icon } from '../shared/components/Icon';
 import { ChangePasswordPanel } from '../features/auth/ChangePasswordPanel';
+import { UserProfilePanel } from '../features/auth/UserProfilePanel';
 import { FarmInfoPage } from './FarmInfoPage';
 import { FarmRegistrationPage } from './FarmRegistrationPage';
 import { KnowledgePage } from './KnowledgePage';
@@ -92,27 +93,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
         </div>
 
         <div className="profile-layout">
-          <section className="panel profile-details" aria-label="Thông tin cá nhân">
-            <div className="profile-card-header">
-              <span className="shortcut-icon"><Icon name="user" /></span>
-              <div>
-                <h2>Thông tin tài khoản</h2>
-                <p className="profile-section-sub">Thông tin định danh và tài khoản đăng nhập của bạn</p>
-              </div>
-            </div>
-            <dl>
-              <dt>Họ và tên</dt>
-              <dd>{user?.fullName || 'Chưa cập nhật'}</dd>
-              <dt>Email</dt>
-              <dd>{user?.email || 'Chưa cập nhật'}</dd>
-              <dt>Vai trò hệ thống</dt>
-              <dd>{roleName}</dd>
-              <dt>Trạng thái</dt>
-              <dd><span className="status-badge status-badge--success">Đang hoạt động</span></dd>
-              <dt>Hệ thống</dt>
-              <dd>Nông nghiệp số VietGAP 2026</dd>
-            </dl>
-          </section>
+          <UserProfilePanel />
           <ChangePasswordPanel />
         </div>
       </div>
