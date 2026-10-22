@@ -108,3 +108,64 @@ export async function logoutUser(token?: string): Promise<void> {
     }
   }
 }
+
+export interface UserProfile {
+  userId: number;
+  email: string;
+  fullName: string;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  systemRole: string;
+  accountStatus: string;
+  emailVerifiedAt?: string | null;
+  lastLoginAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface UpdateProfileRequest {
+  fullName: string;
+  phone?: string | null;
+  avatarUrl?: string | null;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export async function getUserProfile(): Promise<UserProfile> {
+  const result = await apiRequest<ApiResponse<UserProfile>>('/user/profile', {
+    method: 'GET',
+  });
+  if (!result?.success || !result.data) {
+    throw new Error(result?.message || 'Không thể tải thông tin cá nhân.');
+  }
+  return result.data;
+}
+
+export async function updateUserProfile(request: UpdateProfileRequest): Promise<UserProfile> {
+  const result = await apiRequest<ApiResponse<UserProfile>>('/user/profile', {
+    method: 'PUT',
+    data: {
+      fullName: request.fullName.trim(),
+      phone: request.phone?.trim() || null,
+      avatarUrl: request.avatarUrl?.trim() || null,
+    },
+  });
+  if (!result?.success || !result.data) {
+    throw new Error(result?.message || 'Cập nhật thông tin thất bại.');
+  }
+  return result.data;
+}
+
+export async function changeUserPassword(request: ChangePasswordRequest): Promise<void> {
+  const result = await apiRequest<ApiResponse<void>>('/user/change-password', {
+    method: 'POST',
+    data: request,
+  });
+  if (!result?.success) {
+    throw new Error(result?.message || 'Đổi mật khẩu thất bại.');
+  }
+}

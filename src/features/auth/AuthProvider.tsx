@@ -7,6 +7,7 @@ import {
   type AuthUser,
   saveAccessToken,
   subscribeToAuthChanges,
+  updateAuthUser,
 } from './authStorage';
 
 interface AuthContextValue {
@@ -16,6 +17,7 @@ interface AuthContextValue {
   setSession: (session: AuthSession) => void;
   signOut: () => void;
   switchRole: (role: 'ADMIN' | 'USER') => void;
+  updateUser: (updates: Partial<AuthUser>) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setSession = (session: AuthSession) => saveAccessToken(session.accessToken, session.user);
   const signOut = () => clearAccessToken();
+  const updateUser = (updates: Partial<AuthUser>) => updateAuthUser(updates);
   const switchRole = (role: 'ADMIN' | 'USER') => {
     const current = user || getAuthUser();
     const updatedUser: AuthUser = {
@@ -43,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ accessToken, user, isAuthenticated: Boolean(accessToken), setSession, signOut, switchRole }}>
+    <AuthContext.Provider value={{ accessToken, user, isAuthenticated: Boolean(accessToken), setSession, signOut, switchRole, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -8,6 +8,8 @@ export interface AuthUser {
   email: string;
   fullName: string;
   systemRole: string;
+  phone?: string;
+  avatarUrl?: string;
 }
 
 export interface AuthSession {
@@ -34,6 +36,13 @@ export function saveAccessToken(token: string, user: AuthUser | null = null) {
   currentUser = user;
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   notifyAuthChanged();
+}
+
+export function updateAuthUser(updates: Partial<AuthUser>) {
+  if (currentUser) {
+    currentUser = { ...currentUser, ...updates };
+    notifyAuthChanged();
+  }
 }
 
 export function clearAccessToken() {
