@@ -10,6 +10,7 @@ export type KnowledgeCategory =
 export interface KnowledgeArticle {
   id: string;
   title: string;
+  image?: string;
   summary: string;
   content: string;
   category: KnowledgeCategory;

@@ -8,6 +8,8 @@ import { FarmRegistrationPage } from '../pages/FarmRegistrationPage';
 import { KnowledgePage } from '../pages/KnowledgePage';
 import { LoginPage } from '../pages/LoginPage';
 import { HomePage } from '../pages/HomePage';
+import { AboutPage } from '../pages/AboutPage';
+import { FeaturesPage } from '../pages/FeaturesPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ModulePage } from '../pages/ModulePage';
@@ -28,6 +30,8 @@ export function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/knowledge" element={<KnowledgePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/features" element={<FeaturesPage />} />
       </Route>
 
       {/* Protected pages */}

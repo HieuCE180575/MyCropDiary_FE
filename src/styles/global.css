@@ -21,6 +21,10 @@
   flex-wrap: wrap;
 }
 
+.public-knowledge-view .pagination-controls {
+  justify-content: flex-end;
+}
+
 .pagination-controls button {
   display: inline-grid;
   place-items: center;
@@ -2471,6 +2475,14 @@ p {
   gap: 12px;
   align-content: start;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.knowledge-card-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
 }
 
 .knowledge-card:hover {

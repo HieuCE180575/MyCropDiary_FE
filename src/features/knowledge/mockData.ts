@@ -7,6 +7,7 @@ import type { KnowledgeArticle } from './types';
 export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   {
     id: 'kn-01',
+    image: 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=800&q=80',
     title: 'VietGAP là gì và vì sao nông hộ nên áp dụng?',
     summary:
       'Tổng quan về tiêu chuẩn Thực hành nông nghiệp tốt tại Việt Nam (VietGAP), lợi ích cho nông hộ và thị trường tiêu thụ.',
@@ -20,6 +21,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-02',
+    image: 'https://images.unsplash.com/photo-1738598668890-5f4d28842df5?auto=format&fit=crop&w=800&q=80',
     title: '4 nhóm tiêu chí bắt buộc trong chứng nhận VietGAP',
     summary: 'Phân tích các nhóm tiêu chí: đánh giá vùng sản xuất, giống, quản lý đất - nước và ghi chép hồ sơ.',
     content:
@@ -32,6 +34,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-03',
+    image: 'https://images.unsplash.com/photo-1727099079513-952d40de9d78?auto=format&fit=crop&w=800&q=80',
     title: 'Quy trình đăng ký và cấp giấy chứng nhận VietGAP',
     summary: 'Các bước từ chuẩn bị hồ sơ, đánh giá nội bộ đến đăng ký với tổ chức chứng nhận.',
     content:
@@ -44,6 +47,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-04',
+    image: 'https://images.unsplash.com/photo-1697897400733-46e12551a012?auto=format&fit=crop&w=800&q=80',
     title: 'Đánh giá và lựa chọn vùng sản xuất an toàn',
     summary: 'Các yếu tố cần khảo sát: nguồn ô nhiễm, lịch sử canh tác và khoảng cách với khu công nghiệp.',
     content:
@@ -56,6 +60,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-05',
+    image: 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=800&q=80',
     title: 'Quản lý và cải tạo đất trồng theo hướng bền vững',
     summary: 'Luân canh, che phủ đất và bổ sung hữu cơ để duy trì độ phì nhiêu lâu dài.',
     content:
@@ -68,6 +73,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-06',
+    image: 'https://images.unsplash.com/photo-1752775312083-1cefe2f93358?auto=format&fit=crop&w=800&q=80',
     title: 'Tiêu chuẩn chất lượng nước tưới trong VietGAP',
     summary: 'Ngưỡng cho phép về vi sinh và kim loại nặng trong nước tưới, tần suất kiểm nghiệm.',
     content:
@@ -80,6 +86,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-07',
+    image: 'https://images.unsplash.com/photo-1781782411066-c68b1e5610bc?auto=format&fit=crop&w=800&q=80',
     title: 'Chọn giống cây trồng đạt chuẩn VietGAP',
     summary: 'Tiêu chí lựa chọn nguồn giống rõ ràng, khoẻ mạnh và phù hợp điều kiện canh tác.',
     content:
@@ -92,6 +99,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-08',
+    image: 'https://images.unsplash.com/photo-1773994788915-7fb0f462f223?auto=format&fit=crop&w=800&q=80',
     title: 'Kỹ thuật gieo trồng và mật độ hợp lý theo mùa vụ',
     summary: 'Bố trí mật độ, thời vụ và khoảng cách trồng để tối ưu năng suất, hạn chế sâu bệnh.',
     content:
@@ -104,6 +112,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-09',
+    image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=800&q=80',
     title: 'Nguyên tắc "4 đúng" khi sử dụng thuốc bảo vệ thực vật',
     summary: 'Đúng thuốc, đúng liều lượng, đúng lúc và đúng cách để đảm bảo an toàn và hiệu quả.',
     content:
@@ -116,6 +125,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-10',
+    image: 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=800&q=80',
     title: 'Thời gian cách ly thuốc BVTV trước khi thu hoạch',
     summary: 'Cách tra cứu và tuân thủ thời gian cách ly để nông sản đạt ngưỡng dư lượng an toàn.',
     content:
@@ -128,6 +138,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-11',
+    image: 'https://images.unsplash.com/photo-1729009511263-329748943004?auto=format&fit=crop&w=800&q=80',
     title: 'Sử dụng phân bón hữu cơ và vô cơ cân đối',
     summary: 'Kết hợp phân hữu cơ hoai mục với phân vô cơ theo nhu cầu dinh dưỡng của cây.',
     content:
@@ -140,6 +151,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-12',
+    image: 'https://images.unsplash.com/photo-1746014929708-fcb859fd3185?auto=format&fit=crop&w=800&q=80',
     title: 'Kỹ thuật thu hoạch giảm tổn thất sau thu hoạch',
     summary: 'Thời điểm thu hoạch, dụng cụ và cách xử lý sơ bộ để giữ chất lượng nông sản.',
     content:
@@ -152,6 +164,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-13',
+    image: 'https://images.unsplash.com/photo-1657288089316-c0350003ca49?auto=format&fit=crop&w=800&q=80',
     title: 'Vệ sinh dụng cụ và khu vực sơ chế nông sản',
     summary: 'Yêu cầu vệ sinh đối với dụng cụ chứa đựng, khu sơ chế để tránh lây nhiễm chéo.',
     content:
@@ -164,6 +177,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-14',
+    image: 'https://images.unsplash.com/photo-1748742633127-941ebec208da?auto=format&fit=crop&w=800&q=80',
     title: 'Hệ thống ghi chép nhật ký canh tác theo VietGAP',
     summary: 'Các loại biểu mẫu cần lưu trữ: giống, phân bón, thuốc BVTV, thu hoạch và tiêu thụ.',
     content:
@@ -176,6 +190,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-15',
+    image: 'https://images.unsplash.com/photo-1775681150283-04970adf1b98?auto=format&fit=crop&w=800&q=80',
     title: 'Mã số vùng trồng và truy xuất nguồn gốc điện tử',
     summary: 'Vai trò của mã số vùng trồng và QR code trong việc minh bạch chuỗi cung ứng.',
     content:
@@ -188,6 +203,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-16',
+    image: 'https://images.unsplash.com/photo-1781785186628-e1a04569776d?auto=format&fit=crop&w=800&q=80',
     title: 'Đào tạo và trang bị bảo hộ cho người lao động',
     summary: 'Yêu cầu tập huấn định kỳ, sử dụng đồ bảo hộ khi tiếp xúc hoá chất nông nghiệp.',
     content:
@@ -200,6 +216,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-17',
+    image: 'https://images.unsplash.com/photo-1738244969496-eeabfacec172?auto=format&fit=crop&w=800&q=80',
     title: 'Đánh giá nội bộ trước khi đăng ký chứng nhận',
     summary: 'Cách xây dựng checklist tự đánh giá và khắc phục điểm chưa đạt trước khi mời đánh giá.',
     content:
@@ -212,6 +229,7 @@ export const MOCK_KNOWLEDGE_ARTICLES: KnowledgeArticle[] = [
   },
   {
     id: 'kn-18',
+    image: 'https://images.unsplash.com/photo-1742071853823-f9f87d9f3894?auto=format&fit=crop&w=800&q=80',
     title: 'Quản lý và xử lý chất thải nông nghiệp đúng cách',
     summary: 'Phân loại bao bì thuốc BVTV, chất thải hữu cơ và nơi thu gom theo quy định.',
     content:
