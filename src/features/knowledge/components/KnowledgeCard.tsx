@@ -13,6 +13,9 @@ function formatDate(iso: string): string {
 export function KnowledgeCard({ article, onOpen }: KnowledgeCardProps) {
   return (
     <article className="knowledge-card">
+      {article.image && (
+        <img src={article.image} alt={article.title} className="knowledge-card-image" loading="lazy" />
+      )}
       <span className="module-code" style={{justifySelf: 'start'}}>{KNOWLEDGE_CATEGORY_LABEL[article.category]}</span>
       <h3>{article.title}</h3>
       <p>{article.summary}</p>

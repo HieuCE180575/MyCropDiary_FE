@@ -1,0 +1,119 @@
+{
+  "runId": "20261020-135230",
+  "api": "http://localhost:8080/api/v1",
+  "database": "MyCropDiary",
+  "testEmail": "farm-e2e-20261020-135230@example.invalid",
+  "userId": 13,
+  "registrationIds": [
+    7,
+    8,
+    9
+  ],
+  "farmId": 5,
+  "checks": [
+    {
+      "passed": true,
+      "check": "SQL Server has the separate rejection_reason column"
+    },
+    {
+      "passed": true,
+      "check": "Admin authenticates through the real login API"
+    },
+    {
+      "passed": true,
+      "check": "Isolated test USER authenticates through the real login API"
+    },
+    {
+      "passed": true,
+      "check": "USER cannot access admin registrations"
+    },
+    {
+      "passed": true,
+      "check": "User submits a pending registration with all seven fields"
+    },
+    {
+      "passed": true,
+      "check": "Admin approval persists an approved registration and resulting farm in SQL Server"
+    },
+    {
+      "passed": true,
+      "check": "SQL Server contains an active OWNER membership for the applicant"
+    },
+    {
+      "passed": true,
+      "check": "The same USER token can access the approved farm as OWNER"
+    },
+    {
+      "passed": true,
+      "check": "Farm selector API returns the new farm with OWNER role"
+    },
+    {
+      "passed": true,
+      "check": "Already approved registration cannot be handled again"
+    },
+    {
+      "passed": true,
+      "check": "User cannot cancel an approved registration"
+    },
+    {
+      "passed": true,
+      "check": "Rejection without a reason is blocked"
+    },
+    {
+      "passed": true,
+      "check": "Rejection response preserves description separately from rejectionReason"
+    },
+    {
+      "passed": true,
+      "check": "SQL Server stores original description and rejection reason in separate columns"
+    },
+    {
+      "passed": true,
+      "check": "Reloaded User and Admin details preserve both independent fields"
+    },
+    {
+      "passed": true,
+      "check": "Admin list used by frontend also returns independent description and reason"
+    },
+    {
+      "passed": true,
+      "check": "User can submit a new registration after rejection and cancel it while pending"
+    }
+  ],
+  "completed": true,
+  "uiChecks": [
+    {
+      "check": "Real farm appears in the React workspace selector as Owner",
+      "passed": true
+    },
+    {
+      "check": "React grants Owner-only expenses and membership navigation",
+      "passed": true
+    },
+    {
+      "check": "React blocks the User from viewing admin registrations",
+      "passed": true
+    },
+    {
+      "check": "Admin React detail shows the preserved original description from the real backend",
+      "passed": true
+    },
+    {
+      "check": "Admin React detail shows rejection reason in its separate field",
+      "passed": true
+    },
+    {
+      "check": "Real backend denies Staff access to admin registration APIs",
+      "passed": true
+    },
+    {
+      "check": "Staff cannot read another applicant registration through the User API",
+      "passed": true
+    },
+    {
+      "check": "React also blocks Staff from admin registration screens",
+      "passed": true
+    }
+  ],
+  "uiCompleted": true
+}

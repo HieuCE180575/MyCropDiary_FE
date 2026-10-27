@@ -135,14 +135,6 @@ const testimonials = [
   },
 ];
 
-// Ảnh minh họa tương ứng cho 4 bài viết kiến thức nổi bật
-const articleCoverImages: Record<string, string> = {
-  'kn-01': 'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=800&q=80',
-  'kn-09': 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?auto=format&fit=crop&w=800&q=80',
-  'kn-05': 'https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=800&q=80',
-  'kn-10': 'https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?auto=format&fit=crop&w=800&q=80',
-};
-
 export function HomePage() {
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
 
@@ -266,49 +258,34 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* 2. DÃY CHỈ SỐ THỐNG KÊ (STATS STRIP) */}
-      <section className="home-stats-strip" aria-label="Thống kê kết quả">
+      {/* 2. VÌ SAO CHỌN MYCROPDIARY */}
+      <section className="home-benefits-section" aria-labelledby="home-benefits-heading">
         <div className="home-container">
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon-wrap">
-                <Icon name="plots" />
-              </div>
-              <div className="stat-info">
-                <span className="stat-number">1,500+</span>
-                <span className="stat-label">Trang trại &amp; HTX tin dùng</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrap">
-                <Icon name="book" />
-              </div>
-              <div className="stat-info">
-                <span className="stat-number">45,000+</span>
-                <span className="stat-label">Lần ghi chép mùa vụ số</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrap">
-                <Icon name="check-circle" />
-              </div>
-              <div className="stat-info">
-                <span className="stat-number">99.2%</span>
-                <span className="stat-label">Tỷ lệ thanh tra đạt chuẩn</span>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-icon-wrap">
-                <Icon name="money" />
-              </div>
-              <div className="stat-info">
-                <span className="stat-number">30%</span>
-                <span className="stat-label">Chi phí vật tư tiết kiệm được</span>
-              </div>
-            </div>
+          <header className="home-benefits-header">
+            <h2 id="home-benefits-heading">
+              <Icon name="leaf" className="benefits-heading-leaf" />
+              <span>Vì sao chọn <span className="benefits-brand">MyCropDiary?</span></span>
+              <Icon name="leaf" className="benefits-heading-leaf" />
+            </h2>
+            <p>Giải pháp quản lý nông nghiệp toàn diện, đơn giản và hiệu quả cho nhà vườn Việt.</p>
+          </header>
+          <div className="home-benefits-grid">
+            {[
+              { icon: 'book', title: 'Nhật ký canh tác', desc: 'Ghi chép hoạt động hằng ngày, dễ tra cứu theo mùa vụ.' },
+              { icon: 'money', title: 'Theo dõi chi phí', desc: 'Kiểm soát vật tư, chi phí và hiệu quả sản xuất.' },
+              { icon: 'shield', title: 'Tuân thủ VietGAP', desc: 'Lưu hồ sơ, checklist và truy xuất nguồn gốc rõ ràng.' },
+              { icon: 'sprout', title: 'Trợ lý AI nông nghiệp', desc: 'Gợi ý quy trình, nhắc việc và hỗ trợ ra quyết định.' },
+            ].map((benefit) => (
+              <article className="home-benefit-card" key={benefit.title}>
+                <div className="home-benefit-icon">
+                  <Icon name={benefit.icon} size={30} />
+                </div>
+                <div className="home-benefit-info">
+                  <h3>{benefit.title}</h3>
+                  <p>{benefit.desc}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -371,14 +348,10 @@ export function HomePage() {
 
           <div className="knowledge-cards-grid">
             {featuredArticles.map((article) => {
-              const coverImg =
-                articleCoverImages[article.id] ||
-                'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=800&q=80';
-
               return (
                 <article key={article.id} className="knowledge-spotlight-card">
                   <div className="card-thumb-wrap">
-                    <img src={coverImg} alt={article.title} className="card-thumb-img" loading="lazy" />
+                    {article.image && <img src={article.image} alt={article.title} className="card-thumb-img" loading="lazy" />}
                     <span className="card-category-badge">
                       {KNOWLEDGE_CATEGORY_LABEL[article.category] || 'Tiêu chuẩn'}
                     </span>

@@ -39,12 +39,12 @@ export function PublicHeader() {
           >
             Kiến thức VietGAP
           </Link>
-          <a href="/#features-section" className="nav-link">
+          <Link to="/features" className={`nav-link ${isActive('/features') ? 'is-active' : ''}`} aria-current={isActive('/features') ? 'page' : undefined}>
             Tính năng nổi bật
-          </a>
-          <a href="#footer-brand-heading" className="nav-link">
-            Giới thiệu
-          </a>
+          </Link>
+          <Link to="/about" className={`nav-link ${isActive('/about') ? 'is-active' : ''}`} aria-current={isActive('/about') ? 'page' : undefined}>
+            Về chúng tôi
+          </Link>
         </nav>
 
         <div className="public-header-actions">
@@ -126,20 +126,22 @@ export function PublicHeader() {
             >
               Kiến thức VietGAP
             </Link>
-            <a
-              href="/#features-section"
-              className="mobile-nav-link"
+            <Link
+              to="/features"
+              className={`mobile-nav-link ${isActive('/features') ? 'is-active' : ''}`}
+              aria-current={isActive('/features') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
               Tính năng nổi bật
-            </a>
-            <a
-              href="#footer-brand-heading"
-              className="mobile-nav-link"
+            </Link>
+            <Link
+              to="/about"
+              className={`mobile-nav-link ${isActive('/about') ? 'is-active' : ''}`}
+              aria-current={isActive('/about') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Giới thiệu
-            </a>
+              Về chúng tôi
+            </Link>
 
             <div className="mobile-drawer-auth">
               {isAuthenticated ? (
