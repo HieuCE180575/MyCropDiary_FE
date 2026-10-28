@@ -16,7 +16,7 @@ export function KnowledgeCard({ article, onOpen }: KnowledgeCardProps) {
       {article.image && (
         <img src={article.image} alt={article.title} className="knowledge-card-image" loading="lazy" />
       )}
-      <span className="module-code" style={{justifySelf: 'start'}}>{KNOWLEDGE_CATEGORY_LABEL[article.category]}</span>
+      <span className="module-code" style={{justifySelf: 'start'}}>{article.category ? KNOWLEDGE_CATEGORY_LABEL[article.category] : 'Kiến thức nông nghiệp'}</span>
       <h3>{article.title}</h3>
       <p>{article.summary}</p>
       <div className="knowledge-card-meta">

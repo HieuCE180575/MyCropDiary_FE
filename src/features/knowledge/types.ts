@@ -8,12 +8,12 @@ export type KnowledgeCategory =
   | 'training-certification';
 
 export interface KnowledgeArticle {
-  id: string;
+  id: number;
   title: string;
   image?: string;
   summary: string;
   content: string;
-  category: KnowledgeCategory;
+  category: KnowledgeCategory | null;
   tags: string[];
   readTimeMinutes: number;
   publishedAt: string; // ISO date string

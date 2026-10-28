@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
-import { MOCK_KNOWLEDGE_ARTICLES } from '../features/knowledge/mockData';
+import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
+import { useApiData } from '../shared/hooks/useApiData';
 import { KNOWLEDGE_CATEGORY_LABEL } from '../features/knowledge/constants';
 import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
 import type { KnowledgeArticle } from '../features/knowledge/types';
@@ -135,13 +136,13 @@ const testimonials = [
   },
 ];
 
+const loadFeaturedArticles = (signal: AbortSignal) => fetchKnowledgeArticles({ sort: 'popular', page: 1, pageSize: 4 }, signal);
+
 export function HomePage() {
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
 
-  // Chọn ra 4 bài viết kiến thức nổi bật
-  const featuredArticles = MOCK_KNOWLEDGE_ARTICLES.filter((a) =>
-    ['kn-01', 'kn-09', 'kn-05', 'kn-10'].includes(a.id)
-  );
+  const { data, loading, error, retry } = useApiData(loadFeaturedArticles);
+  const featuredArticles = !loading && !error ? data?.items ?? [] : [];
 
   return (
     <main className="home-page-root" role="main">
@@ -346,6 +347,9 @@ export function HomePage() {
             </Link>
           </div>
 
+          {loading && <p role="status">Đang tải bài viết...</p>}
+          {error && <div role="alert"><p>{error}</p><button type="button" className="action-button" onClick={retry}>Thử lại</button></div>}
+          {!loading && !error && featuredArticles.length === 0 && <p>Chưa có bài viết được xuất bản.</p>}
           <div className="knowledge-cards-grid">
             {featuredArticles.map((article) => {
               return (
@@ -353,7 +357,7 @@ export function HomePage() {
                   <div className="card-thumb-wrap">
                     {article.image && <img src={article.image} alt={article.title} className="card-thumb-img" loading="lazy" />}
                     <span className="card-category-badge">
-                      {KNOWLEDGE_CATEGORY_LABEL[article.category] || 'Tiêu chuẩn'}
+                      {article.category ? KNOWLEDGE_CATEGORY_LABEL[article.category] : 'Kiến thức nông nghiệp'}
                     </span>
                   </div>
 

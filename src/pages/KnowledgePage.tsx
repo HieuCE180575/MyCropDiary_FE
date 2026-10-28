@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pagination } from '../shared/components/Pagination';
 import { useDebounce } from '../shared/hooks/useDebounce';
+import { useApiData } from '../shared/hooks/useApiData';
 import { KnowledgeSearchBar } from '../features/knowledge/components/KnowledgeSearchBar';
 import { KnowledgeFilterBar } from '../features/knowledge/components/KnowledgeFilterBar';
 import { KnowledgeList } from '../features/knowledge/components/KnowledgeList';
@@ -25,11 +26,10 @@ export function KnowledgePage() {
   const [sort, setSort] = useState<KnowledgeSort>('newest');
   const [page, setPage] = useState(1);
 
-  const [result, setResult] = useState<PagedResult<KnowledgeArticle>>(EMPTY_RESULT);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
+  const load = useCallback((signal: AbortSignal) => fetchKnowledgeArticles({ search: debouncedSearch, category, sort, page, pageSize: KNOWLEDGE_PAGE_SIZE }, signal), [debouncedSearch, category, sort, page]);
+  const { data, loading, error, retry } = useApiData(load);
+  const result = data ?? EMPTY_RESULT;
 
   const hasActiveFilters = debouncedSearch.trim() !== '' || category !== 'all';
 
@@ -37,27 +37,6 @@ export function KnowledgePage() {
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch]);
-
-  useEffect(() => {
-    let ignore = false;
-    setLoading(true);
-    setError(null);
-
-    fetchKnowledgeArticles({ search: debouncedSearch, category, sort, page, pageSize: KNOWLEDGE_PAGE_SIZE })
-      .then((data) => {
-        if (!ignore) setResult(data);
-      })
-      .catch(() => {
-        if (!ignore) setError('Không thể tải danh sách kiến thức. Vui lòng thử lại.');
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [debouncedSearch, category, sort, page, reloadToken]);
 
   const resultSummary = useMemo(() => {
     if (result.totalItems === 0) return null;
@@ -100,11 +79,11 @@ export function KnowledgePage() {
           </div>
 
           {error ? (
-            <div className="panel empty-state">
+            <div className="panel empty-state" role="alert">
               <div className="empty-icon">⚠️</div>
               <h2>Đã có lỗi xảy ra</h2>
               <p>{error}</p>
-              <button type="button" className="primary-button" onClick={() => setReloadToken((t) => t + 1)}>
+              <button type="button" className="primary-button" onClick={retry}>
                 Thử lại
               </button>
             </div>
