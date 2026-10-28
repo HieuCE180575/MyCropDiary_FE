@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth';
 import { Icon } from '../../shared/components/Icon';
@@ -29,6 +29,11 @@ function WorkspaceLayout() {
   const { farms, selectedFarm, selectFarm } = useFarmWorkspace();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  useEffect(() => {
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [pathname]);
+  const isZoneRoute = /^\/zones(?:\/|$)/.test(pathname);
   const navigation = moduleDefinitions.filter((module) => canAccessModule(module, user?.systemRole, selectedFarm));
   const displayName = user?.fullName?.trim() || user?.email || 'Tài khoản của bạn';
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -81,7 +86,7 @@ function WorkspaceLayout() {
             {navigation
               .filter((module) => module.group !== 'account' && (!isAdmin || (module.group === 'admin' && module.key !== 'admin')))
               .map((module) => (
-                <NavLink key={module.key} to={'/' + module.path}>
+                <NavLink key={module.key} to={module.key === 'production' && isZoneRoute ? '/zones' : '/' + module.path}>
                   <Icon name={module.icon} />{module.title}
                 </NavLink>
               ))}

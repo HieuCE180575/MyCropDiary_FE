@@ -14,17 +14,23 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
   const oldAdapter = axios.defaults.adapter;
   let currentFarmRole = null;
   const logoutCalls = [];
+  const zone = { zoneId: 5, farmId: 1, zoneName: 'Khu cây ăn trái', areaValue: 1000,
+    areaUnit: 'm2', status: 'active', createdAt: '2026-10-01T00:00:00Z' };
   axios.defaults.adapter = async (config) => {
     if (config.url === '/auth/logout') logoutCalls.push(config);
+    let data = {
+      items: currentFarmRole ? [{ id: 1, farmCode: 'F1', farmName: 'Test Farm', currentUserRole: currentFarmRole, status: 'ACTIVE' }] : [],
+      page: 0, size: 12, totalPages: 1, totalElements: currentFarmRole ? 1 : 0, last: true,
+    };
+    if (config.url === '/farms/1/zones') data = [zone];
+    if (config.url === '/zones/5') data = zone;
+    if (config.url.startsWith('/blocks?') || config.url.includes('zone-assignments') || config.url.endsWith('/zones/assigned')) data = [];
     return ({
     status: 200,
     statusText: 'OK',
     headers: {},
     config,
-    data: JSON.stringify({ success: true, data: {
-      items: currentFarmRole ? [{ id: 1, farmCode: 'F1', farmName: 'Test Farm', currentUserRole: currentFarmRole, status: 'ACTIVE' }] : [],
-      page: 0, size: 12, totalPages: 1, totalElements: currentFarmRole ? 1 : 0, last: true,
-    } }),
+    data: JSON.stringify({ success: true, data }),
     });
   };
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom' });
@@ -67,6 +73,20 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
       assert.equal(button.getAttribute('aria-expanded'), 'true');
       assert.equal(document.getElementById('test-location').textContent, url);
       assert.deepEqual([...document.querySelectorAll('.sidebar a')].map(link => link.getAttribute('href')), links);
+      if (farmRole) {
+        const productionLink = document.querySelector('.sidebar a[href="/production-areas"]');
+        await act(async () => productionLink.click());
+        assert.equal(productionLink.getAttribute('aria-current'), 'page');
+        document.documentElement.scrollTop = 500;
+        document.body.scrollTop = 500;
+        await act(async () => document.querySelector('.zone-card-actions a').click());
+        assert.equal(document.getElementById('test-location').textContent, '/zones/5');
+        assert.equal(document.documentElement.scrollTop, 0);
+        assert.equal(document.body.scrollTop, 0);
+        assert.equal(productionLink.classList.contains('active'), true);
+        assert.equal(productionLink.getAttribute('aria-current'), 'page');
+        assert.match(document.querySelector('main').textContent, /Phân khu chưa có lô đất nào/);
+      }
       await act(async () => document.querySelector('.sidebar-logout').click());
       const logout = logoutCalls.at(-1);
       assert.equal(logoutCalls.length, ['ADMIN', 'USER', 'OWNER', 'STAFF'].indexOf(role) + 1);
