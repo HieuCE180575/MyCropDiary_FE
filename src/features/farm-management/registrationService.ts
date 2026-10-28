@@ -77,6 +77,10 @@ export async function getAdminRegistrations(signal?: AbortSignal): Promise<Regis
   }
 }
 
+export function getAdminRegistrationById(id: string, signal?: AbortSignal): Promise<RegistrationResponse> {
+  return request<RegistrationResponse>(`/admin/farm-registrations/${id}`, { signal });
+}
+
 export function handleFarmRegistration(id: string, action: 'APPROVED' | 'REJECTED', reason: string) {
   if (action === 'REJECTED' && !reason.trim()) throw new Error('Vui lòng nhập lý do từ chối.');
   return request<RegistrationResponse>(`/admin/farm-registrations/${id}/handle`, {

@@ -18,6 +18,11 @@ test('admin uses registration APIs while other modules keep their existing behav
   let fixtures = [];
   let rejectWrite = true;
   let failRead = false;
+  let detailFailure = false;
+  let holdDetail = false;
+  let releaseDetail;
+  let detailSignal;
+  const detailRequests = [];
   const writes = [];
   let userFixtures = [
     { userId: 1, fullName: 'Nguyễn Minh An', email: 'minhan@example.com', phone: '0912345678', systemRole: 'USER', accountStatus: 'ACTIVE', emailVerifiedAt: '2026-09-01T00:00:00Z', createdAt: '2026-09-01T00:00:00Z', updatedAt: '2026-09-01T00:00:00Z' }
@@ -25,6 +30,18 @@ test('admin uses registration APIs while other modules keep their existing behav
   axios.defaults.adapter = async config => {
     requestCount += 1;
     assert.equal(config.headers.get('Authorization'), 'Bearer preview-test-session');
+    const detail = config.url.match(/^\/admin\/(users|farm-registrations)\/(\d+)$/);
+    if (detail) {
+      detailRequests.push(config.url);
+      detailSignal = config.signal;
+      if (holdDetail) await new Promise(resolve => { releaseDetail = resolve; });
+      const data = detail[1] === 'users'
+        ? userFixtures.find(item => String(item.userId) === detail[2])
+        : fixtures.find(item => String(item.registrationId) === detail[2]);
+      return { config, status: detailFailure ? 404 : 200, headers: {}, data: JSON.stringify({
+        success: !detailFailure, message: 'Không tìm thấy chi tiết.', data: detailFailure ? null : data,
+      }) };
+    }
     if (config.url.startsWith('/admin/users')) {
       if (config.method === 'get') {
         return { status: 200, data: JSON.stringify({ success: true, data: { items: userFixtures, last: true, totalPages: 1 } }), config, headers: {} };
@@ -87,7 +104,22 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 1);
     assert.ok(query('.admin-table').textContent.includes('Trang trại Bình Minh'));
     await button('Xóa bộ lọc', '.admin-filters');
+    holdDetail = true;
     await click('[aria-label="Xem chi tiết Vườn rau An Nhiên"]');
+    assert.match(query('dialog [role="status"]').textContent, /Đang tải chi tiết/);
+    await click('dialog [aria-label="Đóng cửa sổ"]');
+    assert.equal(detailSignal.aborted, true);
+    await act(async () => releaseDetail());
+    assert.equal(document.querySelector('dialog'), null);
+    holdDetail = false;
+    detailFailure = true;
+    await click('[aria-label="Xem chi tiết Vườn rau An Nhiên"]');
+    assert.match(query('dialog [role="alert"]').textContent, /Không tìm thấy chi tiết/);
+    assert.equal(document.querySelector('dialog .admin-details'), null, 'Failed detail must not display cached list data');
+    detailFailure = false;
+    fixtures[0].description = 'Mô tả mới nhất từ API chi tiết';
+    await button('Thử lại');
+    assert.ok(query('dialog').textContent.includes(fixtures[0].description));
     assert.ok(query('dialog').textContent.includes('Quận kiểm thử'));
     assert.ok(query('dialog').textContent.includes('Phường kiểm thử'));
     assert.equal(query('dialog a').href, 'https://example.com/ho-so.pdf');
@@ -106,7 +138,7 @@ test('admin uses registration APIs while other modules keep their existing behav
       await click('[aria-label="Xem chi tiết Vườn rau An Nhiên"]');
       const detail = label => [...document.querySelectorAll('dialog .admin-details > div')]
         .find(node => node.querySelector('dt')?.textContent === label)?.querySelector('dd')?.textContent;
-      assert.equal(detail('Mô tả trang trại'), registrationFixtures[0].description, 'Original description must remain after rejection');
+      assert.equal(detail('Mô tả trang trại'), fixtures[0].description, 'Original description must remain after rejection');
       assert.equal(detail('Lý do từ chối'), 'Cần bổ sung mô tả khu sản xuất.', 'Rejection reason must use its own response field');
       await button('Đóng');
     };
@@ -135,7 +167,9 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(articleRow.textContent.includes('Đã duyệt'));
 
     await navigate('/admin/users');
+    userFixtures[0].phone = '0987654321';
     await click('[aria-label="Xem chi tiết Nguyễn Minh An"]');
+    assert.ok(query('dialog').textContent.includes('0987654321'), 'User detail must use fresh server data');
     await button('Khóa tài khoản');
     await submit();
     assert.ok(query('tbody tr').textContent.includes('Đã khóa'));
@@ -167,7 +201,9 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(document.body.textContent.includes('Tháng bắt đầu không được sau tháng kết thúc'));
     await set('.admin-stat-filters label:last-of-type input', '2027-02');
     assert.ok(document.body.textContent.includes('Chưa có số liệu trong khoảng thời gian này'));
-    assert.equal(requestCount, 5, 'Only registration and user requests should reach the backend.');
+    assert.ok(detailRequests.includes('/admin/users/1'));
+    assert.ok(detailRequests.includes('/admin/farm-registrations/1'));
+    assert.equal(requestCount, 5 + detailRequests.length, 'Only registration and user requests should reach the backend.');
     await navigate('/admin/registrations');
     await button('Tải lại', '.admin-list-heading');
     await checkRegistrationDetails();

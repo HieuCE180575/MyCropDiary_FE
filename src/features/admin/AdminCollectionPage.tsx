@@ -1,5 +1,6 @@
 import { Pagination } from '../../shared/components/Pagination';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useApiData } from '../../shared/hooks/useApiData';
 import { Icon } from '../../shared/components/Icon';
 import { useAdmin } from './AdminProvider';
 import { adminConfigs, articleCategories, cropGroups, displayValue, feedbackStatuses, ratingLabels, roleLabels } from './adminConfig';
@@ -57,9 +58,17 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
 }
 
 function RecordDialog({ collection, dialog, close, change }: { collection: Collection; dialog: DialogState; close: () => void; change: (dialog: DialogState) => void }) {
-  const { state, execute } = useAdmin();
+  const { state, execute, loadDetail } = useAdmin();
   const config = adminConfigs[collection];
-  const record = state[collection].find(item => item.id === dialog.id);
+  const needsDetail = dialog.mode === 'detail' && (collection === 'users' || collection === 'registrations');
+  const load = useCallback((signal: AbortSignal) => {
+    if (dialog.mode === 'detail' && dialog.id && (collection === 'users' || collection === 'registrations')) {
+      return loadDetail(collection, dialog.id, signal);
+    }
+    return Promise.resolve(undefined);
+  }, [collection, dialog.mode, dialog.id, loadDetail]);
+  const { data, loading, error: detailError, retry } = useApiData(load);
+  const record = needsDetail ? data : state[collection].find(item => item.id === dialog.id);
   const [values, setValues] = useState<Record<string, string>>(record ?? {});
   const [reason, setReason] = useState('');
   const [reply, setReply] = useState(record?.reply ?? '');
@@ -74,6 +83,11 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
     catch (failure) { setError(failure instanceof Error ? failure.message : 'Không thể thực hiện thao tác.'); }
     finally { setSubmitting(false); }
   };
+  if (needsDetail && (loading || detailError)) {
+    return <AdminModal title={`Chi tiết ${config.singular}`} close={close} wide><div className="admin-modal-body">
+      {loading ? <p role="status">Đang tải chi tiết...</p> : <><p role="alert" className="admin-form-error">{detailError}</p><button className="action-button" onClick={retry}>Thử lại</button></>}
+    </div></AdminModal>;
+  }
   if (dialog.mode !== 'create' && !record) return null;
   if (dialog.mode === 'create' || dialog.mode === 'edit') {
     if (collection !== 'crops' && collection !== 'rules' && collection !== 'articles') return null;

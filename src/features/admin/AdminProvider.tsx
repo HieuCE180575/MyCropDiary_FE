@@ -1,7 +1,7 @@
 import { Icon } from '../../shared/components/Icon';
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { getAdminRegistrations, handleFarmRegistration, type RegistrationResponse } from '../farm-management/registrationService';
-import { getAdminUsers, updateAdminUserStatus, type AdminUserResponse } from './adminUserService';
+import { getAdminRegistrations, getAdminRegistrationById, handleFarmRegistration, type RegistrationResponse } from '../farm-management/registrationService';
+import { getAdminUsers, getAdminUserById, updateAdminUserStatus, type AdminUserResponse } from './adminUserService';
 import { useAuth } from '../auth';
 import { createAdminDemo } from './adminDemo';
 import { applyAdminCommand } from './adminModel';
@@ -10,6 +10,7 @@ import type { AdminCommand, AdminState, AdminRecord } from './adminTypes';
 interface AdminContextValue {
   state: AdminState;
   execute: (command: AdminCommand) => Promise<void>;
+  loadDetail: (collection: 'users' | 'registrations', id: string, signal: AbortSignal) => Promise<AdminRecord>;
   notice: string;
   noticeId: number;
   dismissNotice: () => void;
@@ -94,6 +95,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [user?.userId, revision]);
 
+  const loadDetail = useCallback(async (collection: 'users' | 'registrations', id: string, signal: AbortSignal) => {
+    const record = collection === 'users'
+      ? userToRecord(await getAdminUserById(id, signal))
+      : toRecord(await getAdminRegistrationById(id, signal));
+    if (!signal.aborted) setState(previous => ({
+      ...previous, [collection]: previous[collection].map(item => item.id === id ? record : item),
+    }));
+    return record;
+  }, []);
+
   const execute = async (command: AdminCommand) => {
     if (user?.systemRole?.toUpperCase() !== 'ADMIN') throw new Error('Bạn không có quyền thực hiện thao tác quản trị.');
     if (command.type === 'review') {
@@ -120,6 +131,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       value={{
         state,
         execute,
+        loadDetail,
         notice,
         noticeId,
         dismissNotice: () => setNotice(''),

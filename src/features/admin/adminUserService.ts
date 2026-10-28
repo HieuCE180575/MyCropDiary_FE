@@ -34,6 +34,10 @@ export async function getAdminUsers(signal?: AbortSignal): Promise<AdminUserResp
   }
 }
 
+export function getAdminUserById(id: string, signal?: AbortSignal): Promise<AdminUserResponse> {
+  return request<AdminUserResponse>(`/admin/users/${id}`, { signal });
+}
+
 export function updateAdminUserStatus(
   userId: string | number,
   status: 'ACTIVE' | 'LOCKED' | 'PENDING' | string
