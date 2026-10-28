@@ -6,6 +6,7 @@ import { Icon } from '../../shared/components/Icon';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { ZoneModal } from '../../features/production/components/ZoneModal';
 import { BlockModal } from '../../features/production/components/BlockModal';
+import { BlockDetailModal } from '../../features/production/components/BlockDetailModal';
 import { AssignStaffModal } from '../../features/production/components/AssignStaffModal';
 import { RecordConditionModal } from '../../features/production/components/RecordConditionModal';
 import { BlockConditionHistoryModal } from '../../features/production/components/BlockConditionHistoryModal';
@@ -44,6 +45,7 @@ export function ZoneDetailPage() {
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [blockToEdit, setBlockToEdit] = useState<Block | null>(null);
   const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
+  const [blockToView, setBlockToView] = useState<number | null>(null);
 
   const [isAssignStaffOpen, setIsAssignStaffOpen] = useState(false);
   const [assignmentToCancel, setAssignmentToCancel] = useState<StaffZoneAssignment | null>(null);
@@ -54,6 +56,7 @@ export function ZoneDetailPage() {
   const [isConditionHistoryOpen, setIsConditionHistoryOpen] = useState(false);
 
   useEffect(() => {
+    setBlockToView(null);
     loadZoneData();
   }, [zoneId, farmId]);
 
@@ -362,6 +365,14 @@ export function ZoneDetailPage() {
                   <div className="block-action-bar">
                     <button
                       type="button"
+                      className="btn btn-secondary btn-sm-action"
+                      onClick={() => setBlockToView(block.blockId)}
+                      aria-label={`Xem chi tiết ${block.blockName}`}
+                    >
+                      <Icon name="eye" size={14} /> Chi tiết
+                    </button>
+                    <button
+                      type="button"
                       className="btn btn-primary-emerald btn-sm-action"
                       style={{ flex: 1 }}
                       onClick={() => {
@@ -542,6 +553,9 @@ export function ZoneDetailPage() {
       />
 
       {/* BLOCK MODAL */}
+      {blockToView !== null && (
+        <BlockDetailModal key={blockToView} blockId={blockToView} onClose={() => setBlockToView(null)} />
+      )}
       <BlockModal
         isOpen={isBlockModalOpen}
         onClose={() => setIsBlockModalOpen(false)}

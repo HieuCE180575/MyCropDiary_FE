@@ -27,9 +27,9 @@ function readAuthSession(result: ApiResponse<AuthResponse>): AuthSession {
     || !result.data.accessToken.trim() || result.data.tokenType !== 'Bearer') {
     throw new Error('Không xác minh được đăng nhập: máy chủ chưa trả về access token hợp lệ.');
   }
-  const { accessToken, userId, email, fullName, systemRole } = result.data;
+  const { accessToken, refreshToken, userId, email, fullName, systemRole } = result.data;
   const normalizedRole = (systemRole || 'USER').trim().toUpperCase();
-  return { accessToken, user: { userId, email, fullName, systemRole: normalizedRole } };
+  return { accessToken, refreshToken, user: { userId, email, fullName, systemRole: normalizedRole } };
 }
 
 export interface RegisterRequest {
@@ -101,6 +101,7 @@ export async function logoutUser(token?: string): Promise<void> {
     try {
       await apiRequest<ApiResponse<void>>('/auth/logout', {
         method: 'POST',
+        anonymous: true,
         data: { refreshToken: token },
       });
     } catch {

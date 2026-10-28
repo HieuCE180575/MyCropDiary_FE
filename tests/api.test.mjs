@@ -26,6 +26,7 @@ async function client(transport) {
         }),
       }),
       isCancel: axios.isCancel,
+      CanceledError: axios.CanceledError,
     });
     this.setExport('AxiosHeaders', AxiosHeaders);
   }, { context });
@@ -33,18 +34,24 @@ async function client(transport) {
     if (modules.has(file)) return modules.get(file);
     const source = await readFile(file, 'utf8');
     const js = stripTypeScriptTypes(source, { mode: 'transform' });
-    const mod = new SourceTextModule(js, { context, identifier: file, initializeImportMeta(meta) { meta.env = {}; } });
+    const mod = new SourceTextModule(js, { context, identifier: file,
+      initializeImportMeta(meta) { meta.env = {}; },
+      importModuleDynamically: (name, parent) => load(resolve(dirname(parent.identifier), `${name}.ts`)),
+    });
     modules.set(file, mod);
-    await mod.link((name, parent) => name === 'axios'
-      ? axiosModule
-      : load(resolve(dirname(parent.identifier), `${name}.ts`)));
     return mod;
   }
+  const link = (name, parent) => name === 'axios'
+    ? axiosModule
+    : load(resolve(dirname(parent.identifier), `${name}.ts`));
   const auth = await load(resolve('src/features/auth/authApi.ts'));
+  await auth.link(link);
   await auth.evaluate();
   const farms = await load(resolve('src/features/farm-management/api.ts'));
+  await farms.link(link);
   await farms.evaluate();
   const registrations = await load(resolve('src/features/farm-management/registrationService.ts'));
+  await registrations.link(link);
   await registrations.evaluate();
   return {
     registrations: registrations.namespace,
@@ -58,6 +65,159 @@ async function client(transport) {
 
 const reply = (body, status = 200) => ({ status, data: JSON.stringify(body) });
 const ok = (data) => reply({ success: true, message: 'OK', data, timestamp: new Date().toISOString() });
+
+const refreshedAuth = {
+  accessToken: 'renewed.jwt.token', refreshToken: 'rotated-refresh-token', tokenType: 'Bearer',
+  userId: 12, email: 'farmer@example.com', fullName: 'Farmer', systemRole: 'USER',
+};
+const deferred = () => {
+  let resolve;
+  const promise = new Promise(done => { resolve = done; });
+  return { promise, resolve };
+};
+
+test('expired JWT refreshes before sending the protected request and stores rotated tokens in memory', async () => {
+  const calls = [];
+  const app = await client(async config => {
+    calls.push(config);
+    return config.url.endsWith('/auth/refresh-token') ? ok(refreshedAuth) : ok({ items: [] });
+  });
+  app.storage.saveAccessToken(`header.${btoa(JSON.stringify({ exp: 1 }))}.signature`,
+    { ...refreshedAuth, avatarUrl: 'profile.png' }, 'original-refresh-token');
+  await app.farms.getFarms();
+  assert.equal(calls.length, 2);
+  assert.ok(calls[0].url.endsWith('/auth/refresh-token'));
+  assert.equal(calls[0].method, 'post');
+  assert.equal(calls[0].headers.has('Authorization'), false);
+  assert.deepEqual(JSON.parse(calls[0].data), { refreshToken: 'original-refresh-token' });
+  assert.equal(calls[1].headers.get('Authorization'), 'Bearer renewed.jwt.token');
+  assert.equal(app.storage.getRefreshToken(), 'rotated-refresh-token');
+  assert.equal(app.storage.getAuthUser().avatarUrl, 'profile.png');
+  assert.equal(app.stored.size, 0);
+});
+
+test('concurrent 401s share one refresh and replay the original method, body and headers', async () => {
+  const started = deferred();
+  const release = deferred();
+  let refreshes = 0;
+  const retries = [];
+  const app = await client(async config => {
+    if (config.url.endsWith('/auth/refresh-token')) {
+      refreshes++;
+      started.resolve();
+      await release.promise;
+      return ok(refreshedAuth);
+    }
+    if (config.headers.get('Authorization') === 'Bearer old.jwt') return reply({}, 401);
+    retries.push(config);
+    return ok({ saved: true });
+  });
+  app.storage.saveAccessToken('old.jwt', null, 'refresh-token');
+  const requests = [1, 2, 3].map(id => app.http.apiRequest(`/records/${id}`, {
+    method: 'PUT', data: { id }, headers: { 'X-Request-ID': String(id) },
+  }));
+  await started.promise;
+  release.resolve();
+  await Promise.all(requests);
+  assert.equal(refreshes, 1);
+  assert.equal(retries.length, 3);
+  retries.forEach(config => {
+    const id = Number(config.url.split('/').at(-1));
+    assert.equal(config.method, 'put');
+    assert.equal(config.headers.get('X-Request-ID'), String(id));
+    assert.deepEqual(JSON.parse(config.data), { id });
+  });
+});
+
+test('refresh rejection clears both tokens and a retried 401 cannot loop', async () => {
+  for (const refreshStatus of [400, 401, 403, 200]) {
+    let calls = 0;
+    const app = await client(async config => {
+      calls++;
+      return config.url.endsWith('/auth/refresh-token')
+        ? refreshStatus === 200 ? ok(refreshedAuth) : reply({ message: 'Refresh hết hạn' }, refreshStatus)
+        : reply({}, 401);
+    });
+    app.storage.saveAccessToken('old.jwt', null, 'refresh-token');
+    await assert.rejects(app.farms.getFarms());
+    assert.equal(calls, refreshStatus === 200 ? 3 : 2);
+    assert.equal(app.storage.getAccessToken(), null);
+    assert.equal(app.storage.getRefreshToken(), null);
+  }
+});
+
+test('temporary refresh failures keep the session and allow a later attempt', async () => {
+  for (const failure of [0, 503]) {
+    let retry = false;
+    const app = await client(async config => {
+      if (!config.url.endsWith('/auth/refresh-token')) {
+        return config.headers.get('Authorization') === 'Bearer old.jwt' ? reply({}, 401) : ok({ items: [] });
+      }
+      if (retry) return ok(refreshedAuth);
+      if (failure === 0) throw new Error('offline');
+      return reply({}, failure);
+    });
+    app.storage.saveAccessToken('old.jwt', null, 'refresh-token');
+    await assert.rejects(app.farms.getFarms(), error => error.status === failure);
+    assert.equal(app.storage.getAccessToken(), 'old.jwt');
+    retry = true;
+    await app.farms.getFarms();
+    assert.equal(app.storage.getAccessToken(), refreshedAuth.accessToken);
+  }
+});
+
+test('late refresh cannot resurrect logout or overwrite a newer login', async () => {
+  for (const newLogin of [false, true]) {
+    const started = deferred();
+    const release = deferred();
+    const app = await client(async config => {
+      if (!config.url.endsWith('/auth/refresh-token')) return reply({}, 401);
+      started.resolve();
+      await release.promise;
+      return ok(refreshedAuth);
+    });
+    app.storage.saveAccessToken('old.jwt', null, 'refresh-token');
+    const request = app.farms.getFarms();
+    const rejected = assert.rejects(request, error => error.status === 401);
+    await started.promise;
+    app.storage.clearAccessToken();
+    if (newLogin) app.storage.saveAccessToken('other.jwt', null, 'other-refresh');
+    release.resolve();
+    await rejected;
+    assert.equal(app.storage.getAccessToken(), newLogin ? 'other.jwt' : null);
+    assert.equal(app.storage.getRefreshToken(), newLogin ? 'other-refresh' : null);
+  }
+});
+
+test('403 and anonymous 401 do not refresh; cancellation does not replay a waiting request', async () => {
+  const calls = [];
+  const app = await client(async config => { calls.push(config); return reply({}, config.url.endsWith('/public') ? 401 : 403); });
+  app.storage.saveAccessToken('old.jwt', null, 'refresh-token');
+  await assert.rejects(app.http.apiRequest('/forbidden'), error => error.status === 403);
+  await assert.rejects(app.http.apiRequest('/public', { anonymous: true }), error => error.status === 401);
+  assert.equal(calls.length, 2);
+  assert.equal(app.storage.getAccessToken(), 'old.jwt');
+
+  const started = deferred();
+  const release = deferred();
+  let protectedCalls = 0;
+  const waiting = await client(async config => {
+    if (!config.url.endsWith('/auth/refresh-token')) { protectedCalls++; return reply({}, 401); }
+    started.resolve();
+    await release.promise;
+    return ok(refreshedAuth);
+  });
+  waiting.storage.saveAccessToken('old.jwt', null, 'refresh-token');
+  const controller = new AbortController();
+  const request = waiting.http.apiRequest('/protected', { signal: controller.signal });
+  const cancelled = assert.rejects(request, axios.isCancel);
+  await started.promise;
+  controller.abort();
+  release.resolve();
+  await cancelled;
+  assert.equal(protectedCalls, 1);
+  assert.equal(waiting.storage.getAccessToken(), refreshedAuth.accessToken);
+});
 
 test('password recovery sends backend DTOs anonymously without changing the session', async () => {
   const calls = [];
@@ -97,12 +257,14 @@ test('login and OTP preserve account identity and clear it when the session ends
     }));
     const session = await app.auth[method](user.email, '123456');
     assert.deepEqual(JSON.parse(JSON.stringify(session.user)), user);
-    assert.equal('refreshToken' in session, false);
-    app.storage.saveAccessToken(session.accessToken, session.user);
+    assert.equal(session.refreshToken, 'private-refresh-token');
+    app.storage.saveAccessToken(session.accessToken, session.user, session.refreshToken);
+    assert.equal(app.storage.getRefreshToken(), 'private-refresh-token');
     assert.equal(app.storage.getAuthUser().fullName, user.fullName);
     assert.equal(app.stored.size, 0);
     app.storage.clearAccessToken();
     assert.equal(app.storage.getAuthUser(), null);
+    assert.equal(app.storage.getRefreshToken(), null);
     app.storage.saveAccessToken(session.accessToken, session.user);
     unauthorized = true;
     await assert.rejects(app.farms.getFarms(), error => error.status === 401);

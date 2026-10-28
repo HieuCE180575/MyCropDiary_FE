@@ -349,6 +349,25 @@
   flex-wrap: wrap;
 }
 
+.block-detail-modal img {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.block-detail-modal .block-detail-row {
+  gap: 16px;
+}
+
+.block-detail-modal .block-detail-value {
+  margin: 0;
+  max-width: 65%;
+  text-align: right;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* Condition Timeline & Observations */
 .observation-timeline {
   display: flex;

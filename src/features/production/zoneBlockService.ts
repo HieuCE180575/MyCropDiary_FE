@@ -111,8 +111,8 @@ export async function fetchBlocks(farmId: number, zoneId?: number, status?: stri
   }
 }
 
-export async function fetchBlockById(blockId: number): Promise<Block> {
-  return await request<Block>(`/blocks/${blockId}`);
+export async function fetchBlockById(blockId: number, signal?: AbortSignal): Promise<Block> {
+  return await request<Block>(`/blocks/${blockId}`, { signal });
 }
 
 export async function createBlock(zoneId: number, values: BlockFormValues): Promise<Block> {

@@ -3,12 +3,14 @@ import {
   clearAccessToken,
   getAccessToken,
   getAuthUser,
+  getRefreshToken,
   type AuthSession,
   type AuthUser,
   saveAccessToken,
   subscribeToAuthChanges,
   updateAuthUser,
 } from './authStorage';
+import { logoutUser } from './authApi';
 
 interface AuthContextValue {
   accessToken: string | null;
@@ -31,8 +33,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(getAuthUser());
   }), []);
 
-  const setSession = (session: AuthSession) => saveAccessToken(session.accessToken, session.user);
-  const signOut = () => clearAccessToken();
+  const setSession = (session: AuthSession) => saveAccessToken(session.accessToken, session.user, session.refreshToken);
+  const signOut = () => {
+    const token = getRefreshToken();
+    clearAccessToken();
+    void logoutUser(token ?? undefined);
+  };
   const updateUser = (updates: Partial<AuthUser>) => updateAuthUser(updates);
   const switchRole = (role: 'ADMIN' | 'USER') => {
     const current = user || getAuthUser();

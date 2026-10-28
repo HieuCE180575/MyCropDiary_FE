@@ -14,9 +14,18 @@ Không còn sử dụng HTTP Basic hoặc endpoint công khai `/modules` để �
 
 Dùng email và mật khẩu tài khoản đã kích hoạt. Frontend hiển thị thông báo
 backend khi sai thông tin, tài khoản chưa xác thực OTP hoặc bị khóa.
-JWT được giữ trong bộ nhớ tab; tải lại trang cần đăng nhập lại. Đăng xuất và
-phản hồi 401 xóa phiên. Không lưu mật khẩu hoặc refresh token. Backend đã trả
-refresh token nhưng chưa có endpoint refresh nên frontend chưa tự gia hạn.
+Access token và refresh token được giữ trong bộ nhớ tab, không ghi vào localStorage;
+tải lại trang cần đăng nhập lại. Đăng nhập và xác thực OTP đều lưu cả hai token.
+Khi access token đã hết hạn theo JWT hoặc API có xác thực trả 401, frontend gọi
+`POST /auth/refresh-token` với `{ refreshToken }`, cập nhật token và thử lại yêu cầu
+tối đa một lần. Nhiều yêu cầu đồng thời dùng chung một lần refresh. Phản hồi 403
+do thiếu quyền không kích hoạt refresh. API đăng nhập/OTP/refresh chạy ẩn danh,
+không tự refresh khi lỗi. Refresh token hết hạn hoặc bị thu hồi sẽ xóa phiên;
+lỗi mạng hoặc lỗi máy chủ tạm thời giữ phiên để có thể thử lại. Đăng xuất xóa cả
+hai token ở frontend và gọi `POST /auth/logout` với refresh token vừa lưu để backend
+thu hồi token đó. API này chạy ẩn danh để vẫn gọi được khi access token hết hạn;
+nếu mất mạng, frontend vẫn thoát phiên nhưng không bảo đảm thu hồi trên backend.
+Kết quả refresh đến muộn không thể khôi phục phiên đã kết thúc.
 
 ## Trang trại và danh mục
 

@@ -13,7 +13,10 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
   const oldAdapter = axios.defaults.adapter;
   let currentFarmRole = null;
-  axios.defaults.adapter = async (config) => ({
+  const logoutCalls = [];
+  axios.defaults.adapter = async (config) => {
+    if (config.url === '/auth/logout') logoutCalls.push(config);
+    return ({
     status: 200,
     statusText: 'OK',
     headers: {},
@@ -22,7 +25,8 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
       items: currentFarmRole ? [{ id: 1, farmCode: 'F1', farmName: 'Test Farm', currentUserRole: currentFarmRole, status: 'ACTIVE' }] : [],
       page: 0, size: 12, totalPages: 1, totalElements: currentFarmRole ? 1 : 0, last: true,
     } }),
-  });
+    });
+  };
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom' });
   let root;
   try {
@@ -34,7 +38,7 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
     for (const role of ['ADMIN', 'USER', 'OWNER', 'STAFF']) {
       const farmRole = ['OWNER', 'STAFF'].includes(role) ? role : null;
       currentFarmRole = farmRole;
-      storage.saveAccessToken('test-session', { userId: role, email: 'test@example.com', fullName: 'Test', systemRole: role === 'ADMIN' ? 'ADMIN' : 'USER' });
+      storage.saveAccessToken('test-session', { userId: role, email: 'test@example.com', fullName: 'Test', systemRole: role === 'ADMIN' ? 'ADMIN' : 'USER' }, `refresh-${role}`);
       root = createRoot(document.getElementById('root'));
       await act(async () => root.render(createElement(MemoryRouter, { initialEntries: [role === 'ADMIN' ? '/admin/registrations' : '/dashboard'] }, createElement(AuthProvider, null, createElement(App), createElement(Location)))));
       if (farmRole) {
@@ -63,6 +67,14 @@ test('sidebar toggles for Admin, User, Owner and Staff without changing URL, con
       assert.equal(button.getAttribute('aria-expanded'), 'true');
       assert.equal(document.getElementById('test-location').textContent, url);
       assert.deepEqual([...document.querySelectorAll('.sidebar a')].map(link => link.getAttribute('href')), links);
+      await act(async () => document.querySelector('.sidebar-logout').click());
+      const logout = logoutCalls.at(-1);
+      assert.equal(logoutCalls.length, ['ADMIN', 'USER', 'OWNER', 'STAFF'].indexOf(role) + 1);
+      assert.equal(logout.method, 'post');
+      assert.deepEqual(JSON.parse(logout.data), { refreshToken: `refresh-${role}` });
+      assert.equal(logout.headers.has('Authorization'), false);
+      assert.equal(storage.getAccessToken(), null);
+      assert.equal(storage.getRefreshToken(), null);
       await act(async () => root.unmount());
       root = undefined;
     }
