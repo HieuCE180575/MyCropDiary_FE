@@ -25,6 +25,9 @@ export function AssignStaffModal({ isOpen, onClose, farmId, zoneId, zoneName, on
 
   useEffect(() => {
     if (!isOpen || !farmId) return;
+    setError(null);
+    setMembers([]);
+    setSelectedMemberId('');
     setLoadingMembers(true);
     getFarmMembers(farmId)
       .then((data) => {
@@ -33,14 +36,7 @@ export function AssignStaffModal({ isOpen, onClose, farmId, zoneId, zoneName, on
           setSelectedMemberId(data[0].id);
         }
       })
-      .catch(() => {
-        // Fallback demo members if needed
-        setMembers([
-          { id: 1, userId: 10, fullName: 'Nguyễn Văn Kỹ Thuật', email: 'tech1@vietgap.com', role: 'STAFF', status: 'ACTIVE', joinedAt: '2026-01-01' },
-          { id: 2, userId: 11, fullName: 'Trần Thị Nông Học', email: 'agri2@vietgap.com', role: 'STAFF', status: 'ACTIVE', joinedAt: '2026-01-15' },
-        ]);
-        setSelectedMemberId(1);
-      })
+      .catch(err => setError(err instanceof Error ? err.message : 'Không tải được danh sách nhân viên.'))
       .finally(() => setLoadingMembers(false));
   }, [isOpen, farmId]);
 

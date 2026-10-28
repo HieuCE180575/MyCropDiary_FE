@@ -15,6 +15,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
   const [conditions, setConditions] = useState<BlockConditionObservation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!isOpen || !block) return;
@@ -24,7 +25,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
       .then((data) => setConditions(data))
       .catch((err) => setError(err instanceof Error ? err.message : 'Không thể tải lịch sử tình trạng.'))
       .finally(() => setLoading(false));
-  }, [isOpen, block]);
+  }, [isOpen, block, attempt]);
 
   if (!block) return null;
 
@@ -74,7 +75,10 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
           <p style={{ marginTop: '8px' }}>Đang tải lịch sử tình trạng...</p>
         </div>
       ) : error ? (
-        <div className="alert alert--error">{error}</div>
+        <div className="alert alert--error" role="alert">
+          <p>{error}</p>
+          <button type="button" className="action-button" onClick={() => setAttempt(value => value + 1)}>Thử lại</button>
+        </div>
       ) : conditions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '12px' }}>
           <span style={{ fontSize: '32px' }}>📋</span>

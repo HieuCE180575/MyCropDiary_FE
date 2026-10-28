@@ -156,7 +156,8 @@ export function ZoneDetailPage() {
   if (error || !zone) {
     return (
       <section style={{ padding: '24px' }}>
-        <div className="alert alert--error">{error || 'Không tìm thấy phân khu.'}</div>
+        <div className="alert alert--error" role="alert">{error || 'Không tìm thấy phân khu.'}</div>
+        <button type="button" className="action-button" onClick={loadZoneData}>Thử lại</button>
         <Link to="/zones" className="btn btn-secondary" style={{ marginTop: '16px' }}>
           <Icon name="arrow-left" /> Quay lại danh sách phân khu
         </Link>

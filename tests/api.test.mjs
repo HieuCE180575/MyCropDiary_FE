@@ -10,7 +10,7 @@ import axios, { AxiosHeaders } from 'axios';
 async function client(transport) {
   const stored = new Map();
   const events = new EventTarget();
-  const context = createContext({ FormData, TextEncoder, btoa, atob, Event,
+  const context = createContext({ FormData, TextEncoder, URLSearchParams, btoa, atob, Event,
     window: events, localStorage: { removeItem: (key) => stored.delete(key), setItem: (key, value) => stored.set(key, value) } });
   const modules = new Map();
   // Keep Axios serialization, headers and cancellation; replace only network I/O.
@@ -53,7 +53,11 @@ async function client(transport) {
   const registrations = await load(resolve('src/features/farm-management/registrationService.ts'));
   await registrations.link(link);
   await registrations.evaluate();
+  const production = await load(resolve('src/features/production/zoneBlockService.ts'));
+  await production.link(link);
+  await production.evaluate();
   return {
+    production: production.namespace,
     registrations: registrations.namespace,
     auth: auth.namespace,
     http: modules.get(resolve('src/shared/api/httpClient.ts')).namespace,
@@ -65,6 +69,21 @@ async function client(transport) {
 
 const reply = (body, status = 200) => ({ status, data: JSON.stringify(body) });
 const ok = (data) => reply({ success: true, message: 'OK', data, timestamp: new Date().toISOString() });
+
+test('production reads preserve empty results and propagate API failures instead of demo data', async () => {
+  const lists = ['fetchZonesByFarm', 'fetchAssignedZones', 'fetchBlocks', 'fetchBlockConditions', 'fetchZoneAssignments'];
+  const empty = await client(async () => ok([]));
+  for (const name of lists) assert.equal((await empty.production[name](1)).length, 0);
+  for (const status of [403, 500, 200, 0]) {
+    const failed = await client(async () => {
+      if (status === 0) throw new Error('offline');
+      return reply({ success: false, message: 'Không thể tải dữ liệu thật.' }, status);
+    });
+    for (const name of [...lists, 'fetchZoneById']) {
+      await assert.rejects(failed.production[name](1), status === 0 ? /Không kết nối được/ : /Không thể tải dữ liệu thật/);
+    }
+  }
+});
 
 const refreshedAuth = {
   accessToken: 'renewed.jwt.token', refreshToken: 'rotated-refresh-token', tokenType: 'Bearer',

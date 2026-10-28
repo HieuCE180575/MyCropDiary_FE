@@ -159,6 +159,7 @@ export function ZoneListPage() {
   });
 
   // Calculate Stats
+  const dataUnavailable = loading || Boolean(error);
   const totalAreaM2 = zones.reduce((acc, z) => {
     const val = z.areaUnit === 'ha' ? z.areaValue * 10000 : z.areaValue;
     return acc + (val || 0);
@@ -225,7 +226,7 @@ export function ZoneListPage() {
             </div>
             <div className="zone-stat-content">
               <h4>Tổng số Phân khu</h4>
-              <div className="stat-number">{zones.length} khu</div>
+              <div className="stat-number">{dataUnavailable ? '—' : `${zones.length} khu`}</div>
             </div>
           </div>
 
@@ -235,7 +236,7 @@ export function ZoneListPage() {
             </div>
             <div className="zone-stat-content">
               <h4>Lô / Thửa canh tác</h4>
-              <div className="stat-number">{blocks.length} lô</div>
+              <div className="stat-number">{dataUnavailable ? '—' : `${blocks.length} lô`}</div>
             </div>
           </div>
 
@@ -246,7 +247,7 @@ export function ZoneListPage() {
             <div className="zone-stat-content">
               <h4>Tổng quy mô diện tích</h4>
               <div className="stat-number">
-                {totalAreaM2 >= 10000 ? `${(totalAreaM2 / 10000).toFixed(2)} ha` : `${totalAreaM2.toLocaleString()} m²`}
+                {dataUnavailable ? '—' : totalAreaM2 >= 10000 ? `${(totalAreaM2 / 10000).toFixed(2)} ha` : `${totalAreaM2.toLocaleString()} m²`}
               </div>
             </div>
           </div>
@@ -257,7 +258,7 @@ export function ZoneListPage() {
             </div>
             <div className="zone-stat-content">
               <h4>Khu vực tôi phụ trách</h4>
-              <div className="stat-number">{assignedZones.length} khu</div>
+              <div className="stat-number">{dataUnavailable ? '—' : `${assignedZones.length} khu`}</div>
             </div>
           </div>
         </div>
@@ -270,21 +271,21 @@ export function ZoneListPage() {
           className={`zone-tab-btn ${activeTab === 'zones' ? 'active' : ''}`}
           onClick={() => setActiveTab('zones')}
         >
-          <Icon name="plots" size={16} /> Tất cả Phân khu ({zones.length})
+          <Icon name="plots" size={16} /> Tất cả Phân khu ({dataUnavailable ? '—' : zones.length})
         </button>
         <button
           type="button"
           className={`zone-tab-btn ${activeTab === 'assigned' ? 'active' : ''}`}
           onClick={() => setActiveTab('assigned')}
         >
-          <Icon name="user" size={16} /> Phân khu tôi phụ trách ({assignedZones.length})
+          <Icon name="user" size={16} /> Phân khu tôi phụ trách ({dataUnavailable ? '—' : assignedZones.length})
         </button>
         <button
           type="button"
           className={`zone-tab-btn ${activeTab === 'blocks' ? 'active' : ''}`}
           onClick={() => setActiveTab('blocks')}
         >
-          <Icon name="leaf" size={16} /> Quản lý Lô đất / Thửa ({blocks.length})
+          <Icon name="leaf" size={16} /> Quản lý Lô đất / Thửa ({dataUnavailable ? '—' : blocks.length})
         </button>
       </div>
 
@@ -342,7 +343,10 @@ export function ZoneListPage() {
           <p style={{ marginTop: '12px' }}>Đang tải thông tin phân khu & lô đất...</p>
         </div>
       ) : error ? (
-        <div className="alert alert--error">{error}</div>
+        <div className="alert alert--error" role="alert">
+          <p>{error}</p>
+          <button type="button" className="action-button" onClick={loadData}>Thử lại</button>
+        </div>
       ) : activeTab === 'zones' ? (
         /* ALL ZONES TAB (UC-16) */
         filteredZones.length === 0 ? (

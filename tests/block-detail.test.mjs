@@ -18,6 +18,8 @@ test('block detail opens from the zone, loads server data, retries failures and 
   let hold = false;
   let release;
   let detailSignal;
+  let listFailure = false;
+  let emptyList = false;
   const block = { blockId: 7, zoneId: 3, blockName: 'Lô A', areaValue: 100,
     areaUnit: 'm2', status: 'AVAILABLE', createdAt: '2026-10-01T00:00:00Z' };
   axios.defaults.adapter = async config => {
@@ -26,7 +28,8 @@ test('block detail opens from the zone, loads server data, retries failures and 
     let status = 200;
     if (config.url.startsWith('/farms?')) data = { items: [{ id: 1, farmName: 'Farm', currentUserRole: 'OWNER' }], last: true, totalPages: 1 };
     if (config.url === '/zones/3') data = { zoneId: 3, zoneName: 'Phân khu A', areaValue: 500, areaUnit: 'm2', createdAt: block.createdAt };
-    if (config.url.startsWith('/blocks?')) data = [block];
+    if (config.url.startsWith('/blocks?')) data = emptyList ? [] : [block];
+    if (listFailure && config.url === '/farms/1/zones') status = 503;
     if (config.url === '/blocks/7') {
       detailSignal = config.signal;
       if (hold) await new Promise(done => { release = done; });
@@ -35,7 +38,7 @@ test('block detail opens from the zone, loads server data, retries failures and 
       assert.equal(config.headers.get('Authorization'), 'Bearer test-session');
     }
     return { config, status, headers: {}, statusText: '', data: JSON.stringify({ success: status === 200,
-      message: failure && config.url === '/blocks/7' ? 'Không tìm thấy lô đất.' : 'OK', data }) };
+      message: status === 503 ? 'Máy chủ đang lỗi, chưa tải được phân khu.' : failure && config.url === '/blocks/7' ? 'Không tìm thấy lô đất.' : 'OK', data }) };
   };
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
     server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom' });
@@ -43,6 +46,7 @@ test('block detail opens from the zone, loads server data, retries failures and 
   try {
     const { createRoot } = await import('react-dom/client');
     const { ZoneDetailPage } = await server.ssrLoadModule('/src/pages/zone/ZoneDetailPage.tsx');
+    const { ZoneListPage } = await server.ssrLoadModule('/src/pages/zone/ZoneListPage.tsx');
     const { AuthProvider } = await server.ssrLoadModule('/src/features/auth/AuthProvider.tsx');
     const { FarmWorkspaceProvider } = await server.ssrLoadModule('/src/features/farm-management/FarmWorkspace.tsx');
     const storage = await server.ssrLoadModule('/src/features/auth/authStorage.ts');
@@ -69,6 +73,20 @@ test('block detail opens from the zone, loads server data, retries failures and 
     assert.equal(detailSignal.aborted, true);
     await act(async () => release());
     assert.equal(document.querySelector('[role="dialog"]'), null);
+    await act(async () => root.unmount());
+    listFailure = true;
+    root = createRoot(document.getElementById('root'));
+    await act(async () => root.render(createElement(MemoryRouter, { initialEntries: ['/zones'] },
+      createElement(AuthProvider, null, createElement(FarmWorkspaceProvider, null, createElement(ZoneListPage))))));
+    assert.match(document.querySelector('[role="alert"]').textContent, /Máy chủ đang lỗi/);
+    assert.deepEqual([...document.querySelectorAll('.stat-number')].map(node => node.textContent.trim()), ['—', '—', '—', '—']);
+    assert.doesNotMatch(document.body.textContent, /Chưa tìm thấy phân khu nào/);
+    listFailure = false;
+    emptyList = true;
+    await act(async () => [...document.querySelectorAll('button')].find(button => button.textContent === 'Thử lại').click());
+    assert.equal(document.querySelector('[role="alert"]'), null);
+    assert.match(document.body.textContent, /Chưa tìm thấy phân khu nào/);
+    assert.deepEqual([...document.querySelectorAll('.stat-number')].map(node => node.textContent.trim()), ['0 khu', '0 lô', '0 m²', '0 khu']);
   } finally {
     if (root) await act(async () => root.unmount());
     await server.close();
