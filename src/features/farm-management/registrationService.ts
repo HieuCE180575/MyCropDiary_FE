@@ -1,4 +1,4 @@
-﻿import { apiRequest } from '../../shared/api/httpClient';
+import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
 import type { PageResponse } from './api';
 import type { FarmRegistration, FarmRegistrationFormValues, FarmRegistrationStatus } from './types';
@@ -19,6 +19,9 @@ export interface RegistrationResponse {
   district?: string | null;
   ward?: string | null;
   documentUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  boundaryCoordinates?: string | null;
 }
 
 async function request<T>(path: string, options: Parameters<typeof apiRequest>[1] = {}): Promise<T> {
@@ -35,6 +38,9 @@ function toRegistration(data: RegistrationResponse): FarmRegistration {
     province: data.province ?? undefined,
     district: data.district ?? undefined,
     ward: data.ward ?? undefined,
+    latitude: data.latitude ?? undefined,
+    longitude: data.longitude ?? undefined,
+    boundaryCoordinates: data.boundaryCoordinates ?? undefined,
     documentUrl: data.documentUrl ?? undefined,
     description: data.description ?? undefined,
     status: data.status.toLowerCase() as FarmRegistrationStatus,
@@ -52,14 +58,27 @@ export async function fetchMyLatestRegistration(signal?: AbortSignal): Promise<F
 }
 
 export async function submitFarmRegistration(values: FarmRegistrationFormValues): Promise<FarmRegistration> {
+  const payload: Record<string, unknown> = {
+    farmName: values.proposedFarmName.trim(),
+    addressLine: values.address.trim(),
+    province: values.province?.trim() || null,
+    district: values.district?.trim() || null,
+    ward: values.ward?.trim() || null,
+    description: values.description.trim() || null,
+    documentUrl: values.documentUrl?.trim() || null,
+  };
+
+  if (values.latitude != null && values.longitude != null) {
+    payload.latitude = values.latitude;
+    payload.longitude = values.longitude;
+  }
+  if (values.boundaryCoordinates && values.boundaryCoordinates.trim()) {
+    payload.boundaryCoordinates = values.boundaryCoordinates.trim();
+  }
+
   return toRegistration(await request<RegistrationResponse>('/farm-registrations', {
     method: 'POST',
-    data: {
-      farmName: values.proposedFarmName.trim(), addressLine: values.address.trim(),
-      province: values.province?.trim() || null, district: values.district?.trim() || null,
-      ward: values.ward?.trim() || null, description: values.description.trim() || null,
-      documentUrl: values.documentUrl?.trim() || null,
-    },
+    data: payload,
   }));
 }
 

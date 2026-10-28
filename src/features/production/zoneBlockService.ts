@@ -21,6 +21,46 @@ async function request<T>(path: string, options: Parameters<typeof apiRequest>[1
   return res.data;
 }
 
+interface BackendAssignmentResp {
+  id?: number;
+  assignmentId?: number;
+  farmMemberId: number;
+  userId?: number | null;
+  staffName?: string | null;
+  staffEmail?: string | null;
+  staffJobTitle?: string | null;
+  jobTitle?: string | null;
+  zoneId: number;
+  zoneName?: string | null;
+  assignedByMemberId?: number | null;
+  assignerName?: string | null;
+  assignedByName?: string | null;
+  startDate?: string | null;
+  assignedAt?: string | null;
+  endDate?: string | null;
+  endedAt?: string | null;
+  isActive?: boolean | null;
+  active?: boolean | null;
+}
+
+function mapAssignmentFields(raw: BackendAssignmentResp): StaffZoneAssignment {
+  return {
+    assignmentId: raw.assignmentId ?? raw.id ?? 0,
+    farmMemberId: raw.farmMemberId,
+    userId: raw.userId ?? null,
+    staffName: raw.staffName ?? null,
+    staffEmail: raw.staffEmail ?? null,
+    jobTitle: raw.jobTitle ?? raw.staffJobTitle ?? null,
+    zoneId: raw.zoneId,
+    zoneName: raw.zoneName ?? null,
+    assignedByMemberId: raw.assignedByMemberId ?? null,
+    assignedByName: raw.assignedByName ?? raw.assignerName ?? null,
+    assignedAt: raw.assignedAt ?? raw.startDate ?? new Date().toISOString(),
+    endedAt: raw.endedAt ?? raw.endDate ?? null,
+    active: raw.active ?? raw.isActive ?? !(raw.endedAt ?? raw.endDate),
+  };
+}
+
 // ==========================================
 // UC-16: Quản lý Phân khu (Zone)
 // ==========================================
@@ -35,7 +75,11 @@ export async function fetchZonesByFarm(farmId: number, keyword?: string, status?
 }
 
 export async function fetchAssignedZones(farmId: number): Promise<AssignedZoneResp[]> {
-  return request<AssignedZoneResp[]>(`/farms/${farmId}/zones/assigned`);
+  try {
+    return await request<AssignedZoneResp[]>(`/farms/${farmId}/zones/assigned`);
+  } catch {
+    return await request<AssignedZoneResp[]>(`/farms/${farmId}/my-assigned-zones`);
+  }
 }
 
 export async function fetchZoneById(zoneId: number): Promise<Zone> {
@@ -165,7 +209,8 @@ export async function fetchBlockConditions(blockId: number): Promise<BlockCondit
 
 export async function fetchZoneAssignments(farmId: number, zoneId?: number): Promise<StaffZoneAssignment[]> {
   const url = zoneId ? `/farms/${farmId}/zone-assignments?zoneId=${zoneId}` : `/farms/${farmId}/zone-assignments`;
-  return request<StaffZoneAssignment[]>(url);
+  const list = await request<BackendAssignmentResp[]>(url);
+  return list.map(mapAssignmentFields);
 }
 
 export async function assignStaffToZone(farmId: number, zoneId: number, values: AssignStaffToZonePayload): Promise<StaffZoneAssignment> {
@@ -175,10 +220,11 @@ export async function assignStaffToZone(farmId: number, zoneId: number, values: 
     assignedAt: values.assignedAt || new Date().toISOString(),
     endedAt: values.endedAt || null,
   };
-  return await request<StaffZoneAssignment>(`/farms/${farmId}/zone-assignments`, {
+  const created = await request<BackendAssignmentResp>(`/farms/${farmId}/zone-assignments`, {
     method: 'POST',
     data: payload,
   });
+  return mapAssignmentFields(created);
 }
 
 export async function unassignStaffFromZone(farmId: number, assignmentId: number): Promise<void> {

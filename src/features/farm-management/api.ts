@@ -40,6 +40,7 @@ export interface FarmDetail {
   address: string | null;
   latitude: number | null;
   longitude: number | null;
+  boundaryCoordinates?: string | null;
   coverImageUrl: string | null;
   status: string;
   createdAt: string;
@@ -51,8 +52,9 @@ export interface CreateFarmPayload {
   farmName: string;
   description?: string;
   address?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  boundaryCoordinates?: string | null;
   coverImageUrl?: string;
 }
 
@@ -60,8 +62,9 @@ export interface UpdateFarmPayload {
   farmName?: string;
   description?: string;
   address?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
+  boundaryCoordinates?: string | null;
   coverImageUrl?: string;
   status?: string;
 }
@@ -71,9 +74,13 @@ export interface FarmMemberItem {
   userId: number;
   fullName: string;
   email: string;
+  phoneNumber?: string | null;
   role: string;
+  farmRole?: string;
+  jobTitle?: string | null;
   status: string;
   joinedAt: string;
+  activeAssignmentCount?: number;
 }
 
 export interface ZoneItem {
@@ -113,22 +120,32 @@ export async function updateFarm(farmId: number, payload: UpdateFarmPayload): Pr
 }
 
 export async function getFarmMembers(farmId: number): Promise<FarmMemberItem[]> {
-  const result = await apiRequest<ApiResponse<FarmMemberItem[]>>(`/farms/${farmId}/members`);
-  return result?.data ?? [];
+  const result = await apiRequest<ApiResponse<FarmMemberItem[]>>(`/farms/${farmId}/members/staff?status=active`).catch(
+    () => apiRequest<ApiResponse<FarmMemberItem[]>>(`/farms/${farmId}/members`)
+  );
+  const items = result?.data ?? [];
+  return items.map((m) => ({
+    ...m,
+    role: m.jobTitle || (m.farmRole?.toUpperCase() === 'OWNER' ? 'Chủ trang trại' : m.role || 'Nhân viên kỹ thuật'),
+  }));
 }
 
 export async function addFarmMember(farmId: number, payload: { email: string; role: string }): Promise<FarmMemberItem> {
-  const result = await apiRequest<ApiResponse<FarmMemberItem>>(`/farms/${farmId}/members`, {
+  const result = await apiRequest<ApiResponse<FarmMemberItem>>(`/farms/${farmId}/members/staff`, {
     method: 'POST',
-    data: payload,
+    data: {
+      email: payload.email,
+      farmRole: payload.role?.toLowerCase() === 'owner' ? 'owner' : 'staff',
+      jobTitle: payload.role,
+    },
   });
   if (!result?.success || !result.data) throw new Error(result?.message || 'Không thêm được thành viên.');
   return result.data;
 }
 
 export async function removeFarmMember(farmId: number, memberId: number): Promise<void> {
-  await apiRequest<ApiResponse<void>>(`/farms/${farmId}/members/${memberId}`, {
-    method: 'DELETE',
+  await apiRequest<ApiResponse<void>>(`/farms/${farmId}/members/${memberId}/deactivate`, {
+    method: 'PATCH',
   });
 }
 

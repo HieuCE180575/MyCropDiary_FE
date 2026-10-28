@@ -13,6 +13,13 @@ import {
   type FarmDetail,
   type FarmMemberItem,
 } from '../features/farm-management/api';
+import {
+  calculatePolygonAreaM2,
+  parseBoundaryCoordinates,
+  stringifyBoundaryCoordinates,
+  type LatLngPoint,
+} from '../features/farm-management/goongMapService';
+import { FarmGoongMap } from '../features/farm-management/components/FarmGoongMap';
 
 export function FarmInfoPage() {
   const { selectedFarm, farms, selectFarm, retry } = useFarmWorkspace();
@@ -26,6 +33,9 @@ export function FarmInfoPage() {
   const [editName, setEditName] = useState('');
   const [editAddress, setEditAddress] = useState('');
   const [editDesc, setEditDesc] = useState('');
+  const [editLat, setEditLat] = useState<number | null>(null);
+  const [editLng, setEditLng] = useState<number | null>(null);
+  const [editBoundary, setEditBoundary] = useState<LatLngPoint[]>([]);
   const [updating, setUpdating] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -40,6 +50,9 @@ export function FarmInfoPage() {
   const [createFarmName, setCreateFarmName] = useState('');
   const [createFarmAddress, setCreateFarmAddress] = useState('');
   const [createFarmDesc, setCreateFarmDesc] = useState('');
+  const [createLat, setCreateLat] = useState<number | null>(null);
+  const [createLng, setCreateLng] = useState<number | null>(null);
+  const [createBoundary, setCreateBoundary] = useState<LatLngPoint[]>([]);
   const [creatingFarm, setCreatingFarm] = useState(false);
 
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
@@ -66,6 +79,9 @@ export function FarmInfoPage() {
           setEditName(detail.farmName || '');
           setEditAddress(detail.address || '');
           setEditDesc(detail.description || '');
+          setEditLat(detail.latitude ?? null);
+          setEditLng(detail.longitude ?? null);
+          setEditBoundary(parseBoundaryCoordinates(detail.boundaryCoordinates));
         } else {
           setFarmDetail({
             id: selectedFarm.id,
@@ -74,6 +90,7 @@ export function FarmInfoPage() {
             address: [selectedFarm.district, selectedFarm.province].filter(Boolean).join(', ') || 'Chưa cập nhật',
             latitude: null,
             longitude: null,
+            boundaryCoordinates: null,
             coverImageUrl: null,
             status: selectedFarm.status || 'ACTIVE',
             createdAt: new Date().toISOString(),
@@ -105,10 +122,13 @@ export function FarmInfoPage() {
         farmName: editName.trim(),
         address: editAddress.trim(),
         description: editDesc.trim(),
+        latitude: editLat,
+        longitude: editLng,
+        boundaryCoordinates: stringifyBoundaryCoordinates(editBoundary) || null,
       });
       setFarmDetail(updated);
       setIsEditOpen(false);
-      setActionMsg({ text: 'Cập nhật thông tin trang trại thành công!', type: 'success' });
+      setActionMsg({ text: 'Cập nhật thông tin và bản đồ trang trại thành công!', type: 'success' });
       retry();
     } catch (err) {
       setActionMsg({ text: err instanceof Error ? err.message : 'Cập nhật thất bại', type: 'error' });
@@ -160,11 +180,17 @@ export function FarmInfoPage() {
         farmName: createFarmName.trim(),
         address: createFarmAddress.trim(),
         description: createFarmDesc.trim(),
+        latitude: createLat,
+        longitude: createLng,
+        boundaryCoordinates: stringifyBoundaryCoordinates(createBoundary) || null,
       });
       setIsCreateFarmOpen(false);
       setCreateFarmName('');
       setCreateFarmAddress('');
       setCreateFarmDesc('');
+      setCreateLat(null);
+      setCreateLng(null);
+      setCreateBoundary([]);
       setActionMsg({ text: `Tạo trang trại "${newFarm.farmName}" thành công!`, type: 'success' });
       retry();
       selectFarm(newFarm.id);
@@ -175,17 +201,20 @@ export function FarmInfoPage() {
     }
   };
 
+  const detailBoundary = parseBoundaryCoordinates(farmDetail?.boundaryCoordinates);
+  const polygonAreaM2 = calculatePolygonAreaM2(detailBoundary);
+
   return (
     <section className="farm-info-page">
       <div className="page-heading">
         <div>
           <h1>Hồ sơ trang trại</h1>
-          <p className="page-subtitle">Thông tin chi tiết quy mô canh tác, nhân sự và tiêu chuẩn VietGAP</p>
+          <p className="page-subtitle">Thông tin chi tiết quy mô canh tác, bản đồ, nhân sự và tiêu chuẩn VietGAP</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           {selectedFarm && isOwner && (
             <button type="button" className="primary-button" onClick={() => setIsEditOpen(true)}>
-              <Icon name="check" /> Chỉnh sửa trang trại
+              <Icon name="check" /> Chỉnh sửa trang trại & Bản đồ
             </button>
           )}
           <button type="button" className="action-button" onClick={() => setIsCreateFarmOpen(true)}>
@@ -250,121 +279,151 @@ export function FarmInfoPage() {
           <p>{error}</p>
         </div>
       ) : farmDetail ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-          {/* Main Info Card */}
-          <div className="panel" style={{ padding: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '24px' }}>
-                  🌱
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+            {/* Main Info Card */}
+            <div className="panel" style={{ padding: '28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '24px' }}>
+                    🌱
+                  </div>
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 700, color: '#0f172a' }}>{farmDetail.farmName}</h2>
+                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Mã trang trại: #{farmDetail.id}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 700, color: '#0f172a' }}>{farmDetail.farmName}</h2>
-                  <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '14px' }}>Mã trang trại: #{farmDetail.id}</p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <span className="status-badge status-badge--success">Chuẩn VietGAP</span>
+                  <span className="profile-role-pill">{isOwner ? 'Chủ sở hữu' : 'Nhân sự vận hành'}</span>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span className="status-badge status-badge--success">Chuẩn VietGAP</span>
-                <span className="profile-role-pill">{isOwner ? 'Chủ sở hữu' : 'Nhân sự vận hành'}</span>
+
+              <p style={{ margin: '20px 0', color: '#334155', fontSize: '15px', lineHeight: 1.6, background: '#f8fafc', padding: '16px', borderRadius: '10px' }}>
+                {farmDetail.description || 'Trang trại áp dụng quy chuẩn Thực hành nông nghiệp tốt (VietGAP) hướng đến nông sản an toàn, minh bạch và truy xuất nguồn gốc số.'}
+              </p>
+
+              <dl style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', margin: '20px 0 0', fontSize: '14px' }}>
+                <dt style={{ color: '#64748b', fontWeight: 600 }}>Địa chỉ:</dt>
+                <dd style={{ margin: 0, color: '#0f172a', fontWeight: 500 }}>{farmDetail.address || 'Chưa cập nhật'}</dd>
+
+                {farmDetail.latitude != null && farmDetail.longitude != null && (
+                  <>
+                    <dt style={{ color: '#64748b', fontWeight: 600 }}>Tọa độ:</dt>
+                    <dd style={{ margin: 0, color: '#059669', fontWeight: 600 }}>
+                      {farmDetail.latitude.toFixed(6)}, {farmDetail.longitude.toFixed(6)}
+                    </dd>
+                  </>
+                )}
+
+                <dt style={{ color: '#64748b', fontWeight: 600 }}>Diện tích:</dt>
+                <dd style={{ margin: 0, color: '#0f172a', fontWeight: 500 }}>
+                  {selectedFarm.totalAreaM2
+                    ? `${selectedFarm.totalAreaM2.toLocaleString('vi-VN')} m²`
+                    : polygonAreaM2 > 0
+                      ? `${polygonAreaM2.toLocaleString('vi-VN')} m² (~${(polygonAreaM2 / 10000).toFixed(2)} ha theo sơ đồ bản đồ)`
+                      : 'Quy mô đạt chuẩn'}
+                </dd>
+
+                <dt style={{ color: '#64748b', fontWeight: 600 }}>Trạng thái:</dt>
+                <dd style={{ margin: 0 }}>
+                  <span className="status-badge status-badge--success">{farmDetail.status || 'Đang hoạt động'}</span>
+                </dd>
+
+                <dt style={{ color: '#64748b', fontWeight: 600 }}>Tạo lúc:</dt>
+                <dd style={{ margin: 0, color: '#64748b' }}>
+                  {new Date(farmDetail.createdAt).toLocaleDateString('vi-VN')}
+                </dd>
+              </dl>
+
+              {/* Quick Links inside Farm */}
+              <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                <Link to="/production-areas" className="action-button" style={{ fontSize: '13px' }}>
+                  🗺️ Vùng & Lô đất
+                </Link>
+                <Link to="/crop-seasons" className="action-button" style={{ fontSize: '13px' }}>
+                  🌾 Mùa vụ
+                </Link>
+                <Link to="/activities" className="action-button" style={{ fontSize: '13px' }}>
+                  📖 Nhật ký canh tác
+                </Link>
+                <Link to="/harvests" className="action-button" style={{ fontSize: '13px' }}>
+                  📦 Thu hoạch & Truy xuất
+                </Link>
               </div>
             </div>
 
-            <p style={{ margin: '20px 0', color: '#334155', fontSize: '15px', lineHeight: 1.6, background: '#f8fafc', padding: '16px', borderRadius: '10px' }}>
-              {farmDetail.description || 'Trang trại áp dụng quy chuẩn Thực hành nông nghiệp tốt (VietGAP) hướng đến nông sản an toàn, minh bạch và truy xuất nguồn gốc số.'}
-            </p>
+            {/* Members Panel */}
+            <div className="panel" style={{ padding: '28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Thành viên & Nhân sự</h2>
+                  <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>{members.length} thành viên tham gia canh tác</p>
+                </div>
+                {isOwner && (
+                  <button type="button" className="action-button" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={() => setIsAddMemberOpen(true)}>
+                    <Icon name="plus" /> Thêm thành viên
+                  </button>
+                )}
+              </div>
 
-            <dl style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', margin: '20px 0 0', fontSize: '14px' }}>
-              <dt style={{ color: '#64748b', fontWeight: 600 }}>Địa chỉ:</dt>
-              <dd style={{ margin: 0, color: '#0f172a', fontWeight: 500 }}>{farmDetail.address || 'Chưa cập nhật'}</dd>
-
-              <dt style={{ color: '#64748b', fontWeight: 600 }}>Diện tích:</dt>
-              <dd style={{ margin: 0, color: '#0f172a', fontWeight: 500 }}>
-                {selectedFarm.totalAreaM2 ? `${selectedFarm.totalAreaM2.toLocaleString('vi-VN')} m²` : 'Quy mô đạt chuẩn'}
-              </dd>
-
-              <dt style={{ color: '#64748b', fontWeight: 600 }}>Trạng thái:</dt>
-              <dd style={{ margin: 0 }}>
-                <span className="status-badge status-badge--success">{farmDetail.status || 'Đang hoạt động'}</span>
-              </dd>
-
-              <dt style={{ color: '#64748b', fontWeight: 600 }}>Tạo lúc:</dt>
-              <dd style={{ margin: 0, color: '#64748b' }}>
-                {new Date(farmDetail.createdAt).toLocaleDateString('vi-VN')}
-              </dd>
-            </dl>
-
-            {/* Quick Links inside Farm */}
-            <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-              <Link to="/production-areas" className="action-button" style={{ fontSize: '13px' }}>
-                🗺️ Vùng & Lô đất
-              </Link>
-              <Link to="/crop-seasons" className="action-button" style={{ fontSize: '13px' }}>
-                🌾 Mùa vụ
-              </Link>
-              <Link to="/activities" className="action-button" style={{ fontSize: '13px' }}>
-                📖 Nhật ký canh tác
-              </Link>
-              <Link to="/harvests" className="action-button" style={{ fontSize: '13px' }}>
-                📦 Thu hoạch & Truy xuất
-              </Link>
+              {members.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '30px 20px', color: '#94a3b8' }}>
+                  <Icon name="user" />
+                  <p style={{ marginTop: '8px' }}>Chưa có thành viên nào khác trong trang trại.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {members.map((m) => (
+                    <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span className="profile-hero-avatar" style={{ width: '38px', height: '38px', fontSize: '15px' }}>
+                          <Icon name="user" />
+                        </span>
+                        <div>
+                          <strong style={{ display: 'block', fontSize: '14px', color: '#0f172a' }}>{m.fullName || m.email}</strong>
+                          <span style={{ fontSize: '12px', color: '#64748b' }}>{m.email}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span className="profile-tag-pill" style={{ fontSize: '11.5px', padding: '2px 8px' }}>
+                          {m.role === 'OWNER' ? 'Chủ trại' : 'Nhân viên'}
+                        </span>
+                        {isOwner && m.role !== 'OWNER' && (
+                          <button type="button" className="icon-button" title="Xóa thành viên" style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m.id, m.fullName || m.email)}>
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Members Panel */}
-          <div className="panel" style={{ padding: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>Thành viên & Nhân sự</h2>
-                <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>{members.length} thành viên tham gia canh tác</p>
-              </div>
-              {isOwner && (
-                <button type="button" className="action-button" style={{ padding: '6px 12px', fontSize: '13px' }} onClick={() => setIsAddMemberOpen(true)}>
-                  <Icon name="plus" /> Thêm thành viên
-                </button>
-              )}
-            </div>
-
-            {members.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px 20px', color: '#94a3b8' }}>
-                <Icon name="user" />
-                <p style={{ marginTop: '8px' }}>Chưa có thành viên nào khác trong trang trại.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {members.map((m) => (
-                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span className="profile-hero-avatar" style={{ width: '38px', height: '38px', fontSize: '15px' }}>
-                        <Icon name="user" />
-                      </span>
-                      <div>
-                        <strong style={{ display: 'block', fontSize: '14px', color: '#0f172a' }}>{m.fullName || m.email}</strong>
-                        <span style={{ fontSize: '12px', color: '#64748b' }}>{m.email}</span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span className="profile-tag-pill" style={{ fontSize: '11.5px', padding: '2px 8px' }}>
-                        {m.role === 'OWNER' ? 'Chủ trại' : 'Nhân viên'}
-                      </span>
-                      {isOwner && m.role !== 'OWNER' && (
-                        <button type="button" className="icon-button" title="Xóa thành viên" style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m.id, m.fullName || m.email)}>
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Bản đồ tọa độ & sơ đồ ranh giới trang trại trên Goong Map */}
+          <div className="panel" style={{ padding: '24px' }}>
+            <FarmGoongMap
+              farmName={farmDetail.farmName}
+              address={farmDetail.address || ''}
+              province={selectedFarm.province || undefined}
+              district={selectedFarm.district || undefined}
+              latitude={farmDetail.latitude}
+              longitude={farmDetail.longitude}
+              boundary={detailBoundary}
+              editable={false}
+              height={400}
+            />
           </div>
         </div>
       ) : null}
 
       {/* Edit Farm Modal */}
       {isEditOpen && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="panel" style={{ width: '100%', maxWidth: '520px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px' }}>
-            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>Chỉnh sửa thông tin trang trại</h2>
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
+          <div className="panel" style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>Chỉnh sửa thông tin & Bản đồ trang trại</h2>
             <form onSubmit={handleUpdateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Tên trang trại</label>
@@ -373,6 +432,26 @@ export function FarmInfoPage() {
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Địa chỉ</label>
                 <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Bản đồ tọa độ & Vẽ ranh giới trang trại</label>
+                <FarmGoongMap
+                  farmName={editName}
+                  address={editAddress}
+                  latitude={editLat}
+                  longitude={editLng}
+                  boundary={editBoundary}
+                  editable={true}
+                  height={320}
+                  onLocationChange={(lat, lng, rev) => {
+                    setEditLat(lat);
+                    setEditLng(lng);
+                    if (!editAddress.trim() && rev?.formattedAddress) {
+                      setEditAddress(rev.formattedAddress);
+                    }
+                  }}
+                  onBoundaryChange={setEditBoundary}
+                />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Mô tả quy mô / Giới thiệu</label>
@@ -419,8 +498,8 @@ export function FarmInfoPage() {
 
       {/* Create Farm Modal */}
       {isCreateFarmOpen && (
-        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="panel" style={{ width: '100%', maxWidth: '520px', borderRadius: '16px', padding: '28px' }}>
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
+          <div className="panel" style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>Tạo không gian trang trại mới</h2>
             <form onSubmit={handleCreateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
@@ -430,6 +509,26 @@ export function FarmInfoPage() {
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Địa chỉ</label>
                 <input type="text" placeholder="Xã/Huyện/Tỉnh..." value={createFarmAddress} onChange={(e) => setCreateFarmAddress(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Vẽ vị trí & Sơ đồ ranh giới trang trại</label>
+                <FarmGoongMap
+                  farmName={createFarmName || 'Trang trại mới'}
+                  address={createFarmAddress}
+                  latitude={createLat}
+                  longitude={createLng}
+                  boundary={createBoundary}
+                  editable={true}
+                  height={320}
+                  onLocationChange={(lat, lng, rev) => {
+                    setCreateLat(lat);
+                    setCreateLng(lng);
+                    if (!createFarmAddress.trim() && rev?.formattedAddress) {
+                      setCreateFarmAddress(rev.formattedAddress);
+                    }
+                  }}
+                  onBoundaryChange={setCreateBoundary}
+                />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Mô tả quy mô</label>

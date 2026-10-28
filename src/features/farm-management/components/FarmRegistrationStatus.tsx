@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { FARM_REGISTRATION_STATUS_LABEL, FARM_REGISTRATION_STATUS_TONE } from '../constants';
+import { parseBoundaryCoordinates } from '../goongMapService';
 import type { FarmRegistration } from '../types';
+import { FarmGoongMap } from './FarmGoongMap';
 
 interface FarmRegistrationStatusProps {
   registration: FarmRegistration;
@@ -27,6 +29,7 @@ export function FarmRegistrationStatus({
 
   const canCancel = registration.status === 'pending';
   const canStartNew = registration.status === 'rejected' || registration.status === 'cancelled';
+  const boundaryPoints = parseBoundaryCoordinates(registration.boundaryCoordinates);
 
   return (
     <div className="panel farm-registration-status">
@@ -51,6 +54,12 @@ export function FarmRegistrationStatus({
         ] as const).map(([field, label]) => registration[field] ? (
           <div key={field}><dt>{label}</dt><dd>{registration[field]}</dd></div>
         ) : null)}
+        {registration.latitude != null && registration.longitude != null ? (
+          <div>
+            <dt>Tọa độ</dt>
+            <dd>{registration.latitude.toFixed(6)}, {registration.longitude.toFixed(6)}</dd>
+          </div>
+        ) : null}
         {registration.documentUrl && /^https?:\/\//i.test(registration.documentUrl) && (
           <div><dt>Tài liệu minh chứng</dt><dd><a href={registration.documentUrl} target="_blank" rel="noreferrer">Mở tài liệu minh chứng</a></dd></div>
         )}
@@ -77,6 +86,22 @@ export function FarmRegistrationStatus({
           </div>
         ) : null}
       </dl>
+
+      {/* Bản đồ hiển thị tọa độ & vẽ sơ đồ ranh giới trang trại đã đăng ký trên Goong Map */}
+      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+        <FarmGoongMap
+          farmName={registration.proposedFarmName}
+          address={registration.address}
+          province={registration.province}
+          district={registration.district}
+          ward={registration.ward}
+          latitude={registration.latitude ?? null}
+          longitude={registration.longitude ?? null}
+          boundary={boundaryPoints}
+          editable={false}
+          height={360}
+        />
+      </div>
 
       {cancelError ? <p className="form-error-banner">{cancelError}</p> : null}
 

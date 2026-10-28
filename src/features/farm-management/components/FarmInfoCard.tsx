@@ -1,6 +1,8 @@
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { FARM_STATUS_LABEL, FARM_STATUS_TONE } from '../constants';
+import { parseBoundaryCoordinates } from '../goongMapService';
 import type { Farm } from '../types';
+import { FarmGoongMap } from './FarmGoongMap';
 
 interface FarmInfoCardProps {
   farm: Farm;
@@ -11,6 +13,8 @@ function formatDateTime(iso: string): string {
 }
 
 export function FarmInfoCard({ farm }: FarmInfoCardProps) {
+  const boundaryPoints = parseBoundaryCoordinates(farm.boundaryCoordinates);
+
   return (
     <div className="panel farm-info-card">
       <div className="panel-title">
@@ -49,6 +53,18 @@ export function FarmInfoCard({ farm }: FarmInfoCardProps) {
           </div>
         ) : null}
       </dl>
+
+      <div style={{ marginTop: '18px' }}>
+        <FarmGoongMap
+          farmName={farm.farmName}
+          address={farm.address}
+          latitude={farm.latitude ?? null}
+          longitude={farm.longitude ?? null}
+          boundary={boundaryPoints}
+          editable={false}
+          height={340}
+        />
+      </div>
     </div>
   );
 }

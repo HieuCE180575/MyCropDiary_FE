@@ -28,6 +28,9 @@ function toRecord(data: RegistrationResponse): AdminRecord {
     applicant: data.applicantFullName ?? '', email: data.applicantEmail ?? '', address: data.addressLine,
     province: data.province ?? '', description: data.description ?? '', document: data.documentUrl ?? '',
     district: data.district ?? '', ward: data.ward ?? '',
+    latitude: data.latitude != null ? String(data.latitude) : '',
+    longitude: data.longitude != null ? String(data.longitude) : '',
+    boundaryCoordinates: data.boundaryCoordinates ?? '',
     reviewer: data.handlerFullName ?? '', reviewedAt: data.handledAt ?? '',
     reason: data.status.toUpperCase() === 'REJECTED' ? data.rejectionReason ?? '' : '' };
 }

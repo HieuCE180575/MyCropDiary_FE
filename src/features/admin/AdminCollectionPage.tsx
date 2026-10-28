@@ -7,6 +7,8 @@ import { adminConfigs, articleCategories, cropGroups, displayValue, feedbackStat
 import { filterRecords } from './adminModel';
 import { AdminBadge, AdminEmpty, AdminField, AdminModal, AdminPageHeading } from './AdminComponents';
 import type { AdminCommand, AdminRecord, Collection } from './adminTypes';
+import { FarmGoongMap } from '../farm-management/components/FarmGoongMap';
+import { parseBoundaryCoordinates } from '../farm-management/goongMapService';
 
 type DialogState = { mode: 'detail' | 'edit' | 'create'; id?: string } | { mode: 'action'; id: string; status: string };
 const initialFilters = { query: '', status: '', from: '', to: '', extra: '' };
@@ -111,9 +113,29 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
     </div><div className="admin-modal-footer"><button className="action-button" type="button" onClick={close} disabled={submitting}>Quay lại</button><button className={`action-button ${danger ? 'danger' : 'solid'}`} type="submit" disabled={submitting}>{submitting ? 'Đang xử lý...' : `Xác nhận ${label.toLocaleLowerCase('vi-VN')}`}</button></div></form></AdminModal>;
   }
   const details = [...config.fields, ...(config.details ?? [])];
+  const regLat = record.latitude && !Number.isNaN(Number(record.latitude)) ? Number(record.latitude) : null;
+  const regLng = record.longitude && !Number.isNaN(Number(record.longitude)) ? Number(record.longitude) : null;
+  const regBoundary = parseBoundaryCoordinates(record.boundaryCoordinates);
+
   return <AdminModal title={`Chi tiết ${config.singular}`} close={close} wide><div className="admin-modal-body">
     <div className="admin-detail-title"><span className="shortcut-icon"><Icon name={config.icon} /></span><div><span className="admin-subtle">{record.id}</span><h3>{record.name}</h3><AdminBadge collection={collection} status={record.status} /></div></div>
     <dl className="admin-details"><div><dt>Ngày tạo</dt><dd>{displayValue('createdAt', record.createdAt)}</dd></div>{details.filter(field => field.key !== 'name').map(field => <div key={field.key} className={field.type === 'textarea' || ['question', 'answer', 'comment', 'reply', 'description', 'reason', 'source'].includes(field.key) ? 'full' : ''}><dt>{field.label}</dt><dd>{field.key === 'document' && /^https?:\/\//i.test(record[field.key] ?? '') ? <a href={record[field.key]} target="_blank" rel="noreferrer">Mở tài liệu</a> : displayValue(field.key, record[field.key])}</dd></div>)}</dl>
+    {collection === 'registrations' && (
+      <div style={{ marginTop: '16px' }}>
+        <FarmGoongMap
+          farmName={record.name}
+          address={record.address}
+          province={record.province}
+          district={record.district}
+          ward={record.ward}
+          latitude={regLat}
+          longitude={regLng}
+          boundary={regBoundary}
+          editable={false}
+          height={320}
+        />
+      </div>
+    )}
     {collection === 'feedback' && <form id="feedback-review-form" className="admin-feedback-form" onSubmit={(event) => { event.preventDefault(); submit({ type: 'feedback', collection: 'feedback', id: record.id, reply, status: feedbackStatus }); }}><h3>Xử lý phản hồi</h3><AdminField field={{ key: 'reply', label: 'Nội dung trả lời người gửi', type: 'textarea', maxLength: 3000 }} value={reply} onChange={setReply} /><AdminField field={{ key: 'status', label: 'Trạng thái xử lý', type: 'select', options: feedbackStatuses, required: true }} value={feedbackStatus} onChange={setFeedbackStatus} /><p className="admin-subtle">Nội dung trả lời trong bản xem trước không được gửi đến người dùng thật.</p>{error && <p role="alert" className="admin-form-error">{error}</p>}</form>}
   </div><div className="admin-modal-footer"><button className="action-button" onClick={close}>Đóng</button><RecordActions collection={collection} record={record} change={change} />{collection === 'feedback' && <button className="action-button solid" type="submit" form="feedback-review-form">Lưu phản hồi xử lý</button>}</div></AdminModal>;
 }

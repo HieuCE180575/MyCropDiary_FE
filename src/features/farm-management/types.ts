@@ -7,6 +7,9 @@ export interface FarmRegistration {
   province?: string;
   district?: string;
   ward?: string;
+  latitude?: number;
+  longitude?: number;
+  boundaryCoordinates?: string;
   documentUrl?: string;
   description?: string;
   status: FarmRegistrationStatus;
@@ -21,6 +24,9 @@ export interface FarmRegistrationFormValues {
   province?: string;
   district?: string;
   ward?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  boundaryCoordinates?: string;
   documentUrl?: string;
   description: string;
 }
@@ -36,6 +42,9 @@ export interface Farm {
   farmCode: string;
   farmName: string;
   address: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  boundaryCoordinates?: string | null;
   phoneNumber?: string;
   description?: string;
   status: FarmStatus;

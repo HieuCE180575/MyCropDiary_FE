@@ -3,5 +3,7 @@ export const FARM_FEATURES = ['farm-registration', 'farm', 'members', 'staff-are
 export * from './types';
 export * from './constants';
 export * from './validation';
+export * from './goongMapService';
+export { FarmGoongMap } from './components/FarmGoongMap';
 export { fetchMyLatestRegistration, submitFarmRegistration, cancelFarmRegistration } from './registrationService';
 export { fetchMyFarm } from './farmService';

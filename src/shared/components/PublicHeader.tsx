@@ -8,6 +8,7 @@ export function PublicHeader() {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const displayName = user?.fullName?.trim() || user?.email || 'Tài khoản của bạn';
+  const portalPath = user?.systemRole?.toUpperCase() === 'ADMIN' ? '/admin' : '/dashboard';
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -28,8 +29,9 @@ export function PublicHeader() {
 
         <nav className="public-nav-desktop" aria-label="Điều hướng chính">
           <Link
-            to={isAuthenticated ? '/dashboard' : '/'}
-            className={`nav-link ${isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
+            to="/"
+            className={`nav-link ${isActive('/') ? 'is-active' : ''}`}
+            aria-current={isActive('/') ? 'page' : undefined}
           >
             Trang chủ
           </Link>
@@ -50,7 +52,7 @@ export function PublicHeader() {
         <div className="public-header-actions">
           {isAuthenticated ? (
             <div className="public-auth-logged-in">
-              <Link to="/dashboard" className="btn-portal-entry">
+              <Link to={portalPath} className="btn-portal-entry">
                 <Icon name="home" />
                 <span>Vào trang quản lý</span>
               </Link>
@@ -113,8 +115,9 @@ export function PublicHeader() {
         <div className="public-mobile-drawer" role="dialog" aria-modal="true">
           <div className="mobile-drawer-inner">
             <Link
-              to={isAuthenticated ? '/dashboard' : '/'}
-              className={`mobile-nav-link ${isActive('/dashboard') || isActive('/') ? 'is-active' : ''}`}
+              to="/"
+              className={`mobile-nav-link ${isActive('/') ? 'is-active' : ''}`}
+              aria-current={isActive('/') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
               Trang chủ
@@ -162,7 +165,7 @@ export function PublicHeader() {
                     </div>
                   </Link>
                   <Link
-                    to="/dashboard"
+                    to={portalPath}
                     className="btn-portal-entry full-width"
                     onClick={() => setMobileMenuOpen(false)}
                   >

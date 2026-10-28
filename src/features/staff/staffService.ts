@@ -1,182 +1,246 @@
+import { apiRequest } from '../../shared/api/httpClient';
+import type { ApiResponse } from '../../shared/types/api';
 import type { PagedResult, StaffFormValues, StaffMember, StaffQueryParams } from './types';
 
-// Khi backend UC-14-15 san sang, thay cac ham duoi day bang loi goi qua
-// `apiRequest<ApiResponse<...>>` toi cac endpoint tuong ung, vi du:
-//   GET    /farms/:farmId/members?role=staff&search=&status=&sortField=&sortDirection=&page=&pageSize=
-//   POST   /farms/:farmId/members            (role='staff'; backend tim User theo email hoac gui loi moi
-//                                              qua AccountToken neu email chua co tai khoan)
-//   PATCH  /farms/:farmId/members/:id
-//   PATCH  /farms/:farmId/members/:id/suspend
-//   PATCH  /farms/:farmId/members/:id/activate
-// Du lieu luu tam trong bo nho (mat khi tai lai trang) de mo phong hanh vi API; FarmMemberId
-// va UserId o day chi la id gia, khong co bang User/FarmMember that phia sau.
-
-interface StaffSeed {
+export interface BackendFarmMemberResp {
+  id: number;
+  farmId: number;
+  farmName?: string | null;
+  userId: number;
   fullName: string;
   email: string;
-  phoneNumber: string;
-  status: StaffMember['status'];
+  phoneNumber?: string | null;
+  farmRole: string;
+  jobTitle?: string | null;
   joinedAt: string;
-  suspendedAt?: string;
+  leftAt?: string | null;
+  status: string;
+  activeAssignmentCount?: number;
 }
 
-const STAFF_SEEDS: StaffSeed[] = [
-  { fullName: 'Nguyễn Văn An', email: 'an.nguyen@gmail.com', phoneNumber: '0901234567', status: 'active', joinedAt: '2024-02-01' },
-  { fullName: 'Trần Thị Bích', email: 'bich.tran@gmail.com', phoneNumber: '0912345678', status: 'active', joinedAt: '2024-05-15' },
-  { fullName: 'Lê Văn Cường', email: 'cuong.le@gmail.com', phoneNumber: '0923456789', status: 'active', joinedAt: '2023-09-10' },
-  { fullName: 'Phạm Thị Duyên', email: 'duyen.pham@gmail.com', phoneNumber: '0934567890', status: 'active', joinedAt: '2025-01-20' },
-  { fullName: 'Hoàng Văn Em', email: 'em.hoang@gmail.com', phoneNumber: '0945678901', status: 'active', joinedAt: '2022-11-05' },
-  { fullName: 'Võ Thị Phượng', email: 'phuong.vo@gmail.com', phoneNumber: '0956789012', status: 'suspended', joinedAt: '2023-03-01', suspendedAt: '2025-06-30' },
-  { fullName: 'Đặng Văn Giang', email: 'giang.dang@gmail.com', phoneNumber: '0967890123', status: 'active', joinedAt: '2024-08-12' },
-  { fullName: 'Bùi Thị Hoa', email: 'hoa.bui@gmail.com', phoneNumber: '0978901234', status: 'active', joinedAt: '2025-02-14' },
-  { fullName: 'Ngô Văn Inh', email: 'inh.ngo@gmail.com', phoneNumber: '0989012345', status: 'active', joinedAt: '2023-12-01' },
-  { fullName: 'Đỗ Thị Kim', email: 'kim.do@gmail.com', phoneNumber: '0990123456', status: 'suspended', joinedAt: '2022-06-20', suspendedAt: '2024-12-15' },
-  { fullName: 'Vũ Văn Long', email: 'long.vu@gmail.com', phoneNumber: '0901112233', status: 'active', joinedAt: '2025-04-03' },
-  { fullName: 'Phan Thị Mai', email: 'mai.phan@gmail.com', phoneNumber: '0912223344', status: 'active', joinedAt: '2026-01-10' },
-];
+export interface FarmStaffRecord {
+  farmMemberId: number;
+  userId: number;
+  fullName: string;
+  email: string;
+  phoneNumber?: string;
+  status: 'ACTIVE' | 'SUSPENDED';
+  farmRole: string;
+  roleLabel: string;
+  joinedAt: string;
+  activeAssignmentCount: number;
+}
 
-let staffList: StaffMember[] = STAFF_SEEDS.map((seed, index) => {
-  const idNumber = index + 1;
+function mapDtoToStaffRecord(dto: BackendFarmMemberResp): FarmStaffRecord {
+  const rawStatus = (dto.status || 'active').toUpperCase();
+  const isActive = rawStatus === 'ACTIVE' || rawStatus === 'INVITED';
+  const rawRole = (dto.farmRole || 'staff').toLowerCase();
+  const roleLabel =
+    dto.jobTitle?.trim() ||
+    (rawRole === 'owner'
+      ? 'Chủ trang trại'
+      : rawRole === 'staff'
+        ? 'Nhân viên kỹ thuật'
+        : 'Thành viên trang trại');
+
   return {
-    farmMemberId: `fm-${idNumber}`,
-    userId: `user-${idNumber}`,
-    fullName: seed.fullName,
-    email: seed.email,
-    phoneNumber: seed.phoneNumber,
-    status: seed.status,
-    joinedAt: new Date(`${seed.joinedAt}T08:00:00.000Z`).toISOString(),
-    suspendedAt: seed.suspendedAt ? new Date(`${seed.suspendedAt}T08:00:00.000Z`).toISOString() : undefined,
-    createdAt: new Date(`${seed.joinedAt}T08:00:00.000Z`).toISOString(),
+    farmMemberId: dto.id,
+    userId: dto.userId,
+    fullName: dto.fullName || dto.email,
+    email: dto.email,
+    phoneNumber: dto.phoneNumber ?? undefined,
+    status: isActive ? 'ACTIVE' : 'SUSPENDED',
+    farmRole: rawRole.toUpperCase(),
+    roleLabel,
+    joinedAt: dto.joinedAt || new Date().toISOString(),
+    activeAssignmentCount: dto.activeAssignmentCount ?? 0,
   };
-});
-
-let nextIdNumber = staffList.length + 1;
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function normalize(text: string): string {
-  return text.toLowerCase().normalize('NFC');
+function mapDtoToStaffMember(dto: BackendFarmMemberResp): StaffMember {
+  const rec = mapDtoToStaffRecord(dto);
+  return {
+    farmMemberId: String(rec.farmMemberId),
+    userId: String(rec.userId),
+    fullName: rec.fullName,
+    email: rec.email,
+    phoneNumber: rec.phoneNumber,
+    status: rec.status === 'ACTIVE' ? 'active' : 'suspended',
+    joinedAt: rec.joinedAt,
+    suspendedAt: dto.leftAt ?? undefined,
+    createdAt: rec.joinedAt,
+  };
 }
 
-function matchesSearch(staff: StaffMember, search: string): boolean {
-  const keyword = normalize(search.trim());
-  if (!keyword) return true;
-  return (
-    normalize(staff.fullName).includes(keyword) ||
-    normalize(staff.email).includes(keyword) ||
-    (staff.phoneNumber ?? '').includes(keyword)
-  );
+/**
+ * UC-14 & UC-33: Lấy danh sách thành viên / nhân sự trang trại từ Backend `/api/v1/farms/{farmId}/members/staff`
+ */
+export async function getFarmStaffList(
+  farmId: number,
+  params?: { status?: string; keyword?: string }
+): Promise<FarmStaffRecord[]> {
+  const query = new URLSearchParams();
+  if (params?.status && params.status !== 'ALL') {
+    const mappedStatus = params.status.toUpperCase() === 'ACTIVE' ? 'active' : 'left';
+    query.set('status', mappedStatus);
+  }
+  if (params?.keyword?.trim()) {
+    query.set('keyword', params.keyword.trim());
+  }
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  const res = await apiRequest<ApiResponse<BackendFarmMemberResp[]>>(`/farms/${farmId}/members/staff${qs}`);
+  if (!res?.success || !Array.isArray(res.data)) {
+    throw new Error(res?.message || 'Không tải được danh sách nhân sự trang trại.');
+  }
+  return res.data.map(mapDtoToStaffRecord);
 }
 
-export async function fetchStaff(params: StaffQueryParams): Promise<PagedResult<StaffMember>> {
-  await delay(300);
+/**
+ * UC-33: Thêm nhân viên vào trang trại qua `/api/v1/farms/{farmId}/members/staff`
+ */
+export async function addFarmStaffMember(
+  farmId: number,
+  payload: { email: string; farmRole?: string; jobTitle?: string }
+): Promise<FarmStaffRecord> {
+  const res = await apiRequest<ApiResponse<BackendFarmMemberResp>>(`/farms/${farmId}/members/staff`, {
+    method: 'POST',
+    data: {
+      email: payload.email.trim(),
+      farmRole: payload.farmRole?.toLowerCase() === 'owner' ? 'owner' : 'staff',
+      jobTitle: payload.jobTitle?.trim() || undefined,
+    },
+  });
+  if (!res?.success || !res.data) {
+    throw new Error(res?.message || 'Không thể thêm nhân viên vào trang trại.');
+  }
+  return mapDtoToStaffRecord(res.data);
+}
 
+/**
+ * UC-33: Cập nhật vai trò hoặc kích hoạt lại thành viên qua `PUT /api/v1/farms/{farmId}/members/{memberId}`
+ */
+export async function updateFarmStaffMember(
+  farmId: number,
+  memberId: number,
+  payload: { farmRole?: 'OWNER' | 'STAFF'; jobTitle?: string; status?: 'INVITED' | 'ACTIVE' | 'INACTIVE' }
+): Promise<FarmStaffRecord> {
+  const res = await apiRequest<ApiResponse<BackendFarmMemberResp>>(`/farms/${farmId}/members/${memberId}`, {
+    method: 'PUT',
+    data: payload,
+  });
+  if (!res?.success || !res.data) {
+    throw new Error(res?.message || 'Không thể cập nhật thông tin nhân viên.');
+  }
+  return mapDtoToStaffRecord(res.data);
+}
+
+/**
+ * UC-33: Vô hiệu hóa thành viên trang trại qua `PATCH /api/v1/farms/{farmId}/members/{memberId}/deactivate`
+ */
+export async function deactivateFarmStaffMember(farmId: number, memberId: number): Promise<void> {
+  const res = await apiRequest<ApiResponse<void>>(`/farms/${farmId}/members/${memberId}/deactivate`, {
+    method: 'PATCH',
+  });
+  if (res && !res.success) {
+    throw new Error(res.message || 'Không thể vô hiệu hóa nhân viên.');
+  }
+}
+
+// =========================================================================
+// Legacy compatibility helpers (cho các component cũ dùng StaffQueryParams)
+// =========================================================================
+
+export async function fetchStaff(params: StaffQueryParams & { farmId?: number }): Promise<PagedResult<StaffMember>> {
+  const farmId = params.farmId || 1;
   const { search = '', status = 'all', sortField, sortDirection, page, pageSize } = params;
 
-  let filtered = staffList.filter((staff) => matchesSearch(staff, search));
-  if (status !== 'all') {
-    filtered = filtered.filter((staff) => staff.status === status);
-  }
+  try {
+    const records = await getFarmStaffList(farmId, {
+      status: status === 'all' ? 'ALL' : status.toUpperCase(),
+      keyword: search,
+    });
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    const sorted = [...records]
+      .map((r): StaffMember => ({
+        farmMemberId: String(r.farmMemberId),
+        userId: String(r.userId),
+        fullName: r.fullName,
+        email: r.email,
+        phoneNumber: r.phoneNumber,
+        status: r.status === 'ACTIVE' ? 'active' : 'suspended',
+        joinedAt: r.joinedAt,
+        createdAt: r.joinedAt,
+      }))
+      .sort((a, b) => {
+        if (sortField === 'email') return a.email.localeCompare(b.email, 'vi') * direction;
+        if (sortField === 'joinedAt') {
+          return (new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()) * direction;
+        }
+        return a.fullName.localeCompare(b.fullName, 'vi') * direction;
+      });
 
-  const direction = sortDirection === 'asc' ? 1 : -1;
-  filtered = [...filtered].sort((a, b) => {
-    if (sortField === 'email') return a.email.localeCompare(b.email, 'vi') * direction;
-    if (sortField === 'joinedAt') {
-      return (new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()) * direction;
-    }
-    return a.fullName.localeCompare(b.fullName, 'vi') * direction;
+    const totalItems = sorted.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    const safePage = Math.min(Math.max(1, page), totalPages);
+    const start = (safePage - 1) * pageSize;
+    const items = sorted.slice(start, start + pageSize);
+    return { items, page: safePage, pageSize, totalItems, totalPages };
+  } catch {
+    return { items: [], page: 1, pageSize, totalItems: 0, totalPages: 1 };
+  }
+}
+
+export async function createStaff(values: StaffFormValues, farmId = 1): Promise<StaffMember> {
+  const created = await addFarmStaffMember(farmId, {
+    email: values.email,
+    farmRole: 'staff',
   });
-
-  const totalItems = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const start = (safePage - 1) * pageSize;
-  const items = filtered.slice(start, start + pageSize);
-
-  return { items, page: safePage, pageSize, totalItems, totalPages };
+  return mapDtoToStaffMember({
+    id: created.farmMemberId,
+    farmId,
+    userId: created.userId,
+    fullName: created.fullName || values.fullName,
+    email: created.email,
+    phoneNumber: created.phoneNumber || values.phoneNumber,
+    farmRole: created.farmRole,
+    joinedAt: created.joinedAt,
+    status: created.status,
+  });
 }
 
-export async function createStaff(values: StaffFormValues): Promise<StaffMember> {
-  await delay(400);
+export async function updateStaff(farmMemberId: string, _values: StaffFormValues, farmId = 1): Promise<StaffMember> {
+  const updated = await updateFarmStaffMember(farmId, Number(farmMemberId), {
+    farmRole: 'STAFF',
+    status: 'ACTIVE',
+  });
+  return {
+    farmMemberId: String(updated.farmMemberId),
+    userId: String(updated.userId),
+    fullName: updated.fullName,
+    email: updated.email,
+    phoneNumber: updated.phoneNumber,
+    status: updated.status === 'ACTIVE' ? 'active' : 'suspended',
+    joinedAt: updated.joinedAt,
+    createdAt: updated.joinedAt,
+  };
+}
 
-  const email = values.email.trim().toLowerCase();
-  const alreadyMember = staffList.some((staff) => staff.email.toLowerCase() === email);
-  if (alreadyMember) {
-    throw new Error('Email này đã là nhân viên của trang trại.');
-  }
+export async function suspendStaff(farmMemberId: string, farmId = 1): Promise<void> {
+  await deactivateFarmStaffMember(farmId, Number(farmMemberId));
+}
 
-  const idNumber = nextIdNumber++;
-  const record: StaffMember = {
-    farmMemberId: `fm-${idNumber}`,
-    userId: `user-${idNumber}`,
-    fullName: values.fullName.trim(),
-    email: values.email.trim(),
-    phoneNumber: values.phoneNumber.trim() || undefined,
+export async function activateStaff(farmMemberId: string, farmId = 1): Promise<StaffMember> {
+  const updated = await updateFarmStaffMember(farmId, Number(farmMemberId), {
+    status: 'ACTIVE',
+  });
+  return {
+    farmMemberId: String(updated.farmMemberId),
+    userId: String(updated.userId),
+    fullName: updated.fullName,
+    email: updated.email,
+    phoneNumber: updated.phoneNumber,
     status: 'active',
-    joinedAt: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
+    joinedAt: updated.joinedAt,
+    createdAt: updated.joinedAt,
   };
-
-  staffList = [record, ...staffList];
-  return record;
-}
-
-export async function updateStaff(farmMemberId: string, values: StaffFormValues): Promise<StaffMember> {
-  await delay(400);
-
-  const existing = staffList.find((staff) => staff.farmMemberId === farmMemberId);
-  if (!existing) throw new Error('Không tìm thấy nhân viên cần cập nhật.');
-
-  const email = values.email.trim().toLowerCase();
-  const emailTakenByAnother = staffList.some(
-    (staff) => staff.farmMemberId !== farmMemberId && staff.email.toLowerCase() === email,
-  );
-  if (emailTakenByAnother) {
-    throw new Error('Email này đã được dùng bởi một nhân viên khác.');
-  }
-
-  const updated: StaffMember = {
-    ...existing,
-    fullName: values.fullName.trim(),
-    email: values.email.trim(),
-    phoneNumber: values.phoneNumber.trim() || undefined,
-    updatedAt: new Date().toISOString(),
-  };
-
-  staffList = staffList.map((staff) => (staff.farmMemberId === farmMemberId ? updated : staff));
-  return updated;
-}
-
-export async function suspendStaff(farmMemberId: string): Promise<StaffMember> {
-  await delay(300);
-
-  const existing = staffList.find((staff) => staff.farmMemberId === farmMemberId);
-  if (!existing) throw new Error('Không tìm thấy nhân viên cần vô hiệu hoá.');
-
-  const updated: StaffMember = {
-    ...existing,
-    status: 'suspended',
-    suspendedAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  staffList = staffList.map((staff) => (staff.farmMemberId === farmMemberId ? updated : staff));
-  return updated;
-}
-
-export async function activateStaff(farmMemberId: string): Promise<StaffMember> {
-  await delay(300);
-
-  const existing = staffList.find((staff) => staff.farmMemberId === farmMemberId);
-  if (!existing) throw new Error('Không tìm thấy nhân viên cần kích hoạt lại.');
-
-  const updated: StaffMember = {
-    ...existing,
-    status: 'active',
-    suspendedAt: undefined,
-    updatedAt: new Date().toISOString(),
-  };
-  staffList = staffList.map((staff) => (staff.farmMemberId === farmMemberId ? updated : staff));
-  return updated;
 }

@@ -5,6 +5,8 @@ import {
   LockKeyhole, Search, Eye, EyeOff, Mail, Globe, LogIn, X, Hand, Menu,
   LoaderCircle, CircleHelp, Pencil, RotateCcw, Save, UserRoundPlus, ShieldCheck,
   Phone, Check, Award, Sparkles, Star, TrendingUp, Sprout, ExternalLink, FileText,
+  Sun, Moon, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2,
+  Activity, Layers, Zap, Database, Building2,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -22,6 +24,9 @@ const icons: Record<string, LucideIcon> = {
   phone: Phone, 'check-circle': Check, award: Award, sparkles: Sparkles,
   star: Star, 'trending-up': TrendingUp, sprout: Sprout,
   'external-link': ExternalLink, 'file-text': FileText,
+  sun: Sun, moon: Moon, 'chevron-left': ChevronLeft, 'chevron-right': ChevronRight,
+  filter: SlidersHorizontal, expand: Maximize2,
+  activity: Activity, layers: Layers, zap: Zap, database: Database, building: Building2,
 };
 
 export function Icon({ name, className, ...props }: LucideProps & { name: string }) {

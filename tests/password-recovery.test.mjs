@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 import { createElement, act } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
-test('password recovery handles validation, resend, expired OTP and successful reset', async () => {
+test('password recovery handles strong password validation, show/hide password toggle, resend, expired OTP and redirects to /login on success', async () => {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost:5173' });
   const replacements = { window: dom.window, document: dom.window.document, navigator: dom.window.navigator,
     Event: dom.window.Event, IS_REACT_ACT_ENVIRONMENT: true };
@@ -27,8 +27,23 @@ test('password recovery handles validation, resend, expired OTP and successful r
   try {
     const { createRoot } = await import('react-dom/client');
     const { ForgotPasswordPage } = await server.ssrLoadModule('/src/pages/ForgotPasswordPage.tsx');
+    function LocationDisplay() {
+      const loc = useLocation();
+      const stateNotice = loc.state && typeof loc.state === 'object' ? loc.state.notice : '';
+      return createElement('div', null,
+        createElement('output', { id: 'test-path' }, loc.pathname),
+        stateNotice ? createElement('p', { id: 'login-notice' }, stateNotice) : null
+      );
+    }
     root = createRoot(document.getElementById('root'));
-    await act(async () => root.render(createElement(MemoryRouter, null, createElement(ForgotPasswordPage))));
+    await act(async () => root.render(
+      createElement(MemoryRouter, { initialEntries: ['/forgot-password'] },
+        createElement(Routes, null,
+          createElement(Route, { path: '/forgot-password', element: createElement(ForgotPasswordPage) }),
+          createElement(Route, { path: '/login', element: createElement(LocationDisplay) })
+        )
+      )
+    ));
     const set = async (id, value) => {
       const input = document.getElementById(id);
       await act(async () => {
@@ -37,7 +52,7 @@ test('password recovery handles validation, resend, expired OTP and successful r
       });
     };
     const submit = async () => act(async () => document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
-    const button = async text => act(async () => [...document.querySelectorAll('button')].find(node => node.textContent === text).click());
+    const button = async text => act(async () => [...document.querySelectorAll('button')].find(node => node.textContent.trim() === text).click());
     await set('recovery-email', 'invalid');
     await submit();
     assert.equal(calls.length, 0);
@@ -45,13 +60,32 @@ test('password recovery handles validation, resend, expired OTP and successful r
     await submit();
     assert.ok(document.getElementById('recovery-otp'));
     assert.match(document.querySelector('[role="status"]').textContent, /Nếu email/);
+
+    // Verify show/hide password toggle works
+    const pwdInput = document.getElementById('recovery-password');
+    assert.equal(pwdInput.getAttribute('type'), 'password');
+    const toggleBtn = document.querySelector('button[aria-label="Hiện mật khẩu"]');
+    assert.ok(toggleBtn);
+    await act(async () => toggleBtn.click());
+    assert.equal(pwdInput.getAttribute('type'), 'text');
+
+    // Weak password rejected (missing uppercase and special character)
     await set('recovery-otp', '012345');
     await set('recovery-password', 'password123');
-    await set('recovery-confirmation', 'different123');
+    await set('recovery-confirmation', 'password123');
+    await submit();
+    assert.match(document.querySelector('[role="alert"]').textContent, /in hoa/);
+    assert.equal(calls.length, 1);
+
+    // Strong password but mismatched confirmation
+    await set('recovery-password', 'Password@123');
+    await set('recovery-confirmation', 'Different@123');
     await submit();
     assert.match(document.querySelector('[role="alert"]').textContent, /không khớp/);
     assert.equal(calls.length, 1);
-    await set('recovery-confirmation', 'password123');
+
+    // Matching strong password -> hits API -> expired OTP error
+    await set('recovery-confirmation', 'Password@123');
     await submit();
     assert.match(document.querySelector('[role="alert"]').textContent, /hết hạn/);
     await button('Gửi lại mã OTP');
@@ -60,10 +94,9 @@ test('password recovery handles validation, resend, expired OTP and successful r
     await set('recovery-otp', '012345');
     expired = false;
     await submit();
-    assert.deepEqual(calls.at(-1).data, { email: 'farmer@example.com', otp: '012345', newPassword: 'password123' });
-    assert.match(document.body.textContent, /Đặt lại mật khẩu thành công/);
-    assert.equal(document.querySelector('form'), null);
-    assert.equal(document.querySelector('a').getAttribute('href'), '/login');
+    assert.deepEqual(calls.at(-1).data, { email: 'farmer@example.com', otp: '012345', newPassword: 'Password@123' });
+    assert.equal(document.getElementById('test-path').textContent, '/login');
+    assert.match(document.getElementById('login-notice').textContent, /Đặt lại mật khẩu thành công/);
   } finally {
     if (root) await act(async () => root.unmount());
     await server.close();

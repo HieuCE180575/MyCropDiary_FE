@@ -35,6 +35,8 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const initialNotice = (location.state as { notice?: string } | null)?.notice ?? '';
+  const [notice, setNotice] = useState(initialNotice);
 
   if (isAuthenticated) {
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
@@ -55,6 +57,7 @@ export function LoginPage() {
     }
 
     setError('');
+    setNotice('');
     setPending(true);
     try {
       const authorization = await authenticate(trimmedEmail, password);
@@ -130,6 +133,13 @@ export function LoginPage() {
             <div className="auth-error-banner" role="alert">
               <Icon name="warning" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {notice && (
+            <div className="auth-notice-banner" role="status">
+              <Icon name="check-circle" />
+              <span>{notice}</span>
             </div>
           )}
 
