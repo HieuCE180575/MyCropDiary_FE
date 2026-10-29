@@ -1,12 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+import { Modal } from '../../shared/components/Modal';
 import { Icon } from '../../shared/components/Icon';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
 export interface MaterialUsage {
-  id: number;
+  materialUsageId: number;
   farmingActivityId?: number;
   activityName?: string;
   cropSeasonId?: number;
@@ -16,14 +17,14 @@ export interface MaterialUsage {
   materialType?: string;
   inputPurchaseDetailId?: number;
   recordedByMemberId?: number;
-  recorderName?: string;
+  recorderFullName?: string | null;
   usedAt: string;
   quantity: number;
   unit: string;
-  dosage?: string;
-  method?: string;
-  safetyIntervalDays?: number;
-  notes?: string;
+  dosage?: string | null;
+  method?: string | null;
+  safetyIntervalDays?: number | null;
+  notes?: string | null;
 }
 
 export interface MaterialOption {
@@ -38,12 +39,23 @@ export interface MaterialOption {
 
 export function MaterialUsagePage() {
   const { selectedFarm } = useFarmWorkspace();
-  const farmId = selectedFarm?.id || 1;
+  return <MaterialUsageContent key={selectedFarm?.id ?? 'no-farm'} />;
+}
+
+function MaterialUsageContent() {
+  const { selectedFarm } = useFarmWorkspace();
+  const farmId = selectedFarm?.id;
 
   const [usages, setUsages] = useState<MaterialUsage[]>([]);
   const [materials, setMaterials] = useState<MaterialOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [materialsError, setMaterialsError] = useState<string | null>(null);
+  const [editingUsage, setEditingUsage] = useState<MaterialUsage | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const requests = useRef<{ list?: AbortController; materials?: AbortController; detail?: AbortController; save?: AbortController; delete?: AbortController }>({});
 
   // Filters
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -64,261 +76,172 @@ export function MaterialUsagePage() {
   const [customMaterialType, setCustomMaterialType] = useState('Phân bón hữu cơ');
   const [quantity, setQuantity] = useState<number | ''>(10);
   const [unit, setUnit] = useState('kg');
-  const [dosage, setDosage] = useState('50g / gốc');
-  const [method, setMethod] = useState('Bón quanh gốc và tưới ẩm');
-  const [safetyDays, setSafetyDays] = useState<number>(0);
+  const [dosage, setDosage] = useState('');
+  const [method, setMethod] = useState('');
+  const [safetyDays, setSafetyDays] = useState<number | ''>('');
   const [usedAtTime, setUsedAtTime] = useState(new Date().toISOString().slice(0, 16));
-  const [notes, setNotes] = useState('Đạt tiêu chuẩn vật tư danh mục VietGAP cho phép');
-  const [farmingActivityId, setFarmingActivityId] = useState<number>(1);
+  const [notes, setNotes] = useState('');
+  const [farmingActivityId, setFarmingActivityId] = useState<number | ''>('');
 
   useEffect(() => {
-    void loadUsages(false);
-    void loadMaterials();
+    if (farmId) { loadUsages(); loadMaterials(); }
+    return () => Object.values(requests.current).forEach(request => request?.abort());
   }, [farmId]);
 
   useRealtimeSync(() => {
-    void loadUsages(true);
+    void loadUsages();
     void loadMaterials();
   });
 
   const loadMaterials = async () => {
+    if (!farmId) return;
+    requests.current.materials?.abort();
+    const controller = new AbortController();
+    requests.current.materials = controller;
+    setMaterialsError(null);
     try {
-      const res = await apiRequest<ApiResponse<MaterialOption[]>>(`/material-usages/materials?farmId=${farmId}`).catch(() => null);
-      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
-        setMaterials(res.data);
-        if (!selectedMaterialId && res.data.length > 0) {
-          setSelectedMaterialId(res.data[0].id);
-          setUnit(res.data[0].unit || 'kg');
-          if (res.data[0].materialType) {
-            setCustomMaterialType(res.data[0].materialType);
-          }
-        }
-      } else {
-        // Fallback default materials list
-        const defaultMats: MaterialOption[] = [
-          { id: 1, farmId, materialName: 'Phân NPK 20-20-20 Haifa', materialType: 'Phân bón hòa tan', unit: 'kg' },
-          { id: 2, farmId, materialName: 'Dung Dịch Thủy Canh A+B GreenHydro', materialType: 'Dinh dưỡng lỏng', unit: 'lít' },
-          { id: 3, farmId, materialName: 'Chế Phẩm Sinh Học Trừ Sâu Neem Chito', materialType: 'Thuốc BVTV sinh học', unit: 'chai' },
-          { id: 4, farmId, materialName: 'Phân trùn quế nguyên chất Vermicompost', materialType: 'Phân bón hữu cơ', unit: 'kg' },
-          { id: 5, farmId, materialName: 'Chế phẩm Trichoderma Bacillus', materialType: 'Chế phẩm sinh học', unit: 'lít' },
-        ];
-        setMaterials(defaultMats);
-        if (!selectedMaterialId) {
-          setSelectedMaterialId(defaultMats[0].id);
-          setUnit(defaultMats[0].unit);
-        }
+      const res = await apiRequest<ApiResponse<MaterialOption[]>>('/material-usages/materials?farmId=' + farmId, { signal: controller.signal });
+      if (!res.success || !Array.isArray(res.data)) throw new Error(res.message || 'Không tải được danh mục vật tư.');
+      if (!controller.signal.aborted) setMaterials(res.data);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setMaterials([]);
+        setMaterialsError(error instanceof Error ? error.message : 'Không tải được danh mục vật tư.');
       }
-    } catch {
-      // ignore
     }
   };
 
-  const loadUsages = async (silent: boolean | unknown = false) => {
-    const isSilent = silent === true;
-    if (!isSilent) {
-      setLoading(true);
-      setNotification(null);
-    }
+  const loadUsages = async (reset = false) => {
+    if (!farmId) return;
+    requests.current.list?.abort();
+    const controller = new AbortController();
+    requests.current.list = controller;
+    setLoading(true);
+    setLoadError(null);
     try {
-      const params = new URLSearchParams();
-      if (farmId) params.append('farmId', String(farmId));
-      if (searchKeyword.trim()) params.append('keyword', searchKeyword.trim());
-      if (filterType !== 'ALL') params.append('materialType', filterType);
-      if (fromDate) params.append('fromDate', `${fromDate}T00:00:00`);
-      if (toDate) params.append('toDate', `${toDate}T23:59:59`);
-      params.append('size', '50');
-
-      const res = await apiRequest<ApiResponse<{ items: MaterialUsage[] }>>(
-        `/material-usages?${params.toString()}`
-      ).catch(() => null);
-
-      if (res?.data?.items && Array.isArray(res.data.items)) {
-        setUsages(res.data.items);
-      } else {
-        // Fallback seed data if offline or newly initialized
-        setUsages([
-          {
-            id: 1,
-            farmingActivityId: 1,
-            activityName: 'Châm dinh dưỡng nhỏ giọt A+B EC 1.8',
-            cropSeasonId: 1,
-            materialId: 2,
-            materialName: 'Dung Dịch Thủy Canh A+B GreenHydro',
-            materialType: 'Dinh dưỡng lỏng',
-            quantity: 10,
-            unit: 'lít',
-            dosage: 'Pha nồng độ EC 1.8 bồn 1000L',
-            method: 'Tưới nhỏ giọt hồi lưu',
-            safetyIntervalDays: 0,
-            usedAt: '2026-03-01T08:30:00',
-            recorderName: 'Kỹ Sư An',
-            notes: 'Pha vào bồn mẹ dung tích 1000 lít tưới nhỏ giọt',
-          },
-          {
-            id: 2,
-            farmingActivityId: 3,
-            activityName: 'Phun phòng ngừa nấm bệnh sinh học',
-            cropSeasonId: 1,
-            materialId: 3,
-            materialName: 'Chế Phẩm Sinh Học Trừ Sâu Neem Chito',
-            materialType: 'Thuốc BVTV sinh học',
-            quantity: 2,
-            unit: 'chai',
-            dosage: '20ml / bình 16L',
-            method: 'Phun sương đều 2 mặt lá',
-            safetyIntervalDays: 3,
-            usedAt: '2026-03-10T16:30:00',
-            recorderName: 'Trần Văn Bình',
-            notes: 'Phun sương đều 2 mặt lá lúc trời dịu mát',
-          },
-          {
-            id: 3,
-            farmingActivityId: 1,
-            activityName: 'Bón lót vụ xuân',
-            cropSeasonId: 1,
-            materialId: 1,
-            materialName: 'Phân NPK 20-20-20 Haifa',
-            materialType: 'Phân bón hòa tan',
-            quantity: 15,
-            unit: 'kg',
-            dosage: '0.3kg / 10m luống',
-            method: 'Hòa tan tưới gốc',
-            safetyIntervalDays: 7,
-            usedAt: '2026-03-15T09:00:00',
-            recorderName: 'Hoàng Quản Lý',
-            notes: 'Cách ly 7 ngày trước thu hoạch đợt 1',
-          },
-        ]);
+      const params = new URLSearchParams({ farmId: String(farmId), size: '50' });
+      if (!reset) {
+        if (searchKeyword.trim()) params.set('keyword', searchKeyword.trim());
+        if (filterType !== 'ALL') params.set('materialType', filterType);
+        if (fromDate) params.set('fromDate', fromDate + 'T00:00:00');
+        if (toDate) params.set('toDate', toDate + 'T23:59:59');
       }
-    } catch {
-      if (!isSilent) setNotification({ text: 'Lỗi nạp danh sách sử dụng vật tư.', type: 'error' });
+      const res = await apiRequest<ApiResponse<{ items: MaterialUsage[] }>>('/material-usages?' + params, { signal: controller.signal });
+      if (!res.success || !Array.isArray(res.data?.items)) throw new Error(res.message || 'Không tải được lịch sử sử dụng vật tư.');
+      if (!controller.signal.aborted) setUsages(res.data.items);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setUsages([]);
+        setLoadError(error instanceof Error ? error.message : 'Không tải được lịch sử sử dụng vật tư.');
+      }
     } finally {
-      if (!isSilent) setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   };
 
   const handleSelectMaterial = (id: number) => {
     setSelectedMaterialId(id);
-    const m = materials.find((item) => item.id === id);
-    if (m) {
-      setUnit(m.unit);
-      if (m.materialType) setCustomMaterialType(m.materialType);
+    const material = materials.find(item => item.id === id);
+    if (material) { setUnit(material.unit); setCustomMaterialType(material.materialType ?? ''); }
+  };
+
+  const openUsage = async (id: number, edit = false) => {
+    requests.current.detail?.abort();
+    const controller = new AbortController();
+    requests.current.detail = controller;
+    setDetailLoading(true);
+    setNotification(null);
+    setSelectedDetail(null);
+    try {
+      const res = await apiRequest<ApiResponse<MaterialUsage>>('/material-usages/' + id, { signal: controller.signal });
+      if (!res.success || !res.data) throw new Error(res.message || 'Không tải được chi tiết sử dụng vật tư.');
+      if (controller.signal.aborted) return;
+      if (edit) {
+        if (!res.data.farmingActivityId) throw new Error('Bản ghi chưa liên kết hoạt động canh tác, chưa thể chỉnh sửa.');
+        setEditingUsage(res.data);
+        setUseExistingMaterial(true);
+        setSelectedMaterialId(res.data.materialId);
+        setCustomMaterialType(res.data.materialType ?? '');
+        setQuantity(res.data.quantity);
+        setUnit(res.data.unit);
+        setUsedAtTime(res.data.usedAt);
+        setNotes(res.data.notes ?? '');
+        setFarmingActivityId(res.data.farmingActivityId);
+        setDosage(res.data.dosage ?? '');
+        setMethod(res.data.method ?? '');
+        setSafetyDays(res.data.safetyIntervalDays ?? '');
+        setIsCreateModalOpen(true);
+      } else setSelectedDetail(res.data);
+    } catch (error) {
+      if (!controller.signal.aborted) setNotification({ text: error instanceof Error ? error.message : 'Không tải được chi tiết sử dụng vật tư.', type: 'error' });
+    } finally {
+      if (!controller.signal.aborted) setDetailLoading(false);
     }
   };
 
-  const handleCreateUsage = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!quantity || Number(quantity) <= 0) {
-      setNotification({ text: 'Vui lòng nhập số lượng sử dụng lớn hơn 0.', type: 'error' });
+  const handleSaveUsage = async (event: FormEvent) => {
+    event.preventDefault();
+    if (saving || !farmId) return;
+    if (!quantity || !Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(farmingActivityId) || Number(farmingActivityId) <= 0 || !usedAtTime || !unit.trim()) {
+      setNotification({ text: 'Nhập ID hoạt động hợp lệ, thời gian, đơn vị và số lượng lớn hơn 0.', type: 'error' });
       return;
     }
-
+    if (useExistingMaterial && !selectedMaterialId) {
+      setNotification({ text: 'Vui lòng chọn vật tư.', type: 'error' });
+      return;
+    }
     setSaving(true);
     setNotification(null);
-
+    const controller = new AbortController();
+    requests.current.save = controller;
     try {
-      let targetMaterialId: number = Number(selectedMaterialId);
-
-      // Nếu người dùng chọn nhập vật tư mới chưa có trong danh mục
-      if (!useExistingMaterial || !targetMaterialId) {
-        if (!customMaterialName.trim()) {
-          setNotification({ text: 'Vui lòng nhập tên vật tư mới.', type: 'error' });
-          setSaving(false);
-          return;
-        }
-
-        const createMatRes = await apiRequest<ApiResponse<MaterialOption>>('/material-usages/materials', {
-          method: 'POST',
-          data: {
-            farmId,
-            materialName: customMaterialName.trim(),
-            materialType: customMaterialType,
-            unit: unit.trim() || 'kg',
-            description: notes,
-          },
-        }).catch(() => null);
-
-        if (createMatRes?.data?.id) {
-          targetMaterialId = createMatRes.data.id;
-          setMaterials((prev) => [createMatRes.data, ...prev]);
-        } else {
-          targetMaterialId = 1;
-        }
+      let materialId = Number(selectedMaterialId);
+      if (!useExistingMaterial && !editingUsage) {
+        if (!customMaterialName.trim()) throw new Error('Vui lòng nhập tên vật tư mới.');
+        const created = await apiRequest<ApiResponse<MaterialOption>>('/material-usages/materials', {
+          method: 'POST', signal: controller.signal,
+          data: { farmId, materialName: customMaterialName.trim(), materialType: customMaterialType, unit: unit.trim() },
+        });
+        if (!created.success || !created.data?.id) throw new Error(created.message || 'Không tạo được vật tư.');
+        if (controller.signal.aborted) return;
+        materialId = created.data.id;
+        setMaterials(prev => [created.data, ...prev]);
+        setSelectedMaterialId(materialId);
+        setUseExistingMaterial(true);
       }
-
-      const matObj = materials.find((m) => m.id === targetMaterialId);
-      const chosenName = matObj?.materialName || customMaterialName.trim() || 'Vật tư nông nghiệp';
-
-      const payload = {
-        farmingActivityId: farmingActivityId || 1,
-        materialId: targetMaterialId,
-        usedAt: usedAtTime ? new Date(usedAtTime).toISOString().slice(0, 19) : new Date().toISOString().slice(0, 19),
-        quantity: Number(quantity),
-        unit: unit.trim() || 'kg',
-        dosage: dosage.trim() || undefined,
-        method: method.trim() || undefined,
-        safetyIntervalDays: Number(safetyDays) || 0,
-        notes: notes.trim() || undefined,
-      };
-
-      const res = await apiRequest<ApiResponse<MaterialUsage>>('/material-usages', {
-        method: 'POST',
-        data: payload,
+      const res = await apiRequest<ApiResponse<MaterialUsage>>(editingUsage ? '/material-usages/' + editingUsage.materialUsageId : '/material-usages', {
+        method: editingUsage ? 'PUT' : 'POST', signal: controller.signal,
+        data: { ...(!editingUsage && { farmingActivityId }), materialId, usedAt: usedAtTime, quantity: Number(quantity), unit: unit.trim(), notes: notes.trim() },
       });
-
-      if (res?.data) {
-        setUsages((prev) => [res.data, ...prev]);
-      } else {
-        const mockNew: MaterialUsage = {
-          id: Date.now(),
-          farmingActivityId: farmingActivityId || 1,
-          activityName: 'Nhật ký bón phân & tưới',
-          materialId: targetMaterialId,
-          materialName: chosenName,
-          materialType: customMaterialType,
-          quantity: Number(quantity),
-          unit,
-          dosage,
-          method,
-          safetyIntervalDays: Number(safetyDays),
-          usedAt: new Date(usedAtTime).toISOString(),
-          recorderName: 'Người dùng hiện tại',
-          notes,
-        };
-        setUsages((prev) => [mockNew, ...prev]);
-      }
-
-      setNotification({ text: `Đã ghi nhận sử dụng "${chosenName}" thành công!`, type: 'success' });
+      if (!res.success || !res.data) throw new Error(res.message || 'Không lưu được sử dụng vật tư.');
+      if (controller.signal.aborted) return;
+      setNotification({ text: editingUsage ? 'Đã cập nhật sử dụng vật tư.' : 'Đã ghi nhận sử dụng vật tư.', type: 'success' });
       setIsCreateModalOpen(false);
-      setCustomMaterialName('');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Lỗi khi ghi nhận sử dụng vật tư.';
-      setNotification({ text: msg, type: 'error' });
+      loadUsages();
+    } catch (error) {
+      if (!controller.signal.aborted) setNotification({ text: error instanceof Error ? error.message : 'Không lưu được sử dụng vật tư.', type: 'error' });
     } finally {
-      setSaving(false);
+      if (!controller.signal.aborted) setSaving(false);
     }
   };
 
-  const handleDelete = async (id: number, matName: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa bản ghi sử dụng vật tư "${matName}" không?`)) {
-      return;
-    }
-
+  const handleDelete = async (id: number, name: string) => {
+    if (deletingId !== null || !window.confirm('Xóa bản ghi sử dụng vật tư "' + name + '"?')) return;
+    const controller = new AbortController();
+    requests.current.delete = controller;
     setDeletingId(id);
+    setNotification(null);
     try {
-      await apiRequest<ApiResponse<void>>(`/material-usages/${id}`, {
-        method: 'DELETE',
-      });
-      setUsages((prev) => prev.filter((item) => item.id !== id));
-      setNotification({ text: `Đã xóa bản ghi sử dụng "${matName}" thành công.`, type: 'success' });
-      if (selectedDetail?.id === id) {
-        setSelectedDetail(null);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Không thể xóa bản ghi vật tư.';
-      setNotification({ text: msg, type: 'error' });
+      const res = await apiRequest<ApiResponse<void>>('/material-usages/' + id, { method: 'DELETE', signal: controller.signal });
+      if (!res.success) throw new Error(res.message || 'Không xóa được bản ghi.');
+      if (controller.signal.aborted) return;
+      setUsages(prev => prev.filter(item => item.materialUsageId !== id));
+      setSelectedDetail(null);
+      setNotification({ text: 'Đã xóa bản ghi sử dụng vật tư.', type: 'success' });
+    } catch (error) {
+      if (!controller.signal.aborted) setNotification({ text: error instanceof Error ? error.message : 'Không xóa được bản ghi.', type: 'error' });
     } finally {
-      setDeletingId(null);
+      if (!controller.signal.aborted) setDeletingId(null);
     }
   };
 
@@ -338,10 +261,16 @@ export function MaterialUsagePage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button type="button" className="action-button" onClick={() => { loadUsages(); loadMaterials(); }} title="Làm mới dữ liệu">
+          <button type="button" className="action-button" onClick={() => { loadUsages(); loadMaterials(); }} disabled={!farmId || loading || saving || detailLoading} title="Làm mới dữ liệu">
             <Icon name="search" /> Tải lại
           </button>
-          <button type="button" className="primary-button" onClick={() => setIsCreateModalOpen(true)}>
+          <button type="button" className="primary-button" disabled={!farmId || saving || detailLoading || deletingId !== null} onClick={() => {
+            setEditingUsage(null); setNotification(null); setUseExistingMaterial(true);
+            setSelectedMaterialId(''); setCustomMaterialName(''); setCustomMaterialType('Phân bón hữu cơ');
+            setFarmingActivityId(''); setQuantity(10); setUnit('kg'); setDosage(''); setMethod(''); setSafetyDays(''); setNotes('');
+            setUsedAtTime(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+            setIsCreateModalOpen(true);
+          }}>
             <Icon name="plus" /> Ghi nhận sử dụng vật tư
           </button>
         </div>
@@ -349,6 +278,7 @@ export function MaterialUsagePage() {
 
       {notification && (
         <div
+          role={notification.type === 'error' && !isCreateModalOpen ? 'alert' : 'status'}
           className={`notification-popover ${notification.type === 'error' ? 'form-error-banner' : ''}`}
           style={{
             position: 'static',
@@ -368,23 +298,25 @@ export function MaterialUsagePage() {
         </div>
       )}
 
+      {detailLoading && <p role="status">Đang tải chi tiết sử dụng vật tư...</p>}
+
       {/* KPI Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <div className="panel" style={{ padding: '16px 20px', borderLeft: '4px solid #10b981' }}>
           <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>TỔNG LẦN SỬ DỤNG</span>
-          <div style={{ fontSize: '28px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>{totalCount}</div>
+          <div style={{ fontSize: '28px', fontWeight: 700, color: '#0f172a', marginTop: '6px' }}>{loading || loadError || !farmId ? '—' : totalCount}</div>
           <span style={{ fontSize: '12px', color: '#059669' }}>Bản ghi được lưu trữ</span>
         </div>
 
         <div className="panel" style={{ padding: '16px 20px', borderLeft: '4px solid #06b6d4' }}>
           <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>VẬT TƯ HỮU CƠ / SINH HỌC</span>
-          <div style={{ fontSize: '28px', fontWeight: 700, color: '#0891b2', marginTop: '6px' }}>{organicCount}</div>
+          <div style={{ fontSize: '28px', fontWeight: 700, color: '#0891b2', marginTop: '6px' }}>{loading || loadError || !farmId ? '—' : organicCount}</div>
           <span style={{ fontSize: '12px', color: '#0891b2' }}>An toàn sinh học VietGAP</span>
         </div>
 
         <div className="panel" style={{ padding: '16px 20px', borderLeft: '4px solid #f59e0b' }}>
           <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>CẦN CÁCH LY (PHI &gt; 0 NGÀY)</span>
-          <div style={{ fontSize: '28px', fontWeight: 700, color: '#d97706', marginTop: '6px' }}>{phiAlertCount}</div>
+          <div style={{ fontSize: '28px', fontWeight: 700, color: '#d97706', marginTop: '6px' }}>{loading || loadError || !farmId || usages.some(usage => usage.safetyIntervalDays == null) ? '—' : phiAlertCount}</div>
           <span style={{ fontSize: '12px', color: '#b45309' }}>Theo dõi trước thu hoạch</span>
         </div>
       </div>
@@ -450,7 +382,7 @@ export function MaterialUsagePage() {
           </div>
 
           <div style={{ alignSelf: 'flex-end', display: 'flex', gap: '8px' }}>
-            <button type="button" className="action-button solid primary-button" onClick={loadUsages} style={{ height: '38px', padding: '0 16px' }}>
+            <button type="button" className="action-button solid primary-button" onClick={() => loadUsages()} style={{ height: '38px', padding: '0 16px' }}>
               <Icon name="search" /> Lọc
             </button>
             {(searchKeyword || filterType !== 'ALL' || fromDate || toDate) && (
@@ -462,7 +394,7 @@ export function MaterialUsagePage() {
                   setFilterType('ALL');
                   setFromDate('');
                   setToDate('');
-                  setTimeout(loadUsages, 10);
+                  loadUsages(true);
                 }}
                 style={{ height: '38px' }}
               >
@@ -479,6 +411,10 @@ export function MaterialUsagePage() {
           <div className="empty-icon">⏳</div>
           <h2>Đang tải nhật ký sử dụng vật tư...</h2>
         </div>
+      ) : loadError ? (
+        <div className="panel" role="alert"><p>{loadError}</p><button type="button" className="action-button" onClick={() => loadUsages()}>Thử lại</button></div>
+      ) : !farmId ? (
+        <div className="panel empty-state">Hãy chọn trang trại trước.</div>
       ) : usages.length === 0 ? (
         <div className="panel empty-state">
           <div className="empty-icon">📦</div>
@@ -501,11 +437,11 @@ export function MaterialUsagePage() {
             </thead>
             <tbody>
               {usages.map((u) => (
-                <tr key={u.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <tr key={u.materialUsageId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '14px 18px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                        #{u.id}
+                        #{u.materialUsageId}
                       </span>
                       <strong style={{ color: '#0f172a' }}>{u.materialName}</strong>
                     </div>
@@ -517,13 +453,13 @@ export function MaterialUsagePage() {
                     {u.quantity} {u.unit}
                   </td>
                   <td style={{ padding: '14px 18px', color: '#334155' }}>
-                    {u.dosage || 'Theo khuyến cáo kỹ thuật'}
+                    {u.dosage || 'Chưa có dữ liệu'}
                   </td>
                   <td style={{ padding: '14px 18px', color: '#64748b' }}>
-                    {u.method || 'Bón lót/tưới ẩm'}
+                    {u.method || 'Chưa có dữ liệu'}
                   </td>
                   <td style={{ padding: '14px 18px' }}>
-                    {u.safetyIntervalDays && u.safetyIntervalDays > 0 ? (
+                    {u.safetyIntervalDays == null ? 'Chưa có dữ liệu' : u.safetyIntervalDays > 0 ? (
                       <span style={{ padding: '4px 10px', borderRadius: '6px', background: '#fef3c7', color: '#b45309', fontWeight: 700, fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         ⏳ {u.safetyIntervalDays} ngày PHI
                       </span>
@@ -535,28 +471,29 @@ export function MaterialUsagePage() {
                   </td>
                   <td style={{ padding: '14px 18px', color: '#64748b', fontSize: '12.5px' }}>
                     <div>{new Date(u.usedAt).toLocaleDateString('vi-VN')} {new Date(u.usedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
-                    <div style={{ color: '#94a3b8', fontSize: '11.5px' }}>Ghi bởi: {u.recorderName || 'Thành viên nông trại'}</div>
+                    <div style={{ color: '#94a3b8', fontSize: '11.5px' }}>Ghi bởi: {u.recorderFullName || 'Thành viên nông trại'}</div>
                   </td>
                   <td style={{ padding: '14px 18px', textAlign: 'center' }}>
                     <div style={{ display: 'inline-flex', gap: '6px' }}>
                       <button
                         type="button"
                         className="action-button"
-                        onClick={() => setSelectedDetail(u)}
+                        disabled={detailLoading || saving || deletingId !== null} onClick={() => openUsage(u.materialUsageId)}
                         title="Xem chi tiết lịch sử"
                         style={{ padding: '6px 10px', fontSize: '12.5px' }}
                       >
                         <Icon name="search" /> Chi tiết
                       </button>
+                      <button type="button" className="action-button" disabled={detailLoading || saving || deletingId !== null} onClick={() => openUsage(u.materialUsageId, true)}>Chỉnh sửa</button>
                       <button
                         type="button"
                         className="action-button"
-                        onClick={() => handleDelete(u.id, u.materialName)}
-                        disabled={deletingId === u.id}
+                        onClick={() => handleDelete(u.materialUsageId, u.materialName)}
+                        disabled={detailLoading || saving || deletingId !== null}
                         title="Xóa bản ghi"
                         style={{ padding: '6px 10px', fontSize: '12.5px', color: '#dc2626' }}
                       >
-                        <Icon name="trash" /> {deletingId === u.id ? 'Đang xóa...' : 'Xóa'}
+                        <Icon name="trash" /> {deletingId === u.materialUsageId ? 'Đang xóa...' : 'Xóa'}
                       </button>
                     </div>
                   </td>
@@ -568,33 +505,14 @@ export function MaterialUsagePage() {
       )}
 
       {/* Modal 1: Ghi nhận sử dụng vật tư (Manage Material Usage) */}
-      {isCreateModalOpen && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 1000,
-            padding: '20px',
-          }}
-        >
-          <div className="panel" style={{ width: '100%', maxWidth: '560px', borderRadius: '16px', padding: '26px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h2 style={{ margin: 0, fontSize: '19px', color: '#0f172a' }}>Ghi nhận sử dụng vật tư nông nghiệp</h2>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(false)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUsage} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <Modal open={isCreateModalOpen} onClose={() => { if (!saving) setIsCreateModalOpen(false); }} title={editingUsage ? 'Chỉnh sửa sử dụng vật tư' : 'Ghi nhận sử dụng vật tư'}>
+            <form onSubmit={handleSaveUsage} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {notification?.type === 'error' && <p role="alert" className="form-error-banner">{notification.text}</p>}
+              {materialsError && <div role="alert"><p>{materialsError}</p><button type="button" onClick={loadMaterials}>Tải lại danh mục vật tư</button></div>}
+              <label htmlFor="usage-activity">ID hoạt động canh tác *</label>
+              <input id="usage-activity" type="number" min="1" max="2147483647" step="1" required disabled={saving} readOnly={Boolean(editingUsage)} value={farmingActivityId} onChange={event => setFarmingActivityId(event.target.value ? Number(event.target.value) : '')} />
+              {!editingUsage && <p className="page-subtitle">Nhập ID hoạt động thật thuộc trang trại đang chọn.</p>}
+              <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, display: 'contents' }}>
               {/* Toggle Chọn vật tư hay tạo mới */}
               <div style={{ display: 'flex', gap: '8px', padding: '4px', background: '#f1f5f9', borderRadius: '8px' }}>
                 <button
@@ -617,7 +535,7 @@ export function MaterialUsagePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setUseExistingMaterial(false)}
+                  disabled={Boolean(editingUsage)} onClick={() => setUseExistingMaterial(false)}
                   style={{
                     flex: 1,
                     padding: '7px 12px',
@@ -641,11 +559,13 @@ export function MaterialUsagePage() {
                     Chọn vật tư *
                   </label>
                   <select
-                    value={selectedMaterialId}
+                    aria-label="Vật tư" value={selectedMaterialId}
                     onChange={(e) => handleSelectMaterial(Number(e.target.value))}
                     required
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                   >
+                    <option value="">Chọn vật tư</option>
+                    {editingUsage && !materials.some(material => material.id === editingUsage.materialId) && <option value={editingUsage.materialId}>{editingUsage.materialName}</option>}
                     {materials.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.materialName} ({m.materialType || 'Vật tư'} - {m.unit})
@@ -675,10 +595,11 @@ export function MaterialUsagePage() {
                     Phân loại vật tư
                   </label>
                   <select
-                    value={customMaterialType}
+                    disabled={useExistingMaterial} value={customMaterialType}
                     onChange={(e) => setCustomMaterialType(e.target.value)}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                   >
+                    {!['Phân bón hữu cơ', 'Phân bón hòa tan', 'Dinh dưỡng lỏng', 'Chế phẩm sinh học', 'Thuốc BVTV sinh học', 'Chất cải tạo đất', 'Hạt giống'].includes(customMaterialType) && <option value={customMaterialType}>{customMaterialType || 'Chưa phân loại'}</option>}
                     <option value="Phân bón hữu cơ">Phân bón hữu cơ</option>
                     <option value="Phân bón hòa tan">Phân bón hòa tan</option>
                     <option value="Dinh dưỡng lỏng">Dinh dưỡng lỏng</option>
@@ -695,14 +616,15 @@ export function MaterialUsagePage() {
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <input
                       type="number"
-                      step="0.01"
-                      min="0.001"
+                      aria-label="Số lượng" step="any"
+                      min="0.0001"
                       required
                       value={quantity}
                       onChange={(e) => setQuantity(e.target.value ? Number(e.target.value) : '')}
-                      style={{ flex: 2, padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                      style={{ flex: 2, minWidth: 0, padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                     />
-                    <select value={unit} onChange={(e) => setUnit(e.target.value)} style={{ flex: 1, padding: '9px 8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                    <select aria-label="Đơn vị" disabled={useExistingMaterial} value={unit} onChange={(e) => setUnit(e.target.value)} style={{ flex: 1, padding: '9px 8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+                      {!['kg', 'lít', 'chai', 'gói', 'tấn'].includes(unit) && <option value={unit}>{unit}</option>}
                       <option value="kg">kg</option>
                       <option value="lít">lít</option>
                       <option value="chai">chai</option>
@@ -713,6 +635,7 @@ export function MaterialUsagePage() {
                 </div>
               </div>
 
+              <p className="page-subtitle">Liều lượng, phương thức và thời gian cách ly chưa hỗ trợ lưu.</p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
@@ -721,7 +644,7 @@ export function MaterialUsagePage() {
                   <input
                     type="text"
                     placeholder="Ví dụ: 50g / gốc"
-                    value={dosage}
+                    disabled aria-label="Liều lượng" value={dosage}
                     onChange={(e) => setDosage(e.target.value)}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                   />
@@ -733,8 +656,8 @@ export function MaterialUsagePage() {
                   <input
                     type="number"
                     min="0"
-                    placeholder="Số ngày (0 nếu an toàn)"
-                    value={safetyDays}
+                    placeholder="Chưa hỗ trợ lưu"
+                    disabled aria-label="Số ngày cách ly" value={safetyDays}
                     onChange={(e) => setSafetyDays(Number(e.target.value))}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                   />
@@ -749,7 +672,7 @@ export function MaterialUsagePage() {
                   <input
                     type="text"
                     placeholder="Bón lót / Bón thúc / Phun sương..."
-                    value={method}
+                    disabled aria-label="Phương thức" value={method}
                     onChange={(e) => setMethod(e.target.value)}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                   />
@@ -759,7 +682,7 @@ export function MaterialUsagePage() {
                     Thời điểm sử dụng *
                   </label>
                   <input
-                    type="datetime-local"
+                    aria-label="Thời điểm sử dụng" type="datetime-local" step="any"
                     required
                     value={usedAtTime}
                     onChange={(e) => setUsedAtTime(e.target.value)}
@@ -773,60 +696,29 @@ export function MaterialUsagePage() {
                   Ghi chú chứng nhận / Nguồn gốc vật tư
                 </label>
                 <textarea
-                  rows={2}
+                  aria-label="Ghi chú" maxLength={1000} rows={2}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                 />
               </div>
 
+              </fieldset>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-                <button type="button" className="action-button" onClick={() => setIsCreateModalOpen(false)}>
+                <button type="button" className="action-button" disabled={saving} onClick={() => setIsCreateModalOpen(false)}>
                   Hủy
                 </button>
                 <button type="submit" className="primary-button" disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Icon name="save" /> {saving ? 'Đang lưu...' : 'Lưu ghi nhận'}
+                  <Icon name="save" /> {saving ? 'Đang lưu...' : editingUsage ? 'Lưu thay đổi' : 'Lưu ghi nhận'}
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Modal 2: Xem chi tiết lịch sử sử dụng vật tư (View Material Usage History) */}
       {selectedDetail && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 1000,
-            padding: '20px',
-          }}
-        >
-          <div className="panel" style={{ width: '100%', maxWidth: '580px', borderRadius: '16px', padding: '26px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: '#059669', fontWeight: 700, textTransform: 'uppercase' }}>
-                  Hồ sơ sử dụng vật tư #{selectedDetail.id}
-                </span>
-                <h2 style={{ margin: '4px 0 0 0', fontSize: '20px', color: '#0f172a' }}>
-                  {selectedDetail.materialName}
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDetail(null)}
-                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal open onClose={() => { if (deletingId === null) setSelectedDetail(null); }} title={'Chi tiết sử dụng vật tư #' + selectedDetail.materialUsageId}>
+          <h3>{selectedDetail.materialName}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', margin: '20px 0' }}>
               <div>
                 <span style={{ display: 'block', fontSize: '12px', color: '#64748b' }}>Chủng loại</span>
@@ -838,16 +730,16 @@ export function MaterialUsagePage() {
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '12px', color: '#64748b' }}>Liều lượng áp dụng</span>
-                <strong style={{ color: '#0f172a' }}>{selectedDetail.dosage || 'Theo định mức'}</strong>
+                <strong style={{ color: '#0f172a' }}>{selectedDetail.dosage || 'Chưa có dữ liệu'}</strong>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '12px', color: '#64748b' }}>Cách thức xử lý</span>
-                <strong style={{ color: '#0f172a' }}>{selectedDetail.method || 'Bón/phun thông thường'}</strong>
+                <strong style={{ color: '#0f172a' }}>{selectedDetail.method || 'Chưa có dữ liệu'}</strong>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '12px', color: '#64748b' }}>Thời gian cách ly an toàn</span>
                 <div>
-                  {selectedDetail.safetyIntervalDays && selectedDetail.safetyIntervalDays > 0 ? (
+                  {selectedDetail.safetyIntervalDays == null ? 'Chưa có dữ liệu' : selectedDetail.safetyIntervalDays > 0 ? (
                     <span style={{ padding: '3px 8px', borderRadius: '6px', background: '#fef3c7', color: '#b45309', fontWeight: 700, fontSize: '12px' }}>
                       ⏳ Cách ly {selectedDetail.safetyIntervalDays} ngày
                     </span>
@@ -867,7 +759,7 @@ export function MaterialUsagePage() {
               <div style={{ gridColumn: '1 / -1' }}>
                 <span style={{ display: 'block', fontSize: '12px', color: '#64748b' }}>Hoạt động canh tác liên kết</span>
                 <strong style={{ color: '#2563eb' }}>
-                  {selectedDetail.activityName || `Hoạt động #${selectedDetail.farmingActivityId || 1}`}
+                  {selectedDetail.activityName || `Hoạt động #${selectedDetail.farmingActivityId ?? 'Chưa liên kết'}`}
                 </strong>
               </div>
               <div style={{ gridColumn: '1 / -1', background: '#f8fafc', padding: '12px', borderRadius: '8px' }}>
@@ -884,7 +776,7 @@ export function MaterialUsagePage() {
               <button
                 type="button"
                 className="action-button"
-                onClick={() => handleDelete(selectedDetail.id, selectedDetail.materialName)}
+                disabled={deletingId !== null} onClick={() => handleDelete(selectedDetail.materialUsageId, selectedDetail.materialName)}
                 style={{ color: '#dc2626' }}
               >
                 <Icon name="trash" /> Xóa bản ghi
@@ -893,8 +785,7 @@ export function MaterialUsagePage() {
                 Đóng
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </section>
   );
