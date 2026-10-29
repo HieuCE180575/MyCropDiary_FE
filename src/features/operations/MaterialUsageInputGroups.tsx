@@ -28,6 +28,42 @@ export function materialGroupName(type: string) {
   return MATERIAL_GROUPS.find(group => group.types.includes(type))?.name ?? 'Khác';
 }
 
+export const MATERIAL_FORMS = [
+  'Dạng hạt',
+  'Dạng bột',
+  'Dạng lỏng / dung dịch',
+  'Dạng viên nén',
+  'Dạng nhũ dầu',
+  'Dạng hữu cơ vi sinh',
+  'Hạt / cây giống',
+];
+
+export const AREA_UNITS = ['m²', 'sào', 'ha'];
+
+export function defaultMaterialForm(materialType?: string | null, unit?: string | null): string {
+  const type = (materialType ?? '').toLocaleLowerCase('vi-VN');
+  const u = (unit ?? '').toLocaleLowerCase('vi-VN');
+  if (type.includes('lỏng') || u === 'l' || u === 'lít' || u === 'ml' || u === 'can') {
+    return 'Dạng lỏng / dung dịch';
+  }
+  if (type.includes('bvtv') || u === 'chai') {
+    return 'Dạng nhũ dầu';
+  }
+  if (type.includes('hòa tan')) {
+    return 'Dạng bột';
+  }
+  if (type.includes('hữu cơ') || type.includes('sinh học')) {
+    return 'Dạng hữu cơ vi sinh';
+  }
+  if (type.includes('giống') || u === 'hạt' || u === 'cây' || u === 'khay') {
+    return 'Hạt / cây giống';
+  }
+  if (u === 'viên') {
+    return 'Dạng viên nén';
+  }
+  return 'Dạng hạt';
+}
+
 const DOSAGE_UNITS = ['g/gốc', 'kg/ha', 'g/m²', 'ml/lít', 'ml/bình', 'g/bình', '%'];
 function readDosage(value: string) {
   // Preserve legacy free text; only split a recognized numeric dose and suffix.

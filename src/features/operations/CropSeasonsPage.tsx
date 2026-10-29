@@ -762,7 +762,9 @@ export function CropSeasonsPage() {
           </div>
           <div className="zone-stat-content">
             <h4>Tổng số mùa vụ</h4>
-            <strong className="stat-number">{seasons.length} vụ</strong>
+            <strong className="stat-number">
+              {seasons.length} <span className="stat-unit">vụ</span>
+            </strong>
           </div>
         </div>
         <div className="zone-stat-card">
@@ -772,7 +774,8 @@ export function CropSeasonsPage() {
           <div className="zone-stat-content">
             <h4>Đang canh tác</h4>
             <strong className="stat-number">
-              {seasons.filter((s) => (s.seasonStatus || '').toLowerCase() === 'active').length} vụ
+              {seasons.filter((s) => (s.seasonStatus || '').toLowerCase() === 'active').length}{' '}
+              <span className="stat-unit">vụ</span>
             </strong>
           </div>
         </div>
@@ -782,7 +785,9 @@ export function CropSeasonsPage() {
           </div>
           <div className="zone-stat-content">
             <h4>Danh mục cây trồng</h4>
-            <strong className="stat-number">{categories.length} nhóm</strong>
+            <strong className="stat-number">
+              {categories.length} <span className="stat-unit">nhóm</span>
+            </strong>
           </div>
         </div>
         <div className="zone-stat-card">
@@ -792,7 +797,8 @@ export function CropSeasonsPage() {
           <div className="zone-stat-content">
             <h4>Đã hoàn thành</h4>
             <strong className="stat-number">
-              {seasons.filter((s) => (s.seasonStatus || '').toLowerCase() === 'completed').length} vụ
+              {seasons.filter((s) => (s.seasonStatus || '').toLowerCase() === 'completed').length}{' '}
+              <span className="stat-unit">vụ</span>
             </strong>
           </div>
         </div>
@@ -800,69 +806,70 @@ export function CropSeasonsPage() {
 
       {/* Filters: Search Crop Seasons, Season Category, Status, Reset Filters */}
       <div className="production-filter-panel">
-        <label className="form-field" style={{ flex: '1.5 1 280px' }}>
-          <span>
+        <div className="filter-group" style={{ flex: '1.5 1 280px' }}>
+          <label htmlFor="cs-list-search" className="filter-label">
             Tìm kiếm mùa vụ
-            <small style={{ color: '#059669', fontWeight: 700 }}>Tên / Ghi chú</small>
-          </span>
-          <input
-            id="cs-list-search"
-            type="search"
-            placeholder="Tìm theo tên mùa vụ hoặc cây trồng..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-          />
-        </label>
+          </label>
+          <div className="filter-input-wrap">
+            <span className="filter-icon">🔍</span>
+            <input
+              id="cs-list-search"
+              type="search"
+              placeholder="Tìm theo tên mùa vụ hoặc cây trồng..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+            />
+          </div>
+        </div>
 
-        <label className="form-field" style={{ flex: '1 1 240px' }}>
-          <span>
+        <div className="filter-group" style={{ flex: '1 1 240px' }}>
+          <label htmlFor="cs-list-cat" className="filter-label">
             Danh mục cây trồng
-            <small style={{ color: '#059669', fontWeight: 700 }}>Loại cây</small>
-          </span>
+          </label>
           <select
             id="cs-list-cat"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
           >
-            <option value="all">-- Tất cả danh mục --</option>
+            <option value="all">Tất cả danh mục cây trồng</option>
             {categories.map((c) => (
               <option key={c.id} value={String(c.id)}>
                 {c.categoryName}
               </option>
             ))}
           </select>
-        </label>
+        </div>
 
-        <label className="form-field" style={{ flex: '1 1 200px' }}>
-          <span>
+        <div className="filter-group" style={{ flex: '1 1 200px' }}>
+          <label htmlFor="cs-list-status" className="filter-label">
             Trạng thái canh tác
-            <small style={{ color: '#059669', fontWeight: 700 }}>Trạng thái</small>
-          </span>
+          </label>
           <select
             id="cs-list-status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="all">-- Tất cả trạng thái --</option>
+            <option value="all">Tất cả trạng thái</option>
             <option value="planned">Dự kiến</option>
             <option value="active">Đang canh tác</option>
             <option value="completed">Đã hoàn thành</option>
             <option value="cancelled">Đã hủy</option>
           </select>
-        </label>
+        </div>
 
-        <button
-          type="button"
-          className="action-button"
-          onClick={() => {
-            setSearchKeyword('');
-            setCategoryFilter('all');
-            setStatusFilter('all');
-          }}
-          style={{ height: '46px' }}
-        >
-          Đặt lại bộ lọc
-        </button>
+        {(searchKeyword || categoryFilter !== 'all' || statusFilter !== 'all') && (
+          <button
+            type="button"
+            className="filter-reset-btn"
+            onClick={() => {
+              setSearchKeyword('');
+              setCategoryFilter('all');
+              setStatusFilter('all');
+            }}
+          >
+            ✕ Đặt lại bộ lọc
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -967,6 +974,13 @@ export function CropSeasonsPage() {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div className="action-buttons-group" style={{ justifyContent: 'flex-end', gap: '8px' }}>
+                        <Link
+                          to={`/harvests?seasonId=${s.cropSeasonId}`}
+                          className="action-button"
+                          style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', textDecoration: 'none' }}
+                        >
+                          📦 Thu hoạch
+                        </Link>
                         <button
                           type="button"
                           className="action-button"

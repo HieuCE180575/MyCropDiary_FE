@@ -4,9 +4,11 @@ import { Icon } from '../../shared/components/Icon';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { fetchCropSeasonsByFarm, type CropSeasonResp } from './cropSeasonService';
 
 interface FarmingActivity {
   id: number;
+  farmingActivityId?: number;
   cropSeasonId: number;
   activityType: string;
   activityName: string;
@@ -16,15 +18,18 @@ interface FarmingActivity {
   resultNotes?: string;
   weatherNotes?: string;
   recorderName?: string;
+  recorderFullName?: string;
   workerCount?: number;
+  totalWorkers?: number;
 }
 
 export function FarmingActivitiesPage() {
   const { selectedFarm } = useFarmWorkspace();
+  const [seasons, setSeasons] = useState<CropSeasonResp[]>([]);
+  const [seasonId, setSeasonId] = useState<number | ''>('');
   const [activities, setActivities] = useState<FarmingActivity[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterType, setFilterType] = useState('ALL');
-  const [seasonId, setSeasonId] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<FarmingActivity | null>(null);
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -39,82 +44,69 @@ export function FarmingActivitiesPage() {
   const [weatherNotes, setWeatherNotes] = useState('Trời nắng nhẹ, độ ẩm 75%');
   const [saving, setSaving] = useState(false);
 
+  const loadSeasons = async () => {
+    if (!selectedFarm?.id) {
+      setSeasons([]);
+      setSeasonId('');
+      return;
+    }
+    try {
+      const list = await fetchCropSeasonsByFarm(selectedFarm.id);
+      setSeasons(list);
+      if (list.length > 0) {
+        setSeasonId((prev) => (prev && list.some((s) => s.cropSeasonId === prev) ? prev : list[0].cropSeasonId));
+      } else {
+        setSeasonId('');
+        setActivities([]);
+      }
+    } catch {
+      setSeasons([]);
+    }
+  };
+
   useEffect(() => {
-    void loadActivities(false);
+    void loadSeasons();
+  }, [selectedFarm?.id]);
+
+  useEffect(() => {
+    if (seasonId) {
+      void loadActivities(false);
+    } else {
+      setActivities([]);
+    }
   }, [seasonId, selectedFarm?.id]);
 
   useRealtimeSync(() => {
-    void loadActivities(true);
+    void loadSeasons();
+    if (seasonId) {
+      void loadActivities(true);
+    }
+  });
+
+  const normalizeActivity = (item: FarmingActivity, fallbackSeasonId: number): FarmingActivity => ({
+    ...item,
+    id: item.farmingActivityId ?? item.id,
+    cropSeasonId: item.cropSeasonId ?? fallbackSeasonId,
+    recorderName: item.recorderFullName ?? item.recorderName ?? 'Nhân viên kỹ thuật',
+    workerCount: item.totalWorkers ?? item.workerCount ?? 1,
   });
 
   const loadActivities = async (silent = false) => {
+    if (!seasonId) return;
     if (!silent) {
       setLoading(true);
       setNotification(null);
     }
     try {
-      const res = await apiRequest<ApiResponse<{ items: FarmingActivity[] }>>(
+      const res = await apiRequest<ApiResponse<{ items?: FarmingActivity[]; content?: FarmingActivity[] }>>(
         `/farming-activities?cropSeasonId=${seasonId}&size=50`
       ).catch(() => null);
 
-      if (res?.data?.items && Array.isArray(res.data.items) && res.data.items.length > 0) {
-        setActivities(res.data.items);
+      const rawItems = res?.data?.items || res?.data?.content;
+      if (Array.isArray(rawItems)) {
+        setActivities(rawItems.map((item) => normalizeActivity(item, Number(seasonId))));
       } else {
-        // Fallback seed data
-        setActivities([
-          {
-            id: 1,
-            cropSeasonId: seasonId,
-            activityType: 'Làm đất',
-            activityName: 'Cày bừa và bón vôi xử lý đất',
-            startedAt: '2026-03-01T07:30',
-            endedAt: '2026-03-01T11:30',
-            description: 'Phơi đất khử chua bằng vôi bột 30kg/sào, cày ải sâu 25cm.',
-            resultNotes: 'Đất tơi xốp, độ pH đo được 6.2 đạt chuẩn.',
-            weatherNotes: 'Trời nắng ráo, nhiệt độ 28°C.',
-            recorderName: 'Kỹ sư An',
-            workerCount: 4,
-          },
-          {
-            id: 2,
-            cropSeasonId: seasonId,
-            activityType: 'Gieo cấy',
-            activityName: 'Gieo hạt giống dưa lưới F1 chuẩn VietGAP',
-            startedAt: '2026-03-05T08:00',
-            endedAt: '2026-03-05T16:30',
-            description: 'Hạt giống ngâm ủ nứt nanh, gieo vào khay bầu giá thể xơ dừa đã xử lý nấm.',
-            resultNotes: 'Tỷ lệ nảy mầm đạt 96%.',
-            weatherNotes: 'Trời mát mẻ, có gió nhẹ.',
-            recorderName: 'Nguyễn Văn An',
-            workerCount: 6,
-          },
-          {
-            id: 3,
-            cropSeasonId: seasonId,
-            activityType: 'Bón phân',
-            activityName: 'Bón lót phân hữu cơ vi sinh trùn quế',
-            startedAt: '2026-03-12T06:30',
-            endedAt: '2026-03-12T10:00',
-            description: 'Bón phân trùn quế 500kg/ha quanh rãnh luống.',
-            resultNotes: 'Cây con bén rễ nhanh, lá xanh mướt.',
-            weatherNotes: 'Trời râm mát.',
-            recorderName: 'Trần Thị Bích',
-            workerCount: 3,
-          },
-          {
-            id: 4,
-            cropSeasonId: seasonId,
-            activityType: 'Tưới nước',
-            activityName: 'Tưới nhỏ giọt bổ sung dinh dưỡng sinh học',
-            startedAt: '2026-03-20T16:00',
-            endedAt: '2026-03-20T17:30',
-            description: 'Hệ thống tưới tự động Israel kiểm soát EC 1.4, pH 6.0.',
-            resultNotes: 'Độ ẩm gốc duy trì 70-75%.',
-            weatherNotes: 'Trời chiều không mưa.',
-            recorderName: 'Lê Văn Cường',
-            workerCount: 2,
-          },
-        ]);
+        setActivities([]);
       }
     } catch {
       if (!silent) setNotification({ text: 'Lỗi nạp nhật ký canh tác từ máy chủ.', type: 'error' });
@@ -125,14 +117,16 @@ export function FarmingActivitiesPage() {
 
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!actName.trim()) return;
+    if (!actName.trim() || !seasonId) return;
     setSaving(true);
+    const normalizedStart = startedAt.length === 16 ? `${startedAt}:00` : startedAt;
+    const normalizedEnd = endedAt ? (endedAt.length === 16 ? `${endedAt}:00` : endedAt) : undefined;
     const newActPayload = {
-      cropSeasonId: seasonId,
+      cropSeasonId: Number(seasonId),
       activityType: actType,
       activityName: actName.trim(),
-      startedAt: startedAt ? `${startedAt}:00` : new Date().toISOString(),
-      endedAt: endedAt ? `${endedAt}:00` : undefined,
+      startedAt: normalizedStart || new Date().toISOString().slice(0, 19),
+      endedAt: normalizedEnd,
       description: description.trim(),
       resultNotes: resultNotes.trim(),
       weatherNotes: weatherNotes.trim(),
@@ -144,32 +138,19 @@ export function FarmingActivitiesPage() {
         data: newActPayload,
       });
       if (res?.data) {
-        setActivities((prev) => [res.data, ...prev]);
+        const created = normalizeActivity(res.data, Number(seasonId));
+        setActivities((prev) => [created, ...prev]);
       } else {
-        throw new Error('Fallback');
+        throw new Error(res?.message || 'Không thể lưu nhật ký canh tác.');
       }
       setNotification({ text: 'Đã lưu nhật ký canh tác thành công!', type: 'success' });
       setIsModalOpen(false);
       resetForm();
-    } catch {
-      // Offline / Local simulation
-      const mockItem: FarmingActivity = {
-        id: Date.now(),
-        cropSeasonId: seasonId,
-        activityType: actType,
-        activityName: actName.trim(),
-        startedAt,
-        endedAt,
-        description,
-        resultNotes,
-        weatherNotes,
-        recorderName: 'Tôi (Nhật ký số)',
-        workerCount: 3,
-      };
-      setActivities((prev) => [mockItem, ...prev]);
-      setNotification({ text: 'Đã lưu nhật ký canh tác (chế độ nhanh)!', type: 'success' });
-      setIsModalOpen(false);
-      resetForm();
+    } catch (err) {
+      setNotification({
+        text: err instanceof Error ? err.message : 'Không thể lưu nhật ký canh tác.',
+        type: 'error',
+      });
     } finally {
       setSaving(false);
     }
@@ -193,7 +174,12 @@ export function FarmingActivitiesPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button type="button" className="primary-button" onClick={() => setIsModalOpen(true)}>
+          <button
+            type="button"
+            className="primary-button"
+            disabled={!seasonId}
+            onClick={() => setIsModalOpen(true)}
+          >
             <Icon name="plus" /> Ghi nhật ký mới
           </button>
         </div>
@@ -211,11 +197,18 @@ export function FarmingActivitiesPage() {
           <label style={{ fontSize: '13.5px', fontWeight: 600, color: '#475569' }}>Mùa vụ:</label>
           <select
             value={seasonId}
-            onChange={(e) => setSeasonId(Number(e.target.value))}
+            onChange={(e) => setSeasonId(e.target.value ? Number(e.target.value) : '')}
             style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px', fontWeight: 500 }}
           >
-            <option value={1}>Vụ Đông Xuân 2026 (Đang thu hoạch)</option>
-            <option value={2}>Vụ Hè Thu 2026 (Chuẩn bị xuống giống)</option>
+            {seasons.length === 0 ? (
+              <option value="">Chưa có mùa vụ canh tác</option>
+            ) : (
+              seasons.map((s) => (
+                <option key={s.cropSeasonId} value={s.cropSeasonId}>
+                  {s.seasonName} ({s.seasonStatus === 'active' ? 'Đang canh tác' : s.seasonStatus === 'planned' ? 'Chuẩn bị vụ' : s.seasonStatus})
+                </option>
+              ))
+            )}
           </select>
         </div>
 
@@ -254,11 +247,17 @@ export function FarmingActivitiesPage() {
       ) : filtered.length === 0 ? (
         <div className="panel empty-state">
           <div className="empty-icon">📖</div>
-          <h2>Chưa có nhật ký nào trong vụ mùa này</h2>
-          <p>Ghi lại nhật ký canh tác đầu tiên để đảm bảo tiêu chuẩn đánh giá VietGAP.</p>
-          <button type="button" className="primary-button" style={{ marginTop: '12px' }} onClick={() => setIsModalOpen(true)}>
-            + Ghi nhật ký ngay
-          </button>
+          <h2>{seasonId ? 'Chưa có nhật ký nào trong vụ mùa này' : 'Trang trại chưa có mùa vụ canh tác'}</h2>
+          <p>
+            {seasonId
+              ? 'Ghi lại nhật ký canh tác đầu tiên để đảm bảo tiêu chuẩn đánh giá VietGAP.'
+              : 'Hãy tạo mùa vụ canh tác tại mục Mùa vụ canh tác trước khi ghi nhật ký.'}
+          </p>
+          {seasonId && (
+            <button type="button" className="primary-button" style={{ marginTop: '12px' }} onClick={() => setIsModalOpen(true)}>
+              + Ghi nhật ký ngay
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -360,12 +359,12 @@ export function FarmingActivitiesPage() {
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>Loại hoạt động *</label>
                   <select value={actType} onChange={(e) => setActType(e.target.value)} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
-                    <option value="Làm đất">Làm đất & Xử lý giá thể</option>
-                    <option value="Gieo cấy">Gieo hạt & Cấy cây con</option>
-                    <option value="Bón phân">Bón lót & Bón thúc phân bón</option>
-                    <option value="Tưới nước">Tưới tiêu & Châm phân</option>
+                    <option value="Làm đất">Làm đất &amp; Xử lý giá thể</option>
+                    <option value="Gieo cấy">Gieo hạt &amp; Cấy cây con</option>
+                    <option value="Bón phân">Bón lót &amp; Bón thúc phân bón</option>
+                    <option value="Tưới nước">Tưới tiêu &amp; Châm phân</option>
                     <option value="Phun thuốc">Phun thuốc BVTV sinh học</option>
-                    <option value="Làm cỏ">Làm cỏ & Tỉa cành</option>
+                    <option value="Làm cỏ">Làm cỏ &amp; Tỉa cành</option>
                     <option value="Thu hoạch">Thu hoạch nông sản</option>
                   </select>
                 </div>

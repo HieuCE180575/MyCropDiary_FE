@@ -73,9 +73,12 @@ export interface UpdateCropSeasonBlockReq {
 }
 
 interface PageResp<T> {
-  content: T[];
-  pageNumber: number;
-  pageSize: number;
+  items?: T[];
+  content?: T[];
+  page?: number;
+  pageNumber?: number;
+  size?: number;
+  pageSize?: number;
   totalElements: number;
   totalPages: number;
   last: boolean;
@@ -118,7 +121,7 @@ export async function fetchCropSeasonsByFarm(
   const qs = query.toString() ? `?${query.toString()}` : '';
   const data = await request<PageResp<CropSeasonResp> | CropSeasonResp[]>(`/farms/${farmId}/crop-seasons${qs}`);
   if (Array.isArray(data)) return data;
-  return data?.content || [];
+  return data?.items || data?.content || [];
 }
 
 export async function fetchCropSeasonDetail(cropSeasonId: number): Promise<CropSeasonResp> {

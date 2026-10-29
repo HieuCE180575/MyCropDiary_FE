@@ -7,7 +7,17 @@ import type { ApiResponse } from '../../shared/types/api';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 import { FarmingActivityPicker } from './FarmingActivityPicker';
 import { MaterialUsageFormSection } from './MaterialUsageFormSection';
-import { DosageInput, MethodInput, MATERIAL_TYPES, MATERIAL_GROUPS, materialGroupName, getMaterialUnitOptions } from './MaterialUsageInputGroups';
+import {
+  DosageInput,
+  MethodInput,
+  MATERIAL_TYPES,
+  MATERIAL_GROUPS,
+  MATERIAL_FORMS,
+  AREA_UNITS,
+  materialGroupName,
+  defaultMaterialForm,
+  getMaterialUnitOptions,
+} from './MaterialUsageInputGroups';
 import { Pagination } from '../../shared/components/Pagination';
 import { MaterialUsageHistory, isOrganicMaterial } from './MaterialUsageHistory';
 import '../../styles/material-usage.css';
@@ -31,6 +41,7 @@ export interface MaterialUsage {
   materialCode?: string;
   materialName: string;
   materialType?: string;
+  materialForm?: string | null;
   inputPurchaseDetailId?: number;
   recordedByMemberId?: number;
   recorderFullName?: string | null;
@@ -39,6 +50,9 @@ export interface MaterialUsage {
   unit: string;
   dosage?: string | null;
   method?: string | null;
+  appliedArea?: number | null;
+  appliedAreaUnit?: string | null;
+  appliedPlantCount?: number | null;
   safetyIntervalDays?: number | null;
   notes?: string | null;
 }
@@ -48,6 +62,7 @@ export interface MaterialOption {
   farmId: number;
   materialName: string;
   materialType?: string;
+  materialForm?: string | null;
   unit: string;
   description?: string;
   isActive?: boolean;
@@ -96,10 +111,14 @@ function MaterialUsageContent() {
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | ''>('');
   const [customMaterialName, setCustomMaterialName] = useState('');
   const [customMaterialType, setCustomMaterialType] = useState('Phân bón hữu cơ');
+  const [materialForm, setMaterialForm] = useState('Dạng hữu cơ vi sinh');
   const [quantity, setQuantity] = useState<number | ''>(10);
   const [unit, setUnit] = useState('kg');
   const [dosage, setDosage] = useState('');
   const [method, setMethod] = useState('');
+  const [appliedArea, setAppliedArea] = useState<number | ''>('');
+  const [appliedAreaUnit, setAppliedAreaUnit] = useState('m²');
+  const [appliedPlantCount, setAppliedPlantCount] = useState<number | ''>('');
   const [safetyDays, setSafetyDays] = useState<number | ''>('');
   const [usedAtTime, setUsedAtTime] = useState(new Date().toISOString().slice(0, 16));
   const [notes, setNotes] = useState('');
@@ -161,7 +180,6 @@ function MaterialUsageContent() {
         return result.data;
       };
       let result = await fetchPage();
-      // Deleting the last row on the last page can reduce the number of pages.
       if (!controller.signal.aborted && requestedPage > Math.max(0, result.totalPages - 1)) {
         params.set('page', String(Math.max(0, result.totalPages - 1)));
         result = await fetchPage();
@@ -197,7 +215,11 @@ function MaterialUsageContent() {
   const handleSelectMaterial = (id: number) => {
     setSelectedMaterialId(id);
     const material = materials.find(item => item.id === id);
-    if (material) { setUnit(material.unit); setCustomMaterialType(material.materialType ?? ''); }
+    if (material) {
+      setUnit(material.unit);
+      setCustomMaterialType(material.materialType ?? '');
+      setMaterialForm(material.materialForm || defaultMaterialForm(material.materialType, material.unit));
+    }
   };
 
   const openUsage = async (id: number, edit = false) => {
@@ -218,6 +240,7 @@ function MaterialUsageContent() {
         setUseExistingMaterial(true);
         setSelectedMaterialId(res.data.materialId);
         setCustomMaterialType(res.data.materialType ?? '');
+        setMaterialForm(res.data.materialForm || defaultMaterialForm(res.data.materialType, res.data.unit));
         setQuantity(res.data.quantity);
         setUnit(res.data.unit);
         setUsedAtTime(res.data.usedAt);
@@ -225,6 +248,9 @@ function MaterialUsageContent() {
         setFarmingActivityId(res.data.farmingActivityId);
         setDosage(res.data.dosage ?? '');
         setMethod(res.data.method ?? '');
+        setAppliedArea(res.data.appliedArea ?? '');
+        setAppliedAreaUnit(res.data.appliedAreaUnit || 'm²');
+        setAppliedPlantCount(res.data.appliedPlantCount ?? '');
         setSafetyDays(res.data.safetyIntervalDays ?? '');
         setIsCreateModalOpen(true);
       } else setSelectedDetail(res.data);
@@ -250,6 +276,14 @@ function MaterialUsageContent() {
       setNotification({ text: 'Liều lượng tối đa 100 ký tự, phương pháp tối đa 200 ký tự.', type: 'error' });
       return;
     }
+    if (appliedArea !== '' && (!Number.isFinite(appliedArea) || appliedArea <= 0)) {
+      setNotification({ text: 'Diện tích áp dụng phải lớn hơn 0.', type: 'error' });
+      return;
+    }
+    if (appliedPlantCount !== '' && (!Number.isInteger(appliedPlantCount) || appliedPlantCount <= 0)) {
+      setNotification({ text: 'Số cây áp dụng phải là số nguyên dương.', type: 'error' });
+      return;
+    }
     if (safetyDays !== '' && (!Number.isInteger(safetyDays) || safetyDays < 0 || safetyDays > 2147483647)) {
       setNotification({ text: 'Số ngày cách ly phải là số nguyên không âm hợp lệ.', type: 'error' });
       return;
@@ -264,7 +298,13 @@ function MaterialUsageContent() {
         if (!customMaterialName.trim()) throw new Error('Vui lòng nhập tên vật tư mới.');
         const created = await apiRequest<ApiResponse<MaterialOption>>('/material-usages/materials', {
           method: 'POST', signal: controller.signal,
-          data: { farmId, materialName: customMaterialName.trim(), materialType: customMaterialType, unit: unit.trim() },
+          data: {
+            farmId,
+            materialName: customMaterialName.trim(),
+            materialType: customMaterialType,
+            materialForm: materialForm || defaultMaterialForm(customMaterialType, unit),
+            unit: unit.trim(),
+          },
         });
         if (!created.success || !created.data?.id) throw new Error(created.message || 'Không tạo được vật tư.');
         if (controller.signal.aborted) return;
@@ -279,6 +319,9 @@ function MaterialUsageContent() {
           ...(!editingUsage && { farmingActivityId }), materialId, usedAt: usedAtTime,
           quantity: Number(quantity), unit: unit.trim(), notes: notes.trim(),
           dosage: dosage.trim(), method: method.trim(),
+          ...(materialForm.trim() && { materialForm: materialForm.trim() }),
+          ...(appliedArea !== '' && { appliedArea: Number(appliedArea), appliedAreaUnit }),
+          ...(appliedPlantCount !== '' && { appliedPlantCount: Number(appliedPlantCount) }),
           safetyIntervalDays: safetyDays === '' ? null : safetyDays,
         },
       });
@@ -327,7 +370,10 @@ function MaterialUsageContent() {
   const openCreate = () => {
     setEditingUsage(null); setNotification(null); setUseExistingMaterial(true); setMaterialKeyword('');
     setSelectedMaterialId(''); setCustomMaterialName(''); setCustomMaterialType('Phân bón hữu cơ');
-    setFarmingActivityId(''); setQuantity(10); setUnit('kg'); setDosage(''); setMethod(''); setSafetyDays(''); setNotes('');
+    setMaterialForm('Dạng hữu cơ vi sinh');
+    setFarmingActivityId(''); setQuantity(10); setUnit('kg'); setDosage(''); setMethod('');
+    setAppliedArea(''); setAppliedAreaUnit('m²'); setAppliedPlantCount('');
+    setSafetyDays(''); setNotes('');
     setUsedAtTime(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
     setIsCreateModalOpen(true);
   };
@@ -431,19 +477,29 @@ function MaterialUsageContent() {
             <MaterialUsageFormSection number={2} title="Thông tin vật tư" description="Phân loại và đơn vị quản lý">
               <div className="mu-material-info-grid">
                 <div className="mu-field"><label htmlFor="usage-material-group">Nhóm vật tư <span className="mu-required">*</span></label>
-                  <div className="mu-icon-field"><Icon name="leaf" /><select id="usage-material-group" value={materialGroupName(customMaterialType)} disabled={useExistingMaterial} onChange={event => setCustomMaterialType(MATERIAL_GROUPS.find(group => group.name === event.target.value)?.types[0] ?? '')}>
+                  <div className="mu-icon-field"><Icon name="leaf" /><select id="usage-material-group" value={materialGroupName(customMaterialType)} disabled={useExistingMaterial} onChange={event => {
+                    const nextType = MATERIAL_GROUPS.find(group => group.name === event.target.value)?.types[0] ?? '';
+                    setCustomMaterialType(nextType);
+                    setMaterialForm(defaultMaterialForm(nextType, unit));
+                  }}>
                     {materialGroupName(customMaterialType) === 'Khác' && <option value="Khác">Khác</option>}{MATERIAL_GROUPS.map(group => <option key={group.name} value={group.name}>{group.name}</option>)}
                   </select></div><p className="mu-entry-help">Nhóm theo phân loại vật tư</p>
                 </div>
                 <div className="mu-field"><label htmlFor="usage-material-type">Phân loại vật tư <span className="mu-required">*</span></label>
-                  <div className="mu-icon-field"><Icon name="sprout" /><select id="usage-material-type" disabled={useExistingMaterial} value={customMaterialType} onChange={event => setCustomMaterialType(event.target.value)}>
+                  <div className="mu-icon-field"><Icon name="sprout" /><select id="usage-material-type" disabled={useExistingMaterial} value={customMaterialType} onChange={event => {
+                    setCustomMaterialType(event.target.value);
+                    setMaterialForm(defaultMaterialForm(event.target.value, unit));
+                  }}>
                     {!MATERIAL_TYPES.includes(customMaterialType) && <option value={customMaterialType}>{customMaterialType || 'Chưa phân loại'}</option>}
                     {MATERIAL_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
                   </select></div><p className="mu-entry-help">Chọn loại vật tư</p>
                 </div>
                 <div className="mu-field"><label htmlFor="usage-material-form">Dạng vật tư</label>
-                  <div className="mu-icon-field"><Icon name="granules" /><select id="usage-material-form" disabled aria-describedby="usage-material-form-help"><option>Chưa có dữ liệu</option></select></div>
-                  <p id="usage-material-form-help" className="mu-entry-help">Chưa hỗ trợ lưu dạng vật tư</p>
+                  <div className="mu-icon-field"><Icon name="granules" /><select id="usage-material-form" aria-label="Dạng vật tư" aria-describedby="usage-material-form-help" value={materialForm} onChange={event => setMaterialForm(event.target.value)}>
+                    {materialForm && !MATERIAL_FORMS.includes(materialForm) && <option value={materialForm}>{materialForm}</option>}
+                    {MATERIAL_FORMS.map(form => <option key={form} value={form}>{form}</option>)}
+                  </select></div>
+                  <p id="usage-material-form-help" className="mu-entry-help">Trạng thái vật lý của vật tư khi sử dụng</p>
                 </div>
                 <div className="mu-field"><label htmlFor="usage-unit">Đơn vị quản lý <span className="mu-required">*</span></label>
                   <div className="mu-icon-field"><Icon name="weight" /><select id="usage-unit" aria-label="Đơn vị" disabled={useExistingMaterial} value={unit} onChange={event => setUnit(event.target.value)}>
@@ -468,12 +524,12 @@ function MaterialUsageContent() {
               <div className="mu-usage-bottom-grid">
                 <div className="mu-field"><label htmlFor="usage-method">Phương pháp sử dụng</label><MethodInput value={method} onChange={setMethod} /><p className="mu-entry-help">Chọn phương pháp sử dụng vật tư</p></div>
                 <div className="mu-field"><label htmlFor="usage-applied-area">Diện tích áp dụng</label>
-                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="plots" /></span><input id="usage-applied-area" type="number" disabled placeholder="Chưa hỗ trợ" aria-describedby="usage-area-help" /><select disabled aria-label="Đơn vị diện tích"><option>m²</option></select></div>
-                  <p id="usage-area-help" className="mu-entry-help">Chưa hỗ trợ lưu diện tích áp dụng</p>
+                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="plots" /></span><input id="usage-applied-area" aria-label="Diện tích áp dụng" type="number" step="any" min="0.01" placeholder="Ví dụ: 500" aria-describedby="usage-area-help" value={appliedArea} onChange={event => setAppliedArea(event.target.value === '' ? '' : Number(event.target.value))} /><select aria-label="Đơn vị diện tích" value={appliedAreaUnit} onChange={event => setAppliedAreaUnit(event.target.value)}>{AREA_UNITS.map(areaUnit => <option key={areaUnit} value={areaUnit}>{areaUnit}</option>)}</select></div>
+                  <p id="usage-area-help" className="mu-entry-help">Diện tích lô hoặc khu vực canh tác được áp dụng</p>
                 </div>
                 <div className="mu-field"><label htmlFor="usage-plant-count">Số cây áp dụng</label>
-                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="sprout" /></span><input id="usage-plant-count" type="number" disabled placeholder="Chưa hỗ trợ" aria-describedby="usage-plant-help" /><select disabled aria-label="Đơn vị số cây"><option>cây</option></select></div>
-                  <p id="usage-plant-help" className="mu-entry-help">Chưa hỗ trợ lưu số cây áp dụng</p>
+                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="sprout" /></span><input id="usage-plant-count" aria-label="Số cây áp dụng" type="number" step="1" min="1" placeholder="Ví dụ: 120" aria-describedby="usage-plant-help" value={appliedPlantCount} onChange={event => setAppliedPlantCount(event.target.value === '' ? '' : Number(event.target.value))} /><select disabled aria-label="Đơn vị số cây"><option>cây</option></select></div>
+                  <p id="usage-plant-help" className="mu-entry-help">Số lượng cây trồng thực tế được xử lý</p>
                 </div>
               </div>
             </MaterialUsageFormSection>
@@ -498,7 +554,7 @@ function MaterialUsageContent() {
         </form>
       </Modal>
 
-      {/* Modal 2: Xem chi tiết lịch sử sử dụng vật tư (View Material Usage History) */}
+      {/* Modal 2: Xem chi tiết lịch sử sử dụng vật tư */}
       {selectedDetail && (
         <Modal open onClose={() => { if (deletingId === null) setSelectedDetail(null); }} title={'Chi tiết sử dụng vật tư #' + selectedDetail.materialUsageId}>
           <h3>{selectedDetail.materialName}</h3>
@@ -506,6 +562,10 @@ function MaterialUsageContent() {
               <div>
                 <span className="mu-detail-label">Chủng loại</span>
                 <strong>{selectedDetail.materialType || 'Vật tư đầu vào'}</strong>
+              </div>
+              <div>
+                <span className="mu-detail-label">Dạng vật tư</span>
+                <strong>{selectedDetail.materialForm || defaultMaterialForm(selectedDetail.materialType, selectedDetail.unit)}</strong>
               </div>
               <div>
                 <span className="mu-detail-label">Khối lượng / Thể tích</span>
@@ -518,6 +578,13 @@ function MaterialUsageContent() {
               <div>
                 <span className="mu-detail-label">Cách thức xử lý</span>
                 <strong>{selectedDetail.method || 'Chưa có dữ liệu'}</strong>
+              </div>
+              <div>
+                <span className="mu-detail-label">Diện tích / Số cây áp dụng</span>
+                <strong>
+                  {selectedDetail.appliedArea != null ? `${selectedDetail.appliedArea} ${selectedDetail.appliedAreaUnit || 'm²'}` : '—'}
+                  {selectedDetail.appliedPlantCount != null ? ` · ${selectedDetail.appliedPlantCount} cây` : ''}
+                </strong>
               </div>
               <div>
                 <span className="mu-detail-label">Thời gian cách ly an toàn</span>
@@ -547,7 +614,7 @@ function MaterialUsageContent() {
               </div>
               <div className="mu-form-wide mu-detail-note">
                 <span className="mu-detail-label">
-                  Ghi chú truy xuất & Tuân thủ VietGAP
+                  Ghi chú truy xuất &amp; Tuân thủ VietGAP
                 </span>
                 <p>
                   {selectedDetail.notes || 'Không có ghi chú thêm.'}

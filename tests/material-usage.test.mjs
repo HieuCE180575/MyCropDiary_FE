@@ -195,7 +195,7 @@ test('material usage loads real detail, reuses PUT form, preserves errors and us
     assert.equal(records[0].quantity, 35);
     const update = calls.filter(call => call.method === 'put').at(-1);
     assert.equal(update.url, '/material-usages/73');
-    assert.deepEqual(update.data, { materialId: 6, usedAt: '2026-10-28T08:30:00', quantity: 35, unit: 'lít', notes: 'Fresh detail', dosage: '50 g/gốc', method: 'Bón gốc', safetyIntervalDays: 0 });
+    assert.deepEqual(update.data, { materialId: 6, usedAt: '2026-10-28T08:30:00', quantity: 35, unit: 'lít', notes: 'Fresh detail', dosage: '50 g/gốc', method: 'Bón gốc', materialForm: 'Dạng lỏng / dung dịch', safetyIntervalDays: 0 });
     assert.match(document.querySelector('tbody').textContent, /An toàn \(0 ngày\)/);
     writeFailure = true;
     await act(async () => button('Xóa').click());
@@ -206,7 +206,7 @@ test('material usage loads real detail, reuses PUT form, preserves errors and us
     await act(async () => button('Ghi nhận sử dụng vật tư').click());
     assert.equal(document.querySelector('#usage-activity').value, '');
     for (const label of ['Liều lượng', 'Phương pháp sử dụng', 'Số ngày cách ly']) assert.equal(document.querySelector(`[aria-label="${label}"]`).value, '');
-    for (const id of ['usage-material-form', 'usage-applied-area', 'usage-plant-count']) assert.equal(document.getElementById(id).disabled, true);
+    for (const id of ['usage-material-form', 'usage-applied-area', 'usage-plant-count']) assert.equal(document.getElementById(id).disabled, false);
     await submit();
     assert.equal(calls.some(call => call.method === 'post'), false);
     assert.equal(document.querySelector('#usage-activity').disabled, true);
