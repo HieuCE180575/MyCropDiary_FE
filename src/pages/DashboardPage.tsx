@@ -5,12 +5,14 @@ import { useFarmWorkspace } from '../features/farm-management/FarmWorkspace';
 import { moduleDefinitions } from '../app/routes/moduleDefinitions';
 import { RegistrationGuide } from '../features/farm-management/RegistrationGuide';
 import { Icon } from '../shared/components/Icon';
+import { OwnerDashboard } from '../features/owner-dashboard/OwnerDashboard';
 
 export function DashboardPage() {
   const { user } = useAuth();
   const { selectedFarm, farms, loading, error, retry } = useFarmWorkspace();
   const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
   if (isAdmin) return <Navigate to="/admin" replace />;
+  if (selectedFarm && farmRole(selectedFarm) === 'OWNER') return <OwnerDashboard key={selectedFarm.id} farm={selectedFarm} />;
   const name = user?.fullName?.trim() || 'bạn';
   const shortcuts = moduleDefinitions.filter((module) =>
     canAccessModule(module, user?.systemRole, selectedFarm)

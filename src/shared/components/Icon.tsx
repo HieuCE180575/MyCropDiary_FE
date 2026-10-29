@@ -6,12 +6,14 @@ import {
   LoaderCircle, CircleHelp, Pencil, RotateCcw, Save, UserRoundPlus, ShieldCheck,
   Phone, Check, Award, Sparkles, Star, TrendingUp, Sprout, ExternalLink, FileText,
   Sun, Moon, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2,
-  Activity, Layers, Zap, Database, Building2, Trash2, Weight, FlaskConical, Grip,
+  Activity, Layers, Zap, Database, Building2, Trash2, Weight, FlaskConical, Grip, Users, Gauge, MapPin, Bug, Thermometer, ArrowUp,
+  Target, Telescope, Settings, CirclePlay, Cloud,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
 // Explicit imports keep the bundle limited to the icons used by this app.
 const icons: Record<string, LucideIcon> = {
+  target: Target, telescope: Telescope, settings: Settings, 'play-circle': CirclePlay, cloud: Cloud,
   home: House, leaf: Leaf, plots: Map, calendar: CalendarDays, book: BookOpen,
   box: Package, money: CircleDollarSign, check: ListChecks, report: ChartColumn,
   bot: Bot, user: UserRound, bell: Bell, plus: Plus, arrow: ArrowRight,
@@ -28,6 +30,7 @@ const icons: Record<string, LucideIcon> = {
   filter: SlidersHorizontal, expand: Maximize2,
   activity: Activity, layers: Layers, zap: Zap, database: Database, building: Building2, trash: Trash2,
   weight: Weight, flask: FlaskConical, granules: Grip, help: CircleHelp,
+  users: Users, gauge: Gauge, 'map-pin': MapPin, bug: Bug, thermometer: Thermometer, 'arrow-up': ArrowUp,
 };
 
 export function Icon({ name, className, ...props }: LucideProps & { name: string }) {

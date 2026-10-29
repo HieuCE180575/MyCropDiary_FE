@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useFarmWorkspace } from '../features/farm-management/FarmWorkspace';
 import { farmRole } from '../features/auth/accessPolicy';
 import { Icon } from '../shared/components/Icon';
@@ -23,6 +23,7 @@ import { FarmGoongMap } from '../features/farm-management/components/FarmGoongMa
 import { useRealtimeSync } from '../shared/realtime/realtimeSync';
 
 export function FarmInfoPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { selectedFarm, farms, selectFarm, retry } = useFarmWorkspace();
   const [farmDetail, setFarmDetail] = useState<FarmDetail | null>(null);
   const [members, setMembers] = useState<FarmMemberItem[]>([]);
@@ -57,6 +58,14 @@ export function FarmInfoPage() {
   const [creatingFarm, setCreatingFarm] = useState(false);
 
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
+
+  useEffect(() => {
+    if (searchParams.get('edit') !== '1' || !isOwner || !farmDetail || farmDetail.id !== selectedFarm?.id) return;
+    setIsEditOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, isOwner, farmDetail, selectedFarm?.id]);
 
   useEffect(() => {
     if (!selectedFarm?.id) {
@@ -439,7 +448,7 @@ export function FarmInfoPage() {
       {/* Edit Farm Modal */}
       {isEditOpen && (
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
-          <div className="panel" style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="panel" role="dialog" aria-modal="true" aria-label="Chỉnh sửa thông tin trang trại" style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>Chỉnh sửa thông tin & Bản đồ trang trại</h2>
             <form onSubmit={handleUpdateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
