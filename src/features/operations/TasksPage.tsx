@@ -13,7 +13,12 @@ import {
   type CreateFarmTaskReq,
   type UpdateFarmTaskReq,
 } from './farmTaskService';
-import { fetchCropSeasonsByFarm, type CropSeasonResp } from './cropSeasonService';
+import {
+  fetchCropSeasonsByFarm,
+  fetchBlocksInSeason,
+  type CropSeasonResp,
+  type CropSeasonBlockResp,
+} from './cropSeasonService';
 import { fetchZonesByFarm, fetchBlocks } from '../production/zoneBlockService';
 import type { Zone, Block } from '../production/types';
 import { getFarmStaffList, type FarmStaffRecord } from '../staff/staffService';
@@ -37,6 +42,7 @@ export function TasksPage() {
 
   // Dropdown options
   const [seasons, setSeasons] = useState<CropSeasonResp[]>([]);
+  const [seasonBlocks, setSeasonBlocks] = useState<CropSeasonBlockResp[]>([]);
   const [zones, setZones] = useState<Zone[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [staffList, setStaffList] = useState<FarmStaffRecord[]>([]);
@@ -93,6 +99,22 @@ export function TasksPage() {
       // ignore
     }
   };
+
+  useEffect(() => {
+    if (!formSeasonId) {
+      setSeasonBlocks([]);
+      return;
+    }
+    void fetchBlocksInSeason(Number(formSeasonId))
+      .then((data) => {
+        setSeasonBlocks(data);
+        if (data.length > 0 && !editingTask) {
+          setFormBlockId(data[0].blockId);
+          if (data[0].zoneId) setFormZoneId(data[0].zoneId);
+        }
+      })
+      .catch(() => setSeasonBlocks([]));
+  }, [formSeasonId, editingTask]);
 
   useEffect(() => {
     if (!farmId || !formZoneId) {
@@ -307,9 +329,9 @@ export function TasksPage() {
         {(t.seasonName || t.zoneName || t.blockName) && (
           <div className="task-card-meta-tags">
             {t.seasonName && <span className="task-meta-tag">🌱 {t.seasonName}</span>}
-            {t.zoneName && (
+            {(t.zoneName || t.blockName) && (
               <span className="task-meta-tag">
-                📍 {t.zoneName}
+                📍 {t.zoneName || 'Khu canh tác'}
                 {t.blockName ? ` / ${t.blockName}` : ''}
               </span>
             )}
@@ -752,14 +774,14 @@ export function TasksPage() {
                             t.status === 'completed'
                               ? '#dcfce7'
                               : t.status === 'in_progress'
-                              ? '#e0f2fe'
-                              : '#fef3c7',
+                                ? '#e0f2fe'
+                                : '#fef3c7',
                           color:
                             t.status === 'completed'
                               ? '#166534'
                               : t.status === 'in_progress'
-                              ? '#0369a1'
-                              : '#b45309',
+                                ? '#0369a1'
+                                : '#b45309',
                         }}
                       >
                         {getStatusLabel(t.status)}
@@ -798,8 +820,6 @@ export function TasksPage() {
           </table>
         </div>
       )}
-
-
 
       {/* Modal 1: Tạo mới / Chỉnh sửa công việc */}
       <Modal
@@ -905,19 +925,40 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-block">Lô đất canh tác (Block)</label>
+              <label htmlFor="task-block">
+                Lô đất canh tác (Block){' '}
+                {seasonBlocks.length > 0 && (
+                  <span style={{ color: '#059669', fontSize: '11.5px', fontWeight: 700 }}>
+                    (Thuộc mùa vụ: {seasonBlocks.length} lô)
+                  </span>
+                )}
+              </label>
               <select
                 id="task-block"
                 value={formBlockId}
-                disabled={!formZoneId || blocks.length === 0}
-                onChange={(e) => setFormBlockId(e.target.value ? Number(e.target.value) : '')}
+                disabled={seasonBlocks.length === 0 && (!formZoneId || blocks.length === 0)}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : '';
+                  setFormBlockId(val);
+                  if (val && seasonBlocks.length > 0) {
+                    const matched = seasonBlocks.find((sb) => sb.blockId === val);
+                    if (matched?.zoneId) setFormZoneId(matched.zoneId);
+                  }
+                }}
               >
                 <option value="">Chọn lô đất</option>
-                {blocks.map((b) => (
-                  <option key={b.blockId} value={b.blockId}>
-                    {b.blockName}
-                  </option>
-                ))}
+                {seasonBlocks.length > 0
+                  ? seasonBlocks.map((sb) => (
+                    <option key={sb.blockId} value={sb.blockId}>
+                      🌱 {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} · {sb.plantedArea ?? sb.blockArea}{' '}
+                      {sb.areaUnit || 'm²'})
+                    </option>
+                  ))
+                  : blocks.map((b) => (
+                    <option key={b.blockId} value={b.blockId}>
+                      {b.blockName}
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -1055,14 +1096,14 @@ export function TasksPage() {
                     selectedTaskDetail.status === 'completed'
                       ? '#dcfce7'
                       : selectedTaskDetail.status === 'in_progress'
-                      ? '#e0f2fe'
-                      : '#fef3c7',
+                        ? '#e0f2fe'
+                        : '#fef3c7',
                   color:
                     selectedTaskDetail.status === 'completed'
                       ? '#166534'
                       : selectedTaskDetail.status === 'in_progress'
-                      ? '#0369a1'
-                      : '#b45309',
+                        ? '#0369a1'
+                        : '#b45309',
                   fontWeight: 700,
                   fontSize: '12.5px',
                 }}

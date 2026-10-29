@@ -4,7 +4,12 @@ import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
-import { fetchCropSeasonsByFarm, type CropSeasonResp } from './cropSeasonService';
+import {
+  fetchCropSeasonsByFarm,
+  fetchBlocksInSeason,
+  type CropSeasonResp,
+  type CropSeasonBlockResp,
+} from './cropSeasonService';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
 interface HarvestRecord {
@@ -13,7 +18,7 @@ interface HarvestRecord {
   farmId: number;
   seasonName?: string | null;
   farmName?: string | null;
-  blockId?: number;
+  blockId?: number | null;
   blockName?: string | null;
   recorderFullName?: string | null;
   harvestLotCode: string | null;
@@ -36,6 +41,7 @@ function HarvestContent() {
   const [seasonInput, setSeasonInput] = useState('');
   const [cropSeasonId, setCropSeasonId] = useState<number | null>(null);
   const [records, setRecords] = useState<HarvestRecord[]>([]);
+  const [seasonBlocks, setSeasonBlocks] = useState<CropSeasonBlockResp[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,8 +59,10 @@ function HarvestContent() {
   // Local filter state for loaded harvest records
   const [keywordFilter, setKeywordFilter] = useState('');
   const [gradeFilter, setGradeFilter] = useState('');
+  const [blockFilter, setBlockFilter] = useState<number | 'ALL'>('ALL');
 
   // Form states
+  const [selectedBlockId, setSelectedBlockId] = useState<number | ''>('');
   const [lotCode, setLotCode] = useState(`LOT-${new Date().getFullYear()}-01`);
   const [quantity, setQuantity] = useState<number | ''>(500);
   const [harvestedAt, setHarvestedAt] = useState('');
@@ -97,6 +105,8 @@ function HarvestContent() {
     listRequest.current = controller;
     setCropSeasonId(null);
     setRecords([]);
+    setSeasonBlocks([]);
+    setBlockFilter('ALL');
     setSelectedTraceRecord(null);
     setIsModalOpen(false);
     setLoading(true);
@@ -116,6 +126,14 @@ function HarvestContent() {
       }
       setCropSeasonId(id);
       setRecords(res.data.items);
+      // Also load the blocks assigned to this season (CropSeasonBlock N-N)
+      fetchBlocksInSeason(id)
+        .then((blocks) => {
+          if (!controller.signal.aborted && Array.isArray(blocks)) {
+            setSeasonBlocks(blocks);
+          }
+        })
+        .catch(() => {});
     } catch (error) {
       if (!controller.signal.aborted) {
         setLoadError(error instanceof Error ? error.message : 'Lỗi tải lịch sử thu hoạch.');
@@ -157,6 +175,7 @@ function HarvestContent() {
       if (controller.signal.aborted) return;
       if (edit) {
         setEditingRecord(res.data);
+        setSelectedBlockId(res.data.blockId ?? '');
         setLotCode(res.data.harvestLotCode ?? '');
         setTraceabilityCode(res.data.traceabilityCode ?? '');
         setHarvestedAt(res.data.harvestedAt);
@@ -196,6 +215,7 @@ function HarvestContent() {
         harvestLotCode: lotCode.trim(),
         traceabilityCode: traceabilityCode.trim(),
       }),
+      ...(selectedBlockId ? { blockId: Number(selectedBlockId) } : {}),
       harvestedAt,
       quantity: Number(quantity),
       unit: unit.trim(),
@@ -238,6 +258,7 @@ function HarvestContent() {
 
   const resetForm = () => {
     setEditingRecord(null);
+    setSelectedBlockId(seasonBlocks[0]?.blockId ?? '');
     setLotCode(`LOT-${new Date().getFullYear()}-${Math.floor(10 + Math.random() * 90)}`);
     setTraceabilityCode(`GAP-VN-${Math.floor(100000 + Math.random() * 900000)}`);
     setHarvestedAt(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
@@ -247,6 +268,8 @@ function HarvestContent() {
     setStorageLocation('');
     setNotes('');
   };
+
+  const currentSeason = availableSeasons?.find((s) => s.cropSeasonId === cropSeasonId) ?? null;
 
   const yieldUnit = records[0]?.unit ?? 'kg';
   const sameUnit = records.every((record) => record.unit === yieldUnit);
@@ -259,9 +282,11 @@ function HarvestContent() {
       (r.harvestLotCode || '').toLowerCase().includes(q) ||
       (r.traceabilityCode || '').toLowerCase().includes(q) ||
       (r.storageLocation || '').toLowerCase().includes(q) ||
+      (r.blockName || '').toLowerCase().includes(q) ||
       (r.notes || '').toLowerCase().includes(q);
     const matchGrade = !gradeFilter || (r.qualityGrade || '') === gradeFilter;
-    return matchKeyword && matchGrade;
+    const matchBlock = blockFilter === 'ALL' || r.blockId === blockFilter;
+    return matchKeyword && matchGrade && matchBlock;
   });
 
   const uniqueGrades = Array.from(new Set(records.map((r) => r.qualityGrade).filter(Boolean))) as string[];
@@ -270,6 +295,11 @@ function HarvestContent() {
   ).length;
   const gradeOnePercent = records.length > 0 ? Math.round((gradeOneCount / records.length) * 100) : 0;
 
+  const matchedTraceBlock = selectedTraceRecord
+    ? seasonBlocks.find((sb) => sb.blockId === selectedTraceRecord.blockId) ??
+      (seasonBlocks.length === 1 ? seasonBlocks[0] : null)
+    : null;
+
   return (
     <div className="farm-registration-page">
       <div className="page-heading">
@@ -277,7 +307,7 @@ function HarvestContent() {
           <p className="eyebrow">Thu hoạch &amp; truy xuất nguồn gốc · {selectedFarm?.farmName || 'Trang trại'}</p>
           <h2>Thu hoạch &amp; Truy xuất nguồn gốc nông sản</h2>
           <p className="muted">
-            Quản lý lô sản lượng thu hoạch, phẩm cấp chất lượng và cấp mã truy xuất nguồn gốc số chuẩn VietGAP.
+            Quản lý lô sản lượng thu hoạch trên từng lô đất canh tác, phẩm cấp chất lượng và cấp mã QR truy xuất nguồn gốc số chuẩn VietGAP.
           </p>
         </div>
         <div className="dashboard-actions">
@@ -351,7 +381,7 @@ function HarvestContent() {
           <div className="zone-stat-content">
             <h4>Mùa vụ đang tra cứu</h4>
             <strong className="stat-number">
-              {cropSeasonId !== null ? `Mùa vụ #${cropSeasonId}` : 'Chưa chọn'}
+              {cropSeasonId !== null ? currentSeason?.seasonName || `Mùa vụ #${cropSeasonId}` : 'Chưa chọn'}
             </strong>
           </div>
         </div>
@@ -458,9 +488,11 @@ function HarvestContent() {
               setSeasonInput('');
               setCropSeasonId(null);
               setRecords([]);
+              setSeasonBlocks([]);
               setLoadError(null);
               setKeywordFilter('');
               setGradeFilter('');
+              setBlockFilter('ALL');
             }}
           >
             ✕ Đặt lại bộ lọc
@@ -484,6 +516,62 @@ function HarvestContent() {
           </span>
         )}
       </form>
+
+      {/* Assigned Season Blocks Filter Pills */}
+      {cropSeasonId !== null && seasonBlocks.length > 0 && (
+        <div
+          className="panel"
+          style={{
+            padding: '12px 18px',
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#065f46' }}>
+            🌱 Lô đất thuộc mùa vụ #{cropSeasonId}:
+          </span>
+          <button
+            type="button"
+            onClick={() => setBlockFilter('ALL')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '999px',
+              border: '1px solid',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: blockFilter === 'ALL' ? '#047857' : '#f8fafc',
+              borderColor: blockFilter === 'ALL' ? '#047857' : '#cbd5e1',
+              color: blockFilter === 'ALL' ? '#ffffff' : '#334155',
+            }}
+          >
+            Tất cả lô ({seasonBlocks.length})
+          </button>
+          {seasonBlocks.map((sb) => (
+            <button
+              key={sb.blockId}
+              type="button"
+              onClick={() => setBlockFilter(sb.blockId)}
+              style={{
+                padding: '4px 12px',
+                borderRadius: '999px',
+                border: '1px solid',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: blockFilter === sb.blockId ? '#059669' : '#ecfdf5',
+                borderColor: blockFilter === sb.blockId ? '#059669' : '#a7f3d0',
+                color: blockFilter === sb.blockId ? '#ffffff' : '#065f46',
+              }}
+            >
+              🌱 {sb.blockName} ({sb.plantedArea ?? sb.blockArea} {sb.areaUnit || 'm²'})
+            </button>
+          ))}
+        </div>
+      )}
 
       {notification && (
         <div
@@ -537,7 +625,7 @@ function HarvestContent() {
         <div className="panel empty-state">
           <div className="empty-icon">📦</div>
           <h2>Chưa có đợt thu hoạch nào được ghi nhận</h2>
-          <p>Khi đến vụ thu hoạch, hãy nhấn &quot;Ghi nhận đợt thu hoạch&quot; để lưu sản lượng và cấp mã truy xuất nguồn gốc VietGAP.</p>
+          <p>Khi đến vụ thu hoạch, hãy nhấn &quot;Ghi nhận đợt thu hoạch&quot; để lưu sản lượng theo từng lô đất và cấp mã truy xuất nguồn gốc VietGAP.</p>
           <div className="button-row" style={{ justifyContent: 'center' }}>
             <button
               type="button"
@@ -583,7 +671,7 @@ function HarvestContent() {
                   <input
                     id="harvest-sub-search"
                     type="search"
-                    placeholder="Tìm theo mã lô, mã truy xuất, nơi lưu kho..."
+                    placeholder="Tìm theo mã lô, mã truy xuất, tên lô đất, nơi lưu kho..."
                     value={keywordFilter}
                     onChange={(e) => setKeywordFilter(e.target.value)}
                   />
@@ -624,136 +712,178 @@ function HarvestContent() {
           )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
-            {filteredRecords.map((r) => (
-              <div
-                key={r.harvestRecordId}
-                data-harvest-id={r.harvestRecordId}
-                className="structured-field-card"
-                style={{
-                  marginBottom: 0,
-                  background: '#ffffff',
-                  padding: '22px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '14px',
-                    }}
-                  >
-                    <span className="knowledge-tag" style={{ fontWeight: 700 }}>
-                      🏷️ {r.harvestLotCode || `#${r.harvestRecordId}`}
-                    </span>
-                    <span className="status-badge active">{r.qualityGrade || 'Tiêu chuẩn'}</span>
-                  </div>
+            {filteredRecords.map((r) => {
+              const matchedBlk =
+                seasonBlocks.find((sb) => sb.blockId === r.blockId) ??
+                (seasonBlocks.length === 1 ? seasonBlocks[0] : null);
+              const displayBlockName = r.blockName || matchedBlk?.blockName || null;
 
-                  <div style={{ margin: '10px 0 16px', paddingBottom: '14px', borderBottom: '1px solid #f1f5f9' }}>
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
-                      }}
-                    >
-                      Sản lượng thu được
-                    </span>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#047857', marginTop: '4px' }}>
-                      {r.quantity.toLocaleString('vi-VN')} {r.unit}
-                    </div>
-                  </div>
-
-                  <dl
-                    style={{
-                      margin: 0,
-                      fontSize: '13.5px',
-                      display: 'grid',
-                      gridTemplateColumns: '110px 1fr',
-                      gap: '8px 10px',
-                    }}
-                  >
-                    <dt style={{ color: '#64748b', fontWeight: 600 }}>Ngày thu hoạch:</dt>
-                    <dd style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
-                      {new Date(r.harvestedAt).toLocaleDateString('vi-VN')}
-                    </dd>
-
-                    <dt style={{ color: '#64748b', fontWeight: 600 }}>Nơi lưu kho:</dt>
-                    <dd style={{ margin: 0, color: '#334155' }}>{r.storageLocation || 'Kho bảo quản trang trại'}</dd>
-
-                    <dt style={{ color: '#64748b', fontWeight: 600 }}>Mã VietGAP:</dt>
-                    <dd style={{ margin: 0, color: '#059669', fontWeight: 700 }}>{r.traceabilityCode || '—'}</dd>
-                  </dl>
-
-                  {r.notes && (
-                    <p
-                      style={{
-                        margin: '14px 0 0',
-                        padding: '10px 12px',
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '10px',
-                        fontSize: '13px',
-                        color: '#475569',
-                      }}
-                    >
-                      💡 {r.notes}
-                    </p>
-                  )}
-                </div>
-
+              return (
                 <div
+                  key={r.harvestRecordId}
+                  data-harvest-id={r.harvestRecordId}
+                  className="structured-field-card"
                   style={{
-                    marginTop: '18px',
-                    paddingTop: '14px',
-                    borderTop: '1px solid #e2e8f0',
+                    marginBottom: 0,
+                    background: '#ffffff',
+                    padding: '22px',
                     display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     justifyContent: 'space-between',
+                    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
                   }}
                 >
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    <button
-                      type="button"
-                      className="action-button"
-                      style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
-                      disabled={detailLoading}
-                      onClick={() => openHarvest(r.harvestRecordId)}
+                  <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '14px',
+                        flexWrap: 'wrap',
+                        gap: '6px',
+                      }}
                     >
-                      Chi tiết
-                    </button>
-                    <button
-                      type="button"
-                      className="action-button"
-                      style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
-                      disabled={detailLoading}
-                      onClick={() => openHarvest(r.harvestRecordId, true)}
+                      <span className="knowledge-tag" style={{ fontWeight: 700 }}>
+                        🏷️ {r.harvestLotCode || `#${r.harvestRecordId}`}
+                      </span>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {displayBlockName && (
+                          <span
+                            style={{
+                              padding: '3px 9px',
+                              borderRadius: '999px',
+                              background: '#ecfdf5',
+                              border: '1px solid #a7f3d0',
+                              color: '#065f46',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                            }}
+                          >
+                            🌱 {displayBlockName}
+                          </span>
+                        )}
+                        <span className="status-badge active">{r.qualityGrade || 'Tiêu chuẩn'}</span>
+                      </div>
+                    </div>
+
+                    <div style={{ margin: '10px 0 16px', paddingBottom: '14px', borderBottom: '1px solid #f1f5f9' }}>
+                      <span
+                        style={{
+                          fontSize: '12px',
+                          color: '#64748b',
+                          textTransform: 'uppercase',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        Sản lượng thu được
+                      </span>
+                      <div style={{ fontSize: '24px', fontWeight: 800, color: '#047857', marginTop: '4px' }}>
+                        {r.quantity.toLocaleString('vi-VN')} {r.unit}
+                      </div>
+                    </div>
+
+                    <dl
+                      style={{
+                        margin: 0,
+                        fontSize: '13.5px',
+                        display: 'grid',
+                        gridTemplateColumns: '115px 1fr',
+                        gap: '8px 10px',
+                      }}
                     >
-                      Chỉnh sửa
-                    </button>
-                    <button
-                      type="button"
-                      className="primary-button"
-                      style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
-                      disabled={detailLoading}
-                      onClick={() => openHarvest(r.harvestRecordId)}
-                    >
-                      Tem QR
-                    </button>
+                      {displayBlockName && (
+                        <>
+                          <dt style={{ color: '#64748b', fontWeight: 600 }}>Lô đất trồng:</dt>
+                          <dd style={{ margin: 0, fontWeight: 700, color: '#065f46' }}>{displayBlockName}</dd>
+                        </>
+                      )}
+
+                      {matchedBlk?.plantedAt && (
+                        <>
+                          <dt style={{ color: '#64748b', fontWeight: 600 }}>Xuống giống:</dt>
+                          <dd style={{ margin: 0, color: '#334155' }}>
+                            {new Date(matchedBlk.plantedAt).toLocaleDateString('vi-VN')}
+                          </dd>
+                        </>
+                      )}
+
+                      <dt style={{ color: '#64748b', fontWeight: 600 }}>Ngày thu hoạch:</dt>
+                      <dd style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
+                        {new Date(r.harvestedAt).toLocaleDateString('vi-VN')}
+                      </dd>
+
+                      <dt style={{ color: '#64748b', fontWeight: 600 }}>Nơi lưu kho:</dt>
+                      <dd style={{ margin: 0, color: '#334155' }}>{r.storageLocation || 'Kho bảo quản trang trại'}</dd>
+
+                      <dt style={{ color: '#64748b', fontWeight: 600 }}>Mã VietGAP:</dt>
+                      <dd style={{ margin: 0, color: '#059669', fontWeight: 700 }}>{r.traceabilityCode || '—'}</dd>
+                    </dl>
+
+                    {r.notes && (
+                      <p
+                        style={{
+                          margin: '14px 0 0',
+                          padding: '10px 12px',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          color: '#475569',
+                        }}
+                      >
+                        💡 {r.notes}
+                      </p>
+                    )}
                   </div>
-                  <small style={{ color: '#94a3b8', fontWeight: 600 }}>#{r.harvestRecordId}</small>
+
+                  <div
+                    style={{
+                      marginTop: '18px',
+                      paddingTop: '14px',
+                      borderTop: '1px solid #e2e8f0',
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                      <button
+                        type="button"
+                        className="action-button"
+                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                        disabled={detailLoading}
+                        onClick={() => openHarvest(r.harvestRecordId)}
+                      >
+                        Chi tiết
+                      </button>
+                      <button
+                        type="button"
+                        className="action-button"
+                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                        disabled={detailLoading}
+                        onClick={() => openHarvest(r.harvestRecordId, true)}
+                      >
+                        Chỉnh sửa
+                      </button>
+                      <button
+                        type="button"
+                        className="primary-button"
+                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                        disabled={detailLoading}
+                        onClick={() => openHarvest(r.harvestRecordId)}
+                      >
+                        Tem QR
+                      </button>
+                    </div>
+                    <small style={{ color: '#94a3b8', fontWeight: 600 }}>#{r.harvestRecordId}</small>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -781,7 +911,10 @@ function HarvestContent() {
                 fontSize: '13.5px',
               }}
             >
-              <span>🌾 Mùa vụ canh tác #{editingRecord?.cropSeasonId ?? cropSeasonId}</span>
+              <span>
+                🌾 Mùa vụ canh tác:{' '}
+                {currentSeason?.seasonName || `#${editingRecord?.cropSeasonId ?? cropSeasonId}`}
+              </span>
               <span className="structured-field-badge">Trang trại {selectedFarm?.farmName}</span>
             </div>
           </div>
@@ -790,6 +923,34 @@ function HarvestContent() {
             <p role="alert" className="form-error-banner" style={{ margin: 0 }}>
               {notification.text}
             </p>
+          )}
+
+          {/* Chọn lô đất thu hoạch (thuộc mùa vụ đang chọn) */}
+          {seasonBlocks.length > 0 && (
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="harvest-block-select" className="structured-field-label">
+                  🌱 Lô đất thu hoạch (Thuộc mùa vụ)
+                </label>
+                <span className="structured-field-badge">{seasonBlocks.length} lô được phân bổ</span>
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <select
+                  id="harvest-block-select"
+                  value={selectedBlockId}
+                  onChange={(e) => setSelectedBlockId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">-- Chọn lô đất thu hoạch --</option>
+                  {seasonBlocks.map((sb) => (
+                    <option key={sb.blockId} value={sb.blockId}>
+                      {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} · Diện tích trồng:{' '}
+                      {sb.plantedArea ?? sb.blockArea} {sb.areaUnit || 'm²'}
+                      {sb.plantedAt ? ` · Gieo: ${sb.plantedAt}` : ''})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           )}
 
           <div className="farm-registration-location-fields" style={{ gap: '14px' }}>
@@ -958,7 +1119,7 @@ function HarvestContent() {
             <span style={{ fontSize: '36px', display: 'block', marginBottom: '6px' }}>🏷️</span>
             <h3 style={{ margin: '0 0 4px', fontSize: '19px', color: '#0f172a' }}>Tem truy xuất nguồn gốc VietGAP</h3>
             <p className="muted" style={{ margin: '0 0 18px', fontSize: '13.5px' }}>
-              Thông tin lô thu hoạch được trích xuất từ hồ sơ sản xuất
+              Thông tin lô thu hoạch được trích xuất minh bạch từ nhật ký mùa vụ và lô đất sản xuất
             </p>
 
             {/* Simulated QR Box */}
@@ -985,9 +1146,44 @@ function HarvestContent() {
                 }}
               />
             </div>
-            <p className="muted" style={{ fontSize: '12.5px', marginBottom: '16px' }}>
+            <p className="muted" style={{ fontSize: '12.5px', marginBottom: '14px' }}>
               Mã định danh: <strong style={{ color: '#059669' }}>{selectedTraceRecord.traceabilityCode}</strong>
             </p>
+
+            {/* VietGAP Origin Highlight Banner */}
+            <div
+              style={{
+                textAlign: 'left',
+                padding: '12px 14px',
+                marginBottom: '16px',
+                borderRadius: '12px',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                fontSize: '13px',
+                color: '#065f46',
+                lineHeight: 1.55,
+              }}
+            >
+              <strong>✓ Chứng nhận truy xuất VietGAP:</strong> Lô nông sản thuộc{' '}
+              <strong>
+                {selectedTraceRecord.seasonName || currentSeason?.seasonName || `Mùa vụ #${selectedTraceRecord.cropSeasonId}`}
+              </strong>
+              , được canh tác tại{' '}
+              <strong>
+                {selectedTraceRecord.blockName || matchedTraceBlock?.blockName || 'Khu sản xuất tập trung'}
+              </strong>{' '}
+              của <strong>{selectedTraceRecord.farmName || selectedFarm?.farmName}</strong>
+              {(matchedTraceBlock?.plantedAt || currentSeason?.startDate) && (
+                <>
+                  , xuống giống ngày{' '}
+                  <strong>
+                    {new Date(matchedTraceBlock?.plantedAt || currentSeason!.startDate).toLocaleDateString('vi-VN')}
+                  </strong>
+                </>
+              )}{' '}
+              và thu hoạch ngày{' '}
+              <strong>{new Date(selectedTraceRecord.harvestedAt).toLocaleDateString('vi-VN')}</strong>.
+            </div>
 
             <dl className="detail-list" style={{ textAlign: 'left', marginBottom: '18px' }}>
               <div>
@@ -1009,12 +1205,26 @@ function HarvestContent() {
                 <dd>{selectedTraceRecord.farmName || selectedFarm?.farmName}</dd>
               </div>
               <div>
-                <dt>Mùa vụ</dt>
-                <dd>{selectedTraceRecord.seasonName || `#${selectedTraceRecord.cropSeasonId}`}</dd>
+                <dt>Mùa vụ canh tác</dt>
+                <dd>
+                  {selectedTraceRecord.seasonName ||
+                    currentSeason?.seasonName ||
+                    `#${selectedTraceRecord.cropSeasonId}`}
+                </dd>
               </div>
               <div>
-                <dt>Lô đất</dt>
-                <dd>{selectedTraceRecord.blockName || 'Chưa cập nhật'}</dd>
+                <dt>Lô đất trồng (Block)</dt>
+                <dd>{selectedTraceRecord.blockName || matchedTraceBlock?.blockName || 'Chưa cập nhật'}</dd>
+              </div>
+              <div>
+                <dt>Ngày xuống giống</dt>
+                <dd>
+                  {matchedTraceBlock?.plantedAt
+                    ? new Date(matchedTraceBlock.plantedAt).toLocaleDateString('vi-VN')
+                    : currentSeason?.startDate
+                    ? new Date(currentSeason.startDate).toLocaleDateString('vi-VN')
+                    : 'Theo hồ sơ mùa vụ'}
+                </dd>
               </div>
               <div>
                 <dt>Ngày thu hoạch</dt>
