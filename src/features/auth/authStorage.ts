@@ -1,7 +1,8 @@
 export const ACCESS_TOKEN_KEY = 'access_token';
+export const AUTH_SESSION_KEY = 'mycropdiary:auth-session';
 
 const AUTH_CHANGED_EVENT = 'mycropdiary:auth-changed';
-// Keep both tokens in memory; neither survives a page reload.
+// Restore synchronously so protected routes can recognize the session on reload.
 let authorization: string | null = null;
 let refreshCredential: string | null = null;
 let sessionVersion = 0;
@@ -21,6 +22,39 @@ export interface AuthSession {
 }
 
 let currentUser: AuthUser | null = null;
+
+try {
+  const raw = sessionStorage.getItem(AUTH_SESSION_KEY);
+  if (raw) {
+    const session = JSON.parse(raw);
+    const user = session?.user;
+    if (typeof session?.accessToken !== 'string' || !session.accessToken.trim()
+      || (session.refreshToken != null && (typeof session.refreshToken !== 'string' || !session.refreshToken.trim()))
+      || (user != null && (typeof user.userId !== 'number' || typeof user.email !== 'string'
+        || typeof user.fullName !== 'string' || typeof user.systemRole !== 'string'))) {
+      throw new Error('Invalid saved session');
+    }
+    authorization = session.accessToken;
+    refreshCredential = session.refreshToken ?? null;
+    currentUser = user ?? null;
+  }
+} catch {
+  // Storage may be unavailable or contain invalid data; keep the app usable.
+  try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch { /* Storage blocked. */ }
+}
+
+function persistSession() {
+  try {
+    if (authorization) {
+      sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify({
+        accessToken: authorization, refreshToken: refreshCredential, user: currentUser,
+      }));
+    } else {
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
+    }
+  } catch { /* Keep the in-memory session usable when storage is blocked. */ }
+  try { localStorage.removeItem(ACCESS_TOKEN_KEY); } catch { /* Storage blocked. */ }
+}
 
 export function getAuthUser(): AuthUser | null {
   return currentUser;
@@ -48,7 +82,7 @@ export function saveAccessToken(token: string, user: AuthUser | null = null, ref
   authorization = token;
   refreshCredential = refreshToken;
   currentUser = user;
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  persistSession();
   notifyAuthChanged();
 }
 
@@ -57,6 +91,7 @@ export function updateSessionTokens(session: AuthSession, expectedVersion: numbe
   authorization = session.accessToken;
   refreshCredential = session.refreshToken ?? refreshCredential;
   currentUser = { ...currentUser, ...session.user };
+  persistSession();
   notifyAuthChanged();
   return true;
 }
@@ -64,6 +99,7 @@ export function updateSessionTokens(session: AuthSession, expectedVersion: numbe
 export function updateAuthUser(updates: Partial<AuthUser>) {
   if (currentUser) {
     currentUser = { ...currentUser, ...updates };
+    persistSession();
     notifyAuthChanged();
   }
 }
@@ -73,7 +109,7 @@ export function clearAccessToken() {
   authorization = null;
   refreshCredential = null;
   currentUser = null;
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  persistSession();
   notifyAuthChanged();
 }
 

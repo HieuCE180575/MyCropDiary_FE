@@ -6,10 +6,12 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  className?: string;
+  headerIcon?: ReactNode;
 }
 
 /** Modal/hộp thoại dùng lại để hiển thị chi tiết hoặc xác nhận. */
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, className, headerIcon }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -23,9 +25,9 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
 
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
-      <div className="modal-card" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+      <div className={['modal-card', className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          {title ? <h2>{title}</h2> : <span />}
+          {title ? <h2>{headerIcon}{title}</h2> : <span />}
           <button type="button" className="modal-close" aria-label="Đóng" onClick={onClose}>
             ✕
           </button>

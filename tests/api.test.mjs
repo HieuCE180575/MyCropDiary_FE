@@ -7,11 +7,16 @@ import { stripTypeScriptTypes } from 'node:module';
 import axios, { AxiosHeaders } from 'axios';
 
 // Execute the actual TypeScript modules with browser globals and a controlled transport.
-async function client(transport) {
+async function client(transport, sessionStored = new Map()) {
   const stored = new Map();
   const events = new EventTarget();
   const context = createContext({ FormData, TextEncoder, URLSearchParams, btoa, atob, Event,
-    window: events, localStorage: { removeItem: (key) => stored.delete(key), setItem: (key, value) => stored.set(key, value) } });
+    window: events, localStorage: { removeItem: (key) => stored.delete(key), setItem: (key, value) => stored.set(key, value) },
+    sessionStorage: {
+      getItem: key => sessionStored.get(key) ?? null,
+      setItem: (key, value) => sessionStored.set(key, value),
+      removeItem: key => sessionStored.delete(key),
+    } });
   const modules = new Map();
   // Keep Axios serialization, headers and cancellation; replace only network I/O.
   const axiosModule = new SyntheticModule(['default', 'AxiosHeaders'], function () {
@@ -64,6 +69,7 @@ async function client(transport) {
     storage: modules.get(resolve('src/features/auth/authStorage.ts')).namespace,
     farms: farms.namespace,
     stored,
+    sessionStored,
   };
 }
 
@@ -94,6 +100,61 @@ const deferred = () => {
   const promise = new Promise(done => { resolve = done; });
   return { promise, resolve };
 };
+
+test('reload restores the tab session, refreshes expired access and persists refreshed tokens and profile', async () => {
+  const tabStorage = new Map();
+  const app = await client(async () => ok({}), tabStorage);
+  const user = { userId: 12, email: 'farmer@example.com', fullName: 'Farmer', systemRole: 'USER' };
+  const expired = 'header.' + btoa(JSON.stringify({ exp: 1 })) + '.signature';
+  app.storage.saveAccessToken(expired, user, 'original-refresh');
+  app.storage.updateAuthUser({ avatarUrl: 'profile.png' });
+  let refreshes = 0;
+  const reloaded = await client(async config => {
+    if (config.url.endsWith('/auth/refresh-token')) {
+      refreshes++;
+      assert.deepEqual(JSON.parse(config.data), { refreshToken: 'original-refresh' });
+      return ok(refreshedAuth);
+    }
+    assert.equal(config.headers.get('Authorization'), 'Bearer ' + refreshedAuth.accessToken);
+    return ok({ items: [] });
+  }, tabStorage);
+  assert.equal(reloaded.storage.getAccessToken(), expired);
+  assert.equal(reloaded.storage.getAuthUser().avatarUrl, 'profile.png');
+  await reloaded.farms.getFarms();
+  assert.equal(refreshes, 1);
+  const nextReload = await client(async () => ok({}), tabStorage);
+  assert.equal(nextReload.storage.getAccessToken(), refreshedAuth.accessToken);
+  assert.equal(nextReload.storage.getRefreshToken(), refreshedAuth.refreshToken);
+  assert.equal(nextReload.storage.getAuthUser().avatarUrl, 'profile.png');
+  nextReload.storage.clearAccessToken();
+  const afterLogout = await client(async () => ok({}), tabStorage);
+  assert.equal(afterLogout.storage.getAccessToken(), null);
+  assert.equal(afterLogout.storage.getRefreshToken(), null);
+  assert.equal(afterLogout.storage.getAuthUser(), null);
+  assert.equal(tabStorage.size, 0);
+  assert.equal((await client(async () => ok({}))).storage.getAccessToken(), null);
+});
+
+test('rejected refresh removes the saved session so reload cannot restore it', async () => {
+  const tabStorage = new Map();
+  const app = await client(async config => reply({}, config.url.endsWith('/auth/refresh-token') ? 400 : 401), tabStorage);
+  app.storage.saveAccessToken('old.jwt', null, 'revoked-refresh');
+  await assert.rejects(app.farms.getFarms());
+  assert.equal(tabStorage.size, 0);
+  const reloaded = await client(async () => ok({}), tabStorage);
+  assert.equal(reloaded.storage.getAccessToken(), null);
+});
+
+test('malformed saved sessions are discarded without preventing startup', async () => {
+  for (const value of ['{', 'null', '{}', JSON.stringify({ accessToken: '', user: null }),
+    JSON.stringify({ accessToken: 'token', refreshToken: 123 }),
+    JSON.stringify({ accessToken: 'token', user: { userId: 'invalid' } })]) {
+    const tabStorage = new Map([['mycropdiary:auth-session', value]]);
+    const app = await client(async () => ok({}), tabStorage);
+    assert.equal(app.storage.getAccessToken(), null);
+    assert.equal(tabStorage.size, 0);
+  }
+});
 
 test('expired JWT refreshes before sending the protected request and stores rotated tokens in memory', async () => {
   const calls = [];

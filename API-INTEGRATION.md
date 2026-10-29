@@ -14,8 +14,12 @@ Không còn sử dụng HTTP Basic hoặc endpoint công khai `/modules` để �
 
 Dùng email và mật khẩu tài khoản đã kích hoạt. Frontend hiển thị thông báo
 backend khi sai thông tin, tài khoản chưa xác thực OTP hoặc bị khóa.
-Access token và refresh token được giữ trong bộ nhớ tab, không ghi vào localStorage;
-tải lại trang cần đăng nhập lại. Đăng nhập và xác thực OTP đều lưu cả hai token.
+Access token, refresh token và thông tin người dùng được giữ trong bộ nhớ và
+sessionStorage của tab, không ghi vào localStorage. Tải lại trang sẽ khôi phục phiên
+trước khi kiểm tra quyền truy cập; phiên không được lưu lâu dài sau khi đóng tab.
+Đăng nhập và xác thực OTP đều lưu cả hai token. Refresh thành công và cập nhật hồ sơ
+đều cập nhật phiên đã lưu; đăng xuất hoặc refresh bị từ chối sẽ xóa phiên đã lưu.
+Nếu trình duyệt chặn sessionStorage, phiên chỉ hoạt động trong bộ nhớ đến khi tải lại trang.
 Khi access token đã hết hạn theo JWT hoặc API có xác thực trả 401, frontend gọi
 `POST /auth/refresh-token` với `{ refreshToken }`, cập nhật token và thử lại yêu cầu
 tối đa một lần. Nhiều yêu cầu đồng thời dùng chung một lần refresh. Phản hồi 403

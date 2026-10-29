@@ -6,7 +6,7 @@ import {
   LoaderCircle, CircleHelp, Pencil, RotateCcw, Save, UserRoundPlus, ShieldCheck,
   Phone, Check, Award, Sparkles, Star, TrendingUp, Sprout, ExternalLink, FileText,
   Sun, Moon, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2,
-  Activity, Layers, Zap, Database, Building2,
+  Activity, Layers, Zap, Database, Building2, Trash2, Weight, FlaskConical, Grip,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -26,7 +26,8 @@ const icons: Record<string, LucideIcon> = {
   'external-link': ExternalLink, 'file-text': FileText,
   sun: Sun, moon: Moon, 'chevron-left': ChevronLeft, 'chevron-right': ChevronRight,
   filter: SlidersHorizontal, expand: Maximize2,
-  activity: Activity, layers: Layers, zap: Zap, database: Database, building: Building2,
+  activity: Activity, layers: Layers, zap: Zap, database: Database, building: Building2, trash: Trash2,
+  weight: Weight, flask: FlaskConical, granules: Grip, help: CircleHelp,
 };
 
 export function Icon({ name, className, ...props }: LucideProps & { name: string }) {
