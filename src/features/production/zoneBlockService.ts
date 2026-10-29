@@ -1,5 +1,6 @@
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
+import { notifyDataChanged } from '../../shared/realtime/realtimeBus';
 import type {
   Zone,
   Block,
@@ -10,6 +11,9 @@ import type {
   BlockFormValues,
   RecordConditionFormValues,
   AssignStaffToZonePayload,
+  RiskAssessmentRecord,
+  SoilAssessmentRecord,
+  WaterAssessmentRecord,
 } from './types';
 
 // Helper unpacker
@@ -231,6 +235,264 @@ export async function unassignStaffFromZone(farmId: number, assignmentId: number
   await request<void>(`/farms/${farmId}/zone-assignments/${assignmentId}`, {
     method: 'DELETE',
   });
+}
+
+// ==========================================
+// UC-19, UC-20, UC-21: Risk Records, Soil Assessments, Water Assessments
+// ==========================================
+
+const RISK_STORAGE_KEY = 'mcd_vietgap_risk_records_v1';
+const SOIL_STORAGE_KEY = 'mcd_vietgap_soil_assessments_v1';
+const WATER_STORAGE_KEY = 'mcd_vietgap_water_assessments_v1';
+
+function readLocalList<T>(key: string, defaultSeed: T[]): T[] {
+  if (typeof window === 'undefined' || !window.localStorage) return defaultSeed;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      window.localStorage.setItem(key, JSON.stringify(defaultSeed));
+      return defaultSeed;
+    }
+    return JSON.parse(raw) as T[];
+  } catch {
+    return defaultSeed;
+  }
+}
+
+function writeLocalList<T>(key: string, list: T[]): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(list));
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+function getDefaultRisks(zoneId: number, blockId?: number): RiskAssessmentRecord[] {
+  const base: RiskAssessmentRecord[] = [
+    {
+      riskId: 101,
+      targetType: 'ZONE',
+      zoneId: zoneId,
+      assessedAt: '2026-03-10',
+      riskType: 'Trôi dạt hóa chất lân cận',
+      riskLevel: 'MEDIUM',
+      priorFindings: 'Phía Đông giáp ranh hộ canh tác truyền thống có phun thuốc BVTV.',
+      description: 'Nguy cơ thuốc BVTV phát tán qua gió từ khu vực lân cận sang vành đai khu vực.',
+      controlMeasures: 'Trồng hàng rào cây chắn gió cao 2.5m dọc ranh giới phía Đông; thiết lập vùng đệm cách ly 5m.',
+      assessedByName: 'Ban Quản lý VietGAP',
+      status: 'CONTROLLED',
+    },
+    {
+      riskId: 102,
+      targetType: 'ZONE',
+      zoneId: zoneId,
+      assessedAt: '2026-03-18',
+      riskType: 'Ngập úng cục bộ mùa mưa',
+      riskLevel: 'LOW',
+      priorFindings: 'Rãnh thoát nước chính phía Nam đôi khi ứ đọng lá cây sau mưa lớn.',
+      description: 'Nguy cơ tràn nước mặt từ đường nội bộ vào khu sản xuất khi mưa lớn kéo dài.',
+      controlMeasures: 'Nạo vét hệ thống mương thoát nước định kỳ mỗi 2 tuần; gia cố bờ bao cao 30cm.',
+      assessedByName: 'Kỹ thuật viên Phụ trách',
+      status: 'MONITORING',
+    },
+    {
+      riskId: 201,
+      targetType: 'BLOCK',
+      zoneId: zoneId,
+      blockId: blockId ?? 1,
+      assessedAt: '2026-03-12',
+      riskType: 'Mầm bệnh tồn lưu trong đất',
+      riskLevel: 'MEDIUM',
+      priorFindings: 'Vụ trước ghi nhận rải rác hiện tượng héo xanh vi khuẩn ở cuối vụ.',
+      description: 'Mầm bệnh Ralstonia và nấm Fusarium có thể tồn lưu trong tàn dư thực vật tại lô đất.',
+      controlMeasures: 'Thu gom triệt để tàn dư cây trồng, bón vôi nông nghiệp 50kg/1000m², phơi ải đất 15 ngày và bổ sung nấm đối kháng Trichoderma.',
+      assessedByName: 'Kỹ sư Nông học',
+      status: 'CONTROLLED',
+    },
+    {
+      riskId: 202,
+      targetType: 'BLOCK',
+      zoneId: zoneId,
+      blockId: blockId ?? 1,
+      assessedAt: '2026-03-22',
+      riskType: 'Ô nhiễm vi sinh vật từ phân hữu cơ',
+      riskLevel: 'LOW',
+      priorFindings: 'Sử dụng phân chuồng ủ hoai mục cho giai đoạn bón lót.',
+      description: 'Nguy cơ nhiễm khuẩn E.coli hoặc Salmonella nếu phân hữu cơ chưa hoai mục hoàn toàn.',
+      controlMeasures: 'Chỉ sử dụng lô phân hữu cơ đã ủ đủ 60 ngày có biên bản kiểm tra nhiệt độ đống ủ >55°C và kết quả kiểm nghiệm vi sinh đạt chuẩn.',
+      assessedByName: 'Ban Quản lý VietGAP',
+      status: 'CONTROLLED',
+    },
+  ];
+  return base;
+}
+
+export function fetchZoneRiskRecords(zoneId: number): RiskAssessmentRecord[] {
+  const all = readLocalList<RiskAssessmentRecord>(RISK_STORAGE_KEY, getDefaultRisks(zoneId));
+  const zoneItems = all.filter((r) => r.targetType === 'ZONE' && Number(r.zoneId) === Number(zoneId));
+  if (zoneItems.length === 0) {
+    const seeded = getDefaultRisks(zoneId).filter((r) => r.targetType === 'ZONE').map((r, idx) => ({
+      ...r,
+      riskId: Date.now() + idx + zoneId * 10,
+      zoneId,
+    }));
+    writeLocalList(RISK_STORAGE_KEY, [...all, ...seeded]);
+    return seeded;
+  }
+  return zoneItems;
+}
+
+export function fetchBlockRiskRecords(zoneId: number, blockId: number): RiskAssessmentRecord[] {
+  const all = readLocalList<RiskAssessmentRecord>(RISK_STORAGE_KEY, getDefaultRisks(zoneId, blockId));
+  const blockItems = all.filter((r) => r.targetType === 'BLOCK' && Number(r.blockId) === Number(blockId));
+  if (blockItems.length === 0) {
+    const seeded = getDefaultRisks(zoneId, blockId).filter((r) => r.targetType === 'BLOCK').map((r, idx) => ({
+      ...r,
+      riskId: Date.now() + idx + blockId * 100,
+      zoneId,
+      blockId,
+    }));
+    writeLocalList(RISK_STORAGE_KEY, [...all, ...seeded]);
+    return seeded;
+  }
+  return blockItems;
+}
+
+export function saveRiskRecord(record: Omit<RiskAssessmentRecord, 'riskId'> & { riskId?: number }): RiskAssessmentRecord {
+  const all = readLocalList<RiskAssessmentRecord>(RISK_STORAGE_KEY, getDefaultRisks(record.zoneId, record.blockId ?? 1));
+  if (record.riskId) {
+    const updated: RiskAssessmentRecord = { ...(record as RiskAssessmentRecord), riskId: record.riskId };
+    const next = all.map((r) => (r.riskId === record.riskId ? updated : r));
+    writeLocalList(RISK_STORAGE_KEY, next);
+    notifyDataChanged('/production/risks', 'PUT');
+    return updated;
+  }
+  const created: RiskAssessmentRecord = {
+    ...(record as RiskAssessmentRecord),
+    riskId: Date.now(),
+  };
+  writeLocalList(RISK_STORAGE_KEY, [created, ...all]);
+  notifyDataChanged('/production/risks', 'POST');
+  return created;
+}
+
+export function fetchBlockSoilAssessments(zoneId: number, blockId: number, blockName?: string): SoilAssessmentRecord[] {
+  const defaultSeed: SoilAssessmentRecord[] = [
+    {
+      assessmentId: 301 + blockId,
+      blockId,
+      blockName: blockName || `Block #${blockId}`,
+      zoneId,
+      assessedAt: '2026-03-05',
+      sampleCode: `SOIL-${zoneId}-${blockId}-2026Q1`,
+      phLevel: 6.4,
+      organicMatterPct: 3.8,
+      heavyMetalResult: 'SAFE',
+      microbialStatus: 'Đạt chuẩn QCVN 03-MT:2015/BTNMT (As, Cd, Pb, Cu, Zn dưới ngưỡng cho phép)',
+      laboratoryName: 'Trung tâm Phân tích & Chứng nhận Chất lượng Nông림 Thủy sản',
+      conclusion: 'DAT_CHUAN',
+      notes: 'Đất thịt pha cát tơi xốp, giàu mùn hữu cơ, thoát nước tốt, đủ điều kiện canh tác VietGAP.',
+      recordedByName: 'Kỹ sư Nông học',
+    },
+    {
+      assessmentId: 302 + blockId,
+      blockId,
+      blockName: blockName || `Block #${blockId}`,
+      zoneId,
+      assessedAt: '2025-11-15',
+      sampleCode: `SOIL-${zoneId}-${blockId}-2025Q4`,
+      phLevel: 5.9,
+      organicMatterPct: 3.2,
+      heavyMetalResult: 'SAFE',
+      microbialStatus: 'Không phát hiện vi sinh vật gây hại vượt ngưỡng',
+      laboratoryName: 'Viện Khoa học Kỹ thuật Nông nghiệp',
+      conclusion: 'CAN_CAI_TAO',
+      notes: 'Độ pH hơi chua nhẹ (5.9), đã khuyến nghị bón bổ sung vôi Dolomite và phân hữu cơ vi sinh trước vụ mới.',
+      recordedByName: 'Ban Quản lý VietGAP',
+    },
+  ];
+  const all = readLocalList<SoilAssessmentRecord>(SOIL_STORAGE_KEY, defaultSeed);
+  const items = all.filter((s) => Number(s.blockId) === Number(blockId));
+  if (items.length === 0) {
+    writeLocalList(SOIL_STORAGE_KEY, [...all, ...defaultSeed]);
+    return defaultSeed;
+  }
+  return items;
+}
+
+export function saveSoilAssessment(
+  record: Omit<SoilAssessmentRecord, 'assessmentId'> & { assessmentId?: number }
+): SoilAssessmentRecord {
+  const all = readLocalList<SoilAssessmentRecord>(SOIL_STORAGE_KEY, []);
+  if (record.assessmentId) {
+    const updated: SoilAssessmentRecord = { ...(record as SoilAssessmentRecord), assessmentId: record.assessmentId };
+    writeLocalList(
+      SOIL_STORAGE_KEY,
+      all.map((item) => (item.assessmentId === record.assessmentId ? updated : item))
+    );
+    notifyDataChanged('/production/soil', 'PUT');
+    return updated;
+  }
+  const created: SoilAssessmentRecord = {
+    ...(record as SoilAssessmentRecord),
+    assessmentId: Date.now(),
+  };
+  writeLocalList(SOIL_STORAGE_KEY, [created, ...all]);
+  notifyDataChanged('/production/soil', 'POST');
+  return created;
+}
+
+export function fetchBlockWaterAssessments(zoneId: number, blockId: number, blockName?: string): WaterAssessmentRecord[] {
+  const defaultSeed: WaterAssessmentRecord[] = [
+    {
+      assessmentId: 401 + blockId,
+      blockId,
+      blockName: blockName || `Block #${blockId}`,
+      zoneId,
+      assessedAt: '2026-03-08',
+      waterSource: 'Giếng khoan tầng sâu & Hồ chứa lắng lọc',
+      sampleCode: `WATER-${zoneId}-${blockId}-2026Q1`,
+      phLevel: 6.8,
+      ecValue: 0.45,
+      coliformResult: 'SAFE',
+      heavyMetalResult: 'SAFE',
+      laboratoryName: 'Trung tâm Phân tích & Chứng nhận Chất lượng Nông Lâm Thủy sản',
+      conclusion: 'DAT_CHUAN',
+      treatmentMeasure: 'Lọc qua hệ thống lọc cát thạch anh + màng lọc đĩa 120 mesh trước khi cấp vào đường ống tưới nhỏ giọt.',
+      notes: 'Các chỉ tiêu As, Hg, Pb, Cd, E.coli, Coliform đều đạt QCVN 08-MT:2015/BTNMT cột B1 cho nước tưới tiêu.',
+      recordedByName: 'Kỹ sư Nông học',
+    },
+  ];
+  const all = readLocalList<WaterAssessmentRecord>(WATER_STORAGE_KEY, defaultSeed);
+  const items = all.filter((w) => Number(w.blockId) === Number(blockId));
+  if (items.length === 0) {
+    writeLocalList(WATER_STORAGE_KEY, [...all, ...defaultSeed]);
+    return defaultSeed;
+  }
+  return items;
+}
+
+export function saveWaterAssessment(
+  record: Omit<WaterAssessmentRecord, 'assessmentId'> & { assessmentId?: number }
+): WaterAssessmentRecord {
+  const all = readLocalList<WaterAssessmentRecord>(WATER_STORAGE_KEY, []);
+  if (record.assessmentId) {
+    const updated: WaterAssessmentRecord = { ...(record as WaterAssessmentRecord), assessmentId: record.assessmentId };
+    writeLocalList(
+      WATER_STORAGE_KEY,
+      all.map((item) => (item.assessmentId === record.assessmentId ? updated : item))
+    );
+    notifyDataChanged('/production/water', 'PUT');
+    return updated;
+  }
+  const created: WaterAssessmentRecord = {
+    ...(record as WaterAssessmentRecord),
+    assessmentId: Date.now(),
+  };
+  writeLocalList(WATER_STORAGE_KEY, [created, ...all]);
+  notifyDataChanged('/production/water', 'POST');
+  return created;
 }
 
 // --- Mapping for the existing production-area components ---

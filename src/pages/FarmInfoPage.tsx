@@ -20,6 +20,7 @@ import {
   type LatLngPoint,
 } from '../features/farm-management/goongMapService';
 import { FarmGoongMap } from '../features/farm-management/components/FarmGoongMap';
+import { useRealtimeSync } from '../shared/realtime/realtimeSync';
 
 export function FarmInfoPage() {
   const { selectedFarm, farms, selectFarm, retry } = useFarmWorkspace();
@@ -111,6 +112,22 @@ export function FarmInfoPage() {
       active = false;
     };
   }, [selectedFarm?.id]);
+
+  // Silent background realtime sync for Farm Info & Members
+  useRealtimeSync(() => {
+    if (!selectedFarm?.id) return;
+    Promise.all([
+      getFarmById(selectedFarm.id).catch(() => null),
+      getFarmMembers(selectedFarm.id).catch(() => []),
+    ])
+      .then(([detail, memberList]) => {
+        if (detail) {
+          setFarmDetail(detail);
+        }
+        setMembers(memberList);
+      })
+      .catch(() => {});
+  });
 
   const handleUpdateFarm = async (e: React.FormEvent) => {
     e.preventDefault();

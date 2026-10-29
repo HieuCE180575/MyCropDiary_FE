@@ -1,11 +1,12 @@
 import { Icon } from '../../shared/components/Icon';
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { getAdminRegistrations, getAdminRegistrationById, handleFarmRegistration, type RegistrationResponse } from '../farm-management/registrationService';
 import { getAdminUsers, getAdminUserById, updateAdminUserStatus, type AdminUserResponse } from './adminUserService';
 import { useAuth } from '../auth';
 import { createAdminDemo } from './adminDemo';
 import { applyAdminCommand } from './adminModel';
 import type { AdminCommand, AdminState, AdminRecord } from './adminTypes';
+import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
 interface AdminContextValue {
   state: AdminState;
@@ -68,6 +69,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState('');
   const [revision, setRevision] = useState(0);
+  const silentAbortRef = useRef<AbortController | null>(null);
 
   const reloadRegistrations = useCallback(() => setRevision(value => value + 1), []);
   const reloadUsers = useCallback(() => setRevision(value => value + 1), []);
@@ -95,8 +97,37 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     }).catch(error => {
       if (!controller.signal.aborted) setUsersError(error instanceof Error ? error.message : 'Không tải được danh sách tài khoản.');
     }).finally(() => { if (!controller.signal.aborted) setUsersLoading(false); });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      silentAbortRef.current?.abort();
+    };
   }, [user?.userId, revision]);
+
+  // Silent background realtime sync for Admin (no loading spinner, no table wipe)
+  useRealtimeSync(() => {
+    if (user?.systemRole?.toUpperCase() !== 'ADMIN') return;
+    silentAbortRef.current?.abort();
+    const controller = new AbortController();
+    silentAbortRef.current = controller;
+
+    getAdminRegistrations(controller.signal)
+      .then((records) => {
+        if (!controller.signal.aborted) {
+          setState((previous) => ({ ...previous, registrations: records.map(toRecord) }));
+          setRegistrationsError('');
+        }
+      })
+      .catch(() => {});
+
+    getAdminUsers(controller.signal)
+      .then((records) => {
+        if (!controller.signal.aborted) {
+          setState((previous) => ({ ...previous, users: records.map(userToRecord) }));
+          setUsersError('');
+        }
+      })
+      .catch(() => {});
+  });
 
   const loadDetail = useCallback(async (collection: 'users' | 'registrations', id: string, signal: AbortSignal) => {
     const record = collection === 'users'

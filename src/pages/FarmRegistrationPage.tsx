@@ -9,6 +9,7 @@ import {
 import type { FarmRegistration, FarmRegistrationFormValues } from '../features/farm-management/types';
 import { useFarmWorkspace } from '../features/farm-management/FarmWorkspace';
 import { useAuth } from '../features/auth';
+import { useRealtimeSync } from '../shared/realtime/realtimeSync';
 
 export function FarmRegistrationPage() {
   const { user } = useAuth();
@@ -24,24 +25,36 @@ export function FarmRegistrationPage() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
 
-  const loadRegistration = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
-    setLoadError(null);
+  const loadRegistration = useCallback(async (signal?: AbortSignal, silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setLoadError(null);
+    }
     try {
       const data = await fetchMyLatestRegistration(signal);
-      if (!signal?.aborted) setRegistration(data);
+      if (!signal?.aborted) {
+        setRegistration(data);
+        if (silent) setLoadError(null);
+      }
     } catch (error) {
-      if (!signal?.aborted) setLoadError(error instanceof Error ? error.message : 'Không tải được đăng ký.');
+      if (!signal?.aborted && !silent) {
+        setLoadError(error instanceof Error ? error.message : 'Không tải được đăng ký.');
+      }
     } finally {
-      if (!signal?.aborted) setLoading(false);
+      if (!signal?.aborted && !silent) setLoading(false);
     }
   }, [user?.userId]);
 
   useEffect(() => {
     const controller = new AbortController();
-    void loadRegistration(controller.signal);
+    void loadRegistration(controller.signal, false);
     return () => controller.abort();
   }, [loadRegistration]);
+
+  // Silent background realtime sync when Admin approves/rejects registration
+  useRealtimeSync(() => {
+    void loadRegistration(undefined, true);
+  });
 
   async function handleSubmit(values: FarmRegistrationFormValues) {
     if (submitting) return;

@@ -127,6 +127,70 @@ export interface AssignStaffToZonePayload {
   notes?: string;
 }
 
+/**
+ * Risk Assessment Record (Zone / Block Risk Records - UC-19)
+ */
+export interface RiskAssessmentRecord {
+  riskId: number;
+  targetType: 'ZONE' | 'BLOCK';
+  zoneId: number;
+  zoneName?: string;
+  blockId?: number | null;
+  blockName?: string | null;
+  assessedAt: string;
+  riskType: string;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  priorFindings?: string | null;
+  description: string;
+  controlMeasures: string;
+  assessedByName: string;
+  status: 'MONITORING' | 'CONTROLLED' | 'ACTION_REQUIRED';
+}
+
+/**
+ * Soil Assessment Record (Block Soil Assessments - UC-20)
+ */
+export interface SoilAssessmentRecord {
+  assessmentId: number;
+  blockId: number;
+  blockName?: string;
+  zoneId: number;
+  zoneName?: string;
+  assessedAt: string;
+  sampleCode: string;
+  phLevel: number;
+  organicMatterPct: number;
+  heavyMetalResult: 'SAFE' | 'WARNING' | 'EXCEEDED';
+  microbialStatus: string;
+  laboratoryName: string;
+  conclusion: 'DAT_CHUAN' | 'CAN_CAI_TAO' | 'KHONG_DAT';
+  notes?: string | null;
+  recordedByName: string;
+}
+
+/**
+ * Water Assessment Record (Block Water Assessments - UC-21)
+ */
+export interface WaterAssessmentRecord {
+  assessmentId: number;
+  blockId: number;
+  blockName?: string;
+  zoneId: number;
+  zoneName?: string;
+  assessedAt: string;
+  waterSource: string;
+  sampleCode: string;
+  phLevel: number;
+  ecValue: number;
+  coliformResult: 'SAFE' | 'EXCEEDED';
+  heavyMetalResult: 'SAFE' | 'WARNING' | 'EXCEEDED';
+  laboratoryName: string;
+  conclusion: 'DAT_CHUAN' | 'CAN_XU_LY' | 'KHONG_DAT';
+  treatmentMeasure?: string | null;
+  notes?: string | null;
+  recordedByName: string;
+}
+
 // Backward compatibility types for legacy components
 export type ProductionArea = Zone;
 export type ProductionAreaStatus = 'active' | 'archived';
@@ -166,7 +230,7 @@ export interface StaffAreaAssignment {
   startsAt: string;
   endsAt?: string;
   notes?: string;
-  createdAt: string;
+  createdAt?: string;
 }
 
 export interface AssignStaffFormValues {

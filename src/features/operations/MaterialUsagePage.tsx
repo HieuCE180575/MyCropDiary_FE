@@ -3,6 +3,7 @@ import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
+import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
 export interface MaterialUsage {
   id: number;
@@ -71,9 +72,14 @@ export function MaterialUsagePage() {
   const [farmingActivityId, setFarmingActivityId] = useState<number>(1);
 
   useEffect(() => {
-    loadUsages();
-    loadMaterials();
+    void loadUsages(false);
+    void loadMaterials();
   }, [farmId]);
+
+  useRealtimeSync(() => {
+    void loadUsages(true);
+    void loadMaterials();
+  });
 
   const loadMaterials = async () => {
     try {
@@ -107,9 +113,12 @@ export function MaterialUsagePage() {
     }
   };
 
-  const loadUsages = async () => {
-    setLoading(true);
-    setNotification(null);
+  const loadUsages = async (silent: boolean | unknown = false) => {
+    const isSilent = silent === true;
+    if (!isSilent) {
+      setLoading(true);
+      setNotification(null);
+    }
     try {
       const params = new URLSearchParams();
       if (farmId) params.append('farmId', String(farmId));
@@ -182,9 +191,9 @@ export function MaterialUsagePage() {
         ]);
       }
     } catch {
-      setNotification({ text: 'Lỗi nạp danh sách sử dụng vật tư.', type: 'error' });
+      if (!isSilent) setNotification({ text: 'Lỗi nạp danh sách sử dụng vật tư.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 

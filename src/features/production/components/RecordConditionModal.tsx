@@ -1,148 +1,208 @@
-import { useState } from 'react';
-import { Modal } from '../../../shared/components/Modal';
-import { Icon } from '../../../shared/components/Icon';
+import { useState, useEffect } from 'react';
+import type { Block, BlockConditionObservation, RecordConditionFormValues } from '../types';
 import { recordBlockCondition } from '../zoneBlockService';
-import type { Block, BlockConditionObservation } from '../types';
 
 interface RecordConditionModalProps {
   isOpen: boolean;
-  onClose: () => void;
   block: Block | null;
+  onClose: () => void;
   onSuccess: (observation: BlockConditionObservation) => void;
 }
 
-const PRESET_CONDITIONS = [
-  { label: '🌱 Cây sinh trưởng tốt', value: 'Cây sinh trưởng tốt' },
-  { label: '💧 Độ ẩm thấp / Khô hạn', value: 'Độ ẩm thấp / Khô hạn' },
-  { label: '🐛 Sâu bệnh hại phát sinh', value: 'Sâu bệnh hại phát sinh' },
-  { label: '🌊 Ngập úng cục bộ', value: 'Ngập úng cục bộ' },
-  { label: '🍃 Thiếu dinh dưỡng / Vàng lá', value: 'Thiếu dinh dưỡng / Vàng lá' },
-  { label: '🧪 Đất bạc màu / Cần cải tạo', value: 'Đất bạc màu / Cần cải tạo' },
-  { label: '🌾 Đã sẵn sàng thu hoạch', value: 'Đã sẵn sàng thu hoạch' },
+const CONDITION_TYPES = [
+  'Bình thường / Ổn định',
+  'Sâu bệnh hại xuất hiện',
+  'Khô hạn / Thiếu nước tưới',
+  'Ngập úng / Dư nước sau mưa',
+  'Cỏ dại phát triển mạnh',
+  'Đất suy thoái / Chua hóa',
+  'Hạ tầng tưới tiêu hư hỏng',
+  'Khác',
 ];
 
-export function RecordConditionModal({ isOpen, onClose, block, onSuccess }: RecordConditionModalProps) {
-  const [conditionType, setConditionType] = useState(PRESET_CONDITIONS[0].value);
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+export function RecordConditionModal({
+  isOpen,
+  block,
+  onClose,
+  onSuccess,
+}: RecordConditionModalProps) {
+  const [values, setValues] = useState<RecordConditionFormValues>({
+    conditionType: CONDITION_TYPES[0],
+    description: '',
+    imageUrl: '',
+    observedAt: new Date().toISOString().slice(0, 16),
+  });
+
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!block) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setValues({
+        conditionType: CONDITION_TYPES[0],
+        description: '',
+        imageUrl: '',
+        observedAt: new Date().toISOString().slice(0, 16),
+      });
+      setError(null);
+    }
+  }, [isOpen, block]);
+
+  if (!isOpen || !block) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description.trim()) {
-      setError('Vui lòng nhập chi tiết mô tả hiện trạng lô đất.');
+    if (!values.conditionType.trim()) {
+      setError('Vui lòng chọn phân loại điều kiện.');
+      return;
+    }
+    if (!values.description.trim()) {
+      setError('Vui lòng nhập nội dung ghi nhận điều kiện chi tiết.');
       return;
     }
 
-    setSubmitting(true);
+    setLoading(true);
     setError(null);
+
     try {
-      const observation = await recordBlockCondition(block.blockId, {
-        conditionType,
-        description,
-        imageUrl,
+      const formattedObservedAt = values.observedAt
+        ? new Date(values.observedAt).toISOString()
+        : new Date().toISOString();
+
+      const obs = await recordBlockCondition(block.blockId, {
+        ...values,
+        observedAt: formattedObservedAt,
       });
-      onSuccess(observation);
+      onSuccess(obs);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ghi nhận tình trạng thất bại. Vui lòng thử lại.');
+      setError(err instanceof Error ? err.message : 'Không thể lưu hồ sơ điều kiện lô đất.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={`Ghi nhận tình trạng: ${block.blockName}`}>
-      <form onSubmit={handleSubmit} className="form-layout">
-        {error && <div className="alert alert--error">{error}</div>}
-
-        <div className="form-group">
-          <label className="form-label">Tình trạng nhanh (Nhấp để chọn):</label>
-          <div className="condition-tag-list">
-            {PRESET_CONDITIONS.map((c) => (
-              <button
-                type="button"
-                key={c.value}
-                className={`condition-quick-tag ${conditionType === c.value ? 'selected' : ''}`}
-                onClick={() => setConditionType(c.value)}
-              >
-                {c.label}
-              </button>
-            ))}
+    <div className="modal-overlay" role="dialog" aria-modal="true">
+      <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+        <div className="modal-header">
+          <div>
+            <span className="eyebrow">Hồ sơ sản xuất</span>
+            <h2>Ghi nhận điều kiện: {block.blockName}</h2>
           </div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng">
+            ✕
+          </button>
         </div>
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="conditionTypeSelect">Loại hiện trạng:</label>
-          <input
-            id="conditionTypeSelect"
-            type="text"
-            className="form-input"
-            value={conditionType}
-            onChange={(e) => setConditionType(e.target.value)}
-            required
-          />
-        </div>
+        <form className="modal-body" onSubmit={handleSubmit} noValidate>
+          {error ? <p className="form-error-banner" role="alert">{error}</p> : null}
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="conditionDesc">
-            Mô tả chi tiết hiện trạng <span className="required-star">*</span>:
-          </label>
-          <textarea
-            id="conditionDesc"
-            className="form-textarea"
-            rows={4}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Mô tả sự phát triển của cây trồng, màu sắc lá, độ ẩm đất, sâu bệnh hoặc các yếu tố ngoại cảnh tác động..."
-            required
-          />
-        </div>
+          <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
+            <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
+              <span className="structured-field-label" style={{ color: '#065f46' }}>
+                Lô sản xuất mục tiêu
+              </span>
+              <span className="structured-field-badge">Tự động chọn</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, color: '#047857' }}>
+              <span>
+                🌿 {block.blockName} {block.zoneName ? `· ${block.zoneName}` : ''}
+              </span>
+              <span>
+                {block.areaValue} {block.areaUnit}
+              </span>
+            </div>
+          </div>
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="conditionImage">Đường dẫn hình ảnh thực tế (URL):</label>
-          <input
-            id="conditionImage"
-            type="url"
-            className="form-input"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://example.com/images/crop_photo.jpg"
-          />
-          {imageUrl && (
-            <div style={{ marginTop: '8px' }}>
-              <img
-                src={imageUrl}
-                alt="Preview"
-                style={{ maxHeight: '120px', borderRadius: '8px', objectFit: 'cover' }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                }}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="cond-date-input" className="structured-field-label">
+                Thời gian ghi nhận <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">Bắt buộc</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="cond-date-input"
+                type="datetime-local"
+                value={values.observedAt}
+                onChange={(e) => setValues({ ...values, observedAt: e.target.value })}
+                required
               />
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-            Hủy bỏ
-          </button>
-          <button type="submit" className="btn btn-primary-emerald" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Icon name="loader" className="animate-spin" /> Đang lưu...
-              </>
-            ) : (
-              <>
-                <Icon name="check-circle" /> Ghi nhận tình trạng
-              </>
-            )}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="cond-type-select" className="structured-field-label">
+                Phân loại tình trạng điều kiện <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">Tiêu chuẩn VietGAP</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <select
+                id="cond-type-select"
+                value={values.conditionType}
+                onChange={(e) => setValues({ ...values, conditionType: e.target.value })}
+              >
+                {CONDITION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="cond-desc-input" className="structured-field-label">
+                Thông tin điều kiện và ghi chú <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">{values.description.length}/1000 ký tự</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <textarea
+                id="cond-desc-input"
+                rows={4}
+                maxLength={1000}
+                placeholder="Mô tả chi tiết tình trạng mặt luống, độ ẩm đất, dấu hiệu sâu bệnh hoặc điều kiện môi trường thực tế tại lô đất..."
+                value={values.description}
+                onChange={(e) => setValues({ ...values, description: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="cond-img-input" className="structured-field-label">
+                Đường dẫn hình ảnh minh chứng
+              </label>
+              <span className="structured-field-badge">Tùy chọn</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="cond-img-input"
+                type="url"
+                placeholder="https://..."
+                value={values.imageUrl}
+                onChange={(e) => setValues({ ...values, imageUrl: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
+              Hủy
+            </button>
+            <button type="submit" className="primary-button" disabled={loading}>
+              {loading ? 'Đang lưu...' : 'Lưu ghi nhận'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

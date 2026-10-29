@@ -1,235 +1,347 @@
 import { useEffect, useState } from 'react';
-import { Modal } from '../../../shared/components/Modal';
-import { Icon } from '../../../shared/components/Icon';
+import type { Block, BlockFormValues, Zone } from '../types';
 import { createBlock, updateBlock } from '../zoneBlockService';
-import type { Block, BlockFormValues } from '../types';
+import { FarmGoongMap } from '../../farm-management/components/FarmGoongMap';
 
 interface BlockModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  mode: 'create' | 'edit';
   zoneId: number;
-  zoneName: string;
-  blockToEdit?: Block | null;
-  onSuccess: (block: Block) => void;
+  zoneName?: string;
+  availableZones?: Zone[];
+  lockZone?: boolean;
+  initialBlock?: Block | null;
+  onClose: () => void;
+  onSuccess: (savedBlock: Block) => void;
 }
 
-export function BlockModal({ isOpen, onClose, zoneId, zoneName, blockToEdit, onSuccess }: BlockModalProps) {
-  const isEdit = Boolean(blockToEdit);
-  const [blockName, setBlockName] = useState('');
-  const [areaValue, setAreaValue] = useState('');
-  const [areaUnit, setAreaUnit] = useState('m2');
-  const [soilType, setSoilType] = useState('Đất phù sa');
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+export function BlockModal({
+  isOpen,
+  mode,
+  zoneId,
+  zoneName,
+  availableZones = [],
+  lockZone = false,
+  initialBlock,
+  onClose,
+  onSuccess,
+}: BlockModalProps) {
+  const [selectedZoneId, setSelectedZoneId] = useState<number>(zoneId);
+  const [values, setValues] = useState<BlockFormValues>({
+    blockName: '',
+    areaValue: '',
+    areaUnit: 'm2',
+    soilType: '',
+    description: '',
+    imageUrl: '',
+    latitude: '',
+    longitude: '',
+    status: 'AVAILABLE',
+  });
+
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (blockToEdit) {
-      setBlockName(blockToEdit.blockName);
-      setAreaValue(String(blockToEdit.areaValue));
-      setAreaUnit(blockToEdit.areaUnit || 'm2');
-      setSoilType(blockToEdit.soilType || 'Đất phù sa');
-      setDescription(blockToEdit.description || '');
-      setImageUrl(blockToEdit.imageUrl || '');
-      setLatitude(blockToEdit.latitude ? String(blockToEdit.latitude) : '');
-      setLongitude(blockToEdit.longitude ? String(blockToEdit.longitude) : '');
-    } else {
-      setBlockName('');
-      setAreaValue('');
-      setAreaUnit('m2');
-      setSoilType('Đất phù sa');
-      setDescription('');
-      setImageUrl('');
-      setLatitude('');
-      setLongitude('');
+    if (isOpen) {
+      setSelectedZoneId(initialBlock?.zoneId || zoneId || availableZones[0]?.zoneId || 1);
+      if (mode === 'edit' && initialBlock) {
+        setValues({
+          blockName: initialBlock.blockName || '',
+          areaValue: String(initialBlock.areaValue || ''),
+          areaUnit: initialBlock.areaUnit || 'm2',
+          soilType: initialBlock.soilType || '',
+          description: initialBlock.description || '',
+          imageUrl: initialBlock.imageUrl || '',
+          latitude: initialBlock.latitude != null ? String(initialBlock.latitude) : '',
+          longitude: initialBlock.longitude != null ? String(initialBlock.longitude) : '',
+          status: initialBlock.status || 'AVAILABLE',
+        });
+      } else {
+        setValues({
+          blockName: '',
+          areaValue: '',
+          areaUnit: 'm2',
+          soilType: 'Đất thịt nhẹ pha cát (Sandy Loam)',
+          description: '',
+          imageUrl: '',
+          latitude: '',
+          longitude: '',
+          status: 'AVAILABLE',
+        });
+      }
+      setError(null);
     }
-    setError(null);
-  }, [blockToEdit, isOpen]);
+  }, [isOpen, mode, initialBlock, zoneId, availableZones]);
+
+  if (!isOpen) return null;
+
+  const isZoneLocked = mode === 'edit' || lockZone || availableZones.length <= 1;
+  const resolvedZoneName =
+    availableZones.find((z) => z.zoneId === selectedZoneId)?.zoneName ||
+    initialBlock?.zoneName ||
+    zoneName ||
+    `Zone #${selectedZoneId}`;
+
+  const parsedLat = values.latitude ? parseFloat(values.latitude) : null;
+  const parsedLng = values.longitude ? parseFloat(values.longitude) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!blockName.trim()) {
-      setError('Vui lòng nhập tên lô đất.');
+    if (!values.blockName.trim()) {
+      setError('Vui lòng nhập tên Lô sản xuất (Block Name).');
       return;
     }
-    if (!areaValue || isNaN(parseFloat(areaValue)) || parseFloat(areaValue) <= 0) {
-      setError('Diện tích lô đất phải là số dương hợp lệ.');
+    const areaNum = parseFloat(values.areaValue);
+    if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
+      setError('Diện tích Block (Area) phải lớn hơn 0.');
       return;
     }
 
-    setSubmitting(true);
+    setLoading(true);
     setError(null);
 
-    const values: BlockFormValues = {
-      blockName,
-      areaValue,
-      areaUnit,
-      soilType,
-      description,
-      imageUrl,
-      latitude: latitude || undefined,
-      longitude: longitude || undefined,
-    };
-
     try {
-      let result: Block;
-      if (isEdit && blockToEdit) {
-        result = await updateBlock(blockToEdit.blockId, values);
+      let saved: Block;
+      if (mode === 'create') {
+        saved = await createBlock(selectedZoneId, values);
       } else {
-        result = await createBlock(zoneId, values);
+        if (!initialBlock) throw new Error('Không tìm thấy dữ liệu Block để cập nhật.');
+        saved = await updateBlock(initialBlock.blockId, values);
       }
-      onSuccess(result);
+      onSuccess(saved);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lưu lô đất thất bại. Vui lòng kiểm tra lại.');
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Block.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      title={isEdit ? `Cập nhật lô đất: ${blockToEdit?.blockName}` : `Thêm Lô đất mới vào ${zoneName}`}
-    >
-      <form onSubmit={handleSubmit} className="form-layout">
-        {error && <div className="alert alert--error">{error}</div>}
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="blockNameInput">
-            Tên lô / thửa đất <span className="required-star">*</span>:
-          </label>
-          <input
-            id="blockNameInput"
-            type="text"
-            className="form-input"
-            value={blockName}
-            onChange={(e) => setBlockName(e.target.value)}
-            placeholder="Ví dụ: Lô A1, Thửa 02, Giàn 1..."
-            required
-          />
+    <div className="modal-overlay" role="dialog" aria-modal="true">
+      <div className="modal-card" style={{ width: 'min(760px, 100%)', maxHeight: '92vh' }}>
+        <div className="modal-header">
+          <div>
+            <span className="eyebrow">
+              {mode === 'create' ? 'Lô sản xuất mới' : `Cập nhật lô sản xuất #${initialBlock?.blockId}`}
+            </span>
+            <h2>{mode === 'create' ? 'Tạo lô sản xuất mới' : 'Cập nhật lô sản xuất'}</h2>
+          </div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="blockAreaInput">
-              Diện tích canh tác <span className="required-star">*</span>:
-            </label>
-            <input
-              id="blockAreaInput"
-              type="number"
-              step="any"
-              className="form-input"
-              value={areaValue}
-              onChange={(e) => setAreaValue(e.target.value)}
-              placeholder="Ví dụ: 1500"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="blockUnitSelect">Đơn vị:</label>
-            <select
-              id="blockUnitSelect"
-              className="form-select"
-              value={areaUnit}
-              onChange={(e) => setAreaUnit(e.target.value)}
-            >
-              <option value="m2">m²</option>
-              <option value="ha">hecta (ha)</option>
-            </select>
-          </div>
-        </div>
+        <form className="modal-body" onSubmit={handleSubmit} noValidate>
+          {error ? <p className="form-error-banner" role="alert">{error}</p> : null}
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="soilTypeSelect">Loại đất / Giá thể trồng:</label>
-          <select
-            id="soilTypeSelect"
-            className="form-select"
-            value={soilType}
-            onChange={(e) => setSoilType(e.target.value)}
+          {/* Parent Zone Field */}
+          <div
+            className="structured-field-card"
+            style={{
+              background: isZoneLocked ? '#ecfdf5' : '#f8fafc',
+              borderColor: isZoneLocked ? '#a7f3d0' : '#e2e8f0',
+              marginBottom: 0,
+            }}
           >
-            <option value="Đất phù sa">Đất phù sa</option>
-            <option value="Đất thịt nhẹ">Đất thịt nhẹ</option>
-            <option value="Đất cát pha">Đất cát pha</option>
-            <option value="Đất đỏ bazan">Đất đỏ bazan</option>
-            <option value="Giá thể xơ dừa">Giá thể xơ dừa</option>
-            <option value="Thủy canh tuần hoàn">Thủy canh tuần hoàn</option>
-            <option value="Khác">Loại đất khác</option>
-          </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="blockDescInput">Mô tả đặc điểm lô đất:</label>
-          <textarea
-            id="blockDescInput"
-            className="form-textarea"
-            rows={2}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Đặc điểm địa hình, lịch sử canh tác, giống cây dự kiến..."
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="blockImageInput">Link hình ảnh lô đất:</label>
-          <input
-            id="blockImageInput"
-            type="url"
-            className="form-input"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://images.unsplash.com/..."
-          />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="latInput">Vĩ độ (Latitude):</label>
-            <input
-              id="latInput"
-              type="number"
-              step="any"
-              className="form-input"
-              value={latitude}
-              onChange={(e) => setLatitude(e.target.value)}
-              placeholder="Ví dụ: 10.762622"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="longInput">Kinh độ (Longitude):</label>
-            <input
-              id="longInput"
-              type="number"
-              step="any"
-              className="form-input"
-              value={longitude}
-              onChange={(e) => setLongitude(e.target.value)}
-              placeholder="Ví dụ: 106.660172"
-            />
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-            Hủy
-          </button>
-          <button type="submit" className="btn btn-primary-emerald" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Icon name="loader" className="animate-spin" /> Đang lưu...
-              </>
+            <div className="structured-field-header" style={{ borderBottomColor: isZoneLocked ? '#a7f3d0' : '#cbd5e1' }}>
+              <label htmlFor="block-zone-select" className="structured-field-label">
+                Khu vực quản lý trực thuộc <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">
+                {isZoneLocked ? 'Cố định khu vực' : 'Chọn khu vực'}
+              </span>
+            </div>
+            {isZoneLocked ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                <strong style={{ color: '#047857', fontSize: '15px' }}>🗺️ {resolvedZoneName}</strong>
+                <small style={{ color: '#065f46', fontWeight: 600 }}>
+                  {mode === 'edit'
+                    ? 'Không chuyển lô sang khu vực khác khi chỉnh sửa'
+                    : 'Tự động điền theo khu vực hiện tại'}
+                </small>
+              </div>
             ) : (
-              <>
-                <Icon name="save" /> {isEdit ? 'Cập nhật lô đất' : 'Tạo lô đất'}
-              </>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <select
+                  id="block-zone-select"
+                  value={selectedZoneId}
+                  onChange={(e) => setSelectedZoneId(Number(e.target.value))}
+                >
+                  {availableZones.map((z) => (
+                    <option key={z.zoneId} value={z.zoneId}>
+                      {z.zoneName} ({z.areaValue} {z.areaUnit})
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          </div>
+
+          {/* Block Name */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="block-name-input" className="structured-field-label">
+                Tên lô sản xuất <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">{values.blockName.length}/100 ký tự · Bắt buộc</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="block-name-input"
+                type="text"
+                maxLength={100}
+                placeholder="VD: Lô B01 - Lô sản xuất rau cải"
+                value={values.blockName}
+                onChange={(e) => setValues({ ...values, blockName: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Area & Unit */}
+          <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="block-area-input" className="structured-field-label">
+                  Diện tích lô sản xuất <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">&gt; 0</span>
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <input
+                  id="block-area-input"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="VD: 500"
+                  value={values.areaValue}
+                  onChange={(e) => setValues({ ...values, areaValue: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="block-unit-select" className="structured-field-label">
+                  Đơn vị diện tích
+                </label>
+                <span className="structured-field-badge">Đơn vị</span>
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <select
+                  id="block-unit-select"
+                  value={values.areaUnit}
+                  onChange={(e) => setValues({ ...values, areaUnit: e.target.value })}
+                >
+                  <option value="m2">m² (Mét vuông)</option>
+                  <option value="ha">ha (Hecta)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Soil Type */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="block-soil-input" className="structured-field-label">
+                Loại đất &amp; nền thổ nhưỡng
+              </label>
+              <span className="structured-field-badge">{values.soilType.length}/120 ký tự</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="block-soil-input"
+                type="text"
+                maxLength={120}
+                placeholder="VD: Đất thịt nhẹ pha cát, Đất phù sa cổ, Giá thể xơ dừa..."
+                value={values.soilType}
+                onChange={(e) => setValues({ ...values, soilType: e.target.value })}
+              />
+            </div>
+          </div>
+
+          {/* Coordinates + Interactive Goong Map like FarmRegistrationPage */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <span className="structured-field-label">
+                Vị trí tọa độ GPS &amp; Bản đồ lô sản xuất
+              </span>
+              <span className="structured-field-badge">Tọa độ</span>
+            </div>
+            <div className="farm-registration-location-fields" style={{ gap: '12px', marginBottom: '12px' }}>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <span>Vĩ độ</span>
+                <input
+                  id="block-lat-input"
+                  type="number"
+                  step="0.000001"
+                  placeholder="VD: 10.762622"
+                  value={values.latitude}
+                  onChange={(e) => setValues({ ...values, latitude: e.target.value })}
+                />
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <span>Kinh độ</span>
+                <input
+                  id="block-lng-input"
+                  type="number"
+                  step="0.000001"
+                  placeholder="VD: 106.660172"
+                  value={values.longitude}
+                  onChange={(e) => setValues({ ...values, longitude: e.target.value })}
+                />
+              </div>
+            </div>
+            <FarmGoongMap
+              farmName={values.blockName || 'Lô sản xuất mới'}
+              address={resolvedZoneName}
+              latitude={parsedLat && !isNaN(parsedLat) ? parsedLat : null}
+              longitude={parsedLng && !isNaN(parsedLng) ? parsedLng : null}
+              editable={true}
+              height={240}
+              onLocationChange={(lat, lng) => {
+                setValues((prev) => ({
+                  ...prev,
+                  latitude: String(lat),
+                  longitude: String(lng),
+                }));
+              }}
+            />
+          </div>
+
+          {/* Description */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="block-desc-input" className="structured-field-label">
+                Mô tả chi tiết lô sản xuất
+              </label>
+              <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <textarea
+                id="block-desc-input"
+                rows={3}
+                maxLength={500}
+                placeholder="Ghi chú đặc điểm mặt luống, hệ thống tưới nhỏ giọt, lịch sử canh tác trên lô đất..."
+                value={values.description}
+                onChange={(e) => setValues({ ...values, description: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
+              Hủy
+            </button>
+            <button type="submit" className="primary-button" disabled={loading}>
+              {loading ? 'Đang lưu...' : mode === 'create' ? 'Tạo lô đất' : 'Lưu thay đổi'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

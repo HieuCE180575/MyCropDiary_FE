@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/components/Modal';
 import { useApiData } from '../../../shared/hooks/useApiData';
 import { fetchBlockById } from '../zoneBlockService';
@@ -20,7 +21,7 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
   ] : [];
 
   return (
-    <Modal open onClose={onClose} title="Chi tiết lô đất">
+    <Modal open onClose={onClose} title="Chi tiết lô đất (Block Summary)">
       {loading ? <p role="status">Đang tải chi tiết lô đất...</p> : error ? (
         <>
           <p role="alert">{error}</p>
@@ -29,14 +30,37 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
       ) : block && (
         <div className="block-detail-modal">
           {block.imageUrl && <img src={block.imageUrl} alt={block.blockName} />}
-          <dl className="block-details-list">
+          <dl className="block-details-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', margin: '12px 0' }}>
             {fields.map(([label, value]) => (
-              <div className="block-detail-row" key={label}>
-                <dt className="block-detail-label">{label}</dt>
-                <dd className="block-detail-value">{value ?? 'Chưa cập nhật'}</dd>
+              <div
+                className="block-detail-row"
+                key={String(label)}
+                style={{
+                  background: '#f8faf9',
+                  border: '1px solid #d4e2d9',
+                  borderRadius: '10px',
+                  padding: '10px 12px',
+                }}
+              >
+                <dt className="block-detail-label" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#527062', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  {label}
+                </dt>
+                <dd className="block-detail-value" style={{ margin: 0, fontWeight: 600, color: '#1e293b', fontSize: '0.93rem' }}>
+                  {value ?? 'Chưa cập nhật'}
+                </dd>
               </div>
             ))}
           </dl>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+            <Link
+              to={`/zones/${block.zoneId}/blocks/${block.blockId}`}
+              className="btn-primary"
+              onClick={onClose}
+              style={{ textDecoration: 'none' }}
+            >
+              Open Full Block Details →
+            </Link>
+          </div>
         </div>
       )}
     </Modal>

@@ -17,7 +17,8 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from '../features/auth';
 import { ModuleAccess } from '../features/auth/ModuleAccess';
 import { AdminPage } from '../features/admin/AdminPage';
-import { ZoneListPage, ZoneFormPage, ZoneDetailPage } from '../pages/zone';
+import { ZoneListPage, ZoneFormPage, ZoneDetailPage, BlockDetailPage } from '../pages/zone';
+import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 
 
 export function App() {
@@ -48,11 +49,17 @@ export function App() {
           <Route path="/zones/new" element={<ZoneFormPage mode="create" />} />
           <Route path="/zones/:zoneId" element={<ZoneDetailPage />} />
           <Route path="/zones/:zoneId/edit" element={<ZoneFormPage mode="edit" />} />
+          <Route path="/zones/:zoneId/blocks/:blockId" element={<BlockDetailPage />} />
+
+          <Route path="/blocks" element={<ZoneListPage />} />
+          <Route path="/blocks/:blockId" element={<BlockDetailPage />} />
+          <Route path="/crop-seasons/:cropSeasonId" element={<CropSeasonsPage />} />
 
           <Route path="/production-areas" element={<ZoneListPage />} />
           <Route path="/production-areas/new" element={<ZoneFormPage mode="create" />} />
           <Route path="/production-areas/:productionAreaId" element={<ZoneDetailPage />} />
           <Route path="/production-areas/:productionAreaId/edit" element={<ZoneFormPage mode="edit" />} />
+          <Route path="/production-areas/:zoneId/blocks/:blockId" element={<BlockDetailPage />} />
           {moduleDefinitions.map((module) => (
             <Route
               key={module.key}

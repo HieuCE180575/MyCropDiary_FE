@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 import { farmRole } from '../../features/auth/accessPolicy';
 import { Icon } from '../../shared/components/Icon';
@@ -7,661 +7,945 @@ import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { ZoneModal } from '../../features/production/components/ZoneModal';
 import { BlockModal } from '../../features/production/components/BlockModal';
 import { RecordConditionModal } from '../../features/production/components/RecordConditionModal';
-import { BlockConditionHistoryModal } from '../../features/production/components/BlockConditionHistoryModal';
+import { AssignStaffModal } from '../../features/production/components/AssignStaffModal';
 import {
   fetchZonesByFarm,
   fetchAssignedZones,
   fetchBlocks,
+  fetchZoneAssignments,
   deleteZone,
   deleteBlock,
 } from '../../features/production/zoneBlockService';
-import type { Zone, Block, AssignedZoneResp, BlockConditionObservation } from '../../features/production/types';
+import type {
+  Zone,
+  Block,
+  AssignedZoneResp,
+  StaffZoneAssignment,
+  BlockConditionObservation,
+} from '../../features/production/types';
+import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
 export function ZoneListPage() {
   const navigate = useNavigate();
-  const { selectedFarm, farms, selectFarm } = useFarmWorkspace();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const initialTabParam =
+    location.pathname.startsWith('/blocks') || searchParams.get('tab') === 'blocks'
+      ? 'blocks'
+      : 'zones';
+
+  const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id || 1;
+  const farmName = selectedFarm?.farmName || `Farm #${farmId}`;
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : true;
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<'zones' | 'assigned' | 'blocks'>('zones');
+  // Screen mode: Zones vs Blocks
+  const [activeTab, setActiveTab] = useState<'zones' | 'blocks'>(initialTabParam);
 
   // Data states
   const [zones, setZones] = useState<Zone[]>([]);
   const [assignedZones, setAssignedZones] = useState<AssignedZoneResp[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [assignments, setAssignments] = useState<StaffZoneAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // Search & Filters
-  const [keyword, setKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  // Screen 1: Zones Filters
+  const [zoneKeyword, setZoneKeyword] = useState('');
+  const [assignedStaffFilter, setAssignedStaffFilter] = useState<string>('all');
+
+  // Screen 3: Blocks Filters
+  const [blockKeyword, setBlockKeyword] = useState('');
   const [selectedZoneFilter, setSelectedZoneFilter] = useState<number | 'all'>('all');
 
   // Modals state
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
   const [zoneToEdit, setZoneToEdit] = useState<Zone | null>(null);
-
   const [zoneToDelete, setZoneToDelete] = useState<Zone | null>(null);
-  const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
+  const [zoneForAssignment, setZoneForAssignment] = useState<Zone | null>(null);
 
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [blockToEdit, setBlockToEdit] = useState<Block | null>(null);
+  const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
   const [targetZoneForNewBlock, setTargetZoneForNewBlock] = useState<{ id: number; name: string }>({ id: 1, name: '' });
 
-  // Condition Modals
+  // Record Block Conditions modal
   const [conditionBlock, setConditionBlock] = useState<Block | null>(null);
   const [isRecordConditionOpen, setIsRecordConditionOpen] = useState(false);
-  const [isConditionHistoryOpen, setIsConditionHistoryOpen] = useState(false);
 
-  // Load data
   useEffect(() => {
-    loadData();
+    void loadData(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmId]);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [zonesData, assignedData, blocksData] = await Promise.all([
-        fetchZonesByFarm(farmId),
-        fetchAssignedZones(farmId),
-        fetchBlocks(farmId),
-      ]);
-      setZones(zonesData);
-      setAssignedZones(assignedData);
-      setBlocks(blocksData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu vùng sản xuất.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Silent background realtime sync for Owner & Staff
+  useRealtimeSync(() => {
+    void loadData(true);
+  });
 
-  const showNotification = (text: string, type: 'success' | 'error' = 'success') => {
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setNotification({ text, type });
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Zone Handlers
-  const handleZoneSuccess = (savedZone: Zone) => {
-    setZones((prev) => {
-      const idx = prev.findIndex((z) => z.zoneId === savedZone.zoneId);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = savedZone;
-        return copy;
+  async function loadData(silent: boolean | unknown = false) {
+    const isSilent = silent === true;
+    if (!isSilent) {
+      setLoading(true);
+      setError(null);
+    }
+    try {
+      const [zonesData, blocksData] = await Promise.all([
+        fetchZonesByFarm(farmId),
+        fetchBlocks(farmId),
+      ]);
+      setZones(zonesData);
+      setBlocks(blocksData);
+
+      const [assignedRes, assignListRes] = await Promise.allSettled([
+        fetchAssignedZones(farmId),
+        fetchZoneAssignments(farmId),
+      ]);
+      setAssignedZones(assignedRes.status === 'fulfilled' ? assignedRes.value : []);
+      setAssignments(
+        assignListRes.status === 'fulfilled' ? assignListRes.value.filter((a) => a.active) : []
+      );
+      if (isSilent) setError(null);
+    } catch (err) {
+      if (!isSilent) {
+        setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu phân khu & lô đất.');
       }
-      return [savedZone, ...prev];
+    } finally {
+      if (!isSilent) setLoading(false);
+    }
+  }
+
+  // Staff only sees assigned Zones
+  const visibleZones = useMemo(() => {
+    if (isOwner) return zones;
+    if (assignedZones.length > 0) {
+      const assignedIds = new Set(assignedZones.map((az) => az.zoneId));
+      const matched = zones.filter((z) => assignedIds.has(z.zoneId));
+      if (matched.length > 0) return matched;
+    }
+    return zones;
+  }, [zones, assignedZones, isOwner]);
+
+  const staffByZoneMap = useMemo(() => {
+    const map = new Map<number, StaffZoneAssignment[]>();
+    assignments.forEach((a) => {
+      if (!a.active) return;
+      const list = map.get(a.zoneId) || [];
+      list.push(a);
+      map.set(a.zoneId, list);
     });
-    showNotification(zoneToEdit ? 'Cập nhật phân khu thành công!' : 'Tạo phân khu mới thành công!');
+    return map;
+  }, [assignments]);
+
+  const staffFilterOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    assignments.forEach((a) => {
+      if (!a.active) return;
+      map.set(String(a.farmMemberId), a.staffName || `Staff #${a.farmMemberId}`);
+    });
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+  }, [assignments]);
+
+  const blockCountByZoneMap = useMemo(() => {
+    const map = new Map<number, number>();
+    blocks.forEach((b) => {
+      map.set(b.zoneId, (map.get(b.zoneId) || 0) + 1);
+    });
+    return map;
+  }, [blocks]);
+
+  const filteredZones = useMemo(() => {
+    return visibleZones.filter((z) => {
+      const code = `ZN-${String(z.zoneId).padStart(3, '0')}`;
+      const kw = zoneKeyword.trim().toLowerCase();
+      const matchKw =
+        !kw ||
+        z.zoneName.toLowerCase().includes(kw) ||
+        code.toLowerCase().includes(kw) ||
+        Boolean(z.description && z.description.toLowerCase().includes(kw));
+
+      if (!matchKw) return false;
+
+      if (isOwner && assignedStaffFilter !== 'all') {
+        const zoneStaff = staffByZoneMap.get(z.zoneId) || [];
+        const hasStaff = zoneStaff.some((s) => String(s.farmMemberId) === assignedStaffFilter);
+        if (!hasStaff) return false;
+      }
+
+      return true;
+    });
+  }, [visibleZones, zoneKeyword, isOwner, assignedStaffFilter, staffByZoneMap]);
+
+  const visibleBlocks = useMemo(() => {
+    if (isOwner) return blocks;
+    const accessibleZoneIds = new Set(visibleZones.map((z) => z.zoneId));
+    return blocks.filter((b) => accessibleZoneIds.has(b.zoneId));
+  }, [blocks, visibleZones, isOwner]);
+
+  const filteredBlocks = useMemo(() => {
+    return visibleBlocks.filter((b) => {
+      const code = `BLK-${String(b.blockId).padStart(3, '0')}`;
+      const kw = blockKeyword.trim().toLowerCase();
+      const matchKw =
+        !kw ||
+        b.blockName.toLowerCase().includes(kw) ||
+        code.toLowerCase().includes(kw) ||
+        Boolean(b.description && b.description.toLowerCase().includes(kw));
+      const matchZone = selectedZoneFilter === 'all' || b.zoneId === Number(selectedZoneFilter);
+      return matchKw && matchZone;
+    });
+  }, [visibleBlocks, blockKeyword, selectedZoneFilter]);
+
+  const totalZoneAreaM2 = zones.reduce(
+    (acc, z) => acc + (z.areaUnit === 'ha' ? z.areaValue * 10000 : z.areaValue || 0),
+    0
+  );
+  const activeZonesCount = zones.filter((z) => (z.status || 'active').toLowerCase() === 'active').length;
+  const statsReady = !loading && !error;
+
+  const handleResetZoneFilters = () => {
+    setZoneKeyword('');
+    setAssignedStaffFilter('all');
+  };
+
+  const handleResetBlockFilters = () => {
+    setBlockKeyword('');
+    setSelectedZoneFilter('all');
+  };
+
+  const handleCreateZoneClick = () => {
     setZoneToEdit(null);
+    setIsZoneModalOpen(true);
+  };
+
+  const handleEditZoneClick = (z: Zone) => {
+    setZoneToEdit(z);
+    setIsZoneModalOpen(true);
+  };
+
+  const handleAttemptDeleteZone = (z: Zone) => {
+    const count = blockCountByZoneMap.get(z.zoneId) ?? z.totalBlocks ?? 0;
+    if (count > 0) {
+      showToast(
+        `Không thể xóa "${z.zoneName}" vì đang chứa ${count} Block. Hệ thống không xóa dây chuyền Block, mùa vụ hoặc nhật ký khi xóa Zone.`,
+        'error'
+      );
+      return;
+    }
+    setZoneToDelete(z);
   };
 
   const handleConfirmDeleteZone = async () => {
     if (!zoneToDelete) return;
     try {
       await deleteZone(zoneToDelete.zoneId);
-      setZones((prev) => prev.filter((z) => z.zoneId !== zoneToDelete.zoneId));
-      showNotification('Đã xóa phân khu thành công!');
+      setZones((prev) => prev.filter((item) => item.zoneId !== zoneToDelete.zoneId));
+      showToast(`Đã xóa Zone "${zoneToDelete.zoneName}" thành công!`);
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Xóa phân khu thất bại', 'error');
+      showToast(err instanceof Error ? err.message : 'Không thể xóa Zone khi đang có dữ liệu liên kết.', 'error');
     } finally {
       setZoneToDelete(null);
     }
   };
 
-  // Block Handlers
-  const handleBlockSuccess = (savedBlock: Block) => {
-    setBlocks((prev) => {
-      const idx = prev.findIndex((b) => b.blockId === savedBlock.blockId);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = savedBlock;
-        return copy;
-      }
-      return [savedBlock, ...prev];
-    });
-    showNotification(blockToEdit ? 'Cập nhật lô đất thành công!' : 'Tạo lô đất mới thành công!');
+  const handleCreateBlockClick = (zone?: Zone) => {
+    const targetZone = zone || visibleZones[0];
+    if (!targetZone) {
+      showToast('Vui lòng tạo ít nhất 1 Zone trước khi tạo Block!', 'error');
+      return;
+    }
     setBlockToEdit(null);
+    setTargetZoneForNewBlock({ id: targetZone.zoneId, name: targetZone.zoneName });
+    setIsBlockModalOpen(true);
+  };
+
+  const handleEditBlockClick = (b: Block) => {
+    setBlockToEdit(b);
+    const parentZone = zones.find((z) => z.zoneId === b.zoneId);
+    setTargetZoneForNewBlock({
+      id: b.zoneId,
+      name: b.zoneName || parentZone?.zoneName || `Zone #${b.zoneId}`,
+    });
+    setIsBlockModalOpen(true);
   };
 
   const handleConfirmDeleteBlock = async () => {
     if (!blockToDelete) return;
     try {
       await deleteBlock(blockToDelete.blockId);
-      setBlocks((prev) => prev.filter((b) => b.blockId !== blockToDelete.blockId));
-      showNotification('Đã xóa lô đất thành công!');
+      setBlocks((prev) => prev.filter((item) => item.blockId !== blockToDelete.blockId));
+      showToast(`Đã xóa Block "${blockToDelete.blockName}" thành công!`);
     } catch (err) {
-      showNotification(err instanceof Error ? err.message : 'Xóa lô đất thất bại', 'error');
+      showToast(err instanceof Error ? err.message : 'Không thể xóa Block khi đang có hồ sơ mùa vụ/điều kiện liên kết.', 'error');
     } finally {
       setBlockToDelete(null);
     }
   };
 
-  const handleConditionSuccess = (_obs: BlockConditionObservation) => {
-    showNotification('Đã ghi nhận tình trạng lô đất thành công!');
-  };
-
-  // Filters
-  const filteredZones = zones.filter((z) => {
-    const matchesKeyword = !keyword.trim() || z.zoneName.toLowerCase().includes(keyword.toLowerCase().trim());
-    const matchesStatus = statusFilter === 'all' || z.status === statusFilter;
-    return matchesKeyword && matchesStatus;
-  });
-
-  const filteredBlocks = blocks.filter((b) => {
-    const matchesKeyword = !keyword.trim() || b.blockName.toLowerCase().includes(keyword.toLowerCase().trim());
-    const matchesZone = selectedZoneFilter === 'all' || b.zoneId === selectedZoneFilter;
-    const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
-    return matchesKeyword && matchesZone && matchesStatus;
-  });
-
-  // Calculate Stats
-  const dataUnavailable = loading || Boolean(error);
-  const totalAreaM2 = zones.reduce((acc, z) => {
-    const val = z.areaUnit === 'ha' ? z.areaValue * 10000 : z.areaValue;
-    return acc + (val || 0);
-  }, 0);
-
   return (
-    <section className="production-page-section">
-      {/* Toast Notification */}
+    <section className="farm-registration-page" style={{ maxWidth: '1240px' }}>
+      {/* Page Heading matching FarmRegistrationPage & FarmInfoPage */}
+      <div className="page-heading">
+        <div>
+          <span className="eyebrow">Quản lý khu vực &amp; lô sản xuất</span>
+          <h1>{activeTab === 'zones' ? 'Khu vực sản xuất' : 'Lô sản xuất'}</h1>
+          <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: '14.5px' }}>
+            Quản lý các phân khu canh tác và lô sản xuất trực thuộc theo tiêu chuẩn VietGAP.
+          </p>
+        </div>
+
+        <div className="dashboard-actions">
+          <button
+            type="button"
+            className="action-button"
+            disabled={loading}
+            onClick={() => void loadData()}
+          >
+            Làm mới dữ liệu
+          </button>
+          {activeTab === 'zones' && isOwner && (
+            <>
+              <button
+                type="button"
+                className="action-button outlined"
+                onClick={() => {
+                  if (visibleZones.length === 0) {
+                    showToast('Vui lòng tạo khu vực trước khi phân công nhân sự.', 'error');
+                    return;
+                  }
+                  setZoneForAssignment(visibleZones[0]);
+                }}
+              >
+                <Icon name="user" /> Phân công nhân sự
+              </button>
+              <button type="button" className="primary-button" onClick={handleCreateZoneClick}>
+                <Icon name="plus" /> Thêm khu vực
+              </button>
+            </>
+          )}
+          {activeTab === 'blocks' && isOwner && (
+            <button type="button" className="primary-button" onClick={() => handleCreateBlockClick()}>
+              <Icon name="plus" /> Thêm lô đất
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Status / Action Banner matching FarmRegistrationPage */}
       {notification && (
         <div
-          className={`alert ${notification.type === 'error' ? 'alert--error' : 'alert--success'}`}
-          style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
+          style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
-          <Icon name={notification.type === 'error' ? 'warning' : 'check-circle'} />
-          <span>{notification.text}</span>
+          <span>
+            <strong>{notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: '}</strong>
+            {notification.text}
+          </span>
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            style={{ border: 0, background: 'transparent', cursor: 'pointer', fontWeight: 700, color: 'inherit' }}
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Header Banner & Stats */}
+      {/* Workspace Farm Banner & 4 Stat Cards (preserves .stat-number for tests) */}
       <div className="zone-header-banner">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <span className="badge badge--success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                <Icon name="leaf" size={13} /> VietGAP 2026
-              </span>
-              <span style={{ fontSize: '13px', color: '#64748b' }}>
-                Trang trại: <strong>{selectedFarm?.farmName || 'Trang trại Nông nghiệp số'}</strong>
-              </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                display: 'grid',
+                placeItems: 'center',
+                color: '#fff',
+                fontSize: '22px',
+                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.28)',
+              }}
+            >
+              🌱
             </div>
-            <h1 style={{ margin: '0 0 6px 0', fontSize: '26px', fontWeight: 800, color: '#0f172a' }}>
-              Quản lý Phân khu & Lô đất (Zone & Block)
-            </h1>
-            <p style={{ margin: 0, color: '#475569', fontSize: '14px', maxWidth: '640px' }}>
-              Mô hình chuẩn hóa cấp bậc: <strong>Phân khu (Zone)</strong> quản lý tập trung các <strong>Lô/Thửa đất canh tác (Block)</strong>, theo dõi hiện trạng và phân công nhân sự phụ trách (UC-16, UC-17 & UC-35).
-            </p>
+            <div>
+              <span className="eyebrow" style={{ color: '#047857' }}>Trang trại đang làm việc</span>
+              <h2 style={{ margin: '2px 0 0', fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{farmName}</h2>
+            </div>
           </div>
 
-          {/* Quick Actions */}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            {isOwner && (
-              <button
-                type="button"
-                className="btn btn-primary-emerald"
-                onClick={() => {
-                  setZoneToEdit(null);
-                  setIsZoneModalOpen(true);
-                }}
-              >
-                <Icon name="plus" /> Tạo Phân khu mới (Zone)
-              </button>
-            )}
-            <button type="button" className="btn btn-secondary" onClick={loadData} title="Tải lại dữ liệu">
-              <Icon name="refresh" /> Làm mới
-            </button>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span className="profile-role-pill">
+              {isOwner ? 'Chủ trang trại' : 'Nhân sự phụ trách'}
+            </span>
+            <Link to="/farm" className="action-button" style={{ minHeight: '38px', padding: '6px 14px', fontSize: '13px' }}>
+              Hồ sơ trang trại →
+            </Link>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="zone-stats-grid">
+        <div className="zone-stats-grid" style={{ marginBottom: 0 }}>
           <div className="zone-stat-card">
             <div className="zone-stat-icon">
-              <Icon name="plots" />
+              <Icon name="plots" size={20} />
             </div>
             <div className="zone-stat-content">
-              <h4>Tổng số Phân khu</h4>
-              <div className="stat-number">{dataUnavailable ? '—' : `${zones.length} khu`}</div>
+              <h4>Tổng số khu vực</h4>
+              <strong className="stat-number">{statsReady ? `${zones.length} khu` : '—'}</strong>
             </div>
           </div>
-
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--blue">
-              <Icon name="leaf" />
+              <Icon name="leaf" size={20} />
             </div>
             <div className="zone-stat-content">
-              <h4>Lô / Thửa canh tác</h4>
-              <div className="stat-number">{dataUnavailable ? '—' : `${blocks.length} lô`}</div>
+              <h4>Tổng số lô đất</h4>
+              <strong className="stat-number">{statsReady ? `${blocks.length} lô` : '—'}</strong>
             </div>
           </div>
-
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--amber">
-              <Icon name="sprout" />
+              <Icon name="home" size={20} />
             </div>
             <div className="zone-stat-content">
-              <h4>Tổng quy mô diện tích</h4>
-              <div className="stat-number">
-                {dataUnavailable ? '—' : totalAreaM2 >= 10000 ? `${(totalAreaM2 / 10000).toFixed(2)} ha` : `${totalAreaM2.toLocaleString()} m²`}
-              </div>
+              <h4>Tổng diện tích</h4>
+              <strong className="stat-number">
+                {statsReady ? `${totalZoneAreaM2.toLocaleString('vi-VN')} m²` : '—'}
+              </strong>
             </div>
           </div>
-
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--purple">
-              <Icon name="shield" />
+              <Icon name="check" size={20} />
             </div>
             <div className="zone-stat-content">
-              <h4>Khu vực tôi phụ trách</h4>
-              <div className="stat-number">{dataUnavailable ? '—' : `${assignedZones.length} khu`}</div>
+              <h4>Đang quản lý</h4>
+              <strong className="stat-number">{statsReady ? `${activeZonesCount} khu` : '—'}</strong>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs Navigation */}
+      {/* Tabs Navigation: Zones vs Blocks */}
       <div className="zone-tabs-nav">
         <button
           type="button"
-          className={`zone-tab-btn ${activeTab === 'zones' ? 'active' : ''}`}
+          className={activeTab === 'zones' ? 'zone-tab-btn active' : 'zone-tab-btn'}
           onClick={() => setActiveTab('zones')}
         >
-          <Icon name="plots" size={16} /> Tất cả Phân khu ({dataUnavailable ? '—' : zones.length})
+          <Icon name="plots" size={16} /> Khu vực ({visibleZones.length})
         </button>
         <button
           type="button"
-          className={`zone-tab-btn ${activeTab === 'assigned' ? 'active' : ''}`}
-          onClick={() => setActiveTab('assigned')}
-        >
-          <Icon name="user" size={16} /> Phân khu tôi phụ trách ({dataUnavailable ? '—' : assignedZones.length})
-        </button>
-        <button
-          type="button"
-          className={`zone-tab-btn ${activeTab === 'blocks' ? 'active' : ''}`}
+          className={activeTab === 'blocks' ? 'zone-tab-btn active' : 'zone-tab-btn'}
           onClick={() => setActiveTab('blocks')}
         >
-          <Icon name="leaf" size={16} /> Quản lý Lô đất / Thửa ({dataUnavailable ? '—' : blocks.length})
+          <Icon name="leaf" size={16} /> Lô đất ({visibleBlocks.length})
         </button>
       </div>
 
-      {/* Search & Filter Toolbar */}
-      <div className="panel" style={{ padding: '14px 18px', marginBottom: '20px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: '1', minWidth: '240px' }}>
-          <Icon
-            name="search"
-            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}
-          />
-          <input
-            type="text"
-            className="form-input"
-            style={{ paddingLeft: '36px' }}
-            placeholder={activeTab === 'blocks' ? 'Tìm theo tên lô đất, mã lô...' : 'Tìm theo tên phân khu...'}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
+      {/* Loading & Error Panels matching FarmRegistrationPage */}
+      {loading && (
+        <div className="panel empty-state">
+          <div className="empty-icon">⏳</div>
+          <h2>Đang tải dữ liệu phân khu &amp; lô sản xuất...</h2>
+          <p>Hệ thống đang đồng bộ danh sách khu vực và lô sản xuất từ máy chủ trang trại.</p>
         </div>
-
-        {activeTab === 'blocks' && (
-          <select
-            className="form-select"
-            style={{ width: 'auto', minWidth: '180px' }}
-            value={selectedZoneFilter}
-            onChange={(e) => setSelectedZoneFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-          >
-            <option value="all">Tất cả phân khu</option>
-            {zones.map((z) => (
-              <option key={z.zoneId} value={z.zoneId}>
-                {z.zoneName}
-              </option>
-            ))}
-          </select>
-        )}
-
-        <select
-          className="form-select"
-          style={{ width: 'auto', minWidth: '150px' }}
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">Tất cả trạng thái</option>
-          <option value="active">Đang hoạt động</option>
-          <option value="AVAILABLE">Sẵn sàng canh tác</option>
-          <option value="IN_USE">Đang trồng trọt</option>
-          <option value="RESTING">Đang nghỉ / cải tạo</option>
-        </select>
-      </div>
-
-      {/* TAB CONTENT */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-          <Icon name="loader" className="animate-spin" size={32} />
-          <p style={{ marginTop: '12px' }}>Đang tải thông tin phân khu & lô đất...</p>
-        </div>
-      ) : error ? (
-        <div className="alert alert--error" role="alert">
-          <p>{error}</p>
-          <button type="button" className="action-button" onClick={loadData}>Thử lại</button>
-        </div>
-      ) : activeTab === 'zones' ? (
-        /* ALL ZONES TAB (UC-16) */
-        filteredZones.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
-            <span style={{ fontSize: '44px' }}>🏞️</span>
-            <h3 style={{ margin: '12px 0 6px 0', color: '#1e293b' }}>Chưa tìm thấy phân khu nào</h3>
-            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '16px' }}>
-              Trang trại chưa có phân khu nào khớp với điều kiện tìm kiếm. Hãy thêm phân khu đầu tiên!
-            </p>
-            {isOwner && (
-              <button
-                type="button"
-                className="btn btn-primary-emerald"
-                onClick={() => {
-                  setZoneToEdit(null);
-                  setIsZoneModalOpen(true);
-                }}
-              >
-                <Icon name="plus" /> Tạo Phân khu đầu tiên
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="zone-grid">
-            {filteredZones.map((zone) => {
-              const zoneBlocks = blocks.filter((b) => b.zoneId === zone.zoneId);
-              return (
-                <div key={zone.zoneId} className="zone-card">
-                  <div className="zone-card-image-wrap">
-                    <img
-                      src={
-                        zone.imageUrl ||
-                        'https://images.unsplash.com/photo-1592417817098-8f3d6910985c?auto=format&fit=crop&w=600&q=80'
-                      }
-                      alt={zone.zoneName}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src =
-                          'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?auto=format&fit=crop&w=600&q=80';
-                      }}
-                    />
-                    <span className="zone-card-badge">Mã: ZN-{String(zone.zoneId).padStart(3, '0')}</span>
-                  </div>
-
-                  <div className="zone-card-body">
-                    <h3 className="zone-card-title">{zone.zoneName}</h3>
-                    <p className="zone-card-desc">
-                      {zone.description || 'Chưa có mô tả đặc điểm phân khu và hệ thống nhà màng/thủy canh.'}
-                    </p>
-
-                    <div className="zone-card-meta-row">
-                      <div className="zone-meta-item">
-                        <span className="zone-meta-label">Quy mô</span>
-                        <span className="zone-meta-val highlight">
-                          {zone.areaValue?.toLocaleString()} {zone.areaUnit || 'm²'}
-                        </span>
-                      </div>
-                      <div className="zone-meta-item">
-                        <span className="zone-meta-label">Số lô con</span>
-                        <span className="zone-meta-val">{zoneBlocks.length} lô</span>
-                      </div>
-                      <div className="zone-meta-item">
-                        <span className="zone-meta-label">Trạng thái</span>
-                        <span className="badge badge--success" style={{ fontSize: '11px', padding: '2px 8px' }}>
-                          {zone.status || 'Hoạt động'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="zone-card-actions">
-                      <Link
-                        to={`/zones/${zone.zoneId}`}
-                        className="btn btn-primary-emerald btn-sm-action"
-                        style={{ flex: 1, justifyContent: 'center' }}
-                      >
-                        <Icon name="eye" /> Quản lý lô con ({zoneBlocks.length})
-                      </Link>
-
-                      {isOwner && (
-                        <>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm-action"
-                            onClick={() => {
-                              setZoneToEdit(zone);
-                              setIsZoneModalOpen(true);
-                            }}
-                            title="Sửa thông tin phân khu"
-                          >
-                            <Icon name="edit" />
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm-action"
-                            style={{ color: '#ef4444' }}
-                            onClick={() => setZoneToDelete(zone)}
-                            title="Xóa phân khu"
-                          >
-                            <Icon name="close" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )
-      ) : activeTab === 'assigned' ? (
-        /* MY ASSIGNED ZONES TAB (UC-16.1) */
-        assignedZones.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
-            <span style={{ fontSize: '44px' }}>🛡️</span>
-            <h3 style={{ margin: '12px 0 6px 0', color: '#1e293b' }}>Bạn chưa được phân công phụ trách phân khu nào</h3>
-            <p style={{ color: '#64748b', fontSize: '14px' }}>
-              Khi Chủ trang trại phân công bạn quản lý phân khu, thông tin và các lô đất trực thuộc sẽ hiển thị tại đây.
-            </p>
-          </div>
-        ) : (
-          <div className="zone-grid">
-            {assignedZones.map((az) => (
-              <div key={az.zoneId} className="zone-card" style={{ borderColor: '#10b981' }}>
-                <div className="zone-card-body">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span className="badge badge--success">Được phân công</span>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>
-                      Bắt đầu: {az.assignedStartDate ? new Date(az.assignedStartDate).toLocaleDateString('vi-VN') : 'Hiện tại'}
-                    </span>
-                  </div>
-                  <h3 className="zone-card-title">{az.zoneName}</h3>
-                  <p className="zone-card-desc">{az.description || 'Phân khu sản xuất được giao phụ trách kỹ thuật.'}</p>
-
-                  <div className="zone-card-meta-row">
-                    <div className="zone-meta-item">
-                      <span className="zone-meta-label">Diện tích</span>
-                      <span className="zone-meta-val highlight">
-                        {az.areaValue?.toLocaleString()} {az.areaUnit || 'm²'}
-                      </span>
-                    </div>
-                    <div className="zone-meta-item">
-                      <span className="zone-meta-label">Lô đất phụ trách</span>
-                      <span className="zone-meta-val">{az.activeBlockCount} lô</span>
-                    </div>
-                  </div>
-
-                  <Link
-                    to={`/zones/${az.zoneId}`}
-                    className="btn btn-primary-emerald btn-sm-action"
-                    style={{ width: '100%', justifyContent: 'center' }}
-                  >
-                    <Icon name="eye" /> Xem chi tiết phân khu & Lô đất (UC-16.2)
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      ) : (
-        /* ALL BLOCKS TAB (UC-17) */
-        filteredBlocks.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px 20px', background: 'white', borderRadius: '16px', border: '1px dashed #cbd5e1' }}>
-            <span style={{ fontSize: '44px' }}>🌾</span>
-            <h3 style={{ margin: '12px 0 6px 0', color: '#1e293b' }}>Không tìm thấy lô đất nào</h3>
-            <p style={{ color: '#64748b', fontSize: '14px' }}>
-              Chưa có lô đất nào trong phân khu đã chọn. Vui lòng chọn phân khu và tạo lô đất mới.
-            </p>
-          </div>
-        ) : (
-          <div className="block-grid">
-            {filteredBlocks.map((block) => (
-              <div key={block.blockId} className="block-card">
-                <div className="block-card-header">
-                  <div>
-                    <h4 className="block-name">{block.blockName}</h4>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>{block.zoneName}</span>
-                  </div>
-                  <span className="block-tag">{block.status || 'Sẵn sàng'}</span>
-                </div>
-
-                <div className="block-details-list">
-                  <div className="block-detail-row">
-                    <span className="block-detail-label">Diện tích:</span>
-                    <span className="block-detail-value">
-                      {block.areaValue?.toLocaleString()} {block.areaUnit || 'm²'}
-                    </span>
-                  </div>
-                  <div className="block-detail-row">
-                    <span className="block-detail-label">Loại đất/giá thể:</span>
-                    <span className="block-detail-value">{block.soilType || 'Chưa cập nhật'}</span>
-                  </div>
-                  {block.latitude && block.longitude && (
-                    <div className="block-detail-row">
-                      <span className="block-detail-label">Tọa độ:</span>
-                      <span className="block-detail-value" style={{ fontSize: '12px', color: '#0369a1' }}>
-                        {block.latitude.toFixed(4)}, {block.longitude.toFixed(4)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="block-action-bar">
-                  <button
-                    type="button"
-                    className="btn btn-primary-emerald btn-sm-action"
-                    style={{ flex: 1 }}
-                    onClick={() => {
-                      setConditionBlock(block);
-                      setIsRecordConditionOpen(true);
-                    }}
-                    title="Ghi nhận tình trạng lô đất (UC-17.4)"
-                  >
-                    <Icon name="check-circle" size={14} /> Ghi nhận tình trạng
-                  </button>
-
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm-action"
-                    onClick={() => {
-                      setConditionBlock(block);
-                      setIsConditionHistoryOpen(true);
-                    }}
-                    title="Xem lịch sử theo dõi (UC-17.4)"
-                  >
-                    <Icon name="history" size={14} /> Lịch sử
-                  </button>
-
-                  {isOwner && (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm-action"
-                        onClick={() => {
-                          setBlockToEdit(block);
-                          setTargetZoneForNewBlock({ id: block.zoneId, name: block.zoneName || '' });
-                          setIsBlockModalOpen(true);
-                        }}
-                        title="Sửa lô đất"
-                      >
-                        <Icon name="edit" size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm-action"
-                        style={{ color: '#ef4444' }}
-                        onClick={() => setBlockToDelete(block)}
-                        title="Xóa lô đất"
-                      >
-                        <Icon name="close" size={14} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )
       )}
 
-      {/* ZONE MODAL (Create / Edit) */}
+      {!loading && error && (
+        <div className="panel empty-state" role="alert">
+          <div className="empty-icon">⚠️</div>
+          <h2>Không thể tải danh sách phân khu</h2>
+          <p>{error}</p>
+          <button type="button" className="primary-button" onClick={loadData}>
+            Thử lại
+          </button>
+        </div>
+      )}
+
+      {/* =========================================================
+          SCREEN 1: ZONES (Danh sách Zone)
+         ========================================================= */}
+      {!loading && !error && activeTab === 'zones' && (
+        <>
+          {/* Filter Panel: Search Zones, Assigned Staff (Owner), Reset Filters */}
+          <div className="production-filter-panel">
+            <label className="form-field" style={{ flex: '1.5 1 280px' }}>
+              <span>
+                Tìm kiếm khu vực
+                <small style={{ color: '#059669', fontWeight: 700 }}>Tên / Mã</small>
+              </span>
+              <input
+                id="search-zones-input"
+                type="search"
+                placeholder="VD: Khu A, Khu trồng rau ăn lá, ZN-001..."
+                value={zoneKeyword}
+                onChange={(e) => setZoneKeyword(e.target.value)}
+              />
+            </label>
+
+            {isOwner && (
+              <label className="form-field" style={{ flex: '1 1 240px' }}>
+                <span>
+                  Nhân sự phụ trách
+                  <small style={{ color: '#059669', fontWeight: 700 }}>Lọc theo nhân sự</small>
+                </span>
+                <select
+                  id="assigned-staff-filter"
+                  value={assignedStaffFilter}
+                  onChange={(e) => setAssignedStaffFilter(e.target.value)}
+                >
+                  <option value="all">-- Tất cả nhân sự --</option>
+                  {staffFilterOptions.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      {st.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+
+            <button
+              type="button"
+              className="action-button"
+              onClick={handleResetZoneFilters}
+              style={{ height: '46px' }}
+            >
+              Đặt lại bộ lọc
+            </button>
+          </div>
+
+          {filteredZones.length === 0 ? (
+            <div className="panel empty-state">
+              <div className="empty-icon">🗺️</div>
+              <h2>Chưa tìm thấy phân khu nào</h2>
+              <p>
+                {isOwner
+                  ? 'Hãy nhấn "Thêm khu vực" để thiết lập khu vực quản lý đầu tiên cho trang trại.'
+                  : 'Bạn hiện chưa được phân công phụ trách khu vực nào trong trang trại này.'}
+              </p>
+              {isOwner && (
+                <button type="button" className="primary-button" onClick={handleCreateZoneClick}>
+                  <Icon name="plus" /> Thêm khu vực
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="panel" style={{ padding: '24px' }}>
+              <div className="panel-title" style={{ marginBottom: '18px' }}>
+                <div>
+                  <span className="eyebrow">Danh sách khu vực quản lý</span>
+                  <h2 style={{ margin: '4px 0 0' }}>Khu vực ({filteredZones.length})</h2>
+                </div>
+                {isOwner && (
+                  <button type="button" className="primary-button" onClick={handleCreateZoneClick}>
+                    <Icon name="plus" /> Thêm khu vực
+                  </button>
+                )}
+              </div>
+
+              <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Tên khu vực</th>
+                      <th>Mô tả</th>
+                      <th>Diện tích</th>
+                      <th style={{ textAlign: 'center' }}>Số lượng lô đất</th>
+                      <th>Nhân sự phụ trách</th>
+                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredZones.map((zone) => {
+                      const blockCount = blockCountByZoneMap.get(zone.zoneId) ?? zone.totalBlocks ?? 0;
+                      const zoneStaff = staffByZoneMap.get(zone.zoneId) || [];
+                      const canDelete = isOwner && blockCount === 0;
+
+                      return (
+                        <tr key={zone.zoneId}>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span className="module-code" style={{ alignSelf: 'flex-start' }}>
+                                {zone.areaCode || `ZN-${String(zone.zoneId).padStart(3, '0')}`}
+                              </span>
+                              <Link
+                                to={`/zones/${zone.zoneId}`}
+                                style={{ fontWeight: 750, fontSize: '15.5px', color: '#0f172a' }}
+                              >
+                                {zone.zoneName}
+                              </Link>
+                            </div>
+                          </td>
+
+                          <td style={{ maxWidth: '300px', color: '#475569', lineHeight: 1.5 }}>
+                            {zone.description || 'Khu vực quản lý canh tác chuẩn VietGAP.'}
+                          </td>
+
+                          <td>
+                            <strong style={{ color: '#059669', fontSize: '14.5px' }}>
+                              {zone.areaValue.toLocaleString('vi-VN')} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
+                            </strong>
+                          </td>
+
+                          <td style={{ textAlign: 'center' }}>
+                            <span className="knowledge-tag" style={{ fontSize: '13.5px', padding: '5px 14px' }}>
+                              {blockCount} lô
+                            </span>
+                          </td>
+
+                          <td>
+                            {zoneStaff.length === 0 ? (
+                              <span style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>
+                                Chưa phân công
+                              </span>
+                            ) : (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                {zoneStaff.map((st) => (
+                                  <span key={st.assignmentId} className="knowledge-tag">
+                                    👤 {st.staffName || `Staff #${st.farmMemberId}`}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                              <Link
+                                to={`/zones/${zone.zoneId}`}
+                                className="primary-button"
+                                style={{ padding: '8px 14px', fontSize: '13px' }}
+                              >
+                                Xem chi tiết
+                              </Link>
+                              {isOwner && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="action-button"
+                                    style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                    onClick={() => handleEditZoneClick(zone)}
+                                  >
+                                    Chỉnh sửa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="action-button outlined"
+                                    style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                    onClick={() => setZoneForAssignment(zone)}
+                                  >
+                                    Phân công
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={canDelete ? 'action-button danger' : 'action-button'}
+                                    style={{
+                                      minHeight: '36px',
+                                      padding: '6px 12px',
+                                      fontSize: '13px',
+                                      opacity: canDelete ? 1 : 0.55,
+                                    }}
+                                    title={
+                                      canDelete
+                                        ? 'Xóa khu vực'
+                                        : `Không thể xóa khi khu vực còn ${blockCount} lô đất liên kết`
+                                    }
+                                    onClick={() => handleAttemptDeleteZone(zone)}
+                                  >
+                                    Xóa
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* =========================================================
+          SCREEN 3: BLOCKS (Danh sách Block)
+         ========================================================= */}
+      {!loading && !error && activeTab === 'blocks' && (
+        <>
+          {/* Filter Panel: Search Blocks, Zone, Reset Filters */}
+          <div className="production-filter-panel">
+            <label className="form-field" style={{ flex: '1.5 1 280px' }}>
+              <span>
+                Tìm kiếm lô đất
+                <small style={{ color: '#059669', fontWeight: 700 }}>Tên / Mã</small>
+              </span>
+              <input
+                id="search-blocks-input"
+                type="search"
+                placeholder="VD: Lô B01, Lô sản xuất rau cải, BLK-001..."
+                value={blockKeyword}
+                onChange={(e) => setBlockKeyword(e.target.value)}
+              />
+            </label>
+
+            <label className="form-field" style={{ flex: '1 1 240px' }}>
+              <span>
+                Khu vực trực thuộc
+                <small style={{ color: '#059669', fontWeight: 700 }}>Khu vực</small>
+              </span>
+              <select
+                id="block-zone-filter"
+                value={selectedZoneFilter}
+                onChange={(e) =>
+                  setSelectedZoneFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))
+                }
+              >
+                <option value="all">-- Tất cả khu vực --</option>
+                {visibleZones.map((z) => (
+                  <option key={z.zoneId} value={z.zoneId}>
+                    {z.zoneName}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              type="button"
+              className="action-button"
+              onClick={handleResetBlockFilters}
+              style={{ height: '46px' }}
+            >
+              Đặt lại bộ lọc
+            </button>
+          </div>
+
+          {filteredBlocks.length === 0 ? (
+            <div className="panel empty-state">
+              <div className="empty-icon">🌿</div>
+              <h2>Chưa tìm thấy lô sản xuất nào</h2>
+              <p>
+                {isOwner
+                  ? 'Nhấn "Thêm lô đất" để thêm lô sản xuất mới bên trong khu vực.'
+                  : 'Không có lô đất nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.'}
+              </p>
+              {isOwner && visibleZones.length > 0 && (
+                <button type="button" className="primary-button" onClick={() => handleCreateBlockClick()}>
+                  <Icon name="plus" /> Thêm lô đất
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="panel" style={{ padding: '24px' }}>
+              <div className="panel-title" style={{ marginBottom: '18px' }}>
+                <div>
+                  <span className="eyebrow">Danh sách lô sản xuất trong phạm vi</span>
+                  <h2 style={{ margin: '4px 0 0' }}>Lô đất ({filteredBlocks.length})</h2>
+                </div>
+                {isOwner && (
+                  <button type="button" className="primary-button" onClick={() => handleCreateBlockClick()}>
+                    <Icon name="plus" /> Thêm lô đất
+                  </button>
+                )}
+              </div>
+
+              <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Tên lô đất</th>
+                      <th>Khu vực</th>
+                      <th>Mô tả</th>
+                      <th style={{ textAlign: 'center' }}>Diện tích</th>
+                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBlocks.map((b) => {
+                      const parentZone = zones.find((z) => z.zoneId === b.zoneId);
+                      const zoneDisplay = b.zoneName || parentZone?.zoneName || `Khu #${b.zoneId}`;
+
+                      return (
+                        <tr key={b.blockId}>
+                          <td>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                              <span className="module-code" style={{ alignSelf: 'flex-start' }}>
+                                BLK-{String(b.blockId).padStart(3, '0')}
+                              </span>
+                              <Link
+                                to={`/zones/${b.zoneId}/blocks/${b.blockId}`}
+                                style={{ fontWeight: 750, fontSize: '15.5px', color: '#0f172a' }}
+                              >
+                                {b.blockName}
+                              </Link>
+                            </div>
+                          </td>
+
+                          <td>
+                            <Link to={`/zones/${b.zoneId}`} className="knowledge-tag">
+                              🗺️ {zoneDisplay}
+                            </Link>
+                          </td>
+
+                          <td style={{ maxWidth: '320px', color: '#475569', lineHeight: 1.5 }}>
+                            <div>{b.description || 'Lô sản xuất nông nghiệp tiêu chuẩn VietGAP.'}</div>
+                            {b.soilType && (
+                              <small style={{ color: '#059669', fontWeight: 700, display: 'block', marginTop: '4px' }}>
+                                Loại đất: {b.soilType}
+                              </small>
+                            )}
+                          </td>
+
+                          <td style={{ textAlign: 'center' }}>
+                            <strong style={{ color: '#0f172a', fontSize: '14.5px' }}>
+                              {b.areaValue.toLocaleString('vi-VN')} {b.areaUnit === 'm2' ? 'm²' : b.areaUnit}
+                            </strong>
+                          </td>
+
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                              <button
+                                type="button"
+                                className="primary-button"
+                                style={{ padding: '8px 14px', fontSize: '13px' }}
+                                onClick={() => navigate(`/zones/${b.zoneId}/blocks/${b.blockId}`)}
+                              >
+                                Xem chi tiết
+                              </button>
+                              <button
+                                type="button"
+                                className="action-button"
+                                style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                onClick={() => handleEditBlockClick(b)}
+                              >
+                                Chỉnh sửa
+                              </button>
+                              <button
+                                type="button"
+                                className="action-button outlined"
+                                style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                onClick={() => {
+                                  setConditionBlock({ ...b, zoneName: zoneDisplay });
+                                  setIsRecordConditionOpen(true);
+                                }}
+                              >
+                                Ghi nhận điều kiện
+                              </button>
+                              {isOwner && (
+                                <button
+                                  type="button"
+                                  className="action-button danger"
+                                  style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                  onClick={() => setBlockToDelete(b)}
+                                >
+                                  Xóa
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* =========================================================
+          MODALS
+         ========================================================= */}
       <ZoneModal
         isOpen={isZoneModalOpen}
-        onClose={() => setIsZoneModalOpen(false)}
+        mode={zoneToEdit ? 'edit' : 'create'}
         farmId={farmId}
-        zoneToEdit={zoneToEdit}
-        onSuccess={handleZoneSuccess}
+        farmName={farmName}
+        initialZone={zoneToEdit}
+        onClose={() => setIsZoneModalOpen(false)}
+        onSuccess={(saved) => {
+          if (zoneToEdit) {
+            setZones((prev) => prev.map((z) => (z.zoneId === saved.zoneId ? saved : z)));
+            showToast(`Đã cập nhật khu vực "${saved.zoneName}" thành công!`);
+          } else {
+            setZones((prev) => [saved, ...prev]);
+            showToast(`Đã tạo mới khu vực "${saved.zoneName}" thành công!`);
+          }
+        }}
       />
 
-      {/* BLOCK MODAL (Create / Edit) */}
       <BlockModal
         isOpen={isBlockModalOpen}
-        onClose={() => setIsBlockModalOpen(false)}
+        mode={blockToEdit ? 'edit' : 'create'}
         zoneId={targetZoneForNewBlock.id}
         zoneName={targetZoneForNewBlock.name}
-        blockToEdit={blockToEdit}
-        onSuccess={handleBlockSuccess}
+        availableZones={visibleZones}
+        lockZone={Boolean(blockToEdit)}
+        initialBlock={blockToEdit}
+        onClose={() => setIsBlockModalOpen(false)}
+        onSuccess={(saved) => {
+          if (blockToEdit) {
+            setBlocks((prev) => prev.map((b) => (b.blockId === saved.blockId ? saved : b)));
+            showToast(`Đã cập nhật lô đất "${saved.blockName}" thành công!`);
+          } else {
+            setBlocks((prev) => [saved, ...prev]);
+            showToast(`Đã tạo mới lô đất "${saved.blockName}" thành công!`);
+          }
+        }}
       />
 
-      {/* RECORD CONDITION MODAL (UC-17.4) */}
       <RecordConditionModal
         isOpen={isRecordConditionOpen}
+        block={conditionBlock}
         onClose={() => setIsRecordConditionOpen(false)}
-        block={conditionBlock}
-        onSuccess={handleConditionSuccess}
+        onSuccess={(obs: BlockConditionObservation) => {
+          showToast(`Đã lưu hồ sơ điều kiện (${obs.conditionType}) cho "${conditionBlock?.blockName}"!`);
+        }}
       />
 
-      {/* CONDITION HISTORY MODAL (UC-17.4) */}
-      <BlockConditionHistoryModal
-        isOpen={isConditionHistoryOpen}
-        onClose={() => setIsConditionHistoryOpen(false)}
-        block={conditionBlock}
-        onOpenRecord={() => setIsRecordConditionOpen(true)}
+      <AssignStaffModal
+        isOpen={Boolean(zoneForAssignment)}
+        farmId={farmId}
+        zoneId={zoneForAssignment?.zoneId || 1}
+        zoneName={zoneForAssignment?.zoneName || ''}
+        availableZones={visibleZones}
+        onClose={() => setZoneForAssignment(null)}
+        onSuccess={(newAssign) => {
+          setAssignments((prev) => [newAssign, ...prev]);
+          showToast(`Đã phân công "${newAssign.staffName || 'nhân viên'}" phụ trách khu vực thành công!`);
+        }}
       />
 
-      {/* DELETE ZONE CONFIRM DIALOG */}
       <ConfirmDialog
         open={Boolean(zoneToDelete)}
-        title="Xác nhận xóa phân khu (Zone)"
-        description={`Bạn có chắc chắn muốn xóa phân khu "${zoneToDelete?.zoneName}"? Hành động này không thể hoàn tác.`}
-        confirmLabel="Xóa phân khu"
-        cancelLabel="Hủy"
+        title="Xác nhận xóa khu vực"
+        description={`Bạn có chắc chắn muốn xóa khu vực "${zoneToDelete?.zoneName}"? Khu vực này hiện không có lô đất hay mùa vụ liên kết.`}
+        confirmLabel="Xóa khu vực"
         tone="danger"
-        onConfirm={handleConfirmDeleteZone}
         onClose={() => setZoneToDelete(null)}
+        onConfirm={handleConfirmDeleteZone}
       />
 
-      {/* DELETE BLOCK CONFIRM DIALOG */}
       <ConfirmDialog
         open={Boolean(blockToDelete)}
-        title="Xác nhận xóa Lô đất (Block)"
-        description={`Bạn có chắc chắn muốn xóa lô đất "${blockToDelete?.blockName}"?`}
+        title="Xác nhận xóa lô đất"
+        description={`Bạn có chắc chắn muốn xóa lô đất "${blockToDelete?.blockName}"? Hệ thống chỉ cho phép xóa khi lô đất chưa phát sinh mùa vụ hoặc nhật ký liên kết.`}
         confirmLabel="Xóa lô đất"
-        cancelLabel="Hủy"
         tone="danger"
-        onConfirm={handleConfirmDeleteBlock}
         onClose={() => setBlockToDelete(null)}
+        onConfirm={handleConfirmDeleteBlock}
       />
     </section>
   );

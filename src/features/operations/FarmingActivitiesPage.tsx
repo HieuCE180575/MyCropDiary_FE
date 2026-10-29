@@ -3,6 +3,7 @@ import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
+import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
 interface FarmingActivity {
   id: number;
@@ -39,12 +40,18 @@ export function FarmingActivitiesPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    loadActivities();
+    void loadActivities(false);
   }, [seasonId, selectedFarm?.id]);
 
-  const loadActivities = async () => {
-    setLoading(true);
-    setNotification(null);
+  useRealtimeSync(() => {
+    void loadActivities(true);
+  });
+
+  const loadActivities = async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setNotification(null);
+    }
     try {
       const res = await apiRequest<ApiResponse<{ items: FarmingActivity[] }>>(
         `/farming-activities?cropSeasonId=${seasonId}&size=50`
@@ -110,9 +117,9 @@ export function FarmingActivitiesPage() {
         ]);
       }
     } catch {
-      setNotification({ text: 'Lỗi nạp nhật ký canh tác từ máy chủ.', type: 'error' });
+      if (!silent) setNotification({ text: 'Lỗi nạp nhật ký canh tác từ máy chủ.', type: 'error' });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

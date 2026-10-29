@@ -121,5 +121,17 @@ async function sendRequest<T>(path: string, options: ApiRequestOptions, retried:
       : `Yêu cầu không thành công (${response.status}).`);
     throw new ApiError(response.status, message);
   }
+
+  const methodUpper = (init.method ?? 'GET').toUpperCase();
+  if (
+    (methodUpper === 'POST' || methodUpper === 'PUT' || methodUpper === 'PATCH' || methodUpper === 'DELETE') &&
+    !/^\/?auth\b/i.test(path)
+  ) {
+    const isSuccessPayload = !data || typeof data !== 'object' || !('success' in data) || Boolean((data as { success?: boolean }).success);
+    if (isSuccessPayload && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      window.dispatchEvent(new Event('mycropdiary:data-changed'));
+    }
+  }
+
   return data as T;
 }

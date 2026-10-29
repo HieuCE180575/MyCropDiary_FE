@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useRealtimeSync } from '../realtime/realtimeSync';
 
 export function useApiData<T>(load: (signal: AbortSignal) => Promise<T>) {
   const [data, setData] = useState<T>();
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
+  const silentControllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -16,7 +19,28 @@ export function useApiData<T>(load: (signal: AbortSignal) => Promise<T>) {
     }).finally(() => {
       if (!controller.signal.aborted) setLoading(false);
     });
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      silentControllerRef.current?.abort();
+    };
   }, [load, attempt]);
+
+  // Silent background realtime refresh (never sets loading=true or flashes UI)
+  useRealtimeSync(() => {
+    silentControllerRef.current?.abort();
+    const controller = new AbortController();
+    silentControllerRef.current = controller;
+    load(controller.signal)
+      .then((result) => {
+        if (!controller.signal.aborted) {
+          setData(result);
+          setError(undefined);
+        }
+      })
+      .catch(() => {
+        // Keep existing data intact on transient background error
+      });
+  });
+
   return { data, error, loading, retry: () => setAttempt((value) => value + 1) };
 }

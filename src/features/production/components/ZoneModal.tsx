@@ -1,189 +1,237 @@
 import { useEffect, useState } from 'react';
-import { Modal } from '../../../shared/components/Modal';
-import { Icon } from '../../../shared/components/Icon';
-import { createZone, updateZone } from '../zoneBlockService';
 import type { Zone, ZoneFormValues } from '../types';
+import { createZone, updateZone } from '../zoneBlockService';
 
 interface ZoneModalProps {
   isOpen: boolean;
-  onClose: () => void;
+  mode: 'create' | 'edit';
   farmId: number;
-  zoneToEdit?: Zone | null;
-  onSuccess: (zone: Zone) => void;
+  farmName?: string;
+  initialZone?: Zone | null;
+  onClose: () => void;
+  onSuccess: (savedZone: Zone) => void;
 }
 
-export function ZoneModal({ isOpen, onClose, farmId, zoneToEdit, onSuccess }: ZoneModalProps) {
-  const isEdit = Boolean(zoneToEdit);
-  const [zoneName, setZoneName] = useState('');
-  const [areaValue, setAreaValue] = useState('');
-  const [areaUnit, setAreaUnit] = useState('m2');
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+export function ZoneModal({
+  isOpen,
+  mode,
+  farmId,
+  farmName,
+  initialZone,
+  onClose,
+  onSuccess,
+}: ZoneModalProps) {
+  const [values, setValues] = useState<ZoneFormValues>({
+    zoneName: '',
+    areaValue: '',
+    areaUnit: 'm2',
+    description: '',
+    imageUrl: '',
+  });
+
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (zoneToEdit) {
-      setZoneName(zoneToEdit.zoneName);
-      setAreaValue(String(zoneToEdit.areaValue));
-      setAreaUnit(zoneToEdit.areaUnit || 'm2');
-      setDescription(zoneToEdit.description || '');
-      setImageUrl(zoneToEdit.imageUrl || '');
-    } else {
-      setZoneName('');
-      setAreaValue('');
-      setAreaUnit('m2');
-      setDescription('');
-      setImageUrl('');
+    if (isOpen) {
+      if (mode === 'edit' && initialZone) {
+        setValues({
+          zoneName: initialZone.zoneName || '',
+          areaValue: String(initialZone.areaValue || ''),
+          areaUnit: initialZone.areaUnit || 'm2',
+          description: initialZone.description || '',
+          imageUrl: initialZone.imageUrl || '',
+        });
+      } else {
+        setValues({
+          zoneName: '',
+          areaValue: '',
+          areaUnit: 'm2',
+          description: '',
+          imageUrl: '',
+        });
+      }
+      setError(null);
     }
-    setError(null);
-  }, [zoneToEdit, isOpen]);
+  }, [isOpen, mode, initialZone]);
+
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!zoneName.trim()) {
-      setError('Vui lòng nhập tên phân khu (Zone).');
+    if (!values.zoneName.trim()) {
+      setError('Vui lòng nhập tên khu vực quản lý (Zone Name).');
       return;
     }
-    if (!areaValue || isNaN(parseFloat(areaValue)) || parseFloat(areaValue) <= 0) {
-      setError('Diện tích phân khu phải là số dương hợp lệ.');
+    if (values.zoneName.trim().length > 100) {
+      setError('Zone Name không được vượt quá 100 ký tự.');
+      return;
+    }
+    const areaNum = parseFloat(values.areaValue);
+    if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
+      setError('Diện tích Zone phải là số dương hợp lệ (> 0).');
       return;
     }
 
-    setSubmitting(true);
+    setLoading(true);
     setError(null);
 
-    const values: ZoneFormValues = {
-      zoneName,
-      areaValue,
-      areaUnit,
-      description,
-      imageUrl,
-    };
-
     try {
-      let result: Zone;
-      if (isEdit && zoneToEdit) {
-        result = await updateZone(zoneToEdit.zoneId, values);
+      let saved: Zone;
+      if (mode === 'create') {
+        saved = await createZone(farmId, values);
       } else {
-        result = await createZone(farmId, values);
+        if (!initialZone) throw new Error('Không tìm thấy thông tin Zone cần cập nhật.');
+        saved = await updateZone(initialZone.zoneId, values);
       }
-      onSuccess(result);
+      onSuccess(saved);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Lưu phân khu thất bại. Vui lòng kiểm tra lại.');
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Zone.');
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Modal
-      open={isOpen}
-      onClose={onClose}
-      title={isEdit ? `Cập nhật phân khu: ${zoneToEdit?.zoneName}` : 'Tạo Phân khu sản xuất mới (Zone)'}
-    >
-      <form onSubmit={handleSubmit} className="form-layout">
-        {error && <div className="alert alert--error">{error}</div>}
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="zoneNameInput">
-            Tên phân khu (Zone) <span className="required-star">*</span>:
-          </label>
-          <input
-            id="zoneNameInput"
-            type="text"
-            className="form-input"
-            value={zoneName}
-            onChange={(e) => setZoneName(e.target.value)}
-            placeholder="Ví dụ: Phân khu A - Dưa lưới, Khu B - Rau ăn lá..."
-            required
-          />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-          <div className="form-group">
-            <label className="form-label" htmlFor="zoneAreaInput">
-              Quy mô diện tích <span className="required-star">*</span>:
-            </label>
-            <input
-              id="zoneAreaInput"
-              type="number"
-              step="any"
-              className="form-input"
-              value={areaValue}
-              onChange={(e) => setAreaValue(e.target.value)}
-              placeholder="Ví dụ: 10000"
-              required
-            />
+    <div className="modal-overlay" role="dialog" aria-modal="true">
+      <div className="modal-card" style={{ width: 'min(680px, 100%)', maxHeight: '90vh' }}>
+        <div className="modal-header">
+          <div>
+            <span className="eyebrow">
+              {mode === 'create' ? 'Khu vực sản xuất mới' : `Cập nhật khu vực #${initialZone?.zoneId}`}
+            </span>
+            <h2>{mode === 'create' ? 'Tạo khu vực sản xuất mới' : 'Cập nhật khu vực sản xuất'}</h2>
           </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="zoneUnitSelect">Đơn vị:</label>
-            <select
-              id="zoneUnitSelect"
-              className="form-select"
-              value={areaUnit}
-              onChange={(e) => setAreaUnit(e.target.value)}
-            >
-              <option value="m2">m²</option>
-              <option value="ha">hecta (ha)</option>
-            </select>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+
+        <form className="modal-body" onSubmit={handleSubmit} noValidate>
+          {error ? <p className="form-error-banner" role="alert">{error}</p> : null}
+
+          <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
+            <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
+              <span className="structured-field-label" style={{ color: '#065f46' }}>
+                Trang trại trực thuộc
+              </span>
+              <span className="structured-field-badge">Cố định</span>
+            </div>
+            <div style={{ fontWeight: 700, color: '#047857', fontSize: '15px' }}>
+              🌱 {farmName || `Farm #${farmId}`}
+            </div>
           </div>
-        </div>
 
-        <div className="form-group">
-          <label className="form-label" htmlFor="zoneDescInput">Mô tả phân khu & cơ sở hạ tầng:</label>
-          <textarea
-            id="zoneDescInput"
-            className="form-textarea"
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Mô tả công nghệ nhà màng, hệ thống tưới tiêu, tiêu chuẩn VietGAP áp dụng..."
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label" htmlFor="zoneImageInput">Link hình ảnh thực tế phân khu:</label>
-          <input
-            id="zoneImageInput"
-            type="url"
-            className="form-input"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://images.unsplash.com/..."
-          />
-          {imageUrl && (
-            <div style={{ marginTop: '8px' }}>
-              <img
-                src={imageUrl}
-                alt="Preview"
-                style={{ maxHeight: '120px', borderRadius: '8px', objectFit: 'cover' }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                }}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="zone-name-input" className="structured-field-label">
+                Tên khu vực quản lý <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">{values.zoneName.length}/100 ký tự · Bắt buộc</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="zone-name-input"
+                type="text"
+                maxLength={100}
+                placeholder="VD: Khu A - Khu trồng rau ăn lá nhà màng"
+                value={values.zoneName}
+                onChange={(e) => setValues({ ...values, zoneName: e.target.value })}
+                required
               />
             </div>
-          )}
-        </div>
+          </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-          <button type="button" className="btn btn-secondary" onClick={onClose} disabled={submitting}>
-            Hủy
-          </button>
-          <button type="submit" className="btn btn-primary-emerald" disabled={submitting}>
-            {submitting ? (
-              <>
-                <Icon name="loader" className="animate-spin" /> Đang lưu...
-              </>
-            ) : (
-              <>
-                <Icon name="save" /> {isEdit ? 'Cập nhật phân khu' : 'Tạo phân khu'}
-              </>
-            )}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="zone-area-input" className="structured-field-label">
+                  Diện tích quy hoạch <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">&gt; 0</span>
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <input
+                  id="zone-area-input"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="VD: 2500"
+                  value={values.areaValue}
+                  onChange={(e) => setValues({ ...values, areaValue: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="zone-unit-select" className="structured-field-label">
+                  Đơn vị diện tích
+                </label>
+                <span className="structured-field-badge">Đơn vị</span>
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <select
+                  id="zone-unit-select"
+                  value={values.areaUnit}
+                  onChange={(e) => setValues({ ...values, areaUnit: e.target.value })}
+                >
+                  <option value="m2">m² (Mét vuông)</option>
+                  <option value="ha">ha (Hecta)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="zone-desc-input" className="structured-field-label">
+                Mô tả đặc điểm khu vực &amp; hạ tầng
+              </label>
+              <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <textarea
+                id="zone-desc-input"
+                rows={3}
+                maxLength={500}
+                placeholder="Mô tả vị trí tiếp giáp, điều kiện nhà màng/nhà lưới, nguồn nước và nhóm cây trồng..."
+                value={values.description}
+                onChange={(e) => setValues({ ...values, description: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="zone-image-input" className="structured-field-label">
+                Đường dẫn ảnh sơ đồ / thực địa
+              </label>
+              <span className="structured-field-badge">Tùy chọn</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="zone-image-input"
+                type="url"
+                placeholder="https://..."
+                value={values.imageUrl}
+                onChange={(e) => setValues({ ...values, imageUrl: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
+              Hủy
+            </button>
+            <button type="submit" className="primary-button" disabled={loading}>
+              {loading ? 'Đang lưu...' : mode === 'create' ? 'Tạo khu vực' : 'Lưu thay đổi'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

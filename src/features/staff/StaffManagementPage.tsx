@@ -16,6 +16,7 @@ import {
   unassignStaffFromZone,
 } from '../production/zoneBlockService';
 import type { Zone, StaffZoneAssignment } from '../production/types';
+import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
 export function StaffManagementPage() {
   const { selectedFarm } = useFarmWorkspace();
@@ -46,12 +47,17 @@ export function StaffManagementPage() {
 
   useEffect(() => {
     if (!selectedFarm?.id) return;
-    void loadData();
+    void loadData(false);
   }, [selectedFarm?.id, activeTab]);
 
-  const loadData = async () => {
+  useRealtimeSync(() => {
     if (!selectedFarm?.id) return;
-    setLoading(true);
+    void loadData(true);
+  });
+
+  const loadData = async (silent = false) => {
+    if (!selectedFarm?.id) return;
+    if (!silent) setLoading(true);
     try {
       const [staffData, zoneData, assignData] = await Promise.all([
         getFarmStaffList(selectedFarm.id),
@@ -62,12 +68,14 @@ export function StaffManagementPage() {
       setZones(zoneData);
       setAssignments(assignData);
     } catch (err) {
-      setNotification({
-        text: err instanceof Error ? err.message : 'Không thể tải dữ liệu nhân sự trang trại.',
-        type: 'error',
-      });
+      if (!silent) {
+        setNotification({
+          text: err instanceof Error ? err.message : 'Không thể tải dữ liệu nhân sự trang trại.',
+          type: 'error',
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
