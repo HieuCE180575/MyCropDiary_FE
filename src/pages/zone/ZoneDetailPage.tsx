@@ -678,44 +678,48 @@ export function ZoneDetailPage() {
                         </td>
 
                         <td style={{ textAlign: 'right' }}>
-                          <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                          <div className="table-action-btns">
                             <Link
                               to={`/zones/${zone.zoneId}/blocks/${b.blockId}`}
-                              className="primary-button"
-                              style={{ padding: '8px 14px', fontSize: '13px' }}
+                              className="table-icon-btn primary"
+                              title="Xem chi tiết lô đất"
+                              aria-label={`Xem chi tiết ${b.blockName}`}
                             >
-                              Xem chi tiết
+                              <Icon name="eye" size={16} />
                             </Link>
                             <button
                               type="button"
-                              className="action-button"
-                              style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                              className="table-icon-btn edit"
+                              title="Chỉnh sửa lô đất"
+                              aria-label={`Chỉnh sửa ${b.blockName}`}
                               onClick={() => {
                                 setBlockToEdit(b);
                                 setIsBlockModalOpen(true);
                               }}
                             >
-                              Chỉnh sửa
+                              <Icon name="edit" size={16} />
                             </button>
                             <button
                               type="button"
-                              className="action-button outlined"
-                              style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                              className="table-icon-btn condition"
+                              title="Ghi nhận điều kiện đất / nước"
+                              aria-label={`Ghi nhận điều kiện cho ${b.blockName}`}
                               onClick={() => {
                                 setConditionBlock({ ...b, zoneName: zone.zoneName });
                                 setIsRecordConditionOpen(true);
                               }}
                             >
-                              Ghi nhận điều kiện
+                              <Icon name="activity" size={16} />
                             </button>
                             {isOwner && (
                               <button
                                 type="button"
-                                className="action-button danger"
-                                style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                className="table-icon-btn danger"
+                                title="Xóa lô đất"
+                                aria-label={`Xóa ${b.blockName}`}
                                 onClick={() => setBlockToDelete(b)}
                               >
-                                Xóa
+                                <Icon name="trash" size={16} />
                               </button>
                             )}
                           </div>

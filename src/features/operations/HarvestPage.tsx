@@ -360,10 +360,10 @@ function HarvestContent() {
       <div className="zone-stats-grid">
         <div className="zone-stat-card">
           <div className="zone-stat-icon">
-            <Icon name="package" size={20} />
+            <Icon name="box" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Tổng sản lượng thu hoạch</h4>
+            <h4>Tổng sản lượng</h4>
             <strong className="stat-number">
               {cropSeasonId === null || loading || loadError || !sameUnit ? (
                 '—'
@@ -378,16 +378,16 @@ function HarvestContent() {
 
         <div className="zone-stat-card">
           <div className="zone-stat-icon zone-stat-icon--blue">
-            <Icon name="layers" size={20} />
+            <Icon name="layers" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Tổng số lô sản phẩm</h4>
+            <h4>Tổng lô hàng</h4>
             <strong className="stat-number">
               {cropSeasonId === null || loading || loadError ? (
                 '—'
               ) : (
                 <>
-                  {records.length} <span className="stat-unit">lô hàng</span>
+                  {records.length} <span className="stat-unit">lô</span>
                 </>
               )}
             </strong>
@@ -396,11 +396,11 @@ function HarvestContent() {
 
         <div className="zone-stat-card">
           <div className="zone-stat-icon zone-stat-icon--amber">
-            <Icon name="calendar" size={20} />
+            <Icon name="calendar" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Mùa vụ đang tra cứu</h4>
-            <strong className="stat-number">
+            <h4>Mùa vụ tra cứu</h4>
+            <strong className="stat-number" style={{ fontSize: '1rem' }}>
               {cropSeasonId !== null ? currentSeason?.seasonName || `Mùa vụ #${cropSeasonId}` : 'Chưa chọn'}
             </strong>
           </div>
@@ -408,10 +408,10 @@ function HarvestContent() {
 
         <div className="zone-stat-card">
           <div className="zone-stat-icon zone-stat-icon--purple">
-            <Icon name="check" size={20} />
+            <Icon name="check" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Tỷ lệ phẩm cấp loại 1</h4>
+            <h4>Tỷ lệ loại 1</h4>
             <strong className="stat-number">
               {cropSeasonId === null || loading || loadError || records.length === 0 ? (
                 '—'

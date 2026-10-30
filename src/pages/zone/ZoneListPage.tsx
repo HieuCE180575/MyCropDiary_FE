@@ -395,25 +395,25 @@ export function ZoneListPage() {
         <div className="zone-stats-grid" style={{ marginBottom: 0 }}>
           <div className="zone-stat-card">
             <div className="zone-stat-icon">
-              <Icon name="plots" size={20} />
+              <Icon name="plots" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Tổng số khu vực</h4>
+              <h4>Tổng khu vực</h4>
               <strong className="stat-number">{statsReady ? `${zones.length} khu` : '—'}</strong>
             </div>
           </div>
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--blue">
-              <Icon name="leaf" size={20} />
+              <Icon name="leaf" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Tổng số lô đất</h4>
+              <h4>Tổng lô đất</h4>
               <strong className="stat-number">{statsReady ? `${blocks.length} lô` : '—'}</strong>
             </div>
           </div>
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--amber">
-              <Icon name="home" size={20} />
+              <Icon name="home" size={18} />
             </div>
             <div className="zone-stat-content">
               <h4>Tổng diện tích</h4>
@@ -424,7 +424,7 @@ export function ZoneListPage() {
           </div>
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--purple">
-              <Icon name="check" size={20} />
+              <Icon name="check" size={18} />
             </div>
             <div className="zone-stat-content">
               <h4>Đang quản lý</h4>
@@ -620,49 +620,51 @@ export function ZoneListPage() {
                           </td>
 
                           <td style={{ textAlign: 'right' }}>
-                            <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                            <div className="table-action-btns zone-card-actions">
                               <Link
                                 to={`/zones/${zone.zoneId}`}
-                                className="primary-button"
-                                style={{ padding: '8px 14px', fontSize: '13px' }}
+                                className="table-icon-btn primary"
+                                title="Xem chi tiết phân khu"
+                                aria-label={`Xem chi tiết ${zone.zoneName}`}
                               >
-                                Xem chi tiết
+                                <Icon name="eye" size={16} />
                               </Link>
                               {isOwner && (
                                 <>
                                   <button
                                     type="button"
-                                    className="action-button"
-                                    style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                    className="table-icon-btn edit"
+                                    title="Chỉnh sửa khu vực"
+                                    aria-label={`Chỉnh sửa ${zone.zoneName}`}
                                     onClick={() => handleEditZoneClick(zone)}
                                   >
-                                    Chỉnh sửa
+                                    <Icon name="edit" size={16} />
                                   </button>
                                   <button
                                     type="button"
-                                    className="action-button outlined"
-                                    style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                    className="table-icon-btn assign"
+                                    title="Phân công nhân sự phụ trách"
+                                    aria-label={`Phân công nhân sự cho ${zone.zoneName}`}
                                     onClick={() => setZoneForAssignment(zone)}
                                   >
-                                    Phân công
+                                    <Icon name="users" size={16} />
                                   </button>
                                   <button
                                     type="button"
-                                    className={canDelete ? 'action-button danger' : 'action-button'}
+                                    className="table-icon-btn danger"
                                     style={{
-                                      minHeight: '36px',
-                                      padding: '6px 12px',
-                                      fontSize: '13px',
-                                      opacity: canDelete ? 1 : 0.55,
+                                      opacity: canDelete ? 1 : 0.45,
+                                      cursor: canDelete ? 'pointer' : 'not-allowed',
                                     }}
                                     title={
                                       canDelete
                                         ? 'Xóa khu vực'
                                         : `Không thể xóa khi khu vực còn ${blockCount} lô đất liên kết`
                                     }
+                                    aria-label={`Xóa ${zone.zoneName}`}
                                     onClick={() => handleAttemptDeleteZone(zone)}
                                   >
-                                    Xóa
+                                    <Icon name="trash" size={16} />
                                   </button>
                                 </>
                               )}
@@ -814,42 +816,46 @@ export function ZoneListPage() {
                           </td>
 
                           <td style={{ textAlign: 'right' }}>
-                            <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                            <div className="table-action-btns">
                               <button
                                 type="button"
-                                className="primary-button"
-                                style={{ padding: '8px 14px', fontSize: '13px' }}
+                                className="table-icon-btn primary"
+                                title="Xem chi tiết lô đất"
+                                aria-label={`Xem chi tiết ${b.blockName}`}
                                 onClick={() => navigate(`/zones/${b.zoneId}/blocks/${b.blockId}`)}
                               >
-                                Xem chi tiết
+                                <Icon name="eye" size={16} />
                               </button>
                               <button
                                 type="button"
-                                className="action-button"
-                                style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                className="table-icon-btn edit"
+                                title="Chỉnh sửa thông tin lô đất"
+                                aria-label={`Chỉnh sửa ${b.blockName}`}
                                 onClick={() => handleEditBlockClick(b)}
                               >
-                                Chỉnh sửa
+                                <Icon name="edit" size={16} />
                               </button>
                               <button
                                 type="button"
-                                className="action-button outlined"
-                                style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                className="table-icon-btn condition"
+                                title="Ghi nhận điều kiện đất / nước"
+                                aria-label={`Ghi nhận điều kiện cho ${b.blockName}`}
                                 onClick={() => {
                                   setConditionBlock({ ...b, zoneName: zoneDisplay });
                                   setIsRecordConditionOpen(true);
                                 }}
                               >
-                                Ghi nhận điều kiện
+                                <Icon name="activity" size={16} />
                               </button>
                               {isOwner && (
                                 <button
                                   type="button"
-                                  className="action-button danger"
-                                  style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                                  className="table-icon-btn danger"
+                                  title="Xóa lô đất"
+                                  aria-label={`Xóa ${b.blockName}`}
                                   onClick={() => setBlockToDelete(b)}
                                 >
-                                  Xóa
+                                  <Icon name="trash" size={16} />
                                 </button>
                               )}
                             </div>

@@ -1041,11 +1041,11 @@ export function CropSeasonsPage() {
         <div className="zone-stats-grid" style={{ marginBottom: 0 }}>
           <div className="zone-stat-card">
             <div className="zone-stat-icon">
-              <Icon name="sprout" size={20} />
+              <Icon name="sprout" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Danh mục cây trồng</h4>
-              <strong className="stat-number" style={{ fontSize: '1.1rem' }}>
+              <h4>Cây trồng</h4>
+              <strong className="stat-number" style={{ fontSize: '1.05rem' }}>
                 {selectedSeason.cropCategoryName || `Nhóm #${selectedSeason.cropCategoryId}`}
               </strong>
             </div>
@@ -1053,33 +1053,33 @@ export function CropSeasonsPage() {
 
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--blue">
-              <Icon name="calendar" size={20} />
+              <Icon name="calendar" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Thời gian canh tác</h4>
-              <strong className="stat-number" style={{ fontSize: '1rem' }}>
-                {selectedSeason.startDate} → {selectedSeason.endDate || 'Đang diễn ra'}
+              <h4>Thời gian</h4>
+              <strong className="stat-number" style={{ fontSize: '0.95rem' }}>
+                {selectedSeason.startDate} → {selectedSeason.endDate || 'Hiện tại'}
               </strong>
             </div>
           </div>
 
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--amber">
-              <Icon name="plots" size={20} />
+              <Icon name="plots" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Lô đất tham gia (N-N)</h4>
+              <h4>Lô phân bổ</h4>
               <strong className="stat-number">{seasonBlocks.length} lô</strong>
             </div>
           </div>
 
           <div className="zone-stat-card">
             <div className="zone-stat-icon zone-stat-icon--purple">
-              <Icon name="check" size={20} />
+              <Icon name="check" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Trạng thái mùa vụ</h4>
-              <strong className="stat-number" style={{ textTransform: 'uppercase', fontSize: '1.1rem' }}>
+              <h4>Trạng thái</h4>
+              <strong className="stat-number" style={{ textTransform: 'uppercase', fontSize: '1rem' }}>
                 {selectedSeason.seasonStatus}
               </strong>
             </div>
@@ -1219,22 +1219,24 @@ export function CropSeasonsPage() {
                           {sb.plantedAt || selectedSeason.startDate} → {sb.expectedHarvestAt || selectedSeason.endDate || 'Đang diễn ra'}
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                          <div className="table-action-btns">
                             <Link
                               to={`/zones/${sb.zoneId || 1}/blocks/${sb.blockId}`}
-                              className="primary-button"
-                              style={{ padding: '7px 14px', fontSize: '0.82rem', textDecoration: 'none' }}
+                              className="table-icon-btn primary"
+                              title="Xem chi tiết lô đất"
+                              aria-label={`Xem chi tiết ${sb.blockName}`}
                             >
-                              Xem chi tiết lô đất
+                              <Icon name="eye" size={16} />
                             </Link>
                             {isOwner && (
                               <button
                                 type="button"
-                                className="danger-button"
-                                style={{ padding: '7px 14px', fontSize: '0.82rem' }}
+                                className="table-icon-btn danger"
+                                title="Gỡ lô đất khỏi mùa vụ"
+                                aria-label={`Gỡ lô đất ${sb.blockName}`}
                                 onClick={() => handleRemoveBlockFromSeason(sb.blockId)}
                               >
-                                Gỡ bỏ
+                                <Icon name="trash" size={16} />
                               </button>
                             )}
                           </div>
@@ -1381,11 +1383,44 @@ export function CropSeasonsPage() {
     );
   }
 
+  const getCropMeta = (categoryName?: string | null) => {
+    const name = (categoryName || '').toLowerCase();
+    if (name.includes('ớt') || name.includes('tiêu') || name.includes('chilli')) {
+      return { icon: '🌶️', color: 'red' };
+    }
+    if (name.includes('cà chua') || name.includes('tomato')) {
+      return { icon: '🍅', color: 'red' };
+    }
+    if (name.includes('dưa leo') || name.includes('cucumber')) {
+      return { icon: '🥒', color: 'green' };
+    }
+    if (name.includes('dưa') || name.includes('melon')) {
+      return { icon: '🍈', color: 'green' };
+    }
+    if (name.includes('dâu') || name.includes('berry')) {
+      return { icon: '🍓', color: 'red' };
+    }
+    return { icon: '🌱', color: 'green' };
+  };
+
+  const formatVietnameseDate = (dateStr?: string | null) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return dateStr;
+    } catch {
+      return dateStr;
+    }
+  };
+
   // =========================================================
   // VIEW 2: CROP SEASONS LIST (/crop-seasons)
   // =========================================================
   return (
-    <div className="farm-registration-page">
+    <div className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {notification && (
         <div className={notification.type === 'success' ? 'alert-success' : 'alert-error'} role="status">
           <span>{notification.text}</span>
@@ -1395,125 +1430,96 @@ export function CropSeasonsPage() {
         </div>
       )}
 
-      <div className="page-heading">
+      {/* Breadcrumb matching exact mockup */}
+      <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
+        TRANG TRẠI {farmName || farmId} <span style={{ margin: '0 6px', color: '#cbd5e1' }}>/</span> MÙA VỤ
+      </div>
+
+      {/* Main Page Heading */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
         <div>
-          <p className="eyebrow">Mùa vụ canh tác · {farmName}</p>
-          <h2>Mùa vụ canh tác</h2>
-          <p className="muted">
-            Quản lý các chu kỳ mùa vụ theo danh mục cây trồng và phân bổ nhiều lô đất canh tác (N-N) cho từng vụ.
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            Mùa vụ canh tác
+          </h1>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+            Quản lý mùa vụ và lô đất áp dụng.
           </p>
         </div>
-        <div className="dashboard-actions">
-          <Link to="/harvests" className="action-button" style={{ textDecoration: 'none' }}>
-            <Icon name="package" size={16} /> Mở Thu hoạch &amp; truy xuất
-          </Link>
-          <button type="button" className="primary-button" onClick={openCreateModal}>
-            <Icon name="plus" size={16} /> Thêm mùa vụ
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={openCreateModal}
+            style={{
+              padding: '10px 18px',
+              fontSize: '14px',
+              fontWeight: 700,
+              borderRadius: '10px',
+              background: '#059669',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+            }}
+          >
+            <Icon name="plus" size={17} /> Thêm mùa vụ
           </button>
         </div>
       </div>
 
-      {/* Stat Cards Grid */}
-      <div className="zone-stats-grid">
-        <div className="zone-stat-card">
-          <div className="zone-stat-icon">
-            <Icon name="calendar" size={20} />
-          </div>
-          <div className="zone-stat-content">
-            <h4>Tổng số mùa vụ</h4>
-            <strong className="stat-number">
-              {seasons.length} <span className="stat-unit">vụ</span>
-            </strong>
-          </div>
-        </div>
-        <div className="zone-stat-card">
-          <div className="zone-stat-icon zone-stat-icon--blue">
-            <Icon name="sprout" size={20} />
-          </div>
-          <div className="zone-stat-content">
-            <h4>Đang canh tác</h4>
-            <strong className="stat-number">
-              {seasons.filter((s) => (s.seasonStatus || '').toLowerCase() === 'active').length}{' '}
-              <span className="stat-unit">vụ</span>
-            </strong>
-          </div>
-        </div>
-        <div className="zone-stat-card">
-          <div className="zone-stat-icon zone-stat-icon--amber">
-            <Icon name="plots" size={20} />
-          </div>
-          <div className="zone-stat-content">
-            <h4>Tổng số lô đất trang trại</h4>
-            <strong className="stat-number">
-              {allFarmBlocks.length} <span className="stat-unit">lô đất</span>
-            </strong>
-          </div>
-        </div>
-        <div className="zone-stat-card">
-          <div className="zone-stat-icon zone-stat-icon--purple">
-            <Icon name="check" size={20} />
-          </div>
-          <div className="zone-stat-content">
-            <h4>Đã hoàn thành</h4>
-            <strong className="stat-number">
-              {seasons.filter((s) => (s.seasonStatus || '').toLowerCase() === 'completed').length}{' '}
-              <span className="stat-unit">vụ</span>
-            </strong>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters: Search Crop Seasons, Season Category, Status, Reset Filters */}
-      <div className="production-filter-panel">
-        <div className="filter-group" style={{ flex: '1.5 1 280px' }}>
-          <label htmlFor="cs-list-search" className="filter-label">
-            Tìm kiếm mùa vụ hoặc lô đất
-          </label>
-          <div className="filter-input-wrap">
-            <span className="filter-icon">🔍</span>
-            <input
-              id="cs-list-search"
-              type="search"
-              placeholder="Tìm theo tên mùa vụ, cây trồng hoặc tên lô đất (Lô A1, A2)..."
-              value={searchKeyword}
-              onChange={(e) => setSearchKeyword(e.target.value)}
-            />
-          </div>
+      {/* Clean Horizontal Filter Bar (Input Search + Category Dropdown + Status Dropdown) */}
+      <div className="crops-clean-filter-bar">
+        <div className="crops-clean-search-wrap">
+          <span className="search-icon">
+            <Icon name="search" size={17} />
+          </span>
+          <input
+            type="search"
+            placeholder="Tìm mùa vụ hoặc lô đất"
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+          />
         </div>
 
-        <div className="filter-group" style={{ flex: '1 1 240px' }}>
-          <label htmlFor="cs-list-cat" className="filter-label">
-            Danh mục cây trồng
-          </label>
+        <div className="crops-clean-select-wrap">
+          <span className="select-lead-icon">
+            <Icon name="leaf" size={16} />
+          </span>
           <select
-            id="cs-list-cat"
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
+            aria-label="Lọc theo cây trồng"
           >
-            <option value="all">Tất cả danh mục cây trồng</option>
+            <option value="all">Tất cả cây trồng</option>
             {categories.map((c) => (
               <option key={c.id} value={String(c.id)}>
                 {c.categoryName}
               </option>
             ))}
           </select>
+          <span className="select-chevron">
+            <Icon name="chevron" size={16} />
+          </span>
         </div>
 
-        <div className="filter-group" style={{ flex: '1 1 200px' }}>
-          <label htmlFor="cs-list-status" className="filter-label">
-            Trạng thái canh tác
-          </label>
+        <div className="crops-clean-select-wrap">
+          <span className="select-lead-icon" style={{ color: '#475569' }}>
+            <Icon name="check" size={16} />
+          </span>
           <select
-            id="cs-list-status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Lọc theo trạng thái"
           >
             <option value="all">Tất cả trạng thái</option>
-            <option value="planned">Dự kiến</option>
             <option value="active">Đang canh tác</option>
             <option value="completed">Đã hoàn thành</option>
+            <option value="planned">Dự kiến</option>
             <option value="cancelled">Đã hủy</option>
           </select>
+          <span className="select-chevron">
+            <Icon name="chevron" size={16} />
+          </span>
         </div>
 
         {(searchKeyword || categoryFilter !== 'all' || statusFilter !== 'all') && (
@@ -1525,189 +1531,197 @@ export function CropSeasonsPage() {
               setCategoryFilter('all');
               setStatusFilter('all');
             }}
+            style={{ height: '44px' }}
           >
-            ✕ Đặt lại bộ lọc
+            ✕ Đặt lại
           </button>
         )}
       </div>
 
-      {loading ? (
-        <div className="panel" style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <p className="muted">Đang tải danh sách mùa vụ...</p>
+      {/* Card Content & Table */}
+      <div
+        style={{
+          background: '#ffffff',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+          overflow: 'hidden',
+          padding: '20px 24px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 750, color: '#0f172a', margin: 0 }}>
+            Danh sách mùa vụ
+          </h2>
+          <span style={{ fontSize: '13px', fontWeight: 500, color: '#64748b' }}>
+            {filteredSeasons.length} mùa vụ
+          </span>
         </div>
-      ) : filteredSeasons.length === 0 ? (
-        <div className="panel empty-state">
-          <div className="empty-icon">📅</div>
-          <h2>Danh sách mùa vụ chưa được kết nối hoặc chưa có dữ liệu</h2>
-          <p>
-            Nhấn &quot;Thêm mùa vụ&quot; để khởi tạo mùa vụ canh tác mới và tick chọn các lô đất áp dụng ngay trong biểu mẫu.
-          </p>
-          <div className="button-row" style={{ justifyContent: 'center' }}>
-            <Link to="/harvests" className="action-button" style={{ textDecoration: 'none' }}>
-              Mở Thu hoạch &amp; truy xuất
-            </Link>
-            {isOwner && (
-              <button type="button" className="primary-button" onClick={openCreateModal}>
-                <Icon name="plus" size={16} /> Thêm mùa vụ
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="panel" style={{ padding: '24px' }}>
-          <div className="panel-title" style={{ marginBottom: '18px' }}>
-            <div>
-              <span className="eyebrow">Danh sách mùa vụ canh tác &amp; Lô đất phân bổ</span>
-              <h2 style={{ margin: '4px 0 0' }}>Mùa vụ ({filteredSeasons.length})</h2>
-            </div>
-            {isOwner && (
-              <button type="button" className="primary-button" onClick={openCreateModal}>
-                <Icon name="plus" size={16} /> Thêm mùa vụ
-              </button>
-            )}
-          </div>
 
+        {loading ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+            <p className="muted">Đang tải danh sách mùa vụ...</p>
+          </div>
+        ) : filteredSeasons.length === 0 ? (
+          <div className="panel empty-state" style={{ border: 'none', boxShadow: 'none' }}>
+            <div className="empty-icon">📅</div>
+            <h2>Danh sách mùa vụ chưa được kết nối hoặc chưa có dữ liệu</h2>
+            <p>
+              Nhấn &quot;Thêm mùa vụ&quot; để khởi tạo mùa vụ mới và gán lô đất cho vụ.
+            </p>
+            <div className="button-row" style={{ justifyContent: 'center' }}>
+              <Link to="/harvests" className="action-button" style={{ textDecoration: 'none' }}>
+                Mở Thu hoạch &amp; truy xuất
+              </Link>
+              {isOwner && (
+                <button type="button" className="primary-button" onClick={openCreateModal}>
+                  <Icon name="plus" size={16} /> Thêm mùa vụ
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
           <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-            <table className="data-table">
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
               <thead>
-                <tr>
-                  <th>Mã &amp; Tên mùa vụ</th>
-                  <th>Danh mục cây trồng</th>
-                  <th>Lô đất áp dụng (N-N)</th>
-                  <th>Thời gian canh tác</th>
-                  <th style={{ textAlign: 'center' }}>Trạng thái</th>
-                  <th style={{ textAlign: 'right' }}>Thao tác</th>
+                <tr style={{ background: '#f8fafc' }}>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                    MÃ &amp; TÊN MÙA VỤ ↕
+                  </th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                    CÂY TRỒNG
+                  </th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                    LÔ ĐẤT
+                  </th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                    THỜI GIAN ↕
+                  </th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                    TRẠNG THÁI ↕
+                  </th>
+                  <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                    THAO TÁC
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredSeasons.map((s) => {
                   const assignedBlocks = seasonBlocksMap[s.cropSeasonId] || [];
+                  const meta = getCropMeta(s.cropCategoryName);
+                  const statusKey = (s.seasonStatus || 'planned').toLowerCase();
+                  const isCompleted = statusKey === 'completed';
+                  const isActive = statusKey === 'active';
+                  const isCancelled = statusKey === 'cancelled';
+
+                  // Format Block info string: e.g. "Lô A01 • 500 m²"
+                  const blockText = assignedBlocks.length === 0
+                    ? 'Chưa gán lô'
+                    : assignedBlocks.length === 1
+                      ? `${assignedBlocks[0].blockName} • ${(assignedBlocks[0].plantedArea ?? assignedBlocks[0].blockArea ?? 0).toLocaleString('vi-VN')} ${assignedBlocks[0].areaUnit || 'm²'}`
+                      : `${assignedBlocks.map(b => b.blockName).join(', ')} • ${assignedBlocks.reduce((sum, b) => sum + (Number(b.plantedArea ?? b.blockArea) || 0), 0).toLocaleString('vi-VN')} m²`;
+
                   return (
-                    <tr key={s.cropSeasonId}>
-                      <td>
-                        <Link
-                          to={`/crop-seasons/${s.cropSeasonId}`}
-                          style={{
-                            fontWeight: 700,
-                            color: '#047857',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '14.5px',
-                          }}
-                        >
-                          🌾 {s.seasonName}
-                        </Link>
-                        <small style={{ color: '#64748b', display: 'block', marginTop: '2px' }}>
-                          Mã vụ: #{s.cropSeasonId} (CS-{String(s.cropSeasonId).padStart(3, '0')})
-                        </small>
+                    <tr key={s.cropSeasonId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '14px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div className={`crop-avatar-circle ${meta.color}`}>
+                            {meta.icon}
+                          </div>
+                          <div>
+                            <Link
+                              to={`/crop-seasons/${s.cropSeasonId}`}
+                              style={{
+                                fontWeight: 750,
+                                color: '#0f172a',
+                                textDecoration: 'none',
+                                fontSize: '14.5px',
+                                display: 'block',
+                                transition: 'color 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
+                              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                            >
+                              {s.seasonName}
+                            </Link>
+                            <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                              CS-{String(s.cropSeasonId).padStart(3, '0')}
+                            </span>
+                          </div>
+                        </div>
                       </td>
-                      <td>
-                        <span className="knowledge-tag">
+
+                      <td style={{ padding: '14px 16px' }}>
+                        <span className={`crop-cat-pill ${meta.color}`}>
                           {s.cropCategoryName || 'Cây trồng chung'}
                         </span>
                       </td>
-                      <td>
+
+                      <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', fontWeight: 600 }}>
                         {assignedBlocks.length === 0 ? (
                           <button
                             type="button"
                             className="action-button"
-                            style={{ minHeight: '30px', padding: '4px 10px', fontSize: '12px' }}
+                            style={{ minHeight: '30px', padding: '3px 10px', fontSize: '12px', borderRadius: '8px' }}
                             onClick={() => void openEditModal(s)}
                           >
-                            + Chọn lô đất
+                            + Gán lô đất
                           </button>
                         ) : (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '300px' }}>
-                            {assignedBlocks.map((b) => (
-                              <Link
-                                key={b.blockId}
-                                to={`/zones/${b.zoneId || 1}/blocks/${b.blockId}`}
-                                title={`Xuống giống: ${b.plantedAt || s.startDate} · Diện tích: ${b.plantedArea ?? b.blockArea} ${b.areaUnit || 'm²'}`}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '4px',
-                                  padding: '3px 9px',
-                                  borderRadius: '8px',
-                                  background: '#ecfdf5',
-                                  border: '1px solid #a7f3d0',
-                                  color: '#065f46',
-                                  fontSize: '12.5px',
-                                  fontWeight: 700,
-                                  textDecoration: 'none',
-                                }}
-                              >
-                                🌱 {b.blockName || `Lô #${b.blockId}`}
-                                <span style={{ fontWeight: 500, color: '#047857', fontSize: '11.5px' }}>
-                                  ({b.plantedArea ?? b.blockArea} {b.areaUnit || 'm²'})
-                                </span>
-                              </Link>
-                            ))}
-                          </div>
+                          <span>{blockText}</span>
                         )}
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
-                        <strong>{s.startDate}</strong>
-                        <span style={{ color: '#94a3b8', margin: '0 6px' }}>→</span>
-                        <span>{s.endDate || 'Đang diễn ra'}</span>
+
+                      <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
+                        {formatVietnameseDate(s.startDate)} – {formatVietnameseDate(s.endDate) || 'Hiện tại'}
                       </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span
-                          className={`status-badge ${s.seasonStatus === 'active'
-                              ? 'active'
-                              : s.seasonStatus === 'completed'
-                                ? 'active'
-                                : s.seasonStatus === 'cancelled'
-                                  ? 'inactive'
-                                  : 'pending'
-                            }`}
-                        >
-                          {s.seasonStatus === 'active'
+
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                        <span className={`status-dot-badge ${isActive ? 'active' : isCompleted ? 'completed' : isCancelled ? 'cancelled' : 'in_progress'}`}>
+                          <span className="dot" />
+                          {isActive
                             ? 'Đang canh tác'
-                            : s.seasonStatus === 'completed'
+                            : isCompleted
                               ? 'Đã hoàn thành'
-                              : s.seasonStatus === 'cancelled'
+                              : isCancelled
                                 ? 'Đã hủy'
                                 : 'Dự kiến'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div className="action-buttons-group" style={{ justifyContent: 'flex-end', gap: '8px' }}>
-                          <Link
-                            to={`/harvests?seasonId=${s.cropSeasonId}`}
-                            className="action-button"
-                            style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', textDecoration: 'none' }}
-                          >
-                            📦 Thu hoạch
-                          </Link>
+
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <div className="table-action-btns">
                           <button
                             type="button"
-                            className="action-button"
-                            style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                            className="table-icon-btn"
+                            title="Xem chi tiết mùa vụ"
+                            aria-label={`Xem chi tiết ${s.seasonName}`}
                             onClick={() => navigate(`/crop-seasons/${s.cropSeasonId}`)}
                           >
-                            Xem chi tiết
+                            <Icon name="eye" size={16} />
                           </button>
+
                           {isOwner && (
                             <button
                               type="button"
-                              className="action-button"
-                              style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                              className="table-icon-btn edit"
+                              title="Chỉnh sửa mùa vụ & lô đất"
+                              aria-label={`Chỉnh sửa ${s.seasonName}`}
                               onClick={() => void openEditModal(s)}
                             >
-                              Chỉnh sửa
+                              <Icon name="edit" size={16} />
                             </button>
                           )}
+
                           {isOwner && (
                             <button
                               type="button"
-                              className="action-button danger"
-                              style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                              className="table-icon-btn danger"
+                              title="Xóa mùa vụ"
+                              aria-label={`Xóa ${s.seasonName}`}
                               onClick={() => setSeasonToDelete(s)}
                             >
-                              Xóa
+                              <Icon name="trash" size={16} />
                             </button>
                           )}
                         </div>
@@ -1718,8 +1732,8 @@ export function CropSeasonsPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {renderCreateEditModal()}
 
