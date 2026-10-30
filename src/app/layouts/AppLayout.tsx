@@ -282,8 +282,16 @@ function WorkspaceLayout() {
             {/* Profile Avatar / Menu */}
             <div className="account-menu">
               <Link className="account-profile" to="/profile" title="Xem hồ sơ cá nhân" aria-label="Hồ sơ cá nhân">
-                <span className="avatar">
-                  {displayName.charAt(0).toUpperCase()}
+                <span className="avatar" style={user?.avatarUrl ? { padding: 0, overflow: 'hidden' } : undefined}>
+                  {user?.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={displayName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+                    />
+                  ) : (
+                    displayName.charAt(0).toUpperCase()
+                  )}
                 </span>
                 <div className="account-profile-info">
                   <strong title={displayName}>{displayName}</strong>

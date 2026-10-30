@@ -2,7 +2,6 @@ import type { ModuleDefinition } from '../shared/types/module';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth';
 import { Icon } from '../shared/components/Icon';
-import { ChangePasswordPanel } from '../features/auth/ChangePasswordPanel';
 import { UserProfilePanel } from '../features/auth/UserProfilePanel';
 import { FarmInfoPage } from './FarmInfoPage';
 import { FarmRegistrationPage } from './FarmRegistrationPage';
@@ -20,7 +19,7 @@ import { AIAssistantPage } from '../features/ai/AIAssistantPage';
 
 export function ModulePage({ module }: { module: ModuleDefinition }) {
   const { user } = useAuth();
-  if (module.key === 'password') return <Navigate to="/profile#change-password" replace />;
+  if (module.key === 'password') return <Navigate to="/profile" replace />;
 
   if (module.key === 'farm') return <FarmInfoPage />;
   if (module.key === 'farm-registration') return <FarmRegistrationPage />;
@@ -46,14 +45,12 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'ai-drafts') return <AIAssistantPage initialTab="ai-drafts" />;
 
   const displayName = user?.fullName?.trim() || user?.email || 'Người dùng VietGAP';
-  const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
-  const roleName = isAdmin ? 'Quản trị viên' : 'Người dùng';
 
   return (
     <section className="profile-page-section">
       <div className="page-heading">
         <div>
-          <h1>Xin chào, {user?.fullName?.trim() || user?.email || 'bạn'}!</h1>
+          <h1>Xin chào, {displayName}!</h1>
           <p className="module-description">{module.description}</p>
         </div>
       </div>
@@ -62,7 +59,16 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
         <div className="profile-hero-card">
           <div className="profile-hero-avatar-wrap">
             <span className="profile-hero-avatar">
-              <Icon name="user" />
+              {user?.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt={displayName}
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                  onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                />
+              ) : (
+                <Icon name="user" />
+              )}
             </span>
             <span className="profile-hero-status-dot" title="Tài khoản trực tuyến"></span>
           </div>
@@ -71,30 +77,16 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
               <span className="profile-tag-pill">
                 <Icon name="leaf" /> Hồ sơ cá nhân
               </span>
-              <span className="profile-role-pill">
-                {isAdmin ? 'Quản trị viên hệ thống' : 'Nông dân VietGAP'}
-              </span>
             </div>
             <h2 className="profile-hero-name">{displayName}</h2>
             <p className="profile-hero-email">
               <Icon name="mail" /> {user?.email || 'Chưa cập nhật email'}
             </p>
           </div>
-          <div className="profile-hero-meta">
-            <div className="profile-meta-stat">
-              <span className="meta-label">Mã tài khoản</span>
-              <span className="meta-value">#{user?.userId || 'USR-01'}</span>
-            </div>
-            <div className="profile-meta-stat">
-              <span className="meta-label">Bảo mật</span>
-              <span className="meta-value meta-secure">Đã bảo vệ</span>
-            </div>
-          </div>
         </div>
 
         <div className="profile-layout">
           <UserProfilePanel />
-          <ChangePasswordPanel />
         </div>
       </div>
     </section>

@@ -43,7 +43,13 @@ function PasswordField({ name, label, value, onChange, current = false, disabled
   );
 }
 
-export function ChangePasswordPanel() {
+export function ChangePasswordPanel({
+  embedded = false,
+  onSuccess,
+}: {
+  embedded?: boolean;
+  onSuccess?: () => void;
+} = {}) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -78,6 +84,9 @@ export function ChangePasswordPanel() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      if (onSuccess) {
+        setTimeout(onSuccess, 1200);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
       setStatus({ type: 'error', message: msg });
@@ -86,18 +95,8 @@ export function ChangePasswordPanel() {
     }
   };
 
-  return (
-    <section className="panel profile-password-panel" id="change-password" aria-labelledby="change-password-heading">
-      <div className="profile-card-header">
-        <span className="shortcut-icon">
-          <Icon name="lock" />
-        </span>
-        <div>
-          <h2 id="change-password-heading">Thay đổi mật khẩu</h2>
-          <p className="profile-password-description">Bảo vệ tài khoản bằng mật khẩu riêng, bảo mật và khó đoán.</p>
-        </div>
-      </div>
-
+  const formBody = (
+    <>
       {status && (
         <div
           className={`notification-popover ${status.type === 'error' ? 'form-error-banner' : ''}`}
@@ -120,7 +119,7 @@ export function ChangePasswordPanel() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '14px' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: embedded ? '6px' : '14px' }}>
         <PasswordField
           name="currentPassword"
           label="Mật khẩu hiện tại"
@@ -149,13 +148,32 @@ export function ChangePasswordPanel() {
           disabled={loading}
         />
 
-        <div style={{ marginTop: '8px' }}>
+        <div style={{ marginTop: '10px', display: 'flex', justifyContent: embedded ? 'flex-end' : 'flex-start', gap: '10px' }}>
           <button className="action-button solid primary-button" type="submit" disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             <Icon name="save" />
             {loading ? 'Đang lưu mật khẩu...' : 'Lưu mật khẩu mới'}
           </button>
         </div>
       </form>
+    </>
+  );
+
+  if (embedded) {
+    return <div style={{ padding: '4px 0' }}>{formBody}</div>;
+  }
+
+  return (
+    <section className="panel profile-password-panel" id="change-password" aria-labelledby="change-password-heading">
+      <div className="profile-card-header">
+        <span className="shortcut-icon">
+          <Icon name="lock" />
+        </span>
+        <div>
+          <h2 id="change-password-heading">Thay đổi mật khẩu</h2>
+          <p className="profile-password-description">Bảo vệ tài khoản bằng mật khẩu riêng, bảo mật và khó đoán.</p>
+        </div>
+      </div>
+      {formBody}
     </section>
   );
 }
