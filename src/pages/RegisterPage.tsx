@@ -1,6 +1,6 @@
 import { type FormEvent, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { useAuth } from '../features/auth';
+import { useAuth, GoogleAuthModal } from '../features/auth';
 import { registerAccount, resendOtp, verifyOtp } from '../features/auth/authApi';
 import { Icon } from '../shared/components/Icon';
 
@@ -110,6 +110,7 @@ export function RegisterPage() {
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
   const [touched, setTouched] = useState<Partial<Record<keyof FormValues, boolean>>>({});
   const [pending, setPending] = useState(false);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const busy = useRef(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -602,6 +603,30 @@ export function RegisterPage() {
               />
               <span>{pending ? 'Đang xử lý…' : step === 'register' ? 'Đăng ký tài khoản' : 'Xác thực và đăng nhập'}</span>
             </button>
+
+            {step === 'register' && (
+              <>
+                <div className="auth-divider">
+                  <span>hoặc</span>
+                </div>
+
+                <button
+                  className="btn-google-auth"
+                  type="button"
+                  disabled={pending}
+                  onClick={() => setIsGoogleModalOpen(true)}
+                  title="Đăng ký nhanh bằng tài khoản Google"
+                >
+                  <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.28 14.27A7.195 7.195 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.966 11.966 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                  </svg>
+                  <span>Đăng ký nhanh với Google</span>
+                </button>
+              </>
+            )}
           </form>
 
           {step === 'verify' && (
@@ -672,6 +697,12 @@ export function RegisterPage() {
           </p>
         </div>
       </section>
+      <GoogleAuthModal
+        isOpen={isGoogleModalOpen}
+        mode="register"
+        onClose={() => setIsGoogleModalOpen(false)}
+        onSuccess={(session) => setSession(session)}
+      />
     </main>
   );
 }

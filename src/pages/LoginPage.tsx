@@ -1,6 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../features/auth';
+import { useAuth, GoogleAuthModal } from '../features/auth';
 import { authenticate } from '../features/auth/authApi';
 import { Icon } from '../shared/components/Icon';
 
@@ -37,6 +37,7 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const initialNotice = (location.state as { notice?: string } | null)?.notice ?? '';
   const [notice, setNotice] = useState(initialNotice);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
 
   if (isAuthenticated) {
     const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
@@ -228,8 +229,9 @@ export function LoginPage() {
             <button
               className="btn-google-auth"
               type="button"
-              disabled
-              title="Đăng nhập Google sắp ra mắt"
+              disabled={pending}
+              onClick={() => setIsGoogleModalOpen(true)}
+              title="Đăng nhập bằng tài khoản Google"
             >
               <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                 <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -249,6 +251,12 @@ export function LoginPage() {
           </form>
         </div>
       </section>
+      <GoogleAuthModal
+        isOpen={isGoogleModalOpen}
+        mode="login"
+        onClose={() => setIsGoogleModalOpen(false)}
+        onSuccess={(session) => setSession(session)}
+      />
     </main>
   );
 }

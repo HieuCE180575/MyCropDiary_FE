@@ -12,6 +12,22 @@ export interface AuthResponse {
   systemRole: string;
 }
 
+export interface GoogleAuthRequest {
+  idToken?: string;
+  email?: string;
+  fullName?: string;
+  avatarUrl?: string;
+}
+
+export async function authenticateWithGoogle(payload: GoogleAuthRequest): Promise<AuthSession> {
+  const result = await apiRequest<ApiResponse<AuthResponse>>('/auth/google', {
+    method: 'POST',
+    anonymous: true,
+    data: payload,
+  });
+  return readAuthSession(result);
+}
+
 export async function authenticate(email: string, password: string): Promise<AuthSession> {
   if (!email.trim() || !password) throw new Error('Vui lòng nhập email và mật khẩu.');
   const result = await apiRequest<ApiResponse<AuthResponse>>('/auth/login', {
