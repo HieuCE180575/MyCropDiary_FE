@@ -29,6 +29,8 @@ export function StaffManagementPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [assignSearch, setAssignSearch] = useState('');
+  const [assignZoneFilter, setAssignZoneFilter] = useState('ALL');
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Add Staff Modal
@@ -50,6 +52,7 @@ export function StaffManagementPage() {
   const [assignStaffId, setAssignStaffId] = useState<number | ''>('');
   const [assignZoneId, setAssignZoneId] = useState<number | ''>('');
   const [assignedAtDate, setAssignedAtDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [assignNotes, setAssignNotes] = useState('');
   const [savingAssign, setSavingAssign] = useState(false);
 
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
@@ -210,6 +213,8 @@ export function StaffManagementPage() {
     if (zones.length > 0 && !assignZoneId) {
       setAssignZoneId(zones[0].zoneId);
     }
+    setAssignNotes('');
+    setAssignedAtDate(new Date().toISOString().split('T')[0]);
     setIsAssignOpen(true);
   };
 
@@ -223,6 +228,7 @@ export function StaffManagementPage() {
       await assignStaffToZone(selectedFarm.id, Number(assignZoneId), {
         farmMemberId: Number(assignStaffId),
         assignedAt: assignedIso,
+        notes: assignNotes.trim() || undefined,
       });
       setNotification({ text: 'Đã phân công nhân viên phụ trách phân khu thành công!', type: 'success' });
       setIsAssignOpen(false);
@@ -262,6 +268,18 @@ export function StaffManagementPage() {
       (s.phoneNumber || '').includes(q);
     const matchesStatus = statusFilter === 'ALL' || s.status === statusFilter;
     return matchesSearch && matchesStatus;
+  });
+
+  const filteredAssignments = assignments.filter((item) => {
+    const q = assignSearch.trim().toLowerCase();
+    const matchesSearch =
+      !q ||
+      (item.staffName && item.staffName.toLowerCase().includes(q)) ||
+      (item.staffEmail && item.staffEmail.toLowerCase().includes(q)) ||
+      (item.zoneName && item.zoneName.toLowerCase().includes(q)) ||
+      (item.jobTitle && item.jobTitle.toLowerCase().includes(q));
+    const matchesZone = assignZoneFilter === 'ALL' || String(item.zoneId) === String(assignZoneFilter);
+    return matchesSearch && matchesZone;
   });
 
   const activeStaffOptions = staffList.filter((s) => s.status === 'ACTIVE');
@@ -532,6 +550,29 @@ export function StaffManagementPage() {
                                     <Icon name="edit" size={15} />
                                     <span className="sr-only">Chỉnh sửa</span>
                                   </button>
+                                  {isActive ? (
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn"
+                                      title="Tạm ngưng hoạt động nhân viên"
+                                      aria-label={`Tạm dừng ${staff.fullName}`}
+                                      onClick={() => handleDeactivate(staff.farmMemberId, staff.fullName)}
+                                    >
+                                      <Icon name="close" size={14} />
+                                      <span className="sr-only">Tạm ngưng</span>
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn edit"
+                                      title="Kích hoạt lại nhân viên"
+                                      aria-label={`Kích hoạt lại ${staff.fullName}`}
+                                      onClick={() => handleReactivate(staff.farmMemberId, staff.fullName)}
+                                    >
+                                      <Icon name="check" size={14} />
+                                      <span className="sr-only">Kích hoạt</span>
+                                    </button>
+                                  )}
                                   <button
                                     type="button"
                                     className="table-icon-btn danger"
@@ -575,243 +616,535 @@ export function StaffManagementPage() {
         )}
 
         {activeTab === 'assignments' && (
-          <div style={{ padding: '24px' }}>
+          <>
+            {/* Filter Bar */}
+            <div className="zone-clean-filter-bar">
+              <div className="zone-clean-search">
+                <span className="search-icon">
+                  <Icon name="search" size={17} />
+                </span>
+                <input
+                  type="search"
+                  placeholder="Tìm theo tên nhân sự hoặc phân khu phụ trách..."
+                  value={assignSearch}
+                  onChange={(e) => setAssignSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="zone-clean-select-wrap">
+                <select
+                  value={assignZoneFilter}
+                  onChange={(e) => setAssignZoneFilter(e.target.value)}
+                  aria-label="Lọc theo phân khu sản xuất"
+                >
+                  <option value="ALL">Tất cả phân khu ({zones.length})</option>
+                  {zones.map((z) => (
+                    <option key={z.zoneId} value={String(z.zoneId)}>
+                      {z.zoneName}
+                    </option>
+                  ))}
+                </select>
+                <span className="select-arrow">
+                  <Icon name="chevron" size={16} />
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="zone-clean-reload-btn"
+                title="Làm mới bộ lọc"
+                aria-label="Làm mới bộ lọc"
+                onClick={() => {
+                  setAssignSearch('');
+                  setAssignZoneFilter('ALL');
+                }}
+              >
+                <Icon name="refresh" size={16} />
+              </button>
+            </div>
+
             {loading ? (
-              <div className="panel empty-state" style={{ border: 'none', boxShadow: 'none' }}>
+              <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
                 <div className="empty-icon">⏳</div>
                 <h2>Đang tải danh sách phân công...</h2>
               </div>
-            ) : assignments.length === 0 ? (
-              <div className="panel empty-state" style={{ border: 'none', boxShadow: 'none' }}>
-                <div className="empty-icon">🗺️</div>
-                <h2>Chưa có phân công nào</h2>
-                <p>Phân công nhân viên kỹ thuật phụ trách từng phân khu (Zone) của trang trại.</p>
-                {isOwner && (
-                  <button type="button" className="primary-button" style={{ marginTop: '12px' }} onClick={openAssignModal}>
+            ) : filteredAssignments.length === 0 ? (
+              <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '16px',
+                    background: '#ecfdf5',
+                    color: '#059669',
+                    display: 'grid',
+                    placeItems: 'center',
+                    margin: '0 auto 16px',
+                  }}
+                >
+                  <Icon name="plots" size={32} />
+                </div>
+                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
+                  {assignments.length === 0 ? 'Chưa có phân công nào' : 'Không tìm thấy phân công phù hợp'}
+                </h2>
+                <p style={{ color: '#64748b', fontSize: '14.5px', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
+                  {assignments.length === 0
+                    ? 'Phân công nhân viên kỹ thuật phụ trách từng phân khu sản xuất để quản lý mùa vụ, lô đất và giám sát quy trình VietGAP.'
+                    : 'Hãy thử tìm kiếm với từ khóa khác hoặc làm mới bộ lọc phân khu.'}
+                </p>
+                {isOwner && assignments.length === 0 && (
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={openAssignModal}
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      borderRadius: '10px',
+                      background: '#059669',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+                    }}
+                  >
                     <Icon name="plus" size={16} /> Phân công ngay
                   </button>
                 )}
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                {assignments.map((item) => (
-                  <div
-                    key={item.assignmentId}
-                    style={{
-                      background: '#ffffff',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '14px',
-                      padding: '20px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                        <span className="crop-cat-pill green">
-                          📍 {item.zoneName || `Phân khu #${item.zoneId}`}
-                        </span>
+              <>
+                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                          <input type="checkbox" aria-label="Chọn tất cả phân công" style={{ cursor: 'pointer' }} />
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Phân khu sản xuất
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Nhân sự phụ trách
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Vai trò / Chức vụ
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Ngày bắt đầu
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Người giao việc
+                        </th>
                         {isOwner && (
-                          <button
-                            type="button"
-                            className="table-icon-btn danger"
-                            title="Hủy phân công"
-                            aria-label={`Hủy phân công cho ${item.staffName}`}
-                            onClick={() => handleUnassign(item.assignmentId)}
-                          >
-                            <Icon name="trash" size={14} />
-                          </button>
+                          <th style={{ width: '90px', padding: '14px 16px', textAlign: 'right' }}>
+                            Thao tác
+                          </th>
                         )}
-                      </div>
-                      <h3 style={{ margin: '0 0 6px', fontSize: '17px', color: '#0f172a', fontWeight: 750 }}>
-                        👤 {item.staffName || `Thành viên #${item.farmMemberId}`}
-                      </h3>
-                      {item.staffEmail && (
-                        <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '13px' }}>
-                          ✉️ {item.staffEmail}
-                        </p>
-                      )}
-                      <p style={{ margin: 0, color: '#059669', fontWeight: 650, fontSize: '13.5px' }}>
-                        {item.jobTitle || 'Nhân viên kỹ thuật phụ trách phân khu'}
-                      </p>
-                    </div>
-                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', fontSize: '12px', color: '#94a3b8' }}>
-                      Phân công từ ngày: {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
-                      {item.assignedByName ? ` • Giao bởi: ${item.assignedByName}` : ''}
-                    </div>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAssignments.map((item) => (
+                        <tr key={item.assignmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <input
+                              type="checkbox"
+                              aria-label={`Chọn phân công của ${item.staffName || 'nhân viên'}`}
+                              style={{ cursor: 'pointer' }}
+                            />
+                          </td>
+
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span
+                                style={{
+                                  width: '36px',
+                                  height: '36px',
+                                  borderRadius: '10px',
+                                  background: '#ecfdf5',
+                                  color: '#059669',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Icon name="plots" size={18} />
+                              </span>
+                              <div>
+                                <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px' }}>
+                                  {item.zoneName || `Phân khu #${item.zoneId}`}
+                                </strong>
+                                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                                  Mã: KV-00{item.zoneId}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div className="staff-initials-avatar">
+                                {getStaffInitials(item.staffName)}
+                              </div>
+                              <div>
+                                <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px' }}>
+                                  {item.staffName || `Thành viên #${item.farmMemberId}`}
+                                </strong>
+                                <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+                                  {item.staffEmail || 'Chưa có email'}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '14px 16px' }}>
+                            <span
+                              className="crop-cat-pill"
+                              style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}
+                            >
+                              {item.jobTitle || 'Kỹ thuật viên phụ trách'}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px' }}>
+                            {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
+                          </td>
+
+                          <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', fontWeight: 500 }}>
+                            {item.assignedByName || 'Chủ trang trại'}
+                          </td>
+
+                          {isOwner && (
+                            <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                                <button
+                                  type="button"
+                                  className="table-icon-btn danger"
+                                  title="Hủy phân công nhân sự khỏi phân khu"
+                                  aria-label={`Hủy phân công cho ${item.staffName}`}
+                                  onClick={() => handleUnassign(item.assignmentId)}
+                                >
+                                  <Icon name="trash" size={15} />
+                                  <span className="sr-only">Hủy phân công</span>
+                                </button>
+                              </div>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table Footer */}
+                <div className="zone-table-footer">
+                  <div>
+                    Hiển thị 1–{filteredAssignments.length} trong {filteredAssignments.length} lượt phân công
                   </div>
-                ))}
-              </div>
+                  <div className="zone-pagination-wrap">
+                    <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
+                      <Icon name="chevron-left" size={15} />
+                    </button>
+                    <button type="button" className="zone-page-btn active">
+                      1
+                    </button>
+                    <button type="button" className="zone-page-btn" disabled aria-label="Trang sau">
+                      <Icon name="chevron-right" size={15} />
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
-          </div>
+          </>
         )}
       </div>
 
       {/* Add Staff Modal */}
-      {isAddStaffOpen && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 1000,
-            padding: '20px',
-          }}
-        >
-          <div className="panel" style={{ width: '100%', maxWidth: '480px', borderRadius: '16px', padding: '28px' }}>
-            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>Thêm nhân viên vào trang trại</h2>
-            <p style={{ margin: '6px 0 16px', fontSize: '13px', color: '#64748b' }}>
-              Nhập địa chỉ email của tài khoản người dùng đã đăng ký và kích hoạt trên hệ thống MyCropDiary.
-            </p>
-            <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
-                  Email tài khoản nhân viên *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="nhanvien@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
-                  Vai trò trong trang trại *
-                </label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                >
-                  <option value="STAFF">Nhân viên kỹ thuật (STAFF)</option>
-                  <option value="OWNER">Đồng chủ trang trại (OWNER)</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
-                  Chức danh chuyên môn
-                </label>
-                <input
-                  type="text"
-                  maxLength={100}
-                  placeholder="Kỹ sư nông học / Phụ trách BVTV..."
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button type="button" className="action-button" onClick={() => setIsAddStaffOpen(false)}>
-                  Hủy
-                </button>
-                <button type="submit" className="primary-button" disabled={savingStaff}>
-                  {savingStaff ? 'Đang lưu...' : 'Thêm nhân viên'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={isAddStaffOpen}
+        onClose={() => setIsAddStaffOpen(false)}
+        title="Thêm nhân viên vào trang trại"
+        headerIcon={<Icon name="users" size={20} />}
+      >
+        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b', lineHeight: 1.5 }}>
+          Nhập email của người dùng đã có tài khoản trên MyCropDiary để cấp quyền làm việc tại trang trại.
+        </p>
+        <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="add-staff-email" className="structured-field-label">
+                Email tài khoản nhân viên <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">Bắt buộc</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="add-staff-email"
+                type="email"
+                required
+                placeholder="nhanvien@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
-      )}
 
-      {/* Add Assignment Modal */}
-      {isAssignOpen && (
-        <div
-          className="modal-backdrop"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(4px)',
-            display: 'grid',
-            placeItems: 'center',
-            zIndex: 1000,
-            padding: '20px',
-          }}
-        >
-          <div className="panel" style={{ width: '100%', maxWidth: '480px', borderRadius: '16px', padding: '28px' }}>
-            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>Phân công nhân sự vào Phân khu</h2>
-            <form onSubmit={handleAssignZone} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: '16px' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
-                  Chọn thành viên trang trại *
-                </label>
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="add-staff-role" className="structured-field-label">
+                Vai trò trong trang trại <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">Phân quyền</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <select
+                id="add-staff-role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                <option value="STAFF">Nhân viên kỹ thuật (STAFF)</option>
+                <option value="OWNER">Đồng chủ trang trại (OWNER)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="add-staff-job-title" className="structured-field-label">
+                Chức danh chuyên môn
+              </label>
+              <span className="structured-field-badge">Hiển thị</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="add-staff-job-title"
+                type="text"
+                maxLength={100}
+                placeholder="VD: Kỹ sư nông học / Quản lý BVTV..."
+                value={jobTitle}
+                onChange={(e) => setJobTitle(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <button type="button" className="ghost-button" onClick={() => setIsAddStaffOpen(false)} disabled={savingStaff}>
+              Hủy
+            </button>
+            <button type="submit" className="primary-button" disabled={savingStaff}>
+              {savingStaff ? 'Đang thêm...' : 'Thêm nhân viên'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Staff Modal */}
+      <Modal
+        open={Boolean(editingStaff)}
+        onClose={() => setEditingStaff(null)}
+        title={`Chỉnh sửa nhân viên: ${editingStaff?.fullName || ''}`}
+        headerIcon={<Icon name="edit" size={20} />}
+      >
+        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b' }}>
+          Cập nhật vai trò, chức danh chuyên môn hoặc trạng thái làm việc của thành viên.
+        </p>
+        <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="edit-staff-role" className="structured-field-label">
+                Vai trò trong trang trại <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">Quyền hạn</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <select
+                id="edit-staff-role"
+                value={editRole}
+                onChange={(e) => setEditRole(e.target.value as 'OWNER' | 'STAFF')}
+              >
+                <option value="STAFF">Nhân viên kỹ thuật (STAFF)</option>
+                <option value="OWNER">Đồng chủ trang trại (OWNER)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="edit-staff-job-title" className="structured-field-label">
+                Chức danh chuyên môn
+              </label>
+              <span className="structured-field-badge">Tùy chỉnh</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <input
+                id="edit-staff-job-title"
+                type="text"
+                maxLength={100}
+                placeholder="VD: Kỹ sư nông học / Quản lý dinh dưỡng..."
+                value={editJobTitle}
+                onChange={(e) => setEditJobTitle(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="edit-staff-status" className="structured-field-label">
+                Trạng thái làm việc
+              </label>
+              <span className="structured-field-badge">Trạng thái</span>
+            </div>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <select
+                id="edit-staff-status"
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+              >
+                <option value="ACTIVE">Hoạt động (ACTIVE)</option>
+                <option value="INACTIVE">Tạm ngưng (INACTIVE)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <button type="button" className="ghost-button" onClick={() => setEditingStaff(null)} disabled={savingEdit}>
+              Hủy
+            </button>
+            <button type="submit" className="primary-button" disabled={savingEdit}>
+              {savingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Assign Staff Modal ("Form phân công") */}
+      <Modal
+        open={isAssignOpen}
+        onClose={() => setIsAssignOpen(false)}
+        title="Phân công nhân sự phụ trách phân khu"
+        headerIcon={<Icon name="plots" size={20} />}
+      >
+        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b' }}>
+          Chỉ định kỹ sư hoặc nhân viên kỹ thuật chịu trách nhiệm giám sát và ghi chép nhật ký canh tác theo chuẩn VietGAP cho phân khu sản xuất.
+        </p>
+        <form onSubmit={handleAssignZone} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Field 1: Chọn nhân sự */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="assign-staff-select" className="structured-field-label">
+                Chọn nhân sự phụ trách <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">{activeStaffOptions.length} nhân sự khả dụng</span>
+            </div>
+            {activeStaffOptions.length === 0 ? (
+              <p style={{ color: '#dc2626', fontSize: '13.5px', margin: 0 }}>
+                ⚠️ Trang trại chưa có nhân sự đang hoạt động. Vui lòng thêm nhân viên trước khi phân công.
+              </p>
+            ) : (
+              <div className="form-field" style={{ marginBottom: 0 }}>
                 <select
+                  id="assign-staff-select"
                   required
                   value={assignStaffId}
                   onChange={(e) => setAssignStaffId(e.target.value ? Number(e.target.value) : '')}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                 >
-                  <option value="">-- Chọn nhân viên đang hoạt động --</option>
+                  <option value="">-- Chọn thành viên phụ trách --</option>
                   {activeStaffOptions.map((s) => (
                     <option key={s.farmMemberId} value={s.farmMemberId}>
-                      {s.fullName} ({s.email}) — {s.roleLabel}
+                      {s.fullName} ({s.email}) — {s.roleLabel || 'Nhân sự'}
                     </option>
                   ))}
                 </select>
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
-                  Chọn Phân khu (Zone) *
-                </label>
-                {zones.length > 0 ? (
-                  <select
-                    required
-                    value={assignZoneId}
-                    onChange={(e) => setAssignZoneId(e.target.value ? Number(e.target.value) : '')}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                  >
-                    <option value="">-- Chọn phân khu sản xuất --</option>
-                    {zones.map((z) => (
-                      <option key={z.zoneId} value={z.zoneId}>
-                        {z.zoneName} ({z.areaValue} {z.areaUnit})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type="number"
-                    required
-                    placeholder="Nhập ID phân khu (Zone ID)"
-                    value={assignZoneId}
-                    onChange={(e) => setAssignZoneId(e.target.value ? Number(e.target.value) : '')}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                  />
-                )}
+            )}
+          </div>
+
+          {/* Field 2: Chọn phân khu */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <label htmlFor="assign-zone-select" className="structured-field-label">
+                Phân khu sản xuất tiếp nhận <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">{zones.length} phân khu</span>
+            </div>
+            {zones.length === 0 ? (
+              <p style={{ color: '#dc2626', fontSize: '13.5px', margin: 0 }}>
+                ⚠️ Chưa có phân khu sản xuất nào trong trang trại. Vui lòng tạo phân khu trước.
+              </p>
+            ) : (
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <select
+                  id="assign-zone-select"
+                  required
+                  value={assignZoneId}
+                  onChange={(e) => setAssignZoneId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">-- Chọn phân khu sản xuất --</option>
+                  {zones.map((z) => (
+                    <option key={z.zoneId} value={z.zoneId}>
+                      {z.zoneName} (KV-00{z.zoneId} · {z.areaValue} {z.areaUnit})
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '4px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>
-                  Ngày bắt đầu phụ trách *
+            )}
+          </div>
+
+          {/* Field 3: Ngày bắt đầu & Ghi chú */}
+          <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="assign-start-date" className="structured-field-label">
+                  Ngày bắt đầu phụ trách <span style={{ color: '#dc2626' }}>*</span>
                 </label>
+                <span className="structured-field-badge">Ngày</span>
+              </div>
+              <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
+                  id="assign-start-date"
                   type="date"
                   required
                   value={assignedAtDate}
                   onChange={(e) => setAssignedAtDate(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button type="button" className="action-button" onClick={() => setIsAssignOpen(false)}>
-                  Hủy
-                </button>
-                <button type="submit" className="primary-button" disabled={savingAssign}>
-                  {savingAssign ? 'Đang phân công...' : 'Xác nhận phân công'}
-                </button>
+            </div>
+
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="assign-notes" className="structured-field-label">
+                  Nhiệm vụ &amp; Ghi chú
+                </label>
+                <span className="structured-field-badge">{assignNotes.length}/200 ký tự</span>
               </div>
-            </form>
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <input
+                  id="assign-notes"
+                  type="text"
+                  maxLength={200}
+                  placeholder="VD: Quản lý canh tác, giám sát sâu bệnh..."
+                  value={assignNotes}
+                  onChange={(e) => setAssignNotes(e.target.value)}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <button type="button" className="ghost-button" onClick={() => setIsAssignOpen(false)} disabled={savingAssign}>
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={savingAssign || !assignStaffId || !assignZoneId}
+            >
+              {savingAssign ? 'Đang phân công...' : 'Xác nhận phân công'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </section>
   );
 }
