@@ -749,25 +749,28 @@ export function TasksPage() {
                       <th style={{ width: '38px', padding: '10px 8px', textAlign: 'center' }}>
                         <input type="checkbox" aria-label="Chọn tất cả việc" style={{ cursor: 'pointer' }} />
                       </th>
-                      <th style={{ width: '27%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '23%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Tên công việc &amp; Phân loại
                       </th>
-                      <th style={{ width: '15%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '13%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Mùa vụ &amp; Vị trí
                       </th>
-                      <th style={{ width: '11%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                      <th style={{ width: '10%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                         Độ ưu tiên
                       </th>
-                      <th style={{ width: '13%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '12%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Người phụ trách
                       </th>
-                      <th style={{ width: '11%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '10%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Hạn hoàn thành
                       </th>
-                      <th style={{ width: '11%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                      <th style={{ width: '10%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                         Trạng thái
                       </th>
-                      <th style={{ width: '12%', minWidth: '170px', padding: '10px 12px', textAlign: 'right', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '11%', padding: '10px 8px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                        Tiến độ
+                      </th>
+                      <th style={{ width: '11%', padding: '10px 8px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Thao tác
                       </th>
                     </tr>
@@ -937,43 +940,43 @@ export function TasksPage() {
                             </span>
                           </td>
 
-                          <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                            <div className="table-action-btns" style={{ justifyContent: 'flex-end', gap: '4px' }}>
-                              {/* Quick status transition button */}
-                              {t.status === 'planned' && (
-                                <button
-                                  type="button"
-                                  className="btn-status-quick start"
-                                  title="Bắt đầu thực hiện công việc"
-                                  onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
-                                  style={{ padding: '4px 8px', fontSize: '11.5px' }}
-                                >
-                                  ▶ Bắt đầu
-                                </button>
-                              )}
-                              {t.status === 'in_progress' && (
-                                <button
-                                  type="button"
-                                  className="btn-status-quick done"
-                                  title="Nghiệm thu hoàn thành"
-                                  onClick={() => void handleQuickStatusChange(t.taskId, 'completed')}
-                                  style={{ padding: '4px 8px', fontSize: '11.5px' }}
-                                >
-                                  ✓ Hoàn thành
-                                </button>
-                              )}
-                              {t.status === 'completed' && (
-                                <button
-                                  type="button"
-                                  className="btn-status-quick reopen"
-                                  title="Mở lại công việc"
-                                  onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
-                                  style={{ padding: '4px 8px', fontSize: '11.5px' }}
-                                >
-                                  ↺ Mở lại
-                                </button>
-                              )}
+                          {/* Quick progress transition */}
+                          <td style={{ padding: '10px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {t.status === 'planned' && (
+                              <button
+                                type="button"
+                                className="btn-status-quick start"
+                                title="Bắt đầu thực hiện công việc"
+                                onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
+                              >
+                                ▶ Bắt đầu
+                              </button>
+                            )}
+                            {t.status === 'in_progress' && (
+                              <button
+                                type="button"
+                                className="btn-status-quick done"
+                                title="Nghiệm thu hoàn thành"
+                                onClick={() => void handleQuickStatusChange(t.taskId, 'completed')}
+                              >
+                                ✓ Hoàn thành
+                              </button>
+                            )}
+                            {t.status === 'completed' && (
+                              <button
+                                type="button"
+                                className="btn-status-quick reopen"
+                                title="Mở lại công việc"
+                                onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
+                              >
+                                ↺ Mở lại
+                              </button>
+                            )}
+                          </td>
 
+                          {/* Action icons */}
+                          <td style={{ padding: '10px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
                               <button
                                 type="button"
                                 className="table-icon-btn primary"
