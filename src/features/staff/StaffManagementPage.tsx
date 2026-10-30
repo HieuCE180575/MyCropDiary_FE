@@ -284,11 +284,24 @@ export function StaffManagementPage() {
 
   const activeStaffOptions = staffList.filter((s) => s.status === 'ACTIVE');
 
-  const getStaffInitials = (name?: string | null): string => {
-    if (!name) return 'NS';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const parseStaffName = (rawName?: string | null) => {
+    if (!rawName) return { displayName: 'Nhân sự', subTitle: null, initials: 'NS' };
+    const match = rawName.match(/^(.*?)\s*\((.*?)\)$/);
+    let displayName = rawName.trim();
+    let subTitle: string | null = null;
+    if (match) {
+      displayName = match[1].trim();
+      subTitle = match[2].trim();
+    }
+    const parts = displayName.split(/\s+/).filter(Boolean);
+    const initials =
+      parts.length === 0
+        ? 'NS'
+        : parts.length === 1
+        ? parts[0].slice(0, 2).toUpperCase()
+        : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+
+    return { displayName, subTitle, initials };
   };
 
   return (
@@ -448,29 +461,29 @@ export function StaffManagementPage() {
                   <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                        <th style={{ width: '44px', padding: '14px 16px', textAlign: 'center' }}>
                           <input type="checkbox" aria-label="Chọn tất cả nhân sự" style={{ cursor: 'pointer' }} />
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '260px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Thành viên
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '220px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Liên hệ
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Vai trò
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '140px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Số vùng phụ trách
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Ngày tham gia
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Trạng thái
                         </th>
                         {isOwner && (
-                          <th style={{ width: '100px', padding: '14px 16px', textAlign: 'right' }}>
+                          <th style={{ width: '130px', padding: '14px 16px', textAlign: 'right' }}>
                             Thao tác
                           </th>
                         )}
@@ -479,58 +492,81 @@ export function StaffManagementPage() {
                     <tbody>
                       {filteredStaff.map((staff) => {
                         const isActive = staff.status === 'ACTIVE';
+                        const { displayName, subTitle, initials } = parseStaffName(staff.fullName);
 
                         return (
                           <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                              <input type="checkbox" aria-label={`Chọn ${staff.fullName}`} style={{ cursor: 'pointer' }} />
+                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <input type="checkbox" aria-label={`Chọn ${displayName}`} style={{ cursor: 'pointer' }} />
                             </td>
 
-                            <td style={{ padding: '14px 16px' }}>
+                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div className="staff-initials-avatar">
-                                  {getStaffInitials(staff.fullName)}
+                                <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
+                                  {initials}
                                 </div>
-                                <div>
-                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px' }}>
-                                    {staff.fullName}
-                                  </strong>
-                                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>
-                                    Mã TV: #{staff.farmMemberId}
-                                  </span>
+                                <div style={{ minWidth: 0 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    <strong style={{ color: '#0f172a', fontSize: '14.5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                      {displayName}
+                                    </strong>
+                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                                      #{staff.farmMemberId}
+                                    </span>
+                                  </div>
+                                  {subTitle && (
+                                    <span style={{ display: 'block', fontSize: '12px', color: '#059669', fontWeight: 600, marginTop: '2px' }}>
+                                      {subTitle}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </td>
 
-                            <td style={{ padding: '14px 16px' }}>
-                              <div style={{ color: '#334155', fontSize: '13.5px', fontWeight: 500 }}>{staff.email}</div>
-                              <span style={{ color: '#64748b', fontSize: '12.5px' }}>
+                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                              <div style={{ color: '#0f172a', fontSize: '13.5px', fontWeight: 500 }}>
+                                {staff.email}
+                              </div>
+                              <span style={{ color: '#64748b', fontSize: '12.5px', marginTop: '2px', display: 'block' }}>
                                 {staff.phoneNumber || 'Chưa cập nhật SĐT'}
                               </span>
                             </td>
 
-                            <td style={{ padding: '14px 16px' }}>
+                            <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span
                                 className="crop-cat-pill"
                                 style={{
-                                  background: staff.farmRole === 'OWNER' ? '#ecfdf5' : '#f1f5f9',
+                                  background: staff.farmRole === 'OWNER' ? '#ecfdf5' : '#f8fafc',
                                   color: staff.farmRole === 'OWNER' ? '#047857' : '#334155',
-                                  borderColor: staff.farmRole === 'OWNER' ? '#a7f3d0' : '#e2e8f0',
+                                  borderColor: staff.farmRole === 'OWNER' ? '#a7f3d0' : '#cbd5e1',
+                                  fontWeight: 650,
                                 }}
                               >
                                 {staff.roleLabel}
                               </span>
                             </td>
 
-                            <td style={{ padding: '14px 16px', color: '#0f172a', fontWeight: 600, fontSize: '13.5px' }}>
-                              {staff.activeAssignmentCount} vùng
+                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <span
+                                style={{
+                                  display: 'inline-block',
+                                  padding: '3px 10px',
+                                  borderRadius: '6px',
+                                  background: staff.activeAssignmentCount > 0 ? '#ecfdf5' : '#f1f5f9',
+                                  color: staff.activeAssignmentCount > 0 ? '#047857' : '#64748b',
+                                  fontWeight: 700,
+                                  fontSize: '13px',
+                                }}
+                              >
+                                {staff.activeAssignmentCount} vùng
+                              </span>
                             </td>
 
-                            <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px' }}>
+                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle', color: '#64748b', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
                               {staff.joinedAt ? new Date(staff.joinedAt).toLocaleDateString('vi-VN') : '—'}
                             </td>
 
-                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
                                 <span className="dot" />
                                 {isActive ? 'Hoạt động' : 'Đã ngưng'}
@@ -538,13 +574,13 @@ export function StaffManagementPage() {
                             </td>
 
                             {isOwner && (
-                              <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <td style={{ padding: '14px 16px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                 <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
                                   <button
                                     type="button"
                                     className="table-icon-btn edit"
                                     title="Chỉnh sửa thông tin nhân sự"
-                                    aria-label={`Chỉnh sửa ${staff.fullName}`}
+                                    aria-label={`Chỉnh sửa ${displayName}`}
                                     onClick={() => openEditModal(staff)}
                                   >
                                     <Icon name="edit" size={15} />
@@ -555,8 +591,8 @@ export function StaffManagementPage() {
                                       type="button"
                                       className="table-icon-btn"
                                       title="Tạm ngưng hoạt động nhân viên"
-                                      aria-label={`Tạm dừng ${staff.fullName}`}
-                                      onClick={() => handleDeactivate(staff.farmMemberId, staff.fullName)}
+                                      aria-label={`Tạm dừng ${displayName}`}
+                                      onClick={() => handleDeactivate(staff.farmMemberId, displayName)}
                                     >
                                       <Icon name="close" size={14} />
                                       <span className="sr-only">Tạm ngưng</span>
@@ -566,8 +602,8 @@ export function StaffManagementPage() {
                                       type="button"
                                       className="table-icon-btn edit"
                                       title="Kích hoạt lại nhân viên"
-                                      aria-label={`Kích hoạt lại ${staff.fullName}`}
-                                      onClick={() => handleReactivate(staff.farmMemberId, staff.fullName)}
+                                      aria-label={`Kích hoạt lại ${displayName}`}
+                                      onClick={() => handleReactivate(staff.farmMemberId, displayName)}
                                     >
                                       <Icon name="check" size={14} />
                                       <span className="sr-only">Kích hoạt</span>
@@ -577,8 +613,8 @@ export function StaffManagementPage() {
                                     type="button"
                                     className="table-icon-btn danger"
                                     title="Xóa nhân sự khỏi trang trại"
-                                    aria-label={`Xóa ${staff.fullName}`}
-                                    onClick={() => handleDeleteStaff(staff.farmMemberId, staff.fullName)}
+                                    aria-label={`Xóa ${displayName}`}
+                                    onClick={() => handleDeleteStaff(staff.farmMemberId, displayName)}
                                   >
                                     <Icon name="trash" size={15} />
                                     <span className="sr-only">Xóa</span>
@@ -719,120 +755,129 @@ export function StaffManagementPage() {
                   <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                        <th style={{ width: '44px', padding: '14px 16px', textAlign: 'center' }}>
                           <input type="checkbox" aria-label="Chọn tất cả phân công" style={{ cursor: 'pointer' }} />
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '220px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Phân khu sản xuất
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '240px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Nhân sự phụ trách
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '160px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Vai trò / Chức vụ
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Ngày bắt đầu
                         </th>
-                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        <th style={{ minWidth: '140px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Người giao việc
                         </th>
                         {isOwner && (
-                          <th style={{ width: '90px', padding: '14px 16px', textAlign: 'right' }}>
+                          <th style={{ width: '100px', padding: '14px 16px', textAlign: 'right' }}>
                             Thao tác
                           </th>
                         )}
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAssignments.map((item) => (
-                        <tr key={item.assignmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                            <input
-                              type="checkbox"
-                              aria-label={`Chọn phân công của ${item.staffName || 'nhân viên'}`}
-                              style={{ cursor: 'pointer' }}
-                            />
-                          </td>
+                      {filteredAssignments.map((item) => {
+                        const { displayName, subTitle, initials } = parseStaffName(item.staffName);
 
-                          <td style={{ padding: '14px 16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                              <span
-                                style={{
-                                  width: '36px',
-                                  height: '36px',
-                                  borderRadius: '10px',
-                                  background: '#ecfdf5',
-                                  color: '#059669',
-                                  display: 'grid',
-                                  placeItems: 'center',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <Icon name="plots" size={18} />
-                              </span>
-                              <div>
-                                <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px' }}>
-                                  {item.zoneName || `Phân khu #${item.zoneId}`}
-                                </strong>
-                                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-                                  Mã: KV-00{item.zoneId}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
+                        return (
+                          <tr key={item.assignmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
+                              <input
+                                type="checkbox"
+                                aria-label={`Chọn phân công của ${displayName}`}
+                                style={{ cursor: 'pointer' }}
+                              />
+                            </td>
 
-                          <td style={{ padding: '14px 16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <div className="staff-initials-avatar">
-                                {getStaffInitials(item.staffName)}
-                              </div>
-                              <div>
-                                <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px' }}>
-                                  {item.staffName || `Thành viên #${item.farmMemberId}`}
-                                </strong>
-                                <span style={{ fontSize: '12.5px', color: '#64748b' }}>
-                                  {item.staffEmail || 'Chưa có email'}
-                                </span>
-                              </div>
-                            </div>
-                          </td>
-
-                          <td style={{ padding: '14px 16px' }}>
-                            <span
-                              className="crop-cat-pill"
-                              style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0' }}
-                            >
-                              {item.jobTitle || 'Kỹ thuật viên phụ trách'}
-                            </span>
-                          </td>
-
-                          <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px' }}>
-                            {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
-                          </td>
-
-                          <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', fontWeight: 500 }}>
-                            {item.assignedByName || 'Chủ trang trại'}
-                          </td>
-
-                          {isOwner && (
-                            <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                              <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
-                                <button
-                                  type="button"
-                                  className="table-icon-btn danger"
-                                  title="Hủy phân công nhân sự khỏi phân khu"
-                                  aria-label={`Hủy phân công cho ${item.staffName}`}
-                                  onClick={() => handleUnassign(item.assignmentId)}
+                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span
+                                  style={{
+                                    width: '36px',
+                                    height: '36px',
+                                    borderRadius: '10px',
+                                    background: '#ecfdf5',
+                                    color: '#059669',
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                    flexShrink: 0,
+                                  }}
                                 >
-                                  <Icon name="trash" size={15} />
-                                  <span className="sr-only">Hủy phân công</span>
-                                </button>
+                                  <Icon name="plots" size={18} />
+                                </span>
+                                <div>
+                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px', fontWeight: 700 }}>
+                                    {item.zoneName || `Phân khu #${item.zoneId}`}
+                                  </strong>
+                                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                                    Mã: KV-00{item.zoneId}
+                                  </span>
+                                </div>
                               </div>
                             </td>
-                          )}
-                        </tr>
-                      ))}
+
+                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
+                                  {initials}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                    {displayName}
+                                  </strong>
+                                  <span style={{ fontSize: '12.5px', color: '#64748b', display: 'block' }}>
+                                    {item.staffEmail || 'Chưa có email'}
+                                  </span>
+                                  {subTitle && (
+                                    <span style={{ display: 'block', fontSize: '11.5px', color: '#059669', fontWeight: 600 }}>
+                                      {subTitle}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <span
+                                className="crop-cat-pill"
+                                style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 650 }}
+                              >
+                                {item.jobTitle || 'Kỹ thuật viên phụ trách'}
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
+                            </td>
+
+                            <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', fontWeight: 500, verticalAlign: 'middle' }}>
+                              {item.assignedByName || 'Chủ trang trại'}
+                            </td>
+
+                            {isOwner && (
+                              <td style={{ padding: '14px 16px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                                  <button
+                                    type="button"
+                                    className="table-icon-btn danger"
+                                    title="Hủy phân công nhân sự khỏi phân khu"
+                                    aria-label={`Hủy phân công cho ${displayName}`}
+                                    onClick={() => handleUnassign(item.assignmentId)}
+                                  >
+                                    <Icon name="trash" size={15} />
+                                    <span className="sr-only">Hủy phân công</span>
+                                  </button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
