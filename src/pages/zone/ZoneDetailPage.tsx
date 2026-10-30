@@ -778,22 +778,26 @@ export function ZoneDetailPage() {
                       {r.controlMeasures}
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                      <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
                         <button
                           type="button"
-                          className="action-button"
-                          style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                          className="table-icon-btn primary"
+                          title="Xem chi tiết"
+                          aria-label={`Chi tiết ${r.riskType}`}
                           onClick={() => openEditRiskModal(r, 'view')}
                         >
-                          Xem chi tiết
+                          <Icon name="eye" size={16} />
+                          <span className="sr-only">Xem chi tiết</span>
                         </button>
                         <button
                           type="button"
-                          className="primary-button"
-                          style={{ padding: '8px 14px', fontSize: '13px' }}
+                          className="table-icon-btn edit"
+                          title="Cập nhật biện pháp"
+                          aria-label={`Cập nhật biện pháp ${r.riskType}`}
                           onClick={() => openEditRiskModal(r, 'edit')}
                         >
-                          Cập nhật biện pháp
+                          <Icon name="edit" size={16} />
+                          <span className="sr-only">Cập nhật biện pháp</span>
                         </button>
                       </div>
                     </td>

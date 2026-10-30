@@ -890,21 +890,25 @@ export function BlockDetailPage() {
                           <span className="knowledge-tag">{s.seasonStatus}</span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                          <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
                             <Link
                               to={`/crop-seasons/${s.cropSeasonId}`}
-                              className="primary-button"
-                              style={{ padding: '8px 14px', fontSize: '13px' }}
+                              className="table-icon-btn primary"
+                              title="Xem chi tiết mùa vụ"
+                              aria-label={`Chi tiết ${s.seasonName}`}
                             >
-                              Xem chi tiết
+                              <Icon name="eye" size={16} />
+                              <span className="sr-only">Xem chi tiết</span>
                             </Link>
                             <button
                               type="button"
-                              className="action-button"
-                              style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                              className="table-icon-btn edit"
+                              title="Chỉnh sửa mùa vụ"
+                              aria-label={`Chỉnh sửa ${s.seasonName}`}
                               onClick={() => openEditSeasonModal(s)}
                             >
-                              Chỉnh sửa
+                              <Icon name="edit" size={16} />
+                              <span className="sr-only">Chỉnh sửa</span>
                             </button>
                           </div>
                         </td>
@@ -1008,14 +1012,18 @@ export function BlockDetailPage() {
                         <td style={{ maxWidth: '360px', color: '#334155', lineHeight: 1.5 }}>{obs.description}</td>
                         <td>{obs.recorderFullName || 'Nhân sự trang trại'}</td>
                         <td style={{ textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            className="action-button"
-                            style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
-                            onClick={() => setSelectedCondition(obs)}
-                          >
-                            Xem chi tiết
-                          </button>
+                          <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                            <button
+                              type="button"
+                              className="table-icon-btn primary"
+                              title="Xem chi tiết ghi nhận điều kiện"
+                              aria-label="Xem chi tiết ghi nhận điều kiện"
+                              onClick={() => setSelectedCondition(obs)}
+                            >
+                              <Icon name="eye" size={16} />
+                              <span className="sr-only">Xem chi tiết</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1132,11 +1140,12 @@ export function BlockDetailPage() {
                         {r.controlMeasures}
                       </td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                        <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className="action-button"
-                            style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                            className="table-icon-btn primary"
+                            title="Xem chi tiết"
+                            aria-label={`Chi tiết ${r.riskType}`}
                             onClick={() => {
                               setSelectedRisk(r);
                               setRiskForm({
@@ -1152,12 +1161,14 @@ export function BlockDetailPage() {
                               setRiskModalMode('view');
                             }}
                           >
-                            Xem chi tiết
+                            <Icon name="eye" size={16} />
+                            <span className="sr-only">Xem chi tiết</span>
                           </button>
                           <button
                             type="button"
-                            className="primary-button"
-                            style={{ padding: '8px 14px', fontSize: '13px' }}
+                            className="table-icon-btn edit"
+                            title="Cập nhật biện pháp"
+                            aria-label={`Cập nhật biện pháp ${r.riskType}`}
                             onClick={() => {
                               setSelectedRisk(r);
                               setRiskForm({
@@ -1173,7 +1184,8 @@ export function BlockDetailPage() {
                               setRiskModalMode('edit');
                             }}
                           >
-                            Cập nhật biện pháp
+                            <Icon name="edit" size={16} />
+                            <span className="sr-only">Cập nhật biện pháp</span>
                           </button>
                         </div>
                       </td>
@@ -1277,11 +1289,12 @@ export function BlockDetailPage() {
                         </span>
                       </td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                        <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className="action-button"
-                            style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                            className="table-icon-btn primary"
+                            title="Xem chi tiết"
+                            aria-label={`Chi tiết mẫu đất ${s.sampleCode}`}
                             onClick={() => {
                               setSelectedSoil(s);
                               setSoilForm({
@@ -1299,12 +1312,14 @@ export function BlockDetailPage() {
                               setSoilModalMode('view');
                             }}
                           >
-                            Xem chi tiết
+                            <Icon name="eye" size={16} />
+                            <span className="sr-only">Xem chi tiết</span>
                           </button>
                           <button
                             type="button"
-                            className="primary-button"
-                            style={{ padding: '8px 14px', fontSize: '13px' }}
+                            className="table-icon-btn edit"
+                            title="Chỉnh sửa đánh giá đất"
+                            aria-label={`Chỉnh sửa mẫu đất ${s.sampleCode}`}
                             onClick={() => {
                               setSelectedSoil(s);
                               setSoilForm({
@@ -1322,7 +1337,8 @@ export function BlockDetailPage() {
                               setSoilModalMode('edit');
                             }}
                           >
-                            Chỉnh sửa
+                            <Icon name="edit" size={16} />
+                            <span className="sr-only">Chỉnh sửa</span>
                           </button>
                         </div>
                       </td>
@@ -1429,11 +1445,12 @@ export function BlockDetailPage() {
                         </span>
                       </td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div className="zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                        <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className="action-button"
-                            style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                            className="table-icon-btn primary"
+                            title="Xem chi tiết"
+                            aria-label={`Chi tiết mẫu nước ${w.sampleCode}`}
                             onClick={() => {
                               setSelectedWater(w);
                               setWaterForm({
@@ -1453,12 +1470,14 @@ export function BlockDetailPage() {
                               setWaterModalMode('view');
                             }}
                           >
-                            Xem chi tiết
+                            <Icon name="eye" size={16} />
+                            <span className="sr-only">Xem chi tiết</span>
                           </button>
                           <button
                             type="button"
-                            className="primary-button"
-                            style={{ padding: '8px 14px', fontSize: '13px' }}
+                            className="table-icon-btn edit"
+                            title="Chỉnh sửa đánh giá nguồn nước"
+                            aria-label={`Chỉnh sửa mẫu nước ${w.sampleCode}`}
                             onClick={() => {
                               setSelectedWater(w);
                               setWaterForm({
@@ -1478,7 +1497,8 @@ export function BlockDetailPage() {
                               setWaterModalMode('edit');
                             }}
                           >
-                            Chỉnh sửa
+                            <Icon name="edit" size={16} />
+                            <span className="sr-only">Chỉnh sửa</span>
                           </button>
                         </div>
                       </td>

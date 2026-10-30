@@ -42,11 +42,9 @@
 }
 
 /* Metrics Grid */
+/* Metrics Grid hidden per user request */
 .tasks-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  display: none !important;
 }
 
 .tasks-metric-card {

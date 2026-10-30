@@ -61,8 +61,8 @@
 .mu-notice-error { background: var(--mu-danger-bg); color: var(--mu-danger); }
 .mu-loading-detail { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--mu-muted); font-size: 13px; }
 
-/* Compact & Unified Metric Stat Cards (Reduced Vertical Space) */
-.mu-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+/* Metric Stat Cards hidden per user request to streamline page */
+.mu-metrics { display: none !important; }
 .material-usage-page .mu-metric { padding: 14px 18px; min-width: 0; border-radius: 12px; }
 .mu-metric-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: auto; }
 .mu-metric-top > span:first-child { color: var(--mu-muted); font-size: 11px; font-weight: 700; line-height: 1.4; letter-spacing: .5px; text-transform: uppercase; }
