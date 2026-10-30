@@ -477,12 +477,6 @@ export function StaffManagementPage() {
                 <div className="empty-icon">⏳</div>
                 <h2>Đang tải danh sách nhân sự...</h2>
               </div>
-            ) : filteredStaff.length === 0 ? (
-              <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
-                <div className="empty-icon">👥</div>
-                <h2>Chưa có nhân sự phù hợp</h2>
-                <p>Hãy thử tìm kiếm với từ khóa khác hoặc bấm &quot;Thêm nhân viên&quot; bằng email tài khoản đã kích hoạt.</p>
-              </div>
             ) : (
               <>
                 <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
@@ -518,7 +512,55 @@ export function StaffManagementPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredStaff.map((staff) => {
+                      {filteredStaff.length === 0 ? (
+                        <tr>
+                          <td colSpan={isOwner ? 8 : 7} style={{ textAlign: 'center', padding: '56px 20px', background: '#ffffff' }}>
+                            <div style={{ maxWidth: '440px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <div
+                                style={{
+                                  width: '56px',
+                                  height: '56px',
+                                  borderRadius: '14px',
+                                  background: '#ecfdf5',
+                                  color: '#059669',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  marginBottom: '14px',
+                                }}
+                              >
+                                <Icon name="users" size={28} />
+                              </div>
+                              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+                                Chưa có nhân sự phù hợp
+                              </h3>
+                              <p style={{ color: '#64748b', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
+                                Hãy thử tìm kiếm với từ khóa khác hoặc bấm &quot;Thêm nhân viên&quot; bằng email tài khoản đã kích hoạt.
+                              </p>
+                              {isOwner && (
+                                <button
+                                  type="button"
+                                  className="primary-button"
+                                  onClick={() => setIsAddStaffOpen(true)}
+                                  style={{
+                                    padding: '8px 18px',
+                                    fontSize: '13.5px',
+                                    fontWeight: 700,
+                                    borderRadius: '9px',
+                                    background: '#059669',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    boxShadow: '0 3px 10px rgba(5, 150, 105, 0.2)',
+                                  }}
+                                >
+                                  <Icon name="plus" size={16} /> Thêm nhân viên
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredStaff.map((staff) => {
                         const isActive = staff.status === 'ACTIVE';
                         const { displayName, subTitle, initials } = parseStaffName(staff.fullName);
 
@@ -695,7 +737,8 @@ export function StaffManagementPage() {
                             )}
                           </tr>
                         );
-                      })}
+                      })
+                    )}
                     </tbody>
                   </table>
                 </div>
@@ -703,7 +746,7 @@ export function StaffManagementPage() {
                 {/* Table Footer */}
                 <div className="zone-table-footer">
                   <div>
-                    Hiển thị 1–{filteredStaff.length} trong {filteredStaff.length} nhân sự
+                    Hiển thị {filteredStaff.length > 0 ? `1–${filteredStaff.length}` : '0'} trong {filteredStaff.length} nhân sự
                   </div>
                   <div className="zone-pagination-wrap">
                     <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
@@ -775,51 +818,6 @@ export function StaffManagementPage() {
                 <div className="empty-icon">⏳</div>
                 <h2>Đang tải danh sách phân công...</h2>
               </div>
-            ) : filteredAssignments.length === 0 ? (
-              <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
-                <div
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '16px',
-                    background: '#ecfdf5',
-                    color: '#059669',
-                    display: 'grid',
-                    placeItems: 'center',
-                    margin: '0 auto 16px',
-                  }}
-                >
-                  <Icon name="plots" size={32} />
-                </div>
-                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
-                  {assignments.length === 0 ? 'Chưa có phân công nào' : 'Không tìm thấy phân công phù hợp'}
-                </h2>
-                <p style={{ color: '#64748b', fontSize: '14.5px', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
-                  {assignments.length === 0
-                    ? 'Phân công nhân viên kỹ thuật phụ trách từng phân khu sản xuất để quản lý mùa vụ, lô đất và giám sát quy trình VietGAP.'
-                    : 'Hãy thử tìm kiếm với từ khóa khác hoặc làm mới bộ lọc phân khu.'}
-                </p>
-                {isOwner && assignments.length === 0 && (
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={openAssignModal}
-                    style={{
-                      padding: '10px 20px',
-                      fontSize: '14px',
-                      fontWeight: 700,
-                      borderRadius: '10px',
-                      background: '#059669',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-                    }}
-                  >
-                    <Icon name="plus" size={16} /> Phân công ngay
-                  </button>
-                )}
-              </div>
             ) : (
               <>
                 <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
@@ -852,7 +850,57 @@ export function StaffManagementPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAssignments.map((item) => {
+                      {filteredAssignments.length === 0 ? (
+                        <tr>
+                          <td colSpan={isOwner ? 7 : 6} style={{ textAlign: 'center', padding: '56px 20px', background: '#ffffff' }}>
+                            <div style={{ maxWidth: '440px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                              <div
+                                style={{
+                                  width: '56px',
+                                  height: '56px',
+                                  borderRadius: '14px',
+                                  background: '#ecfdf5',
+                                  color: '#059669',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  marginBottom: '14px',
+                                }}
+                              >
+                                <Icon name="plots" size={28} />
+                              </div>
+                              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+                                {assignments.length === 0 ? 'Chưa có phân công nào' : 'Không tìm thấy phân công phù hợp'}
+                              </h3>
+                              <p style={{ color: '#64748b', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
+                                {assignments.length === 0
+                                  ? 'Phân công nhân viên kỹ thuật phụ trách từng phân khu sản xuất để quản lý mùa vụ, lô đất và giám sát quy trình VietGAP.'
+                                  : 'Hãy thử tìm kiếm với từ khóa khác hoặc làm mới bộ lọc phân khu.'}
+                              </p>
+                              {isOwner && assignments.length === 0 && (
+                                <button
+                                  type="button"
+                                  className="primary-button"
+                                  onClick={openAssignModal}
+                                  style={{
+                                    padding: '9px 18px',
+                                    fontSize: '13.5px',
+                                    fontWeight: 700,
+                                    borderRadius: '9px',
+                                    background: '#059669',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+                                  }}
+                                >
+                                  <Icon name="plus" size={16} /> Phân công ngay
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredAssignments.map((item) => {
                         const { displayName, subTitle, initials } = parseStaffName(item.staffName);
 
                         return (
@@ -950,7 +998,8 @@ export function StaffManagementPage() {
                             )}
                           </tr>
                         );
-                      })}
+                      })
+                    )}
                     </tbody>
                   </table>
                 </div>
@@ -958,7 +1007,7 @@ export function StaffManagementPage() {
                 {/* Table Footer */}
                 <div className="zone-table-footer">
                   <div>
-                    Hiển thị 1–{filteredAssignments.length} trong {filteredAssignments.length} lượt phân công
+                    Hiển thị {filteredAssignments.length > 0 ? `1–${filteredAssignments.length}` : '0'} trong {filteredAssignments.length} lượt phân công
                   </div>
                   <div className="zone-pagination-wrap">
                     <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
