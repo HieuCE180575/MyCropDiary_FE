@@ -112,8 +112,8 @@ function MaterialUsageContent() {
   const [customMaterialName, setCustomMaterialName] = useState('');
   const [customMaterialType, setCustomMaterialType] = useState('Phân bón hữu cơ');
   const [materialForm, setMaterialForm] = useState('Dạng hữu cơ vi sinh');
-  const [quantity, setQuantity] = useState<number | ''>(10);
-  const [unit, setUnit] = useState('kg');
+  const [quantity, setQuantity] = useState<number | ''>(5);
+  const [unit, setUnit] = useState('bao');
   const [dosage, setDosage] = useState('');
   const [method, setMethod] = useState('');
   const [appliedArea, setAppliedArea] = useState<number | ''>('');
@@ -371,7 +371,7 @@ function MaterialUsageContent() {
     setEditingUsage(null); setNotification(null); setUseExistingMaterial(true); setMaterialKeyword('');
     setSelectedMaterialId(''); setCustomMaterialName(''); setCustomMaterialType('Phân bón hữu cơ');
     setMaterialForm('Dạng hữu cơ vi sinh');
-    setFarmingActivityId(''); setQuantity(10); setUnit('kg'); setDosage(''); setMethod('');
+    setFarmingActivityId(''); setQuantity(5); setUnit('bao'); setDosage(''); setMethod('');
     setAppliedArea(''); setAppliedAreaUnit('m²'); setAppliedPlantCount('');
     setSafetyDays(''); setNotes('');
     setUsedAtTime(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
@@ -514,11 +514,11 @@ function MaterialUsageContent() {
               <div className="mu-entry-grid">
                 <div className="mu-field"><label htmlFor="usage-quantity">Số lượng sử dụng <span className="mu-required">*</span></label>
                   <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="weight" /></span><input id="usage-quantity" type="number" aria-label="Số lượng" step="any" min="0.0001" required value={quantity} onChange={event => setQuantity(event.target.value ? Number(event.target.value) : '')} />
-                    <select aria-label="Đơn vị sử dụng" value={unit} disabled={useExistingMaterial} onChange={event => setUnit(event.target.value)}>{getMaterialUnitOptions(unit).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+                    <select aria-label="Đơn vị sử dụng" value={unit} onChange={event => setUnit(event.target.value)}>{getMaterialUnitOptions(unit).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
                   </div><p className="mu-entry-help">Số lượng vật tư thực tế đã sử dụng</p>
                 </div>
                 <div className="mu-field"><label htmlFor="usage-dosage">Liều lượng / nồng độ <Icon name="help" size={15} aria-label="Nhập theo khuyến cáo trên nhãn sản phẩm" /></label>
-                  <DosageInput value={dosage} onChange={setDosage} /><p className="mu-entry-help">Nhập theo khuyến cáo trên nhãn sản phẩm (nếu có)</p>
+                  <DosageInput value={dosage} onChange={setDosage} materialType={customMaterialType} materialUnit={unit} /><p className="mu-entry-help">Nhập theo khuyến cáo trên nhãn sản phẩm (nếu có)</p>
                 </div>
               </div>
               <div className="mu-usage-bottom-grid">

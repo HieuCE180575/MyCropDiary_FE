@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/auth';
 import { Icon } from '../../shared/components/Icon';
@@ -108,6 +108,27 @@ function WorkspaceLayout() {
   const navigation = moduleDefinitions.filter((module) => canAccessModule(module, user?.systemRole, selectedFarm));
   const displayName = user?.fullName?.trim() || user?.email || 'Administrator';
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
+        setAccountMenuOpen(false);
+      }
+    }
+    if (accountMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [accountMenuOpen]);
+
+  useEffect(() => {
+    setAccountMenuOpen(false);
+    setNotificationsOpen(false);
+  }, [pathname]);
   const [invitations, setInvitations] = useState<FarmInvitation[]>([]);
   const [respondingInvId, setRespondingInvId] = useState<number | null>(null);
 
@@ -413,9 +434,16 @@ function WorkspaceLayout() {
               )}
             </div>
 
-            {/* Profile Avatar / Menu */}
-            <div className="account-menu">
-              <Link className="account-profile" to="/profile" title="View profile" aria-label="User Profile">
+            {/* Profile Avatar / Dropdown Menu */}
+            <div className="account-menu" ref={accountMenuRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="account-profile"
+                onClick={() => setAccountMenuOpen((prev) => !prev)}
+                title="Tài khoản & Thiết lập"
+                aria-label="User Profile Menu"
+                aria-expanded={accountMenuOpen}
+              >
                 <span className="avatar" style={user?.avatarUrl ? { padding: 0, overflow: 'hidden' } : undefined}>
                   {user?.avatarUrl ? (
                     <img
@@ -439,7 +467,144 @@ function WorkspaceLayout() {
                           : 'Personal'}
                   </small>
                 </div>
-              </Link>
+                <Icon name={accountMenuOpen ? 'chevron-up' : 'chevron-down'} size={14} style={{ color: '#64748b', marginLeft: '4px' }} />
+              </button>
+
+              {accountMenuOpen && (
+                <div
+                  className="account-dropdown-menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    minWidth: '240px',
+                    background: '#ffffff',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
+                    border: '1px solid #e2e8f0',
+                    padding: '8px',
+                    zIndex: 1000,
+                  }}
+                >
+                  <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid #f1f5f9', marginBottom: '6px' }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{displayName}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user?.email || ''}
+                    </p>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#047857',
+                        background: '#d1fae5',
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                      }}
+                    >
+                      {isAdmin
+                        ? 'Hệ thống Quản trị viên (Admin)'
+                        : currentFarmRole === 'OWNER'
+                          ? 'Chủ trang trại (Farm Owner)'
+                          : currentFarmRole === 'STAFF'
+                            ? 'Nhân viên trang trại (Staff)'
+                            : 'Cá nhân (Personal)'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <button
+                      type="button"
+                      className="dropdown-item"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        navigate('/profile');
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '13.5px',
+                        fontWeight: 500,
+                        color: '#334155',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <Icon name="user" size={17} style={{ color: '#059669' }} />
+                      <span>Hồ sơ cá nhân (Profile)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="dropdown-item"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        navigate('/profile');
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '13.5px',
+                        fontWeight: 500,
+                        color: '#334155',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <Icon name="lock" size={17} style={{ color: '#64748b' }} />
+                      <span>Đổi mật khẩu</span>
+                    </button>
+
+                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+
+                    <button
+                      type="button"
+                      className="dropdown-item"
+                      onClick={() => {
+                        setAccountMenuOpen(false);
+                        signOut();
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '10px 12px',
+                        borderRadius: '10px',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '13.5px',
+                        fontWeight: 600,
+                        color: '#dc2626',
+                        textAlign: 'left',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      <Icon name="log-out" size={17} style={{ color: '#dc2626' }} />
+                      <span>Đăng xuất</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>

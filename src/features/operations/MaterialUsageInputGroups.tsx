@@ -2,23 +2,23 @@ import { useState } from 'react';
 import { Icon } from '../../shared/components/Icon';
 
 export const MATERIAL_UNITS = [
+  'bao',
   'bao (50kg)',
   'bao (25kg)',
-  'bao',
-  'tấn',
-  'tạ',
-  'kg',
-  'g',
+  'chai',
   'chai (1L)',
   'chai (500ml)',
-  'chai',
+  'can',
   'can (5L)',
   'can (10L)',
-  'can',
+  'tấn',
+  'tạ',
   'thùng',
+  'kg',
+  'L',
   'gói',
   'lon',
-  'L',
+  'g',
   'mL',
   'khay',
   'cây',
@@ -31,17 +31,17 @@ export function getMaterialUnitOptions(currentUnit: string) {
   const labelMap: Record<string, string> = {
     'bao (50kg)': 'Bao (50kg - Chuẩn phân bón)',
     'bao (25kg)': 'Bao (25kg)',
-    'bao': 'Bao (Bao bì chung)',
+    'bao': 'Bao (Chuẩn trang trại)',
     'tấn': 'Tấn (1.000 kg)',
     'tạ': 'Tạ (100 kg)',
     'kg': 'Kilogram (kg)',
     'g': 'Gram (g)',
     'chai (1L)': 'Chai 1 Lít (Thuốc BVTV/Dinh dưỡng)',
     'chai (500ml)': 'Chai 500ml',
-    'chai': 'Chai',
+    'chai': 'Chai (Thuốc BVTV / Dinh dưỡng)',
     'can (5L)': 'Can 5 Lít (Chế phẩm sinh học)',
     'can (10L)': 'Can 10 Lít',
-    'can': 'Can',
+    'can': 'Can (Chế phẩm / Dinh dưỡng lớn)',
     'thùng': 'Thùng đóng gói',
     'gói': 'Gói (Hạt giống/Vi sinh)',
     'lon': 'Lon',
@@ -118,7 +118,25 @@ export function defaultMaterialForm(materialType?: string | null, unit?: string 
   return 'Dạng hạt';
 }
 
-const DOSAGE_UNITS = ['g/gốc', 'kg/ha', 'g/m²', 'ml/lít', 'ml/bình', 'g/bình', '%'];
+export const DOSAGE_UNITS = [
+  'bao/ha',
+  'bao/sào',
+  'kg/ha',
+  'kg/1000m²',
+  'tấn/ha',
+  'chai/ha',
+  'can/ha',
+  'chai/phuy (200L)',
+  'lít/ha',
+  'ml/bình (20L)',
+  'ml/lít',
+  'kg/gốc',
+  'g/gốc',
+  'g/m²',
+  'ml/bình',
+  'g/bình',
+  '%',
+];
 function readDosage(value: string) {
   // Preserve legacy free text; only split a recognized numeric dose and suffix.
   const match = value.trim().match(/^(\d+(?:[.,]\d*)?|[.,]\d*)\s*(.+)$/u);
@@ -126,8 +144,27 @@ function readDosage(value: string) {
   return unit && match ? { amount: match[1], unit } : { amount: value, unit: 'custom' };
 }
 
-export function DosageInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const [emptyUnit, setEmptyUnit] = useState('g/gốc');
+export function DosageInput({
+  value,
+  onChange,
+  materialType = '',
+  materialUnit = '',
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  materialType?: string;
+  materialUnit?: string;
+}) {
+  const isPesticideOrLiquid =
+    materialType.toLowerCase().includes('bvtv') ||
+    materialType.toLowerCase().includes('lỏng') ||
+    materialType.toLowerCase().includes('chế phẩm') ||
+    materialUnit.toLowerCase().includes('chai') ||
+    materialUnit.toLowerCase().includes('can') ||
+    materialUnit.toLowerCase().includes('l');
+
+  const defaultDoseUnit = isPesticideOrLiquid ? 'chai/ha' : 'bao/ha';
+  const [emptyUnit, setEmptyUnit] = useState(defaultDoseUnit);
   const parsed = value ? readDosage(value) : { amount: '', unit: emptyUnit };
   const update = (amount: string, unit: string) => {
     setEmptyUnit(unit);
