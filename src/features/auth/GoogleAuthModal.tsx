@@ -351,3 +351,4 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
     </div>
   );
 }
+
