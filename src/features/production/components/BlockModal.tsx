@@ -98,6 +98,14 @@ export function BlockModal({
       return;
     }
 
+    const targetZone = availableZones.find((z) => z.zoneId === selectedZoneId);
+    if (targetZone && targetZone.areaValue && areaNum > targetZone.areaValue) {
+      setError(
+        `Diện tích lô đất (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
 

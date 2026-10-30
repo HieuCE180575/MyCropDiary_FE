@@ -73,6 +73,16 @@ export function ZoneModal({
       return;
     }
 
+    if (mode === 'edit' && initialZone?.blocks && initialZone.blocks.length > 0) {
+      const currentBlocksTotal = initialZone.blocks.reduce((sum, b) => sum + (b.areaValue || 0), 0);
+      if (areaNum < currentBlocksTotal) {
+        setError(
+          `Diện tích phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`
+        );
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
 

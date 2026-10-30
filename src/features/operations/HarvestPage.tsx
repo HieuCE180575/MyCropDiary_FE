@@ -207,6 +207,26 @@ function HarvestContent() {
       setNotification({ text: 'Nhập ngày thu hoạch, đơn vị và sản lượng lớn hơn 0.', type: 'error' });
       return;
     }
+
+    if (currentSeason?.startDate && harvestedAt < currentSeason.startDate) {
+      setNotification({
+        text: `Ngày thu hoạch (${harvestedAt}) không thể trước ngày bắt đầu mùa vụ (${currentSeason.startDate}).`,
+        type: 'error',
+      });
+      return;
+    }
+
+    if (selectedBlockId) {
+      const matchedBlk = seasonBlocks.find((sb) => sb.blockId === Number(selectedBlockId));
+      if (matchedBlk?.plantedAt && harvestedAt < matchedBlk.plantedAt) {
+        setNotification({
+          text: `Ngày thu hoạch (${harvestedAt}) không thể trước ngày xuống giống tại lô đất ${matchedBlk.blockName || '#' + matchedBlk.blockId} (${matchedBlk.plantedAt}).`,
+          type: 'error',
+        });
+        return;
+      }
+    }
+
     setSaving(true);
     setNotification(null);
     const payload = {

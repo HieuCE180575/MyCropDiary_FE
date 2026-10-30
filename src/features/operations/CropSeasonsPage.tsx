@@ -205,7 +205,7 @@ export function CropSeasonsPage() {
       detailSeasonId === season.cropSeasonId
         ? seasonBlocks
         : seasonBlocksMap[season.cropSeasonId] ||
-          (await fetchBlocksInSeason(season.cropSeasonId).catch(() => []));
+        (await fetchBlocksInSeason(season.cropSeasonId).catch(() => []));
     const configs: Record<number, SelectedBlockConfig> = {};
     for (const sb of existingBlocks) {
       configs[sb.blockId] = {
@@ -263,15 +263,90 @@ export function CropSeasonsPage() {
     setSelectedBlockConfigs({});
   };
 
+  interface BlockConflictInfo {
+    seasonName: string;
+    startDate: string;
+    endDate?: string | null;
+  }
+
+  const findBlockScheduleConflict = (
+    blockId: number,
+    startStr: string,
+    endStr?: string | null,
+    excludeSeasonId?: number
+  ): BlockConflictInfo | null => {
+    if (!startStr) return null;
+    const reqStart = startStr;
+    const reqEnd = endStr || '9999-12-31';
+
+    for (const s of seasons) {
+      if (excludeSeasonId && s.cropSeasonId === excludeSeasonId) continue;
+      if (s.seasonStatus === 'cancelled') continue;
+
+      const blocksInS = seasonBlocksMap[s.cropSeasonId] || [];
+      const assigned = blocksInS.find((b) => b.blockId === blockId);
+      if (!assigned) continue;
+
+      const sStart = assigned.plantedAt || s.startDate;
+      const sEnd = assigned.expectedHarvestAt || s.endDate || '9999-12-31';
+
+      if (reqStart <= sEnd && reqEnd >= sStart) {
+        return {
+          seasonName: s.seasonName,
+          startDate: sStart,
+          endDate: assigned.expectedHarvestAt || s.endDate,
+        };
+      }
+    }
+    return null;
+  };
+
   const handleSaveSeason = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formValues.seasonName.trim()) {
       showToast('Vui lòng nhập tên mùa vụ canh tác.', 'error');
       return;
     }
+
+    if (formValues.endDate && formValues.endDate < formValues.startDate) {
+      showToast(
+        `Ngày kết thúc mùa vụ (${formValues.endDate}) không thể trước ngày bắt đầu (${formValues.startDate}).`,
+        'error'
+      );
+      return;
+    }
+
+    const currentSeasonId = modalMode === 'edit' && selectedSeason ? selectedSeason.cropSeasonId : undefined;
+    const chosenConfigs = Object.values(selectedBlockConfigs);
+
+    for (const cfg of chosenConfigs) {
+      const blk = allFarmBlocks.find((b) => b.blockId === cfg.blockId);
+      const plantedAreaNum = parseFloat(cfg.plantedArea) || 0;
+      if (blk && blk.areaValue && plantedAreaNum > blk.areaValue) {
+        showToast(
+          `Lô "${blk.blockName}": Diện tích trồng (${plantedAreaNum} ${cfg.areaUnit}) vượt quá diện tích thực tế của lô đất (${blk.areaValue} ${blk.areaUnit || 'm²'}).`,
+          'error'
+        );
+        return;
+      }
+
+      const conflict = findBlockScheduleConflict(
+        cfg.blockId,
+        cfg.plantedAt || formValues.startDate,
+        formValues.endDate,
+        currentSeasonId
+      );
+      if (conflict) {
+        showToast(
+          `Lô "${blk?.blockName || '#' + cfg.blockId}" đang có lịch canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Vui lòng chọn lô khác hoặc điều chỉnh thời gian.`,
+          'error'
+        );
+        return;
+      }
+    }
+
     setSaving(true);
     try {
-      const chosenConfigs = Object.values(selectedBlockConfigs);
 
       if (modalMode === 'create') {
         // Step 1: POST /farms/{farmId}/crop-seasons
@@ -373,10 +448,10 @@ export function CropSeasonsPage() {
         nextStatus === 'completed'
           ? 'Đã hoàn thành'
           : nextStatus === 'active'
-          ? 'Đang canh tác'
-          : nextStatus === 'cancelled'
-          ? 'Đã hủy'
-          : 'Dự kiến';
+            ? 'Đang canh tác'
+            : nextStatus === 'cancelled'
+              ? 'Đã hủy'
+              : 'Dự kiến';
       showToast(`Đã chuyển trạng thái mùa vụ sang: ${label}.`);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Không thể cập nhật trạng thái mùa vụ.', 'error');
@@ -386,6 +461,40 @@ export function CropSeasonsPage() {
   const handleAssignBlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSeason || !assignBlockForm.blockId) return;
+
+    const blockIdNum = Number(assignBlockForm.blockId);
+    const chosenBlock = allFarmBlocks.find((b) => b.blockId === blockIdNum);
+    const plantedAreaNum = parseFloat(assignBlockForm.plantedArea) || 0;
+
+    if (chosenBlock && chosenBlock.areaValue && plantedAreaNum > chosenBlock.areaValue) {
+      showToast(
+        `Diện tích phân bổ (${plantedAreaNum} ${assignBlockForm.areaUnit}) không được lớn hơn diện tích thực tế của lô đất (${chosenBlock.areaValue} ${chosenBlock.areaUnit || 'm²'}).`,
+        'error'
+      );
+      return;
+    }
+
+    const plantedAt = assignBlockForm.plantedAt || selectedSeason.startDate;
+    const expectedHarvest = assignBlockForm.expectedHarvestAt || selectedSeason.endDate;
+    if (plantedAt && expectedHarvest && expectedHarvest < plantedAt) {
+      showToast('Ngày dự kiến thu hoạch không thể trước ngày xuống giống tại lô đất.', 'error');
+      return;
+    }
+
+    const conflict = findBlockScheduleConflict(
+      blockIdNum,
+      plantedAt,
+      expectedHarvest,
+      selectedSeason.cropSeasonId
+    );
+    if (conflict) {
+      showToast(
+        `Lô đất này đang được canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Không thể gán trùng lịch!`,
+        'error'
+      );
+      return;
+    }
+
     try {
       const added = await assignBlockToSeason(selectedSeason.cropSeasonId, {
         blockId: Number(assignBlockForm.blockId),
@@ -632,6 +741,12 @@ export function CropSeasonsPage() {
                   {allFarmBlocks.map((block) => {
                     const cfg = selectedBlockConfigs[block.blockId];
                     const isChecked = Boolean(cfg);
+                    const conflict = findBlockScheduleConflict(
+                      block.blockId,
+                      formValues.startDate,
+                      formValues.endDate,
+                      modalMode === 'edit' && selectedSeason ? selectedSeason.cropSeasonId : undefined
+                    );
 
                     return (
                       <div
@@ -670,18 +785,36 @@ export function CropSeasonsPage() {
                               </span>
                             </span>
                           </div>
-                          <span
-                            style={{
-                              fontSize: '12.5px',
-                              fontWeight: 700,
-                              color: isChecked ? '#047857' : '#64748b',
-                              background: isChecked ? '#d1fae5' : '#f1f5f9',
-                              padding: '3px 10px',
-                              borderRadius: '999px',
-                            }}
-                          >
-                            Diện tích gốc: {block.areaValue} {block.areaUnit || 'm²'}
-                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            {conflict && (
+                              <span
+                                style={{
+                                  fontSize: '11.5px',
+                                  fontWeight: 700,
+                                  color: '#b91c1c',
+                                  background: '#fee2e2',
+                                  padding: '3px 8px',
+                                  borderRadius: '999px',
+                                  border: '1px solid #fecaca',
+                                }}
+                                title={`Lô đất đang canh tác trong mùa vụ: ${conflict.seasonName} (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'})`}
+                              >
+                                ⚠️ Trùng lịch: {conflict.seasonName}
+                              </span>
+                            )}
+                            <span
+                              style={{
+                                fontSize: '12.5px',
+                                fontWeight: 700,
+                                color: isChecked ? '#047857' : '#64748b',
+                                background: isChecked ? '#d1fae5' : '#f1f5f9',
+                                padding: '3px 10px',
+                                borderRadius: '999px',
+                              }}
+                            >
+                              Diện tích gốc: {block.areaValue} {block.areaUnit || 'm²'}
+                            </span>
+                          </div>
                         </label>
 
                         {isChecked && cfg && (
@@ -789,8 +922,8 @@ export function CropSeasonsPage() {
                 {saving
                   ? 'Đang lưu...'
                   : modalMode === 'create'
-                  ? `Tạo mùa vụ${selectedCount > 0 ? ` & Gán ${selectedCount} lô đất` : ''}`
-                  : 'Lưu thay đổi'}
+                    ? `Tạo mùa vụ${selectedCount > 0 ? ` & Gán ${selectedCount} lô đất` : ''}`
+                    : 'Lưu thay đổi'}
               </button>
             </div>
           </form>
@@ -1522,23 +1655,22 @@ export function CropSeasonsPage() {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span
-                          className={`status-badge ${
-                            s.seasonStatus === 'active'
+                          className={`status-badge ${s.seasonStatus === 'active'
                               ? 'active'
                               : s.seasonStatus === 'completed'
-                              ? 'active'
-                              : s.seasonStatus === 'cancelled'
-                              ? 'inactive'
-                              : 'pending'
-                          }`}
+                                ? 'active'
+                                : s.seasonStatus === 'cancelled'
+                                  ? 'inactive'
+                                  : 'pending'
+                            }`}
                         >
                           {s.seasonStatus === 'active'
                             ? 'Đang canh tác'
                             : s.seasonStatus === 'completed'
-                            ? 'Đã hoàn thành'
-                            : s.seasonStatus === 'cancelled'
-                            ? 'Đã hủy'
-                            : 'Dự kiến'}
+                              ? 'Đã hoàn thành'
+                              : s.seasonStatus === 'cancelled'
+                                ? 'Đã hủy'
+                                : 'Dự kiến'}
                         </span>
                       </td>
                       <td style={{ textAlign: 'right' }}>
