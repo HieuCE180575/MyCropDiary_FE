@@ -100,14 +100,21 @@ const DEFAULT_CATEGORIES: CropCategoryResp[] = [
   { id: 5, categoryName: 'Cây gia vị & rau thơm', description: 'Húng quế, ngò rí, hành lá, tía tô' },
 ];
 
+let cachedCategories: CropCategoryResp[] | null = null;
+
 export async function fetchCropCategories(): Promise<CropCategoryResp[]> {
+  if (cachedCategories && cachedCategories.length > 0) return cachedCategories;
   try {
     const list = await request<CropCategoryResp[]>('/crop-categories');
-    return list && list.length > 0 ? list : DEFAULT_CATEGORIES;
+    cachedCategories = list && list.length > 0 ? list : DEFAULT_CATEGORIES;
+    return cachedCategories;
   } catch {
+    cachedCategories = DEFAULT_CATEGORIES;
     return DEFAULT_CATEGORIES;
   }
 }
+
+
 
 export async function fetchCropSeasonsByFarm(
   farmId: number,
@@ -207,4 +214,5 @@ export async function fetchCropSeasonsForBlock(
   );
   return results.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
 }
+
 

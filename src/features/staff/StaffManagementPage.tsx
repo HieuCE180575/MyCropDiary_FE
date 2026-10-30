@@ -20,13 +20,25 @@ import {
 import type { Zone, StaffZoneAssignment } from '../production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 
+interface FarmStaffDataCache {
+  staffList: FarmStaffRecord[];
+  zones: Zone[];
+  assignments: StaffZoneAssignment[];
+  cachedAt: number;
+}
+
+const farmStaffMemoryCache = new Map<number, FarmStaffDataCache>();
+
 export function StaffManagementPage() {
   const { selectedFarm } = useFarmWorkspace();
+  const farmId = selectedFarm?.id;
+  const initialCache = farmId ? farmStaffMemoryCache.get(farmId) : null;
+
   const [activeTab, setActiveTab] = useState<'staff' | 'assignments'>('staff');
-  const [staffList, setStaffList] = useState<FarmStaffRecord[]>([]);
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [assignments, setAssignments] = useState<StaffZoneAssignment[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [staffList, setStaffList] = useState<FarmStaffRecord[]>(initialCache?.staffList || []);
+  const [zones, setZones] = useState<Zone[]>(initialCache?.zones || []);
+  const [assignments, setAssignments] = useState<StaffZoneAssignment[]>(initialCache?.assignments || []);
+  const [loading, setLoading] = useState(!initialCache);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [assignSearch, setAssignSearch] = useState('');
@@ -58,27 +70,43 @@ export function StaffManagementPage() {
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
 
   useEffect(() => {
-    if (!selectedFarm?.id) return;
-    void loadData(false);
-  }, [selectedFarm?.id, activeTab]);
+    if (!farmId) return;
+    const cached = farmStaffMemoryCache.get(farmId);
+    if (cached) {
+      setStaffList(cached.staffList);
+      setZones(cached.zones);
+      setAssignments(cached.assignments);
+      setLoading(false);
+      void loadData(true);
+    } else {
+      void loadData(false);
+    }
+    // activeTab is excluded so switching tabs is 100% instant without network fetch or spinner!
+  }, [farmId]);
 
   useRealtimeSync(() => {
-    if (!selectedFarm?.id) return;
+    if (!farmId) return;
     void loadData(true);
   });
 
   const loadData = async (silent = false) => {
-    if (!selectedFarm?.id) return;
-    if (!silent) setLoading(true);
+    if (!farmId) return;
+    if (!silent && !farmStaffMemoryCache.has(farmId)) setLoading(true);
     try {
       const [staffData, zoneData, assignData] = await Promise.all([
-        getFarmStaffList(selectedFarm.id),
-        fetchZonesByFarm(selectedFarm.id).catch(() => [] as Zone[]),
-        fetchZoneAssignments(selectedFarm.id).catch(() => [] as StaffZoneAssignment[]),
+        getFarmStaffList(farmId),
+        fetchZonesByFarm(farmId).catch(() => [] as Zone[]),
+        fetchZoneAssignments(farmId).catch(() => [] as StaffZoneAssignment[]),
       ]);
       setStaffList(staffData);
       setZones(zoneData);
       setAssignments(assignData);
+      farmStaffMemoryCache.set(farmId, {
+        staffList: staffData,
+        zones: zoneData,
+        assignments: assignData,
+        cachedAt: Date.now(),
+      });
     } catch (err) {
       if (!silent) {
         setNotification({

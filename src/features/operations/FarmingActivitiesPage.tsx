@@ -33,6 +33,9 @@ interface FarmingActivity {
   totalWorkers?: number;
 }
 
+const activitiesMemoryCache = new Map<number, FarmingActivity[]>();
+const seasonBlocksMemoryCache = new Map<number, CropSeasonBlockResp[]>();
+
 export function FarmingActivitiesPage() {
   const { selectedFarm } = useFarmWorkspace();
   const [seasons, setSeasons] = useState<CropSeasonResp[]>([]);
@@ -82,16 +85,27 @@ export function FarmingActivitiesPage() {
   };
 
   const loadBlocksForSeason = async (targetSeasonId: number) => {
+    if (seasonBlocksMemoryCache.has(targetSeasonId)) {
+      const cached = seasonBlocksMemoryCache.get(targetSeasonId)!;
+      setSeasonBlocks(cached);
+      setSelectedBlockId((prev) => {
+        if (prev && cached.some((b) => b.blockId === prev)) return prev;
+        return cached[0]?.blockId ?? '';
+      });
+    }
     try {
       const blocks = await fetchBlocksInSeason(targetSeasonId);
+      seasonBlocksMemoryCache.set(targetSeasonId, blocks);
       setSeasonBlocks(blocks);
       setSelectedBlockId((prev) => {
         if (prev && blocks.some((b) => b.blockId === prev)) return prev;
         return blocks[0]?.blockId ?? '';
       });
     } catch {
-      setSeasonBlocks([]);
-      setSelectedBlockId('');
+      if (!seasonBlocksMemoryCache.has(targetSeasonId)) {
+        setSeasonBlocks([]);
+        setSelectedBlockId('');
+      }
     }
   };
 
@@ -103,7 +117,11 @@ export function FarmingActivitiesPage() {
   useEffect(() => {
     if (seasonId) {
       setFilterBlockId('ALL');
-      void loadBlocksForSeason(Number(seasonId));
+      const targetId = Number(seasonId);
+      if (activitiesMemoryCache.has(targetId)) {
+        setActivities(activitiesMemoryCache.get(targetId)!);
+      }
+      void loadBlocksForSeason(targetId);
       void loadActivities(false);
     } else {
       setSeasonBlocks([]);
@@ -130,7 +148,9 @@ export function FarmingActivitiesPage() {
 
   const loadActivities = async (silent = false) => {
     if (!seasonId) return;
-    if (!silent) {
+    const targetId = Number(seasonId);
+    const hasCache = activitiesMemoryCache.has(targetId);
+    if (!silent && !hasCache) {
       setLoading(true);
       setNotification(null);
     }
@@ -141,12 +161,14 @@ export function FarmingActivitiesPage() {
 
       const rawItems = res?.data?.items || res?.data?.content;
       if (Array.isArray(rawItems)) {
-        setActivities(rawItems.map((item) => normalizeActivity(item, Number(seasonId))));
-      } else {
+        const normalized = rawItems.map((item) => normalizeActivity(item, targetId));
+        activitiesMemoryCache.set(targetId, normalized);
+        setActivities(normalized);
+      } else if (!hasCache) {
         setActivities([]);
       }
     } catch {
-      if (!silent) setNotification({ text: 'Lỗi nạp nhật ký canh tác từ máy chủ.', type: 'error' });
+      if (!silent && !hasCache) setNotification({ text: 'Lỗi nạp nhật ký canh tác từ máy chủ.', type: 'error' });
     } finally {
       if (!silent) setLoading(false);
     }
