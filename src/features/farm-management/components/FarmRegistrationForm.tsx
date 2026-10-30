@@ -12,14 +12,11 @@ import {
   findProvinceOption,
   generateSampleFarmPolygon,
   geocodeAddress,
-  getGoongPlaceDetail,
   normalizeVietnamese,
   parseBoundaryCoordinates,
-  searchGoongAddresses,
   stringifyBoundaryCoordinates,
   type DistrictOption,
   type GoongGeocodeResult,
-  type GoongPlaceSuggestion,
   type LatLngPoint,
   type WardOption,
 } from '../goongMapService';
@@ -58,12 +55,8 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
   const [loadingWards, setLoadingWards] = useState(false);
 
   // Dropdown open states & filter keyword (gõ phím để filter danh sách thay vì điền tay tự do)
-  const [openDropdown, setOpenDropdown] = useState<'province' | 'district' | 'ward' | 'address' | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<'province' | 'district' | 'ward' | null>(null);
   const [filterKeyword, setFilterKeyword] = useState('');
-
-  // Goong Map Address Autocomplete state
-  const [addressSuggestions, setAddressSuggestions] = useState<GoongPlaceSuggestion[]>([]);
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   const formRef = useRef<HTMLFormElement | null>(null);
 
@@ -126,43 +119,6 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
       cancelled = true;
     };
   }, [values.province, values.district]);
-
-  // Tìm kiếm gợi ý địa chỉ từ Goong Map Places Autocomplete
-  useEffect(() => {
-    const query = values.address.trim();
-    if (query.length < 2 || openDropdown !== 'address') {
-      setAddressSuggestions([]);
-      return;
-    }
-    const controller = new AbortController();
-    const timer = window.setTimeout(() => {
-      setLoadingSuggestions(true);
-      void searchGoongAddresses(
-        query,
-        {
-          province: values.province,
-          district: values.district,
-          ward: values.ward,
-        },
-        controller.signal
-      )
-        .then((results) => {
-          if (!controller.signal.aborted) {
-            setAddressSuggestions(results);
-          }
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) {
-            setLoadingSuggestions(false);
-          }
-        });
-    }, 260);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timer);
-    };
-  }, [values.address, values.province, values.district, values.ward, openDropdown]);
 
   function updateField<K extends FieldName>(field: K, value: FarmRegistrationFormValues[K]) {
     setValues((prev) => {
@@ -301,36 +257,6 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
     });
   }
 
-  // Chọn gợi ý địa chỉ chi tiết từ Goong Map Autocomplete
-  async function handleSelectAddressSuggestion(suggestion: GoongPlaceSuggestion) {
-    setOpenDropdown(null);
-    setFilterKeyword('');
-    const detail = await getGoongPlaceDetail(suggestion);
-    const matchedProvince = findProvinceOption(detail?.province || suggestion.province || values.province);
-
-    setValues((prev) => {
-      const nextLat = detail?.lat ?? suggestion.lat ?? prev.latitude ?? matchedProvince?.lat ?? null;
-      const nextLng = detail?.lng ?? suggestion.lng ?? prev.longitude ?? matchedProvince?.lng ?? null;
-      const nextBoundary =
-        nextLat != null && nextLng != null
-          ? stringifyBoundaryCoordinates(generateSampleFarmPolygon({ lat: nextLat, lng: nextLng }))
-          : prev.boundaryCoordinates;
-
-      const next: FarmRegistrationFormValues = {
-        ...prev,
-        address: suggestion.mainText || detail?.addressLine || suggestion.description,
-        province: matchedProvince?.name || detail?.province || suggestion.province || prev.province,
-        district: detail?.district || suggestion.district || prev.district,
-        ward: detail?.ward || suggestion.ward || prev.ward,
-        latitude: nextLat,
-        longitude: nextLng,
-        boundaryCoordinates: nextBoundary,
-      };
-      setErrors(validateFarmRegistrationForm(next));
-      return next;
-    });
-  }
-
   // Khi người dùng ghim tọa độ hoặc kéo marker trên bản đồ Goong Map
   function handleMapLocationChange(lat: number, lng: number, reverseResult?: GoongGeocodeResult | null) {
     setValues((prev) => {
@@ -419,84 +345,18 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
       </label>
 
       {/* Địa chỉ chi tiết */}
-      <div className="form-field" style={{ position: 'relative' }}>
-        <label style={{ display: 'grid', gap: '6px' }}>
-          <span>Địa chỉ chi tiết *</span>
-          <input
-            type="text"
-            value={values.address}
-            maxLength={300}
-            onFocus={() => {
-              setOpenDropdown('address');
-              setFilterKeyword('');
-            }}
-            onChange={(event) => {
-              updateField('address', event.target.value);
-              setOpenDropdown('address');
-            }}
-            onBlur={() => handleBlur('address')}
-            placeholder="Số nhà, tên đường, thôn/ấp..."
-            autoComplete="off"
-          />
-        </label>
-        {errors.address ? (
-          <small className="field-error">{errors.address}</small>
-        ) : (
-          <small className="field-hint">
-            Nhập địa chỉ để tìm nhanh hoặc chọn Tỉnh/Thành phố bên dưới để lọc theo khu vực.
-          </small>
-        )}
-
-        {openDropdown === 'address' && (loadingSuggestions || addressSuggestions.length > 0) && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              left: 0,
-              right: 0,
-              zIndex: 50,
-              marginTop: '4px',
-              background: '#ffffff',
-              border: '1px solid #10b981',
-              borderRadius: '10px',
-              boxShadow: '0 12px 28px rgba(15, 23, 42, 0.14)',
-              maxHeight: '240px',
-              overflowY: 'auto',
-            }}
-          >
-            {loadingSuggestions ? (
-              <div style={{ padding: '10px 14px', fontSize: '13px', color: '#64748b' }}>
-                🔍 Đang tìm địa chỉ...
-              </div>
-            ) : (
-              addressSuggestions.map((item) => (
-                <div
-                  key={item.placeId}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    void handleSelectAddressSuggestion(item);
-                  }}
-                  style={{
-                    padding: '10px 14px',
-                    cursor: 'pointer',
-                    borderBottom: '1px solid #f1f5f9',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '2px',
-                  }}
-                >
-                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#0f172a' }}>
-                    📍 {item.mainText}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    {item.secondaryText || item.description}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        )}
-      </div>
+      <label className="form-field">
+        <span>Địa chỉ chi tiết *</span>
+        <input
+          type="text"
+          value={values.address}
+          maxLength={300}
+          onChange={(event) => updateField('address', event.target.value)}
+          onBlur={() => handleBlur('address')}
+          placeholder="Số nhà, tên đường, thôn/ấp..."
+        />
+        {errors.address ? <small className="field-error">{errors.address}</small> : null}
+      </label>
 
       {/* Bộ lọc phân cấp Tỉnh / Thành phố -> Quận / Huyện -> Phường / Xã */}
       <div className="farm-registration-location-fields">
