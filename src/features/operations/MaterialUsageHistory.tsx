@@ -20,7 +20,7 @@ export function MaterialUsageHistory({ usages, busy, deletingId, onOpen, onDelet
         <thead><tr>
           <th scope="col">Vật tư</th><th scope="col">Ngày sử dụng</th>
           <th scope="col">Số lượng</th><th scope="col">Liều lượng / Phương pháp</th>
-          <th scope="col">Cách ly (PHI)</th><th scope="col">Người ghi nhận</th><th scope="col">Thao tác</th>
+          <th scope="col">Cách ly (PHI)</th><th scope="col">Người ghi nhận</th><th scope="col" style={{ textAlign: 'right' }}>Thao tác</th>
         </tr></thead>
         <tbody>{usages.map(usage => <tr key={usage.materialUsageId}>
           <td className="mu-material-cell">
@@ -43,15 +43,42 @@ export function MaterialUsageHistory({ usages, busy, deletingId, onOpen, onDelet
             <span className="mu-badge mu-badge-green"><Icon name="check-circle" size={14} />An toàn (0 ngày)</span>}
           </td>
           <td className="mu-recorder">{usage.recorderFullName || 'Thành viên nông trại'}</td>
-          <td className="mu-actions-cell">
-            <details className="mu-row-menu">
-              <summary aria-label={`Thao tác cho ${usage.materialName}`}>Thao tác <Icon name="chevron" size={14} /></summary>
-              <div>
-                <button type="button" disabled={busy} onClick={() => onOpen(usage.materialUsageId)}><Icon name="eye" size={15} />Chi tiết</button>
-                <button type="button" disabled={busy} onClick={() => onOpen(usage.materialUsageId, true)}><Icon name="edit" size={15} />Chỉnh sửa</button>
-                <button type="button" className="mu-delete" disabled={busy} onClick={() => onDelete(usage.materialUsageId, usage.materialName)}><Icon name="trash" size={15} />{deletingId === usage.materialUsageId ? 'Đang xóa...' : 'Xóa'}</button>
-              </div>
-            </details>
+          <td className="mu-actions-cell" style={{ textAlign: 'right' }}>
+            <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="table-icon-btn primary"
+                disabled={busy}
+                title="Xem chi tiết"
+                aria-label={`Chi tiết ${usage.materialName}`}
+                onClick={() => onOpen(usage.materialUsageId)}
+              >
+                <Icon name="eye" size={16} />
+                <span className="mu-sr-only">Chi tiết</span>
+              </button>
+              <button
+                type="button"
+                className="table-icon-btn edit"
+                disabled={busy}
+                title="Chỉnh sửa"
+                aria-label={`Chỉnh sửa ${usage.materialName}`}
+                onClick={() => onOpen(usage.materialUsageId, true)}
+              >
+                <Icon name="edit" size={16} />
+                <span className="mu-sr-only">Chỉnh sửa</span>
+              </button>
+              <button
+                type="button"
+                className="table-icon-btn danger mu-delete"
+                disabled={busy}
+                title="Xóa"
+                aria-label={`Xóa ${usage.materialName}`}
+                onClick={() => onDelete(usage.materialUsageId, usage.materialName)}
+              >
+                <Icon name="trash" size={16} />
+                <span className="mu-sr-only">{deletingId === usage.materialUsageId ? 'Đang xóa...' : 'Xóa'}</span>
+              </button>
+            </div>
           </td>
         </tr>)}</tbody>
       </table>
