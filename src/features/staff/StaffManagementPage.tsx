@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { farmRole } from '../auth/accessPolicy';
 import { Icon } from '../../shared/components/Icon';
+import { Modal } from '../../shared/components/Modal';
 import {
   getFarmStaffList,
   addFarmStaffMember,
   updateFarmStaffMember,
   deactivateFarmStaffMember,
+  deleteFarmStaffMember,
   type FarmStaffRecord,
 } from './staffService';
 import {
@@ -35,6 +37,13 @@ export function StaffManagementPage() {
   const [role, setRole] = useState('STAFF');
   const [jobTitle, setJobTitle] = useState('Kỹ sư nông nghiệp');
   const [savingStaff, setSavingStaff] = useState(false);
+
+  // Edit Staff Modal
+  const [editingStaff, setEditingStaff] = useState<FarmStaffRecord | null>(null);
+  const [editRole, setEditRole] = useState<'OWNER' | 'STAFF'>('STAFF');
+  const [editJobTitle, setEditJobTitle] = useState('');
+  const [editStatus, setEditStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Add Assignment Modal
   const [isAssignOpen, setIsAssignOpen] = useState(false);
@@ -135,6 +144,59 @@ export function StaffManagementPage() {
     } catch (err) {
       setNotification({
         text: err instanceof Error ? err.message : `Không thể kích hoạt lại "${name}".`,
+        type: 'error',
+      });
+    }
+  };
+
+  const openEditModal = (staff: FarmStaffRecord) => {
+    setEditingStaff(staff);
+    setEditRole(staff.farmRole === 'OWNER' ? 'OWNER' : 'STAFF');
+    const isGenericRole = ['chủ trang trại', 'nhân viên kỹ thuật', 'thành viên trang trại'].includes(
+      (staff.roleLabel || '').trim().toLowerCase()
+    );
+    setEditJobTitle(isGenericRole ? '' : staff.roleLabel);
+    setEditStatus(staff.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE');
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFarm?.id || !editingStaff) return;
+    setSavingEdit(true);
+    setNotification(null);
+    try {
+      await updateFarmStaffMember(selectedFarm.id, editingStaff.farmMemberId, {
+        farmRole: editRole,
+        jobTitle: editJobTitle.trim() || undefined,
+        status: editStatus,
+      });
+      setNotification({
+        text: `Đã cập nhật thông tin thành viên "${editingStaff.fullName}" thành công!`,
+        type: 'success',
+      });
+      setEditingStaff(null);
+      await loadData();
+    } catch (err) {
+      setNotification({
+        text: err instanceof Error ? err.message : 'Không thể cập nhật thông tin nhân viên.',
+        type: 'error',
+      });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteStaff = async (memberId: number, name: string) => {
+    if (!selectedFarm?.id) return;
+    if (!window.confirm(`Xác nhận xóa thành viên "${name}" khỏi trang trại? Thao tác này sẽ hủy mọi quyền truy cập và phân công.`)) return;
+    setNotification(null);
+    try {
+      await deleteFarmStaffMember(selectedFarm.id, memberId);
+      setNotification({ text: `Đã xóa thành viên "${name}" khỏi trang trại thành công!`, type: 'success' });
+      await loadData();
+    } catch (err) {
+      setNotification({
+        text: err instanceof Error ? err.message : `Không thể xóa thành viên "${name}".`,
         type: 'error',
       });
     }
@@ -458,34 +520,29 @@ export function StaffManagementPage() {
                             </td>
 
                             {isOwner && (
-                              <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                                {staff.farmRole === 'OWNER' ? (
-                                  <span style={{ color: '#94a3b8', fontSize: '12.5px', fontStyle: 'italic' }}>Chủ trại</span>
-                                ) : isActive ? (
-                                  <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
-                                    <button
-                                      type="button"
-                                      className="table-icon-btn danger"
-                                      title="Tạm dừng quyền hoạt động của nhân viên"
-                                      aria-label={`Tạm dừng ${staff.fullName}`}
-                                      onClick={() => handleDeactivate(staff.farmMemberId, staff.fullName)}
-                                    >
-                                      <Icon name="trash" size={15} />
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
-                                    <button
-                                      type="button"
-                                      className="table-icon-btn primary"
-                                      title="Kích hoạt lại nhân viên"
-                                      aria-label={`Kích hoạt lại ${staff.fullName}`}
-                                      onClick={() => handleReactivate(staff.farmMemberId, staff.fullName)}
-                                    >
-                                      <Icon name="refresh" size={15} />
-                                    </button>
-                                  </div>
-                                )}
+                              <td style={{ padding: '14px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                                  <button
+                                    type="button"
+                                    className="table-icon-btn edit"
+                                    title="Chỉnh sửa thông tin nhân sự"
+                                    aria-label={`Chỉnh sửa ${staff.fullName}`}
+                                    onClick={() => openEditModal(staff)}
+                                  >
+                                    <Icon name="edit" size={15} />
+                                    <span className="sr-only">Chỉnh sửa</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="table-icon-btn danger"
+                                    title="Xóa nhân sự khỏi trang trại"
+                                    aria-label={`Xóa ${staff.fullName}`}
+                                    onClick={() => handleDeleteStaff(staff.farmMemberId, staff.fullName)}
+                                  >
+                                    <Icon name="trash" size={15} />
+                                    <span className="sr-only">Xóa</span>
+                                  </button>
+                                </div>
                               </td>
                             )}
                           </tr>

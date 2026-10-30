@@ -146,6 +146,18 @@ export async function deactivateFarmStaffMember(farmId: number, memberId: number
   }
 }
 
+/**
+ * UC-33: Xóa thành viên khỏi trang trại qua `DELETE /api/v1/farms/{farmId}/members/{memberId}`
+ */
+export async function deleteFarmStaffMember(farmId: number, memberId: number): Promise<void> {
+  const res = await apiRequest<ApiResponse<void>>(`/farms/${farmId}/members/${memberId}`, {
+    method: 'DELETE',
+  });
+  if (res && !res.success) {
+    throw new Error(res.message || 'Không thể xóa thành viên khỏi trang trại.');
+  }
+}
+
 // =========================================================================
 // Legacy compatibility helpers (cho các component cũ dùng StaffQueryParams)
 // =========================================================================
