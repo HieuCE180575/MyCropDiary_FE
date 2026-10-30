@@ -998,47 +998,56 @@ export function CropSeasonsPage() {
           <span className="current">{selectedSeason.seasonName}</span>
         </nav>
 
-        <div className="page-heading">
+        <div className="page-heading" style={{ marginBottom: '20px' }}>
           <div>
             <p className="eyebrow">
               Chi tiết mùa vụ · CS-{String(selectedSeason.cropSeasonId).padStart(3, '0')} · {selectedSeason.farmName || farmName}
             </p>
-            <h2>{selectedSeason.seasonName}</h2>
-            <p className="muted">
+            <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '4px 0 6px', letterSpacing: '-0.02em' }}>
+              {selectedSeason.seasonName}
+            </h1>
+            <p className="muted" style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
               {selectedSeason.notes || 'Hồ sơ chi tiết mùa vụ canh tác và các lô sản xuất trực thuộc.'}
             </p>
           </div>
 
-          <div className="dashboard-actions">
-            <Link to="/crop-seasons" className="action-button" style={{ textDecoration: 'none' }}>
-              <Icon name="arrow-left" size={16} /> Danh sách mùa vụ
+          <div className="dashboard-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link to="/crop-seasons" className="action-button" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Icon name="arrow-left" size={15} /> Danh sách mùa vụ
             </Link>
-            <button type="button" className="action-button" onClick={() => void openEditModal(selectedSeason)}>
-              <Icon name="edit" size={16} /> Chỉnh sửa &amp; Chọn lô đất
+            <button
+              type="button"
+              className="action-button"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => void openEditModal(selectedSeason)}
+            >
+              <Icon name="edit" size={15} /> Chỉnh sửa &amp; Chọn lô đất
             </button>
             {selectedSeason.seasonStatus !== 'completed' && (
               <button
                 type="button"
                 className="primary-button"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#059669' }}
                 onClick={() => handleStatusChange(selectedSeason.cropSeasonId, 'completed')}
               >
-                <Icon name="check" size={16} /> Đánh dấu hoàn thành
+                <Icon name="check" size={15} /> Đánh dấu hoàn thành
               </button>
             )}
             {isOwner && (
               <button
                 type="button"
                 className="action-button danger"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 onClick={() => setSeasonToDelete(selectedSeason)}
               >
-                <Icon name="trash" size={16} /> Xóa mùa vụ
+                <Icon name="trash" size={15} /> Xóa mùa vụ
               </button>
             )}
           </div>
         </div>
 
-        {/* Summary Stat Cards */}
-        <div className="zone-stats-grid" style={{ marginBottom: 0 }}>
+        {/* Summary Stat Cards - Hidden per user request */}
+        <div className="zone-stats-grid" style={{ display: 'none' }}>
           <div className="zone-stat-card">
             <div className="zone-stat-icon">
               <Icon name="sprout" size={18} />
@@ -1093,8 +1102,9 @@ export function CropSeasonsPage() {
                 <p className="eyebrow">Hồ sơ mùa vụ</p>
                 <h3>Thông tin chi tiết mùa vụ</h3>
               </div>
-              <span className="status-badge active" style={{ textTransform: 'uppercase' }}>
-                {selectedSeason.seasonStatus}
+              <span className={`status-dot-badge ${selectedSeason.seasonStatus === 'active' ? 'active' : 'completed'}`}>
+                <span className="dot" />
+                {selectedSeason.seasonStatus === 'active' ? 'Đang canh tác' : selectedSeason.seasonStatus === 'completed' ? 'Đã hoàn thành' : selectedSeason.seasonStatus}
               </span>
             </div>
 
@@ -1137,16 +1147,17 @@ export function CropSeasonsPage() {
                 <p className="eyebrow">Lô canh tác tham gia mùa vụ (CropSeasonBlock)</p>
                 <h3>Lô sản xuất tham gia mùa vụ ({seasonBlocks.length})</h3>
               </div>
-              <div className="button-row">
-                <Link to="/activities" className="action-button" style={{ textDecoration: 'none' }}>
-                  📖 Nhật ký canh tác
+              <div className="button-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Link to="/activities" className="action-button" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="book" size={15} /> Nhật ký canh tác
                 </Link>
-                <Link to="/harvests" className="action-button" style={{ textDecoration: 'none' }}>
-                  📦 Thu hoạch &amp; QR
+                <Link to="/harvests" className="action-button" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="qr" size={15} /> Thu hoạch &amp; QR
                 </Link>
                 <button
                   type="button"
                   className="primary-button"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#059669' }}
                   onClick={() => {
                     const unassigned = allFarmBlocks.find(
                       (b) => !seasonBlocks.some((sb) => sb.blockId === b.blockId)
@@ -1162,7 +1173,7 @@ export function CropSeasonsPage() {
                     setIsAssignBlockOpen(true);
                   }}
                 >
-                  <Icon name="plus" size={16} /> Gán thêm lô đất
+                  <Icon name="plus" size={15} /> Gán thêm lô đất
                 </button>
               </div>
             </div>
@@ -1195,38 +1206,55 @@ export function CropSeasonsPage() {
                     {seasonBlocks.map((sb) => (
                       <tr key={sb.blockId}>
                         <td>
-                          <Link
-                            to={`/zones/${sb.zoneId || 1}/blocks/${sb.blockId}`}
-                            style={{ color: 'var(--brand)', fontWeight: 700, textDecoration: 'none' }}
-                          >
-                            🌱 {sb.blockName || `Lô #${sb.blockId}`}
-                          </Link>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '8px',
+                                background: '#ecfdf5',
+                                color: '#059669',
+                                display: 'inline-grid',
+                                placeItems: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Icon name="plots" size={14} />
+                            </span>
+                            <Link
+                              to={`/zones/${sb.zoneId || 1}/blocks/${sb.blockId}`}
+                              style={{ color: '#0f172a', fontWeight: 700, textDecoration: 'none' }}
+                            >
+                              {sb.blockName || `Lô #${sb.blockId}`}
+                            </Link>
+                          </div>
                         </td>
                         <td>
                           <Link
                             to={`/zones/${sb.zoneId || 1}`}
-                            style={{ color: 'var(--brand-dark)', fontWeight: 600, textDecoration: 'none' }}
+                            style={{ color: '#059669', fontWeight: 600, textDecoration: 'none' }}
                           >
                             {sb.zoneName || `Khu #${sb.zoneId}`}
                           </Link>
                         </td>
                         <td>
-                          <strong>
+                          <strong style={{ color: '#334155' }}>
                             {sb.plantedArea ?? sb.blockArea} {sb.areaUnit || sb.blockAreaUnit || 'm²'}
                           </strong>
                         </td>
-                        <td className="muted">
+                        <td className="muted" style={{ fontSize: '13.5px' }}>
                           {sb.plantedAt || selectedSeason.startDate} → {sb.expectedHarvestAt || selectedSeason.endDate || 'Đang diễn ra'}
                         </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div className="table-action-btns">
+                        <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                          <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
                             <Link
                               to={`/zones/${sb.zoneId || 1}/blocks/${sb.blockId}`}
                               className="table-icon-btn primary"
                               title="Xem chi tiết lô đất"
                               aria-label={`Xem chi tiết ${sb.blockName}`}
                             >
-                              <Icon name="eye" size={16} />
+                              <Icon name="eye" size={15} />
+                              <span className="sr-only">Xem chi tiết</span>
                             </Link>
                             {isOwner && (
                               <button
@@ -1236,7 +1264,8 @@ export function CropSeasonsPage() {
                                 aria-label={`Gỡ lô đất ${sb.blockName}`}
                                 onClick={() => handleRemoveBlockFromSeason(sb.blockId)}
                               >
-                                <Icon name="trash" size={16} />
+                                <Icon name="trash" size={15} />
+                                <span className="sr-only">Gỡ lô đất</span>
                               </button>
                             )}
                           </div>
