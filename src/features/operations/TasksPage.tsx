@@ -426,7 +426,7 @@ export function TasksPage() {
   };
 
   return (
-    <section className="tasks-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+    <section className="tasks-page" style={{ maxWidth: '100%', width: '100%', margin: '0 auto', padding: '12px 16px 32px', boxSizing: 'border-box' }}>
       {/* Notification Banner */}
       {notification && (
         <div
@@ -446,12 +446,12 @@ export function TasksPage() {
       )}
 
       {/* Main Page Heading matching FarmHub Modern Mockup */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', marginBottom: '16px', paddingTop: '4px' }}>
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
             Phân công &amp; Quản lý công việc
           </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+          <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b', fontWeight: 500 }}>
             {totalTasks} công việc · {todoTasks.length} cần thực hiện · {inProgressTasks.length} đang triển khai · {completedTasks.length} đã xong tại {selectedFarm?.farmName || 'Trang trại'}
           </p>
         </div>
@@ -463,28 +463,28 @@ export function TasksPage() {
             disabled={!farmId}
             onClick={openCreateModal}
             style={{
-              padding: '10px 18px',
-              fontSize: '14px',
+              padding: '9px 16px',
+              fontSize: '13.5px',
               fontWeight: 700,
-              borderRadius: '10px',
+              borderRadius: '9px',
               background: '#059669',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '7px',
               boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
             }}
           >
-            <Icon name="plus" size={17} /> Giao việc mới
+            <Icon name="plus" size={16} /> Giao việc mới
           </button>
         </div>
       </div>
 
       {/* Unified Clean Card Container */}
       <div className="zone-clean-card">
-        {/* Clean Filter Bar */}
-        <div className="zone-clean-filter-bar" style={{ flexWrap: 'wrap', gap: '12px' }}>
+        {/* Clean Filter Bar in ONE line without overflowing */}
+        <div className="zone-clean-filter-bar" style={{ flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
           {/* Search Box */}
-          <div className="zone-clean-search" style={{ flex: 1, minWidth: '220px' }}>
+          <div className="zone-clean-search" style={{ flex: 1, minWidth: '200px' }}>
             <span className="search-icon">
               <Icon name="search" size={17} />
             </span>
@@ -496,23 +496,8 @@ export function TasksPage() {
             />
           </div>
 
-          {/* Filter by Status */}
-          <div className="zone-clean-select-wrap">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label="Lọc theo trạng thái"
-            >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="planned">Cần thực hiện</option>
-              <option value="in_progress">Đang triển khai</option>
-              <option value="completed">Đã hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-          </div>
-
           {/* Filter by Priority */}
-          <div className="zone-clean-select-wrap">
+          <div className="zone-clean-select-wrap" style={{ minWidth: '135px' }}>
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
@@ -527,7 +512,7 @@ export function TasksPage() {
           </div>
 
           {/* Filter by Season */}
-          <div className="zone-clean-select-wrap">
+          <div className="zone-clean-select-wrap" style={{ minWidth: '140px' }}>
             <select
               value={seasonFilter}
               onChange={(e) => setSeasonFilter(e.target.value ? Number(e.target.value) : '')}
@@ -543,7 +528,7 @@ export function TasksPage() {
           </div>
 
           {/* Filter by Zone */}
-          <div className="zone-clean-select-wrap">
+          <div className="zone-clean-select-wrap" style={{ minWidth: '135px' }}>
             <select
               value={zoneFilter}
               onChange={(e) => setZoneFilter(e.target.value ? Number(e.target.value) : '')}
@@ -577,7 +562,7 @@ export function TasksPage() {
           </button>
 
           {/* View Switch */}
-          <div className="tasks-view-switch" role="group" aria-label="Chế độ hiển thị">
+          <div className="tasks-view-switch" role="group" aria-label="Chế độ hiển thị" style={{ marginLeft: 'auto' }}>
             <button
               type="button"
               className={`tasks-view-btn ${viewMode === 'TABLE' ? 'active' : ''}`}
@@ -598,7 +583,7 @@ export function TasksPage() {
         {/* Quick Status Filter Pills */}
         <div
           style={{
-            padding: '10px 20px',
+            padding: '8px 20px',
             borderBottom: '1px solid #f1f5f9',
             background: '#f8fafc',
             display: 'flex',
@@ -607,14 +592,14 @@ export function TasksPage() {
             flexWrap: 'wrap',
           }}
         >
-          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>
             Trạng thái:
           </span>
           <button
             type="button"
             onClick={() => setStatusFilter('all')}
             style={{
-              padding: '4px 12px',
+              padding: '3px 10px',
               borderRadius: '999px',
               border: '1px solid',
               fontSize: '12px',
@@ -632,7 +617,7 @@ export function TasksPage() {
             type="button"
             onClick={() => setStatusFilter('planned')}
             style={{
-              padding: '4px 12px',
+              padding: '3px 10px',
               borderRadius: '999px',
               border: '1px solid',
               fontSize: '12px',
@@ -650,7 +635,7 @@ export function TasksPage() {
             type="button"
             onClick={() => setStatusFilter('in_progress')}
             style={{
-              padding: '4px 12px',
+              padding: '3px 10px',
               borderRadius: '999px',
               border: '1px solid',
               fontSize: '12px',
@@ -668,7 +653,7 @@ export function TasksPage() {
             type="button"
             onClick={() => setStatusFilter('completed')}
             style={{
-              padding: '4px 12px',
+              padding: '3px 10px',
               borderRadius: '999px',
               border: '1px solid',
               fontSize: '12px',
@@ -690,7 +675,7 @@ export function TasksPage() {
                 setPriorityFilter('urgent');
               }}
               style={{
-                padding: '4px 12px',
+                padding: '3px 10px',
                 borderRadius: '999px',
                 border: '1px solid',
                 fontSize: '12px',
@@ -757,32 +742,32 @@ export function TasksPage() {
             </div>
           ) : (
             <>
-              <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-                <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+              <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, overflowX: 'auto' }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc' }}>
-                      <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                      <th style={{ width: '38px', padding: '10px 8px', textAlign: 'center' }}>
                         <input type="checkbox" aria-label="Chọn tất cả việc" style={{ cursor: 'pointer' }} />
                       </th>
-                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '27%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Tên công việc &amp; Phân loại
                       </th>
-                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '15%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Mùa vụ &amp; Vị trí
                       </th>
-                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '11%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                         Độ ưu tiên
                       </th>
-                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '13%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Người phụ trách
                       </th>
-                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                      <th style={{ width: '11%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Hạn hoàn thành
                       </th>
-                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                      <th style={{ width: '11%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                         Trạng thái
                       </th>
-                      <th style={{ width: '220px', padding: '14px 16px', textAlign: 'right' }}>
+                      <th style={{ width: '12%', minWidth: '170px', padding: '10px 12px', textAlign: 'right', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Thao tác
                       </th>
                     </tr>
@@ -794,103 +779,154 @@ export function TasksPage() {
 
                       return (
                         <tr key={t.taskId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                          <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                             <input type="checkbox" aria-label={`Chọn ${t.taskName}`} style={{ cursor: 'pointer' }} />
                           </td>
 
-                          <td style={{ padding: '14px 16px' }}>
-                            <strong
-                              style={{
-                                cursor: 'pointer',
-                                color: '#0f172a',
-                                fontSize: '14.5px',
-                                display: 'block',
-                                transition: 'color 0.15s ease',
-                              }}
-                              onClick={() => setSelectedTaskDetail(t)}
-                              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
-                              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
-                            >
-                              {t.taskName}
-                            </strong>
-                            {t.description && (
-                              <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: '#64748b', lineHeight: 1.4, maxWidth: '380px' }}>
-                                {t.description.length > 70 ? `${t.description.slice(0, 70)}...` : t.description}
-                              </p>
-                            )}
-                            <div style={{ marginTop: '5px' }}>
-                              <span className="crop-cat-pill blue" style={{ fontSize: '11.5px', padding: '2px 8px' }}>
+                          <td style={{ padding: '10px 12px', overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong
+                                style={{
+                                  cursor: 'pointer',
+                                  color: '#0f172a',
+                                  fontSize: '13.5px',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  display: 'inline-block',
+                                  maxWidth: 'calc(100% - 95px)',
+                                  transition: 'color 0.15s ease',
+                                }}
+                                title={t.taskName}
+                                onClick={() => setSelectedTaskDetail(t)}
+                                onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
+                                onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                              >
+                                {t.taskName}
+                              </strong>
+                              <span
+                                className="crop-cat-pill blue"
+                                style={{
+                                  fontSize: '10.5px',
+                                  padding: '1px 6px',
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0,
+                                }}
+                              >
                                 {t.taskType || 'Chăm sóc'}
                               </span>
                             </div>
-                          </td>
-
-                          <td style={{ padding: '14px 16px' }}>
-                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                              {t.seasonName ? `🌱 ${t.seasonName}` : '—'}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                              {t.zoneName ? `📍 ${t.zoneName}` : ''}
-                              {t.blockName ? ` • ${t.blockName}` : ''}
-                            </div>
-                          </td>
-
-                          <td style={{ padding: '14px 16px' }}>{getPriorityBadge(t.priority)}</td>
-
-                          <td style={{ padding: '14px 16px' }}>
-                            {t.assignees && t.assignees.length > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {t.assignees.map((a) => (
-                                  <span
-                                    key={a.workerId}
-                                    style={{
-                                      fontSize: '12.5px',
-                                      fontWeight: 500,
-                                      color: '#0f172a',
-                                      display: 'inline-flex',
-                                      alignItems: 'center',
-                                      gap: '6px',
-                                    }}
-                                  >
-                                    <span
-                                      style={{
-                                        width: '22px',
-                                        height: '22px',
-                                        borderRadius: '50%',
-                                        background: '#dcfce7',
-                                        color: '#15803d',
-                                        fontSize: '10.5px',
-                                        fontWeight: 700,
-                                        display: 'grid',
-                                        placeItems: 'center',
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {(a.fullName || 'NS').slice(0, 1).toUpperCase()}
-                                    </span>
-                                    {a.fullName}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span style={{ color: '#94a3b8', fontSize: '12.5px', fontStyle: 'italic' }}>Chưa phân công</span>
+                            {t.description && (
+                              <p
+                                style={{
+                                  margin: '2px 0 0',
+                                  fontSize: '12px',
+                                  color: '#64748b',
+                                  lineHeight: 1.3,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  display: 'block',
+                                  maxWidth: '100%',
+                                }}
+                                title={t.description}
+                              >
+                                {t.description}
+                              </p>
                             )}
                           </td>
 
-                          <td style={{ padding: '14px 16px' }}>
+                          <td style={{ padding: '10px 12px', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                fontSize: '12.5px',
+                                fontWeight: 600,
+                                color: '#0f172a',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                              title={t.seasonName ? `Mùa vụ: ${t.seasonName}` : ''}
+                            >
+                              {t.seasonName ? `🌱 ${t.seasonName}` : '—'}
+                            </div>
+                            {(t.zoneName || t.blockName) && (
+                              <div
+                                style={{
+                                  fontSize: '11.5px',
+                                  color: '#64748b',
+                                  marginTop: '2px',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                                title={`${t.zoneName || ''} • ${t.blockName || ''}`}
+                              >
+                                {t.zoneName ? `📍 ${t.zoneName}` : ''}
+                                {t.blockName ? ` • ${t.blockName}` : ''}
+                              </div>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {getPriorityBadge(t.priority)}
+                          </td>
+
+                          <td style={{ padding: '10px 12px', overflow: 'hidden' }}>
+                            {t.assignees && t.assignees.length > 0 ? (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span
+                                  style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    borderRadius: '50%',
+                                    background: '#dcfce7',
+                                    color: '#15803d',
+                                    fontSize: '9.5px',
+                                    fontWeight: 700,
+                                    display: 'grid',
+                                    placeItems: 'center',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {(t.assignees[0].fullName || 'NS').slice(0, 1).toUpperCase()}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    color: '#0f172a',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                  title={t.assignees.map((a) => a.fullName).join(', ')}
+                                >
+                                  {t.assignees[0].fullName}
+                                  {t.assignees.length > 1 && ` +${t.assignees.length - 1}`}
+                                </span>
+                              </div>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
+                                Chưa phân công
+                              </span>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                             {t.dueAt ? (
                               <span
                                 className={`task-due-date ${!isCompleted && t.dueAt < nowIso ? 'is-overdue' : ''}`}
-                                style={{ fontSize: '13px' }}
+                                style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                               >
                                 📅 {new Date(t.dueAt).toLocaleDateString('vi-VN')}
                               </span>
                             ) : (
-                              <span style={{ color: '#94a3b8', fontSize: '13px' }}>—</span>
+                              <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
                             )}
                           </td>
 
-                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                          <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <span
                               className={`status-dot-badge ${
                                 isCompleted ? 'completed' : isInProgress ? 'in_progress' : 'active'
@@ -901,8 +937,8 @@ export function TasksPage() {
                             </span>
                           </td>
 
-                          <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                            <div className="table-action-btns" style={{ justifyContent: 'flex-end', gap: '6px' }}>
+                          <td style={{ padding: '10px 12px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <div className="table-action-btns" style={{ justifyContent: 'flex-end', gap: '4px' }}>
                               {/* Quick status transition button */}
                               {t.status === 'planned' && (
                                 <button
@@ -910,6 +946,7 @@ export function TasksPage() {
                                   className="btn-status-quick start"
                                   title="Bắt đầu thực hiện công việc"
                                   onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
+                                  style={{ padding: '4px 8px', fontSize: '11.5px' }}
                                 >
                                   ▶ Bắt đầu
                                 </button>
@@ -920,6 +957,7 @@ export function TasksPage() {
                                   className="btn-status-quick done"
                                   title="Nghiệm thu hoàn thành"
                                   onClick={() => void handleQuickStatusChange(t.taskId, 'completed')}
+                                  style={{ padding: '4px 8px', fontSize: '11.5px' }}
                                 >
                                   ✓ Hoàn thành
                                 </button>
@@ -930,6 +968,7 @@ export function TasksPage() {
                                   className="btn-status-quick reopen"
                                   title="Mở lại công việc"
                                   onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
+                                  style={{ padding: '4px 8px', fontSize: '11.5px' }}
                                 >
                                   ↺ Mở lại
                                 </button>

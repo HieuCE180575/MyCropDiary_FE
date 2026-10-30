@@ -3,8 +3,10 @@
    ========================================================================== */
 
 .tasks-page {
-  padding: 24px;
-  max-width: 1600px;
+  padding: 12px 16px 32px;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
   margin: 0 auto;
   font-family: inherit;
   color: #0f172a;
@@ -655,3 +657,4 @@
   border-color: #94a3b8;
   transform: translateY(-1px);
 }
+
