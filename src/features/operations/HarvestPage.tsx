@@ -874,29 +874,29 @@ function HarvestContent() {
                       <button
                         type="button"
                         className="action-button"
-                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId)}
                       >
-                        Chi tiết
+                        <Icon name="eye" size={14} /> Chi tiết
                       </button>
                       <button
                         type="button"
                         className="action-button"
-                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId, true)}
                       >
-                        Chỉnh sửa
+                        <Icon name="edit" size={14} /> Chỉnh sửa
                       </button>
                       <button
                         type="button"
                         className="primary-button"
-                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px' }}
+                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId)}
                       >
-                        Tem QR
+                        <Icon name="sparkles" size={14} /> Tem QR
                       </button>
                     </div>
                     <small style={{ color: '#94a3b8', fontWeight: 600 }}>#{r.harvestRecordId}</small>

@@ -557,26 +557,27 @@ export function FarmingActivitiesPage() {
                   )}
                 </div>
 
-                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
                   <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>
                     Ghi chép: <strong>{act.recorderName || 'Nhân viên kỹ thuật'}</strong>
                   </span>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>
                     👥 Nhân công: {act.workerCount || 1} người
                   </span>
-                  <span
-                    style={{
-                      color: '#10b981',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      marginTop: '4px',
-                    }}
-                  >
-                    Xem chi tiết <Icon name="arrow" />
-                  </span>
+                  <div className="table-action-btns" style={{ marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      className="table-icon-btn primary"
+                      title="Xem chi tiết nhật ký"
+                      aria-label={`Xem chi tiết ${act.activityName}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedActivity(act);
+                      }}
+                    >
+                      <Icon name="eye" size={15} />
+                    </button>
+                  </div>
                 </div>
               </div>
             );

@@ -204,292 +204,394 @@ export function StaffManagementPage() {
 
   const activeStaffOptions = staffList.filter((s) => s.status === 'ACTIVE');
 
+  const getStaffInitials = (name?: string | null): string => {
+    if (!name) return 'NS';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   return (
-    <section className="staff-management-page">
-      <div className="page-heading">
+    <section className="staff-management-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+      {/* Status / Notification Banner */}
+      {notification && (
+        <div
+          role={notification.type === 'error' ? 'alert' : 'status'}
+          className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
+          style={{ marginBottom: '16px' }}
+        >
+          <strong>{notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo'}:</strong> {notification.text}
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            style={{ float: 'right', border: 0, background: 'transparent', cursor: 'pointer', fontWeight: 700 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Main Page Heading matching FarmHub Modern Mockup */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
         <div>
-          <h1>Quản lý nhân sự &amp; Phân công</h1>
-          <p className="page-subtitle">
-            Hồ sơ thành viên trang trại, nhân viên kỹ thuật và phân quyền phụ trách theo vùng sản xuất VietGAP
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            Người lao động &amp; Phân công
+          </h1>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+            {staffList.length} nhân sự · {assignments.length} phân công vùng canh tác VietGAP tại {selectedFarm?.farmName || 'Trang trại'}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {isOwner &&
             (activeTab === 'staff' ? (
-              <button type="button" className="primary-button" onClick={() => setIsAddStaffOpen(true)}>
-                <Icon name="plus" /> Thêm nhân viên
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => setIsAddStaffOpen(true)}
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  background: '#059669',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+                }}
+              >
+                <Icon name="plus" size={17} /> Thêm nhân viên
               </button>
             ) : (
-              <button type="button" className="primary-button" onClick={openAssignModal}>
-                <Icon name="plus" /> Phân công vùng mới
+              <button
+                type="button"
+                className="primary-button"
+                onClick={openAssignModal}
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  background: '#059669',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+                }}
+              >
+                <Icon name="plus" size={17} /> Phân công vùng mới
               </button>
             ))}
         </div>
       </div>
 
-      {notification && (
-        <div
-          role={notification.type === 'error' ? 'alert' : 'status'}
-          className={`notification-popover ${notification.type === 'error' ? 'form-error-banner' : ''}`}
-          style={{ marginBottom: '16px', position: 'static' }}
-        >
-          <strong>{notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo'}:</strong> {notification.text}
-        </div>
-      )}
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #e2e8f0', marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('staff')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14.5px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'staff' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'staff' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          👥 Danh sách nhân sự ({staffList.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('assignments')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14.5px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'assignments' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'assignments' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          🗺️ Phân công vùng sản xuất ({assignments.length})
-        </button>
-      </div>
-
-      {activeTab === 'staff' && (
-        <>
-          {/* Filter Bar */}
-          <div
-            className="panel"
-            style={{
-              padding: '16px 20px',
-              marginBottom: '20px',
-              display: 'flex',
-              gap: '16px',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-            }}
+      {/* Unified Clean Card Container */}
+      <div className="zone-clean-card">
+        {/* Integrated Tabs */}
+        <div className="zone-integrated-tabs">
+          <button
+            type="button"
+            className={`zone-integrated-tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
+            onClick={() => setActiveTab('staff')}
           >
-            <div style={{ flex: 1, minWidth: '240px' }}>
-              <input
-                type="text"
-                placeholder="🔍 Tìm theo họ tên, email hoặc số điện thoại..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '9px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '14px',
-                }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <label style={{ fontSize: '13.5px', fontWeight: 600, color: '#475569' }}>Trạng thái:</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
-              >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="ACTIVE">Đang hoạt động</option>
-                <option value="SUSPENDED">Đã ngưng hoạt động</option>
-              </select>
-            </div>
-          </div>
+            <Icon name="users" size={17} /> Danh sách nhân sự <span className="tab-count">({staffList.length})</span>
+          </button>
+          <button
+            type="button"
+            className={`zone-integrated-tab-btn ${activeTab === 'assignments' ? 'active' : ''}`}
+            onClick={() => setActiveTab('assignments')}
+          >
+            <Icon name="plots" size={17} /> Phân công vùng sản xuất <span className="tab-count">({assignments.length})</span>
+          </button>
+        </div>
 
-          {loading ? (
-            <div className="panel empty-state">
-              <div className="empty-icon">⏳</div>
-              <h2>Đang tải danh sách nhân sự...</h2>
-            </div>
-          ) : filteredStaff.length === 0 ? (
-            <div className="panel empty-state">
-              <div className="empty-icon">👥</div>
-              <h2>Chưa có nhân sự phù hợp</h2>
-              <p>Hãy thử tìm kiếm với từ khóa khác hoặc bấm &quot;Thêm nhân viên&quot; bằng email tài khoản đã kích hoạt.</p>
-            </div>
-          ) : (
-            <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-                <thead>
-                  <tr
-                    style={{
-                      background: '#f8fafc',
-                      borderBottom: '1px solid #e2e8f0',
-                      color: '#475569',
-                      fontSize: '13px',
-                    }}
-                  >
-                    <th style={{ padding: '14px 20px' }}>Thành viên</th>
-                    <th style={{ padding: '14px 20px' }}>Liên hệ</th>
-                    <th style={{ padding: '14px 20px' }}>Vai trò</th>
-                    <th style={{ padding: '14px 20px' }}>Số vùng phụ trách</th>
-                    <th style={{ padding: '14px 20px' }}>Ngày tham gia</th>
-                    <th style={{ padding: '14px 20px' }}>Trạng thái</th>
-                    {isOwner && <th style={{ padding: '14px 20px', textAlign: 'right' }}>Thao tác</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStaff.map((staff) => (
-                    <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '14px 20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span className="profile-hero-avatar" style={{ width: '36px', height: '36px', fontSize: '14px' }}>
-                            <Icon name="user" />
-                          </span>
-                          <div>
-                            <strong style={{ display: 'block', color: '#0f172a' }}>{staff.fullName}</strong>
-                            <small style={{ color: '#94a3b8' }}>Mã TV: #{staff.farmMemberId}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <div style={{ color: '#334155' }}>{staff.email}</div>
-                        <small style={{ color: '#64748b' }}>{staff.phoneNumber || 'Chưa cập nhật SĐT'}</small>
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <span
-                          className="profile-tag-pill"
-                          style={{
-                            fontSize: '12px',
-                            background: staff.farmRole === 'OWNER' ? '#ecfdf5' : '#f1f5f9',
-                            color: staff.farmRole === 'OWNER' ? '#047857' : '#334155',
-                          }}
-                        >
-                          {staff.roleLabel}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 20px', color: '#334155', fontWeight: 600 }}>
-                        {staff.activeAssignmentCount} vùng
-                      </td>
-                      <td style={{ padding: '14px 20px', color: '#64748b' }}>
-                        {staff.joinedAt ? new Date(staff.joinedAt).toLocaleDateString('vi-VN') : '—'}
-                      </td>
-                      <td style={{ padding: '14px 20px' }}>
-                        <span className={`status-badge ${staff.status === 'ACTIVE' ? 'status-badge--success' : ''}`}>
-                          {staff.status === 'ACTIVE' ? 'Hoạt động' : 'Đã ngưng'}
-                        </span>
-                      </td>
-                      {isOwner && (
-                        <td style={{ padding: '14px 20px', textAlign: 'right' }}>
-                          {staff.farmRole === 'OWNER' ? (
-                            <span style={{ color: '#94a3b8', fontSize: '12px' }}>Chủ trại</span>
-                          ) : staff.status === 'ACTIVE' ? (
-                            <button
-                              type="button"
-                              className="action-button"
-                              style={{ padding: '4px 10px', fontSize: '12px', color: '#ef4444' }}
-                              onClick={() => handleDeactivate(staff.farmMemberId, staff.fullName)}
-                            >
-                              Tạm dừng
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="action-button"
-                              style={{ padding: '4px 10px', fontSize: '12px', color: '#059669' }}
-                              onClick={() => handleReactivate(staff.farmMemberId, staff.fullName)}
-                            >
-                              Kích hoạt lại
-                            </button>
-                          )}
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </>
-      )}
+        {activeTab === 'staff' && (
+          <>
+            {/* Filter Bar */}
+            <div className="zone-clean-filter-bar">
+              <div className="zone-clean-search">
+                <span className="search-icon">
+                  <Icon name="search" size={17} />
+                </span>
+                <input
+                  type="search"
+                  placeholder="Tìm theo họ tên, email hoặc số điện thoại..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
 
-      {activeTab === 'assignments' && (
-        <>
-          {loading ? (
-            <div className="panel empty-state">
-              <div className="empty-icon">⏳</div>
-              <h2>Đang tải danh sách phân công...</h2>
-            </div>
-          ) : assignments.length === 0 ? (
-            <div className="panel empty-state">
-              <div className="empty-icon">🗺️</div>
-              <h2>Chưa có phân công nào</h2>
-              <p>Phân công nhân viên kỹ thuật phụ trách từng phân khu (Zone) của trang trại.</p>
-              {isOwner && (
-                <button type="button" className="primary-button" style={{ marginTop: '12px' }} onClick={openAssignModal}>
-                  + Phân công ngay
-                </button>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-              {assignments.map((item) => (
-                <div
-                  key={item.assignmentId}
-                  className="panel"
-                  style={{ padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+              <div className="zone-clean-select-wrap">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  aria-label="Lọc theo trạng thái hoạt động"
                 >
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="SUSPENDED">Đã ngưng hoạt động</option>
+                </select>
+                <span className="select-arrow">
+                  <Icon name="chevron" size={16} />
+                </span>
+              </div>
+
+              <button
+                type="button"
+                className="zone-clean-reload-btn"
+                title="Làm mới bộ lọc"
+                aria-label="Làm mới bộ lọc"
+                onClick={() => {
+                  setSearch('');
+                  setStatusFilter('ALL');
+                }}
+              >
+                <Icon name="refresh" size={16} />
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
+                <div className="empty-icon">⏳</div>
+                <h2>Đang tải danh sách nhân sự...</h2>
+              </div>
+            ) : filteredStaff.length === 0 ? (
+              <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
+                <div className="empty-icon">👥</div>
+                <h2>Chưa có nhân sự phù hợp</h2>
+                <p>Hãy thử tìm kiếm với từ khóa khác hoặc bấm &quot;Thêm nhân viên&quot; bằng email tài khoản đã kích hoạt.</p>
+              </div>
+            ) : (
+              <>
+                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                          <input type="checkbox" aria-label="Chọn tất cả nhân sự" style={{ cursor: 'pointer' }} />
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Thành viên
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Liên hệ
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Vai trò
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Số vùng phụ trách
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          Ngày tham gia
+                        </th>
+                        <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                          Trạng thái
+                        </th>
+                        {isOwner && (
+                          <th style={{ width: '100px', padding: '14px 16px', textAlign: 'right' }}>
+                            Thao tác
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredStaff.map((staff) => {
+                        const isActive = staff.status === 'ACTIVE';
+
+                        return (
+                          <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <input type="checkbox" aria-label={`Chọn ${staff.fullName}`} style={{ cursor: 'pointer' }} />
+                            </td>
+
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div className="staff-initials-avatar">
+                                  {getStaffInitials(staff.fullName)}
+                                </div>
+                                <div>
+                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px' }}>
+                                    {staff.fullName}
+                                  </strong>
+                                  <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>
+                                    Mã TV: #{staff.farmMemberId}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td style={{ padding: '14px 16px' }}>
+                              <div style={{ color: '#334155', fontSize: '13.5px', fontWeight: 500 }}>{staff.email}</div>
+                              <span style={{ color: '#64748b', fontSize: '12.5px' }}>
+                                {staff.phoneNumber || 'Chưa cập nhật SĐT'}
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '14px 16px' }}>
+                              <span
+                                className="crop-cat-pill"
+                                style={{
+                                  background: staff.farmRole === 'OWNER' ? '#ecfdf5' : '#f1f5f9',
+                                  color: staff.farmRole === 'OWNER' ? '#047857' : '#334155',
+                                  borderColor: staff.farmRole === 'OWNER' ? '#a7f3d0' : '#e2e8f0',
+                                }}
+                              >
+                                {staff.roleLabel}
+                              </span>
+                            </td>
+
+                            <td style={{ padding: '14px 16px', color: '#0f172a', fontWeight: 600, fontSize: '13.5px' }}>
+                              {staff.activeAssignmentCount} vùng
+                            </td>
+
+                            <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px' }}>
+                              {staff.joinedAt ? new Date(staff.joinedAt).toLocaleDateString('vi-VN') : '—'}
+                            </td>
+
+                            <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                              <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
+                                <span className="dot" />
+                                {isActive ? 'Hoạt động' : 'Đã ngưng'}
+                              </span>
+                            </td>
+
+                            {isOwner && (
+                              <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                                {staff.farmRole === 'OWNER' ? (
+                                  <span style={{ color: '#94a3b8', fontSize: '12.5px', fontStyle: 'italic' }}>Chủ trại</span>
+                                ) : isActive ? (
+                                  <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn danger"
+                                      title="Tạm dừng quyền hoạt động của nhân viên"
+                                      aria-label={`Tạm dừng ${staff.fullName}`}
+                                      onClick={() => handleDeactivate(staff.farmMemberId, staff.fullName)}
+                                    >
+                                      <Icon name="trash" size={15} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn primary"
+                                      title="Kích hoạt lại nhân viên"
+                                      aria-label={`Kích hoạt lại ${staff.fullName}`}
+                                      onClick={() => handleReactivate(staff.farmMemberId, staff.fullName)}
+                                    >
+                                      <Icon name="refresh" size={15} />
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table Footer */}
+                <div className="zone-table-footer">
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <span className="profile-tag-pill" style={{ background: '#ecfdf5', color: '#059669', fontSize: '12px' }}>
-                        📍 {item.zoneName || `Phân khu #${item.zoneId}`}
-                      </span>
-                      {isOwner && (
-                        <button
-                          type="button"
-                          className="icon-button"
-                          title="Hủy phân công"
-                          style={{ color: '#ef4444' }}
-                          onClick={() => handleUnassign(item.assignmentId)}
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                    <h3 style={{ margin: '0 0 6px', fontSize: '17px', color: '#0f172a' }}>
-                      👤 {item.staffName || `Thành viên #${item.farmMemberId}`}
-                    </h3>
-                    {item.staffEmail && (
-                      <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '13px' }}>
-                        ✉️ {item.staffEmail}
-                      </p>
-                    )}
-                    <p style={{ margin: 0, color: '#059669', fontWeight: 600, fontSize: '13.5px' }}>
-                      {item.jobTitle || 'Nhân viên kỹ thuật phụ trách phân khu'}
-                    </p>
+                    Hiển thị 1–{filteredStaff.length} trong {filteredStaff.length} nhân sự
                   </div>
-                  <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', fontSize: '12px', color: '#94a3b8' }}>
-                    Phân công từ ngày: {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
-                    {item.assignedByName ? ` • Giao bởi: ${item.assignedByName}` : ''}
+                  <div className="zone-pagination-wrap">
+                    <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
+                      <Icon name="chevron-left" size={15} />
+                    </button>
+                    <button type="button" className="zone-page-btn active">
+                      1
+                    </button>
+                    <button type="button" className="zone-page-btn" disabled aria-label="Trang sau">
+                      <Icon name="chevron-right" size={15} />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+              </>
+            )}
+          </>
+        )}
+
+        {activeTab === 'assignments' && (
+          <div style={{ padding: '24px' }}>
+            {loading ? (
+              <div className="panel empty-state" style={{ border: 'none', boxShadow: 'none' }}>
+                <div className="empty-icon">⏳</div>
+                <h2>Đang tải danh sách phân công...</h2>
+              </div>
+            ) : assignments.length === 0 ? (
+              <div className="panel empty-state" style={{ border: 'none', boxShadow: 'none' }}>
+                <div className="empty-icon">🗺️</div>
+                <h2>Chưa có phân công nào</h2>
+                <p>Phân công nhân viên kỹ thuật phụ trách từng phân khu (Zone) của trang trại.</p>
+                {isOwner && (
+                  <button type="button" className="primary-button" style={{ marginTop: '12px' }} onClick={openAssignModal}>
+                    <Icon name="plus" size={16} /> Phân công ngay
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                {assignments.map((item) => (
+                  <div
+                    key={item.assignmentId}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '14px',
+                      padding: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <span className="crop-cat-pill green">
+                          📍 {item.zoneName || `Phân khu #${item.zoneId}`}
+                        </span>
+                        {isOwner && (
+                          <button
+                            type="button"
+                            className="table-icon-btn danger"
+                            title="Hủy phân công"
+                            aria-label={`Hủy phân công cho ${item.staffName}`}
+                            onClick={() => handleUnassign(item.assignmentId)}
+                          >
+                            <Icon name="trash" size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <h3 style={{ margin: '0 0 6px', fontSize: '17px', color: '#0f172a', fontWeight: 750 }}>
+                        👤 {item.staffName || `Thành viên #${item.farmMemberId}`}
+                      </h3>
+                      {item.staffEmail && (
+                        <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '13px' }}>
+                          ✉️ {item.staffEmail}
+                        </p>
+                      )}
+                      <p style={{ margin: 0, color: '#059669', fontWeight: 650, fontSize: '13.5px' }}>
+                        {item.jobTitle || 'Nhân viên kỹ thuật phụ trách phân khu'}
+                      </p>
+                    </div>
+                    <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f1f5f9', fontSize: '12px', color: '#94a3b8' }}>
+                      Phân công từ ngày: {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
+                      {item.assignedByName ? ` • Giao bởi: ${item.assignedByName}` : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Add Staff Modal */}
       {isAddStaffOpen && (
