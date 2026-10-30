@@ -114,6 +114,17 @@ export async function fetchCropCategories(): Promise<CropCategoryResp[]> {
   }
 }
 
+async function unusedOriginalFetch(): Promise<CropCategoryResp[]> {
+  try {
+    const list = await request<CropCategoryResp[]>('/crop-categories');
+    cachedCategories = list && list.length > 0 ? list : DEFAULT_CATEGORIES;
+    return cachedCategories;
+  } catch {
+    cachedCategories = DEFAULT_CATEGORIES;
+    return DEFAULT_CATEGORIES;
+  }
+}
+
 
 
 export async function fetchCropSeasonsByFarm(

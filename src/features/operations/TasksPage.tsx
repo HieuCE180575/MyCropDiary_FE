@@ -33,7 +33,7 @@ export function TasksPage() {
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Filters & View mode
-  const [viewMode, setViewMode] = useState<'KANBAN' | 'TABLE'>('KANBAN');
+  const [viewMode, setViewMode] = useState<'KANBAN' | 'TABLE'>('TABLE');
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -426,473 +426,637 @@ export function TasksPage() {
   };
 
   return (
-    <section className="tasks-page">
-      {/* Page Heading */}
-      <header className="tasks-heading">
-        <div>
-          <h1>Phân công &amp; Quản lý công việc</h1>
-          <p>
-            Giao việc, giám sát quy trình lao động nông nghiệp và theo dõi tiến độ công nhật tại{' '}
-            <strong>{selectedFarm?.farmName || 'Trang trại'}</strong> theo chuẩn VietGAP.
-          </p>
-        </div>
-        <div className="tasks-heading-actions">
+    <section className="tasks-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+      {/* Notification Banner */}
+      {notification && (
+        <div
+          role={notification.type === 'error' ? 'alert' : 'status'}
+          className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
+          style={{ marginBottom: '16px' }}
+        >
+          <strong>{notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo'}:</strong> {notification.text}
           <button
             type="button"
-            className="action-button"
-            disabled={!farmId || loading}
-            onClick={() => void loadTasks()}
+            onClick={() => setNotification(null)}
+            style={{ float: 'right', border: 0, background: 'transparent', cursor: 'pointer', fontWeight: 700 }}
           >
-            <Icon name={loading ? 'loader' : 'refresh'} /> {loading ? 'Đang nạp...' : 'Tải lại'}
+            ✕
           </button>
+        </div>
+      )}
+
+      {/* Main Page Heading matching FarmHub Modern Mockup */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            Phân công &amp; Quản lý công việc
+          </h1>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+            {totalTasks} công việc · {todoTasks.length} cần thực hiện · {inProgressTasks.length} đang triển khai · {completedTasks.length} đã xong tại {selectedFarm?.farmName || 'Trang trại'}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <button
             type="button"
             className="primary-button"
             disabled={!farmId}
             onClick={openCreateModal}
+            style={{
+              padding: '10px 18px',
+              fontSize: '14px',
+              fontWeight: 700,
+              borderRadius: '10px',
+              background: '#059669',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+            }}
           >
-            <Icon name="plus" /> Giao việc mới
+            <Icon name="plus" size={17} /> Giao việc mới
           </button>
         </div>
-      </header>
-
-      {/* Notification Banner */}
-      {notification && (
-        <div
-          role={notification.type === 'error' ? 'alert' : 'status'}
-          className={`form-error-banner ${notification.type === 'success' ? 'mu-notice-success' : ''}`}
-          style={{
-            marginBottom: '20px',
-            background: notification.type === 'success' ? '#ecfdf5' : '#fef2f2',
-            borderColor: notification.type === 'success' ? '#6ee7b7' : '#fca5a5',
-            color: notification.type === 'success' ? '#065f46' : '#991b1b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Icon name={notification.type === 'success' ? 'check-circle' : 'warning'} />
-          <span>{notification.text}</span>
-        </div>
-      )}
-
-      {/* KPI Metrics */}
-      <div className="tasks-metrics" aria-label="Thống kê công việc">
-        <article className="tasks-metric-card tone-slate">
-          <div className="tasks-metric-top">
-            <span>Tổng số việc</span>
-            <span className="tasks-metric-icon">📋</span>
-          </div>
-          <strong className="tasks-metric-value">{totalTasks}</strong>
-          <p className="tasks-metric-hint">Toàn bộ nhiệm vụ của trang trại</p>
-        </article>
-
-        <article className="tasks-metric-card tone-amber">
-          <div className="tasks-metric-top">
-            <span>Cần thực hiện</span>
-            <span className="tasks-metric-icon">⏳</span>
-          </div>
-          <strong className="tasks-metric-value">{todoTasks.length}</strong>
-          <p className="tasks-metric-hint">Chờ phân bổ &amp; tiếp nhận</p>
-        </article>
-
-        <article className="tasks-metric-card tone-blue">
-          <div className="tasks-metric-top">
-            <span>Đang triển khai</span>
-            <span className="tasks-metric-icon">🚀</span>
-          </div>
-          <strong className="tasks-metric-value">{inProgressTasks.length}</strong>
-          <p className="tasks-metric-hint">Đang có nhân sự thực hiện</p>
-        </article>
-
-        <article className="tasks-metric-card tone-green">
-          <div className="tasks-metric-top">
-            <span>Đã hoàn thành</span>
-            <span className="tasks-metric-icon">✅</span>
-          </div>
-          <strong className="tasks-metric-value">{completedTasks.length}</strong>
-          <p className="tasks-metric-hint">Nghiệm thu đạt chuẩn kỹ thuật</p>
-        </article>
-
-        <article className="tasks-metric-card tone-red">
-          <div className="tasks-metric-top">
-            <span>Khẩn cấp chưa xong</span>
-            <span className="tasks-metric-icon">🚨</span>
-          </div>
-          <strong className="tasks-metric-value">{urgentTasks.length}</strong>
-          <p className="tasks-metric-hint">Cần ưu tiên xử lý ngay</p>
-        </article>
       </div>
 
-      {/* Control Bar & Filters */}
-      <div className="tasks-control-bar">
-        <div className="tasks-control-row-top">
-          <form onSubmit={handleSearchSubmit} className="tasks-search-wrap">
-            <span className="tasks-search-icon"><Icon name="search" /></span>
+      {/* Unified Clean Card Container */}
+      <div className="zone-clean-card">
+        {/* Clean Filter Bar */}
+        <div className="zone-clean-filter-bar" style={{ flexWrap: 'wrap', gap: '12px' }}>
+          {/* Search Box */}
+          <div className="zone-clean-search" style={{ flex: 1, minWidth: '220px' }}>
+            <span className="search-icon">
+              <Icon name="search" size={17} />
+            </span>
             <input
               type="search"
               placeholder="Tìm theo tên việc, ghi chú, người phụ trách..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
-          </form>
+          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* View Switch */}
-            <div className="tasks-view-switch" role="group" aria-label="Chế độ hiển thị">
-              <button
-                type="button"
-                className={`tasks-view-btn ${viewMode === 'KANBAN' ? 'active' : ''}`}
-                onClick={() => setViewMode('KANBAN')}
-              >
-                📊 Bảng Kanban
-              </button>
-              <button
-                type="button"
-                className={`tasks-view-btn ${viewMode === 'TABLE' ? 'active' : ''}`}
-                onClick={() => setViewMode('TABLE')}
-              >
-                📑 Danh sách
-              </button>
-            </div>
+          {/* Filter by Status */}
+          <div className="zone-clean-select-wrap">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Lọc theo trạng thái"
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="planned">Cần thực hiện</option>
+              <option value="in_progress">Đang triển khai</option>
+              <option value="completed">Đã hoàn thành</option>
+              <option value="cancelled">Đã hủy</option>
+            </select>
+          </div>
+
+          {/* Filter by Priority */}
+          <div className="zone-clean-select-wrap">
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              aria-label="Lọc theo độ ưu tiên"
+            >
+              <option value="all">Tất cả độ ưu tiên</option>
+              <option value="urgent">Khẩn cấp</option>
+              <option value="high">Ưu tiên cao</option>
+              <option value="normal">Bình thường</option>
+              <option value="low">Mức thấp</option>
+            </select>
+          </div>
+
+          {/* Filter by Season */}
+          <div className="zone-clean-select-wrap">
+            <select
+              value={seasonFilter}
+              onChange={(e) => setSeasonFilter(e.target.value ? Number(e.target.value) : '')}
+              aria-label="Lọc theo mùa vụ"
+            >
+              <option value="">Tất cả mùa vụ</option>
+              {seasons.map((s) => (
+                <option key={s.cropSeasonId} value={s.cropSeasonId}>
+                  {s.seasonName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter by Zone */}
+          <div className="zone-clean-select-wrap">
+            <select
+              value={zoneFilter}
+              onChange={(e) => setZoneFilter(e.target.value ? Number(e.target.value) : '')}
+              aria-label="Lọc theo khu vực"
+            >
+              <option value="">Tất cả khu vực</option>
+              {zones.map((z) => (
+                <option key={z.zoneId} value={z.zoneId}>
+                  {z.zoneName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Reload / Reset */}
+          <button
+            type="button"
+            className="zone-clean-reload-btn"
+            title="Tải lại và đặt lại bộ lọc"
+            aria-label="Tải lại và đặt lại bộ lọc"
+            onClick={() => {
+              setKeyword('');
+              setStatusFilter('all');
+              setPriorityFilter('all');
+              setSeasonFilter('');
+              setZoneFilter('');
+              void loadTasks();
+            }}
+          >
+            <Icon name="refresh" size={16} />
+          </button>
+
+          {/* View Switch */}
+          <div className="tasks-view-switch" role="group" aria-label="Chế độ hiển thị">
+            <button
+              type="button"
+              className={`tasks-view-btn ${viewMode === 'TABLE' ? 'active' : ''}`}
+              onClick={() => setViewMode('TABLE')}
+            >
+              📑 Danh sách
+            </button>
+            <button
+              type="button"
+              className={`tasks-view-btn ${viewMode === 'KANBAN' ? 'active' : ''}`}
+              onClick={() => setViewMode('KANBAN')}
+            >
+              📊 Bảng Kanban
+            </button>
           </div>
         </div>
 
-        <div className="tasks-control-row-filters">
-          <label style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>Lọc theo:</label>
-
-          <select
-            className="tasks-filter-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+        {/* Quick Status Filter Pills */}
+        <div
+          style={{
+            padding: '10px 20px',
+            borderBottom: '1px solid #f1f5f9',
+            background: '#f8fafc',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569' }}>
+            Trạng thái:
+          </span>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '999px',
+              border: '1px solid',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: statusFilter === 'all' ? '#059669' : '#ffffff',
+              borderColor: statusFilter === 'all' ? '#059669' : '#cbd5e1',
+              color: statusFilter === 'all' ? '#ffffff' : '#475569',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="planned">Cần thực hiện</option>
-            <option value="in_progress">Đang triển khai</option>
-            <option value="completed">Đã hoàn thành</option>
-            <option value="cancelled">Đã hủy</option>
-          </select>
-
-          <select
-            className="tasks-filter-select"
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
+            Tất cả ({totalTasks})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('planned')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '999px',
+              border: '1px solid',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: statusFilter === 'planned' ? '#d97706' : '#ffffff',
+              borderColor: statusFilter === 'planned' ? '#d97706' : '#fed7aa',
+              color: statusFilter === 'planned' ? '#ffffff' : '#b45309',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <option value="all">Tất cả độ ưu tiên</option>
-            <option value="urgent">Khẩn cấp</option>
-            <option value="high">Ưu tiên cao</option>
-            <option value="normal">Bình thường</option>
-            <option value="low">Mức thấp</option>
-          </select>
-
-          <select
-            className="tasks-filter-select"
-            value={seasonFilter}
-            onChange={(e) => setSeasonFilter(e.target.value ? Number(e.target.value) : '')}
+            ⏳ Cần thực hiện ({todoTasks.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('in_progress')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '999px',
+              border: '1px solid',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: statusFilter === 'in_progress' ? '#0284c7' : '#ffffff',
+              borderColor: statusFilter === 'in_progress' ? '#0284c7' : '#bae6fd',
+              color: statusFilter === 'in_progress' ? '#ffffff' : '#0369a1',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <option value="">Tất cả mùa vụ</option>
-            {seasons.map((s) => (
-              <option key={s.cropSeasonId} value={s.cropSeasonId}>
-                {s.seasonName}
-              </option>
-            ))}
-          </select>
-
-          <select
-            className="tasks-filter-select"
-            value={zoneFilter}
-            onChange={(e) => setZoneFilter(e.target.value ? Number(e.target.value) : '')}
+            🚀 Đang triển khai ({inProgressTasks.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('completed')}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '999px',
+              border: '1px solid',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: statusFilter === 'completed' ? '#059669' : '#ffffff',
+              borderColor: statusFilter === 'completed' ? '#059669' : '#a7f3d0',
+              color: statusFilter === 'completed' ? '#ffffff' : '#047857',
+              transition: 'all 0.15s ease',
+            }}
           >
-            <option value="">Tất cả khu vực</option>
-            {zones.map((z) => (
-              <option key={z.zoneId} value={z.zoneId}>
-                {z.zoneName}
-              </option>
-            ))}
-          </select>
-
-          {(keyword || statusFilter !== 'all' || priorityFilter !== 'all' || seasonFilter || zoneFilter) && (
+            ✅ Đã hoàn thành ({completedTasks.length})
+          </button>
+          {urgentTasks.length > 0 && (
             <button
               type="button"
-              className="action-button"
-              style={{ fontSize: '12.5px', padding: '6px 12px' }}
               onClick={() => {
-                setKeyword('');
                 setStatusFilter('all');
-                setPriorityFilter('all');
-                setSeasonFilter('');
-                setZoneFilter('');
+                setPriorityFilter('urgent');
+              }}
+              style={{
+                padding: '4px 12px',
+                borderRadius: '999px',
+                border: '1px solid',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: priorityFilter === 'urgent' ? '#dc2626' : '#ffffff',
+                borderColor: priorityFilter === 'urgent' ? '#dc2626' : '#fecaca',
+                color: priorityFilter === 'urgent' ? '#ffffff' : '#b91c1c',
+                transition: 'all 0.15s ease',
               }}
             >
-              Đặt lại bộ lọc
+              🚨 Khẩn cấp ({urgentTasks.length})
             </button>
           )}
         </div>
-      </div>
 
-      {/* Main Content: Kanban or Table */}
-      {viewMode === 'KANBAN' ? (
-        <div className="tasks-kanban-board">
-          {/* Column 1: TODO / Planned */}
-          <div className="tasks-column col-todo">
-            <div className="tasks-column-header">
-              <div className="tasks-column-title">
-                <span className="tasks-column-dot" />
-                <span>Cần thực hiện</span>
+        {/* Main Content: Table List or Kanban */}
+        {viewMode === 'TABLE' ? (
+          loading ? (
+            <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
+              <div className="empty-icon">⏳</div>
+              <h2>Đang tải danh sách công việc...</h2>
+            </div>
+          ) : tasks.length === 0 ? (
+            <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '16px',
+                  background: '#f0fdf4',
+                  color: '#059669',
+                  display: 'grid',
+                  placeItems: 'center',
+                  margin: '0 auto 16px',
+                }}
+              >
+                <Icon name="check-circle" size={32} />
               </div>
-              <span className="tasks-column-count">{todoTasks.length}</span>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
+                Không tìm thấy công việc nào phù hợp
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '14.5px', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
+                Giao việc và phân công nhân viên kỹ thuật để giám sát tiến độ chăm sóc cây trồng theo tiêu chuẩn VietGAP.
+              </p>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={openCreateModal}
+                style={{
+                  padding: '10px 20px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  background: '#059669',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+                }}
+              >
+                <Icon name="plus" size={16} /> Giao việc ngay
+              </button>
             </div>
-            <div className="tasks-column-body">
-              {todoTasks.length === 0 ? (
-                <div className="tasks-column-empty">
-                  <span>Không có việc chờ thực hiện</span>
-                </div>
-              ) : (
-                todoTasks.map((t) => renderTaskCard(t))
-              )}
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+                <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                        <input type="checkbox" aria-label="Chọn tất cả việc" style={{ cursor: 'pointer' }} />
+                      </th>
+                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        Tên công việc &amp; Phân loại
+                      </th>
+                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        Mùa vụ &amp; Vị trí
+                      </th>
+                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        Độ ưu tiên
+                      </th>
+                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        Người phụ trách
+                      </th>
+                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                        Hạn hoàn thành
+                      </th>
+                      <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        Trạng thái
+                      </th>
+                      <th style={{ width: '220px', padding: '14px 16px', textAlign: 'right' }}>
+                        Thao tác
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tasks.map((t) => {
+                      const isCompleted = t.status === 'completed';
+                      const isInProgress = t.status === 'in_progress';
 
-          {/* Column 2: IN PROGRESS */}
-          <div className="tasks-column col-doing">
-            <div className="tasks-column-header">
-              <div className="tasks-column-title">
-                <span className="tasks-column-dot" />
-                <span>Đang triển khai</span>
-              </div>
-              <span className="tasks-column-count">{inProgressTasks.length}</span>
-            </div>
-            <div className="tasks-column-body">
-              {inProgressTasks.length === 0 ? (
-                <div className="tasks-column-empty">
-                  <span>Chưa có việc đang làm</span>
-                </div>
-              ) : (
-                inProgressTasks.map((t) => renderTaskCard(t))
-              )}
-            </div>
-          </div>
+                      return (
+                        <tr key={t.taskId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <input type="checkbox" aria-label={`Chọn ${t.taskName}`} style={{ cursor: 'pointer' }} />
+                          </td>
 
-          {/* Column 3: DONE / Completed */}
-          <div className="tasks-column col-done">
-            <div className="tasks-column-header">
-              <div className="tasks-column-title">
-                <span className="tasks-column-dot" />
-                <span>Đã hoàn thành</span>
-              </div>
-              <span className="tasks-column-count">{completedTasks.length}</span>
-            </div>
-            <div className="tasks-column-body">
-              {completedTasks.length === 0 ? (
-                <div className="tasks-column-empty">
-                  <span>Chưa có việc hoàn thành</span>
-                </div>
-              ) : (
-                completedTasks.map((t) => renderTaskCard(t))
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Table View matching FarmHub clean table */
-        <div className="zone-clean-card" style={{ marginTop: '20px' }}>
-          <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-            <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
-              <thead>
-                <tr style={{ background: '#f8fafc' }}>
-                  <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
-                    <input type="checkbox" aria-label="Chọn tất cả việc" style={{ cursor: 'pointer' }} />
-                  </th>
-                  <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                    Tên công việc &amp; Phân loại
-                  </th>
-                  <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                    Mùa vụ &amp; Vị trí
-                  </th>
-                  <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                    Độ ưu tiên
-                  </th>
-                  <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                    Người phụ trách
-                  </th>
-                  <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                    Hạn chót
-                  </th>
-                  <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                    Trạng thái
-                  </th>
-                  <th style={{ width: '120px', padding: '14px 16px', textAlign: 'right' }}>
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {tasks.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: '#94a3b8' }}>
-                      <div style={{ fontSize: '28px', marginBottom: '8px' }}>📋</div>
-                      Không tìm thấy công việc nào phù hợp với bộ lọc.
-                    </td>
-                  </tr>
-                ) : (
-                  tasks.map((t) => {
-                    const isCompleted = t.status === 'completed';
-                    const isInProgress = t.status === 'in_progress';
+                          <td style={{ padding: '14px 16px' }}>
+                            <strong
+                              style={{
+                                cursor: 'pointer',
+                                color: '#0f172a',
+                                fontSize: '14.5px',
+                                display: 'block',
+                                transition: 'color 0.15s ease',
+                              }}
+                              onClick={() => setSelectedTaskDetail(t)}
+                              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
+                              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                            >
+                              {t.taskName}
+                            </strong>
+                            {t.description && (
+                              <p style={{ margin: '3px 0 0', fontSize: '12.5px', color: '#64748b', lineHeight: 1.4, maxWidth: '380px' }}>
+                                {t.description.length > 70 ? `${t.description.slice(0, 70)}...` : t.description}
+                              </p>
+                            )}
+                            <div style={{ marginTop: '5px' }}>
+                              <span className="crop-cat-pill blue" style={{ fontSize: '11.5px', padding: '2px 8px' }}>
+                                {t.taskType || 'Chăm sóc'}
+                              </span>
+                            </div>
+                          </td>
 
-                    return (
-                      <tr key={t.taskId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                          <input type="checkbox" aria-label={`Chọn ${t.taskName}`} style={{ cursor: 'pointer' }} />
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <strong
-                            style={{
-                              cursor: 'pointer',
-                              color: '#0f172a',
-                              fontSize: '14.5px',
-                              display: 'block',
-                              transition: 'color 0.15s ease',
-                            }}
-                            onClick={() => setSelectedTaskDetail(t)}
-                            onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
-                            onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
-                          >
-                            {t.taskName}
-                          </strong>
-                          <div style={{ marginTop: '4px' }}>
-                            <span className="crop-cat-pill blue" style={{ fontSize: '11.5px', padding: '2px 8px' }}>
-                              {t.taskType || 'Chăm sóc'}
-                            </span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                            {t.seasonName ? `🌱 ${t.seasonName}` : '—'}
-                          </div>
-                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                            {t.zoneName ? `📍 ${t.zoneName}` : ''}
-                            {t.blockName ? ` • ${t.blockName}` : ''}
-                          </div>
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>{getPriorityBadge(t.priority)}</td>
-                        <td style={{ padding: '14px 16px' }}>
-                          {t.assignees && t.assignees.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                              {t.assignees.map((a) => (
-                                <span
-                                  key={a.workerId}
-                                  style={{
-                                    fontSize: '12.5px',
-                                    fontWeight: 500,
-                                    color: '#0f172a',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                  }}
-                                >
+                          <td style={{ padding: '14px 16px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
+                              {t.seasonName ? `🌱 ${t.seasonName}` : '—'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                              {t.zoneName ? `📍 ${t.zoneName}` : ''}
+                              {t.blockName ? ` • ${t.blockName}` : ''}
+                            </div>
+                          </td>
+
+                          <td style={{ padding: '14px 16px' }}>{getPriorityBadge(t.priority)}</td>
+
+                          <td style={{ padding: '14px 16px' }}>
+                            {t.assignees && t.assignees.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {t.assignees.map((a) => (
                                   <span
+                                    key={a.workerId}
                                     style={{
-                                      width: '20px',
-                                      height: '20px',
-                                      borderRadius: '50%',
-                                      background: '#dcfce7',
-                                      color: '#15803d',
-                                      fontSize: '10px',
-                                      fontWeight: 700,
-                                      display: 'grid',
-                                      placeItems: 'center',
+                                      fontSize: '12.5px',
+                                      fontWeight: 500,
+                                      color: '#0f172a',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '6px',
                                     }}
                                   >
-                                    {(a.fullName || 'NS').slice(0, 1).toUpperCase()}
+                                    <span
+                                      style={{
+                                        width: '22px',
+                                        height: '22px',
+                                        borderRadius: '50%',
+                                        background: '#dcfce7',
+                                        color: '#15803d',
+                                        fontSize: '10.5px',
+                                        fontWeight: 700,
+                                        display: 'grid',
+                                        placeItems: 'center',
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {(a.fullName || 'NS').slice(0, 1).toUpperCase()}
+                                    </span>
+                                    {a.fullName}
                                   </span>
-                                  {a.fullName}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '12.5px', fontStyle: 'italic' }}>Chưa phân công</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '14px 16px' }}>
-                          {t.dueAt ? (
-                            <span
-                              className={`task-due-date ${!isCompleted && t.dueAt < nowIso ? 'is-overdue' : ''}`}
-                              style={{ fontSize: '13px' }}
-                            >
-                              📅 {new Date(t.dueAt).toLocaleDateString('vi-VN')}
-                            </span>
-                          ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '13px' }}>—</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                          <span
-                            className={`status-dot-badge ${
-                              isCompleted ? 'completed' : isInProgress ? 'in_progress' : 'active'
-                            }`}
-                          >
-                            <span className="dot" />
-                            {getStatusLabel(t.status)}
-                          </span>
-                        </td>
-                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                          <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
-                            <button
-                              type="button"
-                              className="table-icon-btn primary"
-                              title="Xem chi tiết công việc"
-                              aria-label={`Chi tiết ${t.taskName}`}
-                              onClick={() => setSelectedTaskDetail(t)}
-                            >
-                              <Icon name="eye" size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              className="table-icon-btn edit"
-                              title="Chỉnh sửa công việc"
-                              aria-label={`Chỉnh sửa ${t.taskName}`}
-                              onClick={() => openEditModal(t)}
-                            >
-                              <Icon name="edit" size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              className="table-icon-btn danger"
-                              title="Xóa công việc"
-                              aria-label={`Xóa ${t.taskName}`}
-                              onClick={() => setDeletingTask(t)}
-                            >
-                              <Icon name="trash" size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontSize: '12.5px', fontStyle: 'italic' }}>Chưa phân công</span>
+                            )}
+                          </td>
 
-          {/* Table Footer */}
-          <div className="zone-table-footer">
-            <div>
-              Hiển thị {tasks.length} công việc
-            </div>
-            <div className="zone-pagination-wrap">
-              <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
-                <Icon name="chevron-left" size={15} />
-              </button>
-              <button type="button" className="zone-page-btn active">
-                1
-              </button>
-              <button type="button" className="zone-page-btn" disabled aria-label="Trang sau">
-                <Icon name="chevron-right" size={15} />
-              </button>
+                          <td style={{ padding: '14px 16px' }}>
+                            {t.dueAt ? (
+                              <span
+                                className={`task-due-date ${!isCompleted && t.dueAt < nowIso ? 'is-overdue' : ''}`}
+                                style={{ fontSize: '13px' }}
+                              >
+                                📅 {new Date(t.dueAt).toLocaleDateString('vi-VN')}
+                              </span>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontSize: '13px' }}>—</span>
+                            )}
+                          </td>
+
+                          <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <span
+                              className={`status-dot-badge ${
+                                isCompleted ? 'completed' : isInProgress ? 'in_progress' : 'active'
+                              }`}
+                            >
+                              <span className="dot" />
+                              {getStatusLabel(t.status)}
+                            </span>
+                          </td>
+
+                          <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                            <div className="table-action-btns" style={{ justifyContent: 'flex-end', gap: '6px' }}>
+                              {/* Quick status transition button */}
+                              {t.status === 'planned' && (
+                                <button
+                                  type="button"
+                                  className="btn-status-quick start"
+                                  title="Bắt đầu thực hiện công việc"
+                                  onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
+                                >
+                                  ▶ Bắt đầu
+                                </button>
+                              )}
+                              {t.status === 'in_progress' && (
+                                <button
+                                  type="button"
+                                  className="btn-status-quick done"
+                                  title="Nghiệm thu hoàn thành"
+                                  onClick={() => void handleQuickStatusChange(t.taskId, 'completed')}
+                                >
+                                  ✓ Hoàn thành
+                                </button>
+                              )}
+                              {t.status === 'completed' && (
+                                <button
+                                  type="button"
+                                  className="btn-status-quick reopen"
+                                  title="Mở lại công việc"
+                                  onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
+                                >
+                                  ↺ Mở lại
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                className="table-icon-btn primary"
+                                title="Xem chi tiết công việc"
+                                aria-label={`Chi tiết ${t.taskName}`}
+                                onClick={() => setSelectedTaskDetail(t)}
+                              >
+                                <Icon name="eye" size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                className="table-icon-btn edit"
+                                title="Chỉnh sửa công việc"
+                                aria-label={`Chỉnh sửa ${t.taskName}`}
+                                onClick={() => openEditModal(t)}
+                              >
+                                <Icon name="edit" size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                className="table-icon-btn danger"
+                                title="Xóa công việc"
+                                aria-label={`Xóa ${t.taskName}`}
+                                onClick={() => setDeletingTask(t)}
+                              >
+                                <Icon name="trash" size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer */}
+              <div className="zone-table-footer">
+                <div>
+                  Hiển thị 1–{tasks.length} trong {totalTasks} công việc
+                </div>
+                <div className="zone-pagination-wrap">
+                  <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
+                    <Icon name="chevron-left" size={15} />
+                  </button>
+                  <button type="button" className="zone-page-btn active">
+                    1
+                  </button>
+                  <button type="button" className="zone-page-btn" disabled aria-label="Trang sau">
+                    <Icon name="chevron-right" size={15} />
+                  </button>
+                </div>
+              </div>
+            </>
+          )
+        ) : (
+          /* Kanban Board Layout */
+          <div style={{ padding: '20px' }}>
+            <div className="tasks-kanban-board">
+              {/* Column 1: TODO / Planned */}
+              <div className="tasks-column col-todo">
+                <div className="tasks-column-header">
+                  <div className="tasks-column-title">
+                    <span className="tasks-column-dot" />
+                    <span>Cần thực hiện</span>
+                  </div>
+                  <span className="tasks-column-count">{todoTasks.length}</span>
+                </div>
+                <div className="tasks-column-body">
+                  {todoTasks.length === 0 ? (
+                    <div className="tasks-column-empty">
+                      <span>Không có việc chờ thực hiện</span>
+                    </div>
+                  ) : (
+                    todoTasks.map((t) => renderTaskCard(t))
+                  )}
+                </div>
+              </div>
+
+              {/* Column 2: IN PROGRESS */}
+              <div className="tasks-column col-doing">
+                <div className="tasks-column-header">
+                  <div className="tasks-column-title">
+                    <span className="tasks-column-dot" />
+                    <span>Đang triển khai</span>
+                  </div>
+                  <span className="tasks-column-count">{inProgressTasks.length}</span>
+                </div>
+                <div className="tasks-column-body">
+                  {inProgressTasks.length === 0 ? (
+                    <div className="tasks-column-empty">
+                      <span>Chưa có việc đang làm</span>
+                    </div>
+                  ) : (
+                    inProgressTasks.map((t) => renderTaskCard(t))
+                  )}
+                </div>
+              </div>
+
+              {/* Column 3: DONE / Completed */}
+              <div className="tasks-column col-done">
+                <div className="tasks-column-header">
+                  <div className="tasks-column-title">
+                    <span className="tasks-column-dot" />
+                    <span>Đã hoàn thành</span>
+                  </div>
+                  <span className="tasks-column-count">{completedTasks.length}</span>
+                </div>
+                <div className="tasks-column-body">
+                  {completedTasks.length === 0 ? (
+                    <div className="tasks-column-empty">
+                      <span>Chưa có việc hoàn thành</span>
+                    </div>
+                  ) : (
+                    completedTasks.map((t) => renderTaskCard(t))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modal 1: Tạo mới / Chỉnh sửa công việc */}
       <Modal
