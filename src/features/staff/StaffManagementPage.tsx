@@ -333,7 +333,7 @@ export function StaffManagementPage() {
   };
 
   return (
-    <section className="staff-management-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+    <section className="staff-management-page" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0, margin: '0 auto', paddingBottom: '40px' }}>
       {/* Status / Notification Banner */}
       {notification && (
         <div
@@ -353,7 +353,7 @@ export function StaffManagementPage() {
       )}
 
       {/* Main Page Heading matching FarmHub Modern Mockup */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px', width: '100%', boxSizing: 'border-box' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
             Người lao động &amp; Phân công
@@ -485,33 +485,33 @@ export function StaffManagementPage() {
               </div>
             ) : (
               <>
-                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
+                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ width: '44px', padding: '14px 16px', textAlign: 'center' }}>
+                        <th style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
                           <input type="checkbox" aria-label="Chọn tất cả nhân sự" style={{ cursor: 'pointer' }} />
                         </th>
-                        <th style={{ minWidth: '260px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th style={{ width: isOwner ? '23%' : '26%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Thành viên
                         </th>
-                        <th style={{ minWidth: '220px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th style={{ width: isOwner ? '20%' : '23%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Liên hệ
                         </th>
-                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th style={{ width: isOwner ? '12%' : '14%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Vai trò
                         </th>
-                        <th style={{ minWidth: '140px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th style={{ width: isOwner ? '11%' : '13%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Số vùng phụ trách
                         </th>
-                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th style={{ width: isOwner ? '11%' : '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Ngày tham gia
                         </th>
-                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th style={{ width: isOwner ? '11%' : '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Trạng thái
                         </th>
                         {isOwner && (
-                          <th style={{ width: '130px', padding: '14px 16px', textAlign: 'right' }}>
+                          <th style={{ width: '12%', padding: '12px 10px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                             Thao tác
                           </th>
                         )}
@@ -524,26 +524,48 @@ export function StaffManagementPage() {
 
                         return (
                           <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
                               <input type="checkbox" aria-label={`Chọn ${displayName}`} style={{ cursor: 'pointer' }} />
                             </td>
 
-                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                                 <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
                                   {initials}
                                 </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                    <strong style={{ color: '#0f172a', fontSize: '14.5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <strong
+                                      style={{
+                                        color: '#0f172a',
+                                        fontSize: '14px',
+                                        fontWeight: 700,
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                      }}
+                                      title={displayName}
+                                    >
                                       {displayName}
                                     </strong>
-                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', flexShrink: 0 }}>
                                       #{staff.farmMemberId}
                                     </span>
                                   </div>
                                   {subTitle && (
-                                    <span style={{ display: 'block', fontSize: '12px', color: '#059669', fontWeight: 600, marginTop: '2px' }}>
+                                    <span
+                                      style={{
+                                        display: 'block',
+                                        fontSize: '12px',
+                                        color: '#059669',
+                                        fontWeight: 600,
+                                        marginTop: '2px',
+                                        whiteSpace: 'nowrap',
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                      }}
+                                      title={subTitle}
+                                    >
                                       {subTitle}
                                     </span>
                                   )}
@@ -551,16 +573,37 @@ export function StaffManagementPage() {
                               </div>
                             </td>
 
-                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                              <div style={{ color: '#0f172a', fontSize: '13.5px', fontWeight: 500 }}>
+                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                              <div
+                                style={{
+                                  color: '#0f172a',
+                                  fontSize: '13px',
+                                  fontWeight: 500,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                                title={staff.email}
+                              >
                                 {staff.email}
                               </div>
-                              <span style={{ color: '#64748b', fontSize: '12.5px', marginTop: '2px', display: 'block' }}>
+                              <span
+                                style={{
+                                  color: '#64748b',
+                                  fontSize: '12px',
+                                  marginTop: '2px',
+                                  display: 'block',
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                                title={staff.phoneNumber || ''}
+                              >
                                 {staff.phoneNumber || 'Chưa cập nhật SĐT'}
                               </span>
                             </td>
 
-                            <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span
                                 className="crop-cat-pill"
                                 style={{
@@ -574,7 +617,7 @@ export function StaffManagementPage() {
                               </span>
                             </td>
 
-                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span
                                 style={{
                                   display: 'inline-block',
@@ -590,11 +633,11 @@ export function StaffManagementPage() {
                               </span>
                             </td>
 
-                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle', color: '#64748b', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap' }}>
                               {staff.joinedAt ? new Date(staff.joinedAt).toLocaleDateString('vi-VN') : '—'}
                             </td>
 
-                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
                                 <span className="dot" />
                                 {isActive ? 'Hoạt động' : 'Đã ngưng'}
@@ -602,8 +645,8 @@ export function StaffManagementPage() {
                             </td>
 
                             {isOwner && (
-                              <td style={{ padding: '14px 16px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
                                   <button
                                     type="button"
                                     className="table-icon-btn edit"
@@ -779,30 +822,30 @@ export function StaffManagementPage() {
               </div>
             ) : (
               <>
-                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
+                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ width: '44px', padding: '14px 16px', textAlign: 'center' }}>
+                        <th style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
                           <input type="checkbox" aria-label="Chọn tất cả phân công" style={{ cursor: 'pointer' }} />
                         </th>
-                        <th style={{ minWidth: '220px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th style={{ width: isOwner ? '24%' : '27%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Phân khu sản xuất
                         </th>
-                        <th style={{ minWidth: '240px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th style={{ width: isOwner ? '23%' : '26%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Nhân sự phụ trách
                         </th>
-                        <th style={{ minWidth: '160px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th style={{ width: isOwner ? '15%' : '17%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Vai trò / Chức vụ
                         </th>
-                        <th style={{ minWidth: '130px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th style={{ width: isOwner ? '13%' : '15%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Ngày bắt đầu
                         </th>
-                        <th style={{ minWidth: '140px', padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th style={{ width: isOwner ? '13%' : '15%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Người giao việc
                         </th>
                         {isOwner && (
-                          <th style={{ width: '100px', padding: '14px 16px', textAlign: 'right' }}>
+                          <th style={{ width: '12%', padding: '12px 10px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                             Thao tác
                           </th>
                         )}
@@ -814,7 +857,7 @@ export function StaffManagementPage() {
 
                         return (
                           <tr key={item.assignmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '14px 16px', textAlign: 'center', verticalAlign: 'middle' }}>
+                            <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
                               <input
                                 type="checkbox"
                                 aria-label={`Chọn phân công của ${displayName}`}
@@ -822,12 +865,12 @@ export function StaffManagementPage() {
                               />
                             </td>
 
-                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                                 <span
                                   style={{
-                                    width: '36px',
-                                    height: '36px',
+                                    width: '34px',
+                                    height: '34px',
                                     borderRadius: '10px',
                                     background: '#ecfdf5',
                                     color: '#059669',
@@ -836,33 +879,33 @@ export function StaffManagementPage() {
                                     flexShrink: 0,
                                   }}
                                 >
-                                  <Icon name="plots" size={18} />
+                                  <Icon name="plots" size={17} />
                                 </span>
-                                <div>
-                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px', fontWeight: 700 }}>
+                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.zoneName || `Phân khu #${item.zoneId}`}>
                                     {item.zoneName || `Phân khu #${item.zoneId}`}
                                   </strong>
-                                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
+                                  <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>
                                     Mã: KV-00{item.zoneId}
                                   </span>
                                 </div>
                               </div>
                             </td>
 
-                            <td style={{ padding: '14px 16px', verticalAlign: 'middle' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                                 <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
                                   {initials}
                                 </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14.5px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={displayName}>
                                     {displayName}
                                   </strong>
-                                  <span style={{ fontSize: '12.5px', color: '#64748b', display: 'block' }}>
+                                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.staffEmail || ''}>
                                     {item.staffEmail || 'Chưa có email'}
                                   </span>
                                   {subTitle && (
-                                    <span style={{ display: 'block', fontSize: '11.5px', color: '#059669', fontWeight: 600 }}>
+                                    <span style={{ display: 'block', fontSize: '11.5px', color: '#059669', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={subTitle}>
                                       {subTitle}
                                     </span>
                                   )}
@@ -870,7 +913,7 @@ export function StaffManagementPage() {
                               </div>
                             </td>
 
-                            <td style={{ padding: '14px 16px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span
                                 className="crop-cat-pill"
                                 style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 650 }}
@@ -879,17 +922,19 @@ export function StaffManagementPage() {
                               </span>
                             </td>
 
-                            <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ padding: '12px 10px', color: '#64748b', fontSize: '13px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
                             </td>
 
-                            <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', fontWeight: 500, verticalAlign: 'middle' }}>
-                              {item.assignedByName || 'Chủ trang trại'}
+                            <td style={{ padding: '12px 12px', color: '#334155', fontSize: '13px', fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden' }}>
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }} title={item.assignedByName || 'Chủ trang trại'}>
+                                {item.assignedByName || 'Chủ trang trại'}
+                              </span>
                             </td>
 
                             {isOwner && (
-                              <td style={{ padding: '14px 16px', textAlign: 'right', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                              <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <div className="table-action-btns" style={{ justifyContent: 'center' }}>
                                   <button
                                     type="button"
                                     className="table-icon-btn danger"

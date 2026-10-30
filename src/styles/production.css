@@ -814,6 +814,20 @@
   box-shadow: 0 4px 10px rgba(220, 38, 38, 0.25);
 }
 
+/* Staff & Workers Management Layout */
+.staff-management-page {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.staff-management-page *,
+.staff-management-page *::before,
+.staff-management-page *::after {
+  box-sizing: border-box;
+}
+
 /* Zone & Block Clean Layout 2026 (Matching FarmHub Zones Mockup) */
 .zone-clean-card {
   background: #ffffff;
@@ -822,6 +836,10 @@
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   overflow: hidden;
   margin-bottom: 30px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .zone-integrated-tabs {
