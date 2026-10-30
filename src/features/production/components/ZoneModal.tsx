@@ -8,6 +8,7 @@ interface ZoneModalProps {
   farmId: number;
   farmName?: string;
   initialZone?: Zone | null;
+  existingZones?: Zone[];
   onClose: () => void;
   onSuccess: (savedZone: Zone) => void;
 }
@@ -18,6 +19,7 @@ export function ZoneModal({
   farmId,
   farmName,
   initialZone,
+  existingZones = [],
   onClose,
   onSuccess,
 }: ZoneModalProps) {
@@ -59,13 +61,26 @@ export function ZoneModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.zoneName.trim()) {
+    const trimmedName = values.zoneName.trim();
+    if (!trimmedName) {
       setError('Vui lòng nhập tên khu vực quản lý (Zone Name).');
       return;
     }
-    if (values.zoneName.trim().length > 100) {
-      setError('Zone Name không được vượt quá 100 ký tự.');
+    if (trimmedName.length > 100) {
+      setError('Tên phân khu (Zone) không được vượt quá 100 ký tự.');
       return;
+    }
+
+    if (existingZones && existingZones.length > 0) {
+      const isDuplicate = existingZones.some(
+        (z) =>
+          z.zoneName.trim().toLowerCase() === trimmedName.toLowerCase() &&
+          (mode === 'create' || z.zoneId !== initialZone?.zoneId)
+      );
+      if (isDuplicate) {
+        setError(`Tên phân khu (Zone) "${trimmedName}" đã tồn tại trong trang trại này. Vui lòng chọn tên khác.`);
+        return;
+      }
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {

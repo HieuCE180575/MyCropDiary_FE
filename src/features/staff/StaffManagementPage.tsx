@@ -51,6 +51,7 @@ export function StaffManagementPage() {
   const [role, setRole] = useState('STAFF');
   const [jobTitle, setJobTitle] = useState('Kỹ sư nông nghiệp');
   const [savingStaff, setSavingStaff] = useState(false);
+  const [addStaffError, setAddStaffError] = useState<string | null>(null);
 
   // Edit Staff Modal
   const [editingStaff, setEditingStaff] = useState<FarmStaffRecord | null>(null);
@@ -66,6 +67,7 @@ export function StaffManagementPage() {
   const [assignedAtDate, setAssignedAtDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [assignNotes, setAssignNotes] = useState('');
   const [savingAssign, setSavingAssign] = useState(false);
+  const [assignModalError, setAssignModalError] = useState<string | null>(null);
 
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
 
@@ -121,8 +123,21 @@ export function StaffManagementPage() {
 
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFarm?.id || !email.trim()) return;
+    if (!selectedFarm?.id) return;
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setAddStaffError('Vui lòng nhập địa chỉ email tài khoản nhân viên.');
+      return;
+    }
+
+    const existing = staffList.find((s) => s.email.toLowerCase() === trimmedEmail);
+    if (existing) {
+      setAddStaffError(`Tài khoản "${email.trim()}" đã là thành viên trong trang trại (Trạng thái: ${existing.status || 'Active'}). Không thể thêm trùng lặp!`);
+      return;
+    }
+
     setSavingStaff(true);
+    setAddStaffError(null);
     setNotification(null);
     try {
       const created = await addFarmStaffMember(selectedFarm.id, {
@@ -140,8 +155,10 @@ export function StaffManagementPage() {
       setJobTitle('Kỹ sư nông nghiệp');
       await loadData();
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể thêm nhân viên. Vui lòng kiểm tra email tài khoản đã kích hoạt.';
+      setAddStaffError(msg);
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể thêm nhân viên. Vui lòng kiểm tra email tài khoản đã kích hoạt.',
+        text: msg,
         type: 'error',
       });
     } finally {
@@ -243,13 +260,27 @@ export function StaffManagementPage() {
     }
     setAssignNotes('');
     setAssignedAtDate(new Date().toISOString().split('T')[0]);
+    setAssignModalError(null);
     setIsAssignOpen(true);
   };
 
   const handleAssignZone = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFarm?.id || !assignStaffId || !assignZoneId) return;
+
+    const alreadyAssigned = assignments.find(
+      (a) => a.farmMemberId === Number(assignStaffId) && a.zoneId === Number(assignZoneId) && a.active
+    );
+    if (alreadyAssigned) {
+      const staffObj = staffList.find((s) => s.farmMemberId === Number(assignStaffId));
+      const zoneObj = zones.find((z) => z.zoneId === Number(assignZoneId));
+      const msg = `Nhân sự "${staffObj?.fullName || '#' + assignStaffId}" đã và đang được phân công phụ trách phân khu "${zoneObj?.zoneName || '#' + assignZoneId}". Không thể phân công trùng lặp!`;
+      setAssignModalError(msg);
+      return;
+    }
+
     setSavingAssign(true);
+    setAssignModalError(null);
     setNotification(null);
     try {
       const assignedIso = assignedAtDate ? new Date(`${assignedAtDate}T08:00:00`).toISOString() : new Date().toISOString();
@@ -262,8 +293,10 @@ export function StaffManagementPage() {
       setIsAssignOpen(false);
       await loadData();
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể phân công nhân viên vào phân khu.';
+      setAssignModalError(msg);
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể phân công nhân viên vào phân khu.',
+        text: msg,
         type: 'error',
       });
     } finally {
@@ -1038,6 +1071,11 @@ export function StaffManagementPage() {
           Nhập email của người dùng đã có tài khoản trên MyCropDiary để cấp quyền làm việc tại trang trại.
         </p>
         <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {addStaffError && (
+            <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
+              {addStaffError}
+            </p>
+          )}
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="add-staff-email" className="structured-field-label">
@@ -1196,6 +1234,11 @@ export function StaffManagementPage() {
           Chỉ định kỹ sư hoặc nhân viên kỹ thuật chịu trách nhiệm giám sát và ghi chép nhật ký canh tác theo chuẩn VietGAP cho phân khu sản xuất.
         </p>
         <form onSubmit={handleAssignZone} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {assignModalError && (
+            <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
+              {assignModalError}
+            </p>
+          )}
           {/* Field 1: Chọn nhân sự */}
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">

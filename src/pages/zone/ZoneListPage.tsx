@@ -918,6 +918,7 @@ export function ZoneListPage() {
         farmId={farmId}
         farmName={farmName}
         initialZone={zoneToEdit}
+        existingZones={zones}
         onClose={() => setIsZoneModalOpen(false)}
         onSuccess={(saved) => {
           if (zoneToEdit) {

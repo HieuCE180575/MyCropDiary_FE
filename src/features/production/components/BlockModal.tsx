@@ -88,7 +88,8 @@ export function BlockModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!values.blockName.trim()) {
+    const trimmedBlockName = values.blockName.trim();
+    if (!trimmedBlockName) {
       setError('Vui lòng nhập tên Lô sản xuất (Block Name).');
       return;
     }
@@ -99,6 +100,17 @@ export function BlockModal({
     }
 
     const targetZone = availableZones.find((z) => z.zoneId === selectedZoneId);
+    if (targetZone?.blocks && targetZone.blocks.length > 0) {
+      const isDuplicate = targetZone.blocks.some(
+        (b) =>
+          b.blockName.trim().toLowerCase() === trimmedBlockName.toLowerCase() &&
+          (mode === 'create' || b.blockId !== initialBlock?.blockId)
+      );
+      if (isDuplicate) {
+        setError(`Tên lô / thửa đất "${trimmedBlockName}" đã tồn tại trong khu vực "${targetZone.zoneName}". Vui lòng đặt tên khác.`);
+        return;
+      }
+    }
     if (targetZone && targetZone.areaValue && areaNum > targetZone.areaValue) {
       setError(
         `Diện tích lô đất (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`

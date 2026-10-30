@@ -105,6 +105,15 @@ export function AssignStaffModal({
       return;
     }
 
+    const alreadyAssigned = currentAssignments.find(
+      (a) => a.farmMemberId === selectedMemberId && a.active
+    );
+    if (alreadyAssigned) {
+      const staffName = staffOptions.find((s) => s.memberId === selectedMemberId)?.fullName || 'Nhân sự này';
+      setError(`${staffName} đã và đang được phân công phụ trách phân khu "${resolvedZoneName}". Không thể phân công trùng lặp!`);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 

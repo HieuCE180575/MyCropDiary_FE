@@ -66,6 +66,7 @@ export function TasksPage() {
   const [formStartsAt, setFormStartsAt] = useState(new Date().toISOString().slice(0, 16));
   const [formDueAt, setFormDueAt] = useState('');
   const [formDescription, setFormDescription] = useState('');
+  const [taskModalError, setTaskModalError] = useState<string | null>(null);
 
   const requestsRef = useRef<{ list?: AbortController }>({});
 
@@ -179,6 +180,7 @@ export function TasksPage() {
     setFormStartsAt(new Date().toISOString().slice(0, 16));
     setFormDueAt(new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 16));
     setFormDescription('');
+    setTaskModalError(null);
     setIsCreateModalOpen(true);
   };
 
@@ -195,19 +197,41 @@ export function TasksPage() {
     setFormStartsAt(task.startsAt ? task.startsAt.slice(0, 16) : '');
     setFormDueAt(task.dueAt ? task.dueAt.slice(0, 16) : '');
     setFormDescription(task.description || '');
+    setTaskModalError(null);
     setIsCreateModalOpen(true);
   };
 
   const handleSaveTask = async (e: FormEvent) => {
     e.preventDefault();
-    if (!farmId || !formTaskName.trim()) return;
+    if (!farmId) return;
+
+    const trimmedTaskName = formTaskName.trim();
+    if (!trimmedTaskName) {
+      setTaskModalError('Vui lòng nhập tên công việc / nhiệm vụ.');
+      return;
+    }
 
     if (formStartsAt && formDueAt && formDueAt < formStartsAt) {
-      setNotification({ text: 'Hạn hoàn thành không thể trước ngày bắt đầu.', type: 'error' });
+      setTaskModalError(`Hạn hoàn thành (${formDueAt}) không thể trước thời điểm bắt đầu (${formStartsAt}).`);
+      return;
+    }
+
+    const isDuplicate = tasks.some(
+      (t) =>
+        t.taskName.trim().toLowerCase() === trimmedTaskName.toLowerCase() &&
+        (!editingTask || t.taskId !== editingTask.taskId) &&
+        t.cropSeasonId === (formSeasonId ? Number(formSeasonId) : null) &&
+        t.blockId === (formBlockId ? Number(formBlockId) : null) &&
+        t.status !== 'completed' &&
+        t.status !== 'cancelled'
+    );
+    if (isDuplicate) {
+      setTaskModalError(`Công việc "${trimmedTaskName}" đã tồn tại và đang diễn ra trong phạm vi mùa vụ/lô đất này. Vui lòng kiểm tra lại để tránh giao việc trùng lặp.`);
       return;
     }
 
     setSubmitting(true);
+    setTaskModalError(null);
     setNotification(null);
 
     const payload: CreateFarmTaskReq = {
@@ -235,8 +259,10 @@ export function TasksPage() {
       setIsCreateModalOpen(false);
       void loadTasks();
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Lỗi khi lưu công việc.';
+      setTaskModalError(msg);
       setNotification({
-        text: err instanceof Error ? err.message : 'Lỗi khi lưu công việc.',
+        text: msg,
         type: 'error',
       });
     } finally {
@@ -1109,6 +1135,11 @@ export function TasksPage() {
         title={editingTask ? 'Chỉnh sửa công việc' : 'Giao việc mới (VietGAP)'}
       >
         <form onSubmit={handleSaveTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {taskModalError && (
+            <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
+              {taskModalError}
+            </p>
+          )}
           <div className="task-form-grid">
             <div className="task-form-field task-field-full">
               <label htmlFor="task-name">Tên công việc / Nhiệm vụ *</label>

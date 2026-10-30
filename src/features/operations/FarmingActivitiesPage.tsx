@@ -61,6 +61,7 @@ export function FarmingActivitiesPage() {
   const [resultNotes, setResultNotes] = useState('');
   const [weatherNotes, setWeatherNotes] = useState('Trời nắng nhẹ, độ ẩm 75%');
   const [saving, setSaving] = useState(false);
+  const [activityModalError, setActivityModalError] = useState<string | null>(null);
 
   const loadSeasons = async () => {
     if (!selectedFarm?.id) {
@@ -176,15 +177,26 @@ export function FarmingActivitiesPage() {
 
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!actName.trim() || !seasonId) return;
+    const trimmedActName = actName.trim();
+    if (!trimmedActName) {
+      setActivityModalError('Vui lòng nhập tên hoạt động canh tác.');
+      return;
+    }
+    if (!seasonId) {
+      setActivityModalError('Vui lòng chọn mùa vụ canh tác mục tiêu.');
+      return;
+    }
     if (seasonBlocks.length > 0 && !selectedBlockId) {
-      setNotification({
-        text: 'Vui lòng chọn lô đất thực hiện (đã được phân bổ vào mùa vụ này).',
-        type: 'error',
-      });
+      setActivityModalError('Vui lòng chọn lô đất thực hiện (đã được phân bổ vào mùa vụ này).');
+      return;
+    }
+    if (startedAt && endedAt && endedAt < startedAt) {
+      setActivityModalError(`Thời gian kết thúc (${endedAt}) không thể trước thời gian bắt đầu (${startedAt}).`);
       return;
     }
     setSaving(true);
+    setActivityModalError(null);
+    setNotification(null);
     const normalizedStart = startedAt.length === 16 ? `${startedAt}:00` : startedAt;
     const normalizedEnd = endedAt ? (endedAt.length === 16 ? `${endedAt}:00` : endedAt) : undefined;
     const chosenBlock = seasonBlocks.find((b) => b.blockId === Number(selectedBlockId));
@@ -252,8 +264,10 @@ export function FarmingActivitiesPage() {
       setEditingActivity(null);
       resetForm();
     } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Không thể lưu nhật ký canh tác.';
+      setActivityModalError(msg);
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể lưu nhật ký canh tác.',
+        text: msg,
         type: 'error',
       });
     } finally {
@@ -265,6 +279,7 @@ export function FarmingActivitiesPage() {
     setActName('');
     setDescription('');
     setResultNotes('');
+    setActivityModalError(null);
     if (seasonBlocks.length > 0 && !selectedBlockId) {
       setSelectedBlockId(seasonBlocks[0].blockId);
     }
@@ -883,6 +898,11 @@ export function FarmingActivitiesPage() {
         </p>
 
         <form onSubmit={handleCreateActivity} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {activityModalError && (
+            <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
+              {activityModalError}
+            </p>
+          )}
           {/* Lô đất thực hiện */}
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
