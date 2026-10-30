@@ -126,19 +126,21 @@ export function UserProfilePanel() {
               <>
                 <button
                   type="button"
-                  className="action-button"
+                  className="profile-icon-btn"
                   onClick={() => setIsChangePasswordOpen(true)}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  title="Đổi mật khẩu"
+                  aria-label="Đổi mật khẩu"
                 >
-                  <Icon name="lock" /> Đổi mật khẩu
+                  <Icon name="lock" size={17} />
                 </button>
                 <button
                   type="button"
-                  className="primary-button"
+                  className="profile-icon-btn primary"
                   onClick={() => { setIsEditing(true); setMessage(null); }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  title="Chỉnh sửa hồ sơ"
+                  aria-label="Chỉnh sửa hồ sơ"
                 >
-                  <Icon name="edit" /> Chỉnh sửa hồ sơ
+                  <Icon name="edit" size={17} />
                 </button>
               </>
             )}
@@ -294,12 +296,23 @@ export function UserProfilePanel() {
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-              <button type="button" className="action-button" onClick={handleCancel} disabled={saving}>
-                Hủy
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="action-button"
+                onClick={handleCancel}
+                disabled={saving}
+                style={{ height: '40px', padding: '0 18px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
+              >
+                <Icon name="x" size={16} /> Hủy
               </button>
-              <button type="submit" className="primary-button" disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <Icon name="save" /> {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={saving}
+                style={{ height: '40px', padding: '0 20px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
+              >
+                <Icon name="save" size={16} /> {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
               </button>
             </div>
           </form>
