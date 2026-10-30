@@ -356,8 +356,8 @@ function HarvestContent() {
         </div>
       </div>
 
-      {/* Stat Cards Grid */}
-      <div className="zone-stats-grid">
+      {/* Stat Cards Grid (Hidden to streamline page per user request) */}
+      <div className="zone-stats-grid" style={{ display: 'none' }}>
         <div className="zone-stat-card">
           <div className="zone-stat-icon">
             <Icon name="box" size={18} />
@@ -870,33 +870,39 @@ function HarvestContent() {
                       justifyContent: 'space-between',
                     }}
                   >
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    <div className="table-action-btns" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       <button
                         type="button"
-                        className="action-button"
-                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        className="table-icon-btn primary"
+                        title="Xem chi tiết"
+                        aria-label={`Chi tiết lô ${r.harvestLotCode || r.harvestRecordId}`}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId)}
                       >
-                        <Icon name="eye" size={14} /> Chi tiết
+                        <Icon name="eye" size={16} />
+                        <span className="sr-only">Chi tiết</span>
                       </button>
                       <button
                         type="button"
-                        className="action-button"
-                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        className="table-icon-btn edit"
+                        title="Chỉnh sửa"
+                        aria-label={`Chỉnh sửa lô ${r.harvestLotCode || r.harvestRecordId}`}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId, true)}
                       >
-                        <Icon name="edit" size={14} /> Chỉnh sửa
+                        <Icon name="edit" size={16} />
+                        <span className="sr-only">Chỉnh sửa</span>
                       </button>
                       <button
                         type="button"
-                        className="primary-button"
-                        style={{ minHeight: '36px', padding: '6px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        className="table-icon-btn assign"
+                        title="Tem QR"
+                        aria-label={`Tem QR lô ${r.harvestLotCode || r.harvestRecordId}`}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId)}
                       >
-                        <Icon name="sparkles" size={14} /> Tem QR
+                        <Icon name="sparkles" size={16} />
+                        <span className="sr-only">Tem QR</span>
                       </button>
                     </div>
                     <small style={{ color: '#94a3b8', fontWeight: 600 }}>#{r.harvestRecordId}</small>
