@@ -13,83 +13,83 @@ export function PublicFooter() {
               </span>
               <div className="footer-brand-text">
                 <strong id="footer-brand-heading">MyCropDiary</strong>
-                <span>Nông nghiệp số VietGAP</span>
+                <span>VietGAP Smart Agriculture</span>
               </div>
             </Link>
             <p className="footer-description">
-              Hệ thống quản lý trang trại thông minh, đồng hành cùng nhà nông chuẩn hóa nhật ký sản xuất, tối ưu chi phí đầu vào và minh bạch chất lượng nông sản theo tiêu chuẩn VietGAP.
+              Smart farm management system empowering growers to standardize production diaries, optimize input costs, and ensure produce transparency according to VietGAP standards.
             </p>
             <div className="footer-badges">
               <span className="footer-badge">
-                <Icon name="shield" /> Chuẩn VietGAP
+                <Icon name="shield" /> VietGAP Standard
               </span>
               <span className="footer-badge">
-                <Icon name="lock" /> Bảo mật đám mây
+                <Icon name="lock" /> Cloud Security
               </span>
             </div>
           </section>
 
           <nav className="footer-col" aria-labelledby="footer-explore-heading">
-            <h3 id="footer-explore-heading">Khám phá &amp; Học tập</h3>
+            <h3 id="footer-explore-heading">Explore &amp; Learn</h3>
             <ul className="footer-nav-list">
               <li>
-                <Link to="/">Trang chủ</Link>
+                <Link to="/">Home</Link>
               </li>
               <li>
-                <Link to="/about">Về chúng tôi</Link>
+                <Link to="/about">About Us</Link>
               </li>
               <li>
-                <Link to="/knowledge">Thư viện kiến thức VietGAP</Link>
+                <Link to="/knowledge">VietGAP Knowledge Library</Link>
               </li>
               <li>
-                <Link to="/features">Tính năng nổi bật</Link>
+                <Link to="/features">Features</Link>
               </li>
               <li>
-                <Link to="/register">Đăng ký tài khoản mới</Link>
+                <Link to="/register">Create New Account</Link>
               </li>
             </ul>
           </nav>
 
           <nav className="footer-col" aria-labelledby="footer-solutions-heading">
-            <h3 id="footer-solutions-heading">Giải pháp quản lý</h3>
+            <h3 id="footer-solutions-heading">Solutions</h3>
             <ul className="footer-nav-list">
               <li>
-                <span className="footer-link-text">Nhật ký canh tác số</span>
+                <span className="footer-link-text">Digital Farming Diary</span>
               </li>
               <li>
-                <span className="footer-link-text">Kiểm soát kho &amp; vật tư</span>
+                <span className="footer-link-text">Inventory &amp; Materials</span>
               </li>
               <li>
-                <span className="footer-link-text">Hạch toán chi phí mùa vụ</span>
+                <span className="footer-link-text">Seasonal Cost Accounting</span>
               </li>
               <li>
-                <span className="footer-link-text">Báo cáo kiểm tra &amp; xuất kho</span>
+                <span className="footer-link-text">Compliance &amp; Traceability</span>
               </li>
             </ul>
           </nav>
 
           <section className="footer-col" aria-labelledby="footer-contact-heading">
-            <h3 id="footer-contact-heading">Hỗ trợ &amp; Liên hệ</h3>
+            <h3 id="footer-contact-heading">Support &amp; Contact</h3>
             <ul className="footer-contact-list">
               <li>
                 <Icon name="phone" className="contact-icon" />
                 <div>
-                  <strong>Hotline kỹ thuật:</strong>
-                  <p>1900 6868 (Miễn phí 24/7)</p>
+                  <strong>Technical Hotline:</strong>
+                  <p>1900 6868 (Toll-Free 24/7)</p>
                 </div>
               </li>
               <li>
                 <Icon name="mail" className="contact-icon" />
                 <div>
-                  <strong>Email hỗ trợ:</strong>
-                  <p>hotro@mycropdiary.vn</p>
+                  <strong>Support Email:</strong>
+                  <p>support@mycropdiary.vn</p>
                 </div>
               </li>
               <li>
                 <Icon name="plots" className="contact-icon" />
                 <div>
-                  <strong>Trụ sở:</strong>
-                  <p>Khu Công nghệ Cao, TP. Thủ Đức, TP. Hồ Chí Minh</p>
+                  <strong>Headquarters:</strong>
+                  <p>High-Tech Park, Thu Duc City, Ho Chi Minh City</p>
                 </div>
               </li>
             </ul>
@@ -98,16 +98,14 @@ export function PublicFooter() {
       </div>
 
       <div className="public-footer-bottom">
-        <div className="public-footer-container footer-bottom-inner">
-          <p className="copyright-text">
-            © 2026 <strong>MyCropDiary</strong>. Nền tảng ghi chép và quản lý trang trại theo tiêu chuẩn VietGAP.
+        <div className="public-footer-container">
+          <p className="footer-copyright">
+            &copy; 2026 MyCropDiary. All rights reserved. VietGAP Digital Agriculture Platform.
           </p>
-          <div className="footer-legal-links">
-            <a href="#terms">Điều khoản sử dụng</a>
-            <span className="dot-divider">•</span>
-            <a href="#privacy">Chính sách bảo mật</a>
-            <span className="dot-divider">•</span>
-            <a href="#vietgap-compliance">Chứng nhận VietGAP</a>
+          <div className="footer-bottom-links">
+            <Link to="/about">Terms of Service</Link>
+            <span className="divider">&bull;</span>
+            <Link to="/about">Privacy Policy</Link>
           </div>
         </div>
       </div>

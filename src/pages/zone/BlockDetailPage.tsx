@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 import { farmRole } from '../../features/auth/accessPolicy';
 import { Icon } from '../../shared/components/Icon';
+import { CropCategoryCombobox } from '../../features/operations/CropCategoryCombobox';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { BlockModal } from '../../features/production/components/BlockModal';
 import { RecordConditionModal } from '../../features/production/components/RecordConditionModal';
@@ -100,6 +101,7 @@ export function BlockDetailPage() {
   const [seasonForm, setSeasonForm] = useState({
     seasonName: '',
     cropCategoryId: 1,
+    cropCategoryName: '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     seasonStatus: 'active',
@@ -267,6 +269,7 @@ export function BlockDetailPage() {
     setSeasonForm({
       seasonName: `Vụ canh tác tại ${block.blockName} (${new Date().toLocaleDateString('vi-VN')})`,
       cropCategoryId: categories[0]?.id || 1,
+      cropCategoryName: categories[0]?.categoryName || '',
       startDate: new Date().toISOString().split('T')[0],
       endDate: '',
       seasonStatus: 'active',
@@ -283,6 +286,7 @@ export function BlockDetailPage() {
     setSeasonForm({
       seasonName: s.seasonName,
       cropCategoryId: s.cropCategoryId || categories[0]?.id || 1,
+      cropCategoryName: s.cropCategoryName || '',
       startDate: s.startDate || new Date().toISOString().split('T')[0],
       endDate: s.endDate || '',
       seasonStatus: s.seasonStatus || 'active',
@@ -302,7 +306,8 @@ export function BlockDetailPage() {
       if (seasonModalMode === 'create') {
         const createdSeason = await createCropSeason(farmId, {
           seasonName: seasonForm.seasonName.trim(),
-          cropCategoryId: Number(seasonForm.cropCategoryId),
+          cropCategoryId: Number(seasonForm.cropCategoryId) || undefined,
+          cropCategoryName: seasonForm.cropCategoryName?.trim() || undefined,
           startDate: seasonForm.startDate,
           endDate: seasonForm.endDate || null,
           seasonStatus: seasonForm.seasonStatus,
@@ -320,7 +325,8 @@ export function BlockDetailPage() {
       } else if (seasonModalMode === 'edit' && editingSeason) {
         const updatedSeason = await updateCropSeason(editingSeason.cropSeasonId, {
           seasonName: seasonForm.seasonName.trim(),
-          cropCategoryId: Number(seasonForm.cropCategoryId),
+          cropCategoryId: Number(seasonForm.cropCategoryId) || undefined,
+          cropCategoryName: seasonForm.cropCategoryName?.trim() || undefined,
           startDate: seasonForm.startDate,
           endDate: seasonForm.endDate || null,
           notes: seasonForm.notes || null,
@@ -485,7 +491,7 @@ export function BlockDetailPage() {
             {block.blockName} · {resolvedZoneName} · {farmName}
           </h1>
           <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: '14.5px' }}>
-            {block.description || 'Lô sản xuất nông nghiệp trực thuộc khu vực quản lý theo tiêu chuẩn VietGAP.'}
+            {block.description || 'Block sản xuất trực thuộc Zone quản lý theo tiêu chuẩn VietGAP.'}
           </p>
         </div>
 
@@ -495,7 +501,7 @@ export function BlockDetailPage() {
             ← Quay lại
           </Link>
           <button type="button" className="action-button" onClick={() => setIsEditBlockOpen(true)}>
-            Chỉnh sửa lô đất
+            Chỉnh sửa Block
           </button>
           <button type="button" className="primary-button" onClick={() => setIsRecordConditionOpen(true)}>
             Ghi nhận điều kiện
@@ -508,7 +514,7 @@ export function BlockDetailPage() {
               onClick={() => {
                 if (!canDeleteBlock) {
                   showToast(
-                    'Không thể xóa lô đất khi đang có mùa vụ hoặc lịch sử điều kiện liên kết.',
+                    'Không thể xóa Block khi đang có mùa vụ hoặc lịch sử điều kiện liên kết.',
                     'error'
                   );
                   return;
@@ -516,7 +522,7 @@ export function BlockDetailPage() {
                 setIsDeleteBlockOpen(true);
               }}
             >
-              Xóa lô đất
+              Xóa Block
             </button>
           )}
         </div>
@@ -557,7 +563,7 @@ export function BlockDetailPage() {
 
         <dl className="detail-list" style={{ marginBottom: 0 }}>
           <div>
-            <dt>Tên &amp; Mã lô đất</dt>
+            <dt>Tên &amp; Mã Block</dt>
             <dd>
               {block.blockName} (BLK-{String(block.blockId).padStart(3, '0')})
             </dd>
@@ -651,11 +657,11 @@ export function BlockDetailPage() {
             <div className="panel" style={{ padding: '28px' }}>
               <div className="panel-title" style={{ marginBottom: '18px' }}>
                 <div>
-                  <span className="eyebrow">Thông tin lô sản xuất</span>
+                  <span className="eyebrow">Thông tin Block</span>
                   <h2 style={{ margin: '4px 0 0' }}>{block.blockName}</h2>
                 </div>
                 <button type="button" className="action-button" onClick={() => setIsEditBlockOpen(true)}>
-                  Chỉnh sửa lô đất
+                  Chỉnh sửa Block
                 </button>
               </div>
 
@@ -665,7 +671,7 @@ export function BlockDetailPage() {
                   <dd>#{block.blockId}</dd>
                 </div>
                 <div>
-                  <dt>Mã lô đất</dt>
+                  <dt>Mã Block</dt>
                   <dd>BLK-{String(block.blockId).padStart(3, '0')}</dd>
                 </div>
                 <div>
@@ -856,7 +862,7 @@ export function BlockDetailPage() {
               </div>
 
               <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-                <table className="data-table">
+                <table className="data-table" style={{ minWidth: '880px' }}>
                   <thead>
                     <tr>
                       <th>Tên mùa vụ</th>
@@ -990,7 +996,7 @@ export function BlockDetailPage() {
               </div>
 
               <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-                <table className="data-table">
+                <table className="data-table" style={{ minWidth: '880px' }}>
                   <thead>
                     <tr>
                       <th>Thời gian ghi nhận</th>
@@ -1110,7 +1116,7 @@ export function BlockDetailPage() {
             </div>
 
             <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-              <table className="data-table">
+              <table className="data-table" style={{ minWidth: '880px' }}>
                 <thead>
                   <tr>
                     <th>Ngày đánh giá</th>
@@ -1257,7 +1263,7 @@ export function BlockDetailPage() {
             </div>
 
             <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-              <table className="data-table">
+              <table className="data-table" style={{ minWidth: '880px' }}>
                 <thead>
                   <tr>
                     <th>Ngày đánh giá</th>
@@ -1412,7 +1418,7 @@ export function BlockDetailPage() {
             </div>
 
             <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-              <table className="data-table">
+              <table className="data-table" style={{ minWidth: '880px' }}>
                 <thead>
                   <tr>
                     <th>Ngày đánh giá</th>
@@ -1524,7 +1530,7 @@ export function BlockDetailPage() {
         onClose={() => setIsEditBlockOpen(false)}
         onSuccess={(saved) => {
           setBlock(saved);
-          showToast(`Đã cập nhật lô đất "${saved.blockName}" thành công!`);
+          showToast(`Đã cập nhật Block "${saved.blockName}" thành công!`);
         }}
       />
 
@@ -1554,7 +1560,7 @@ export function BlockDetailPage() {
             <div className="modal-body">
               <dl className="detail-list" style={{ marginBottom: 0 }}>
                 <div>
-                  <dt>Lô đất</dt>
+                  <dt>Block</dt>
                   <dd>{block.blockName}</dd>
                 </div>
                 <div>
@@ -1590,7 +1596,7 @@ export function BlockDetailPage() {
           <div className="modal-card" style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
             <div className="modal-header">
               <div>
-                <span className="eyebrow">Mùa vụ trên lô đất</span>
+                <span className="eyebrow">Mùa vụ trên Block</span>
                 <h2>
                   {seasonModalMode === 'create'
                     ? `Thêm mùa vụ trên ${block.blockName}`
@@ -1606,7 +1612,7 @@ export function BlockDetailPage() {
               <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
                 <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
                   <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    Lô đất áp dụng
+                    Block áp dụng
                   </span>
                   <span className="structured-field-badge">Tự động điền</span>
                 </div>
@@ -1642,17 +1648,19 @@ export function BlockDetailPage() {
                     </label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <select
+                    <CropCategoryCombobox
                       id="cs-cat-select"
                       value={seasonForm.cropCategoryId}
-                      onChange={(e) => setSeasonForm({ ...seasonForm, cropCategoryId: Number(e.target.value) })}
-                    >
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.categoryName}
-                        </option>
-                      ))}
-                    </select>
+                      categoryName={seasonForm.cropCategoryName}
+                      categories={categories}
+                      onChange={(catId, catName) =>
+                        setSeasonForm((prev) => ({
+                          ...prev,
+                          cropCategoryId: catId,
+                          cropCategoryName: catName,
+                        }))
+                      }
+                    />
                   </div>
                 </div>
 
@@ -1769,7 +1777,7 @@ export function BlockDetailPage() {
               <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
                 <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
                   <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    Lô đất áp dụng
+                    Block áp dụng
                   </span>
                 </div>
                 <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
@@ -1908,7 +1916,7 @@ export function BlockDetailPage() {
               <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
                 <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
                   <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    Lô đất áp dụng
+                    Block áp dụng
                   </span>
                 </div>
                 <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
@@ -2062,7 +2070,7 @@ export function BlockDetailPage() {
               <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
                 <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
                   <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    Lô đất áp dụng
+                    Block áp dụng
                   </span>
                 </div>
                 <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
@@ -2180,9 +2188,9 @@ export function BlockDetailPage() {
 
       <ConfirmDialog
         open={isDeleteBlockOpen}
-        title="Xác nhận xóa lô đất"
-        description={`Bạn có chắc chắn muốn xóa lô đất "${block.blockName}"?`}
-        confirmLabel="Xóa lô đất"
+        title="Xác nhận xóa Block"
+        description={`Bạn có chắc chắn muốn xóa Block "${block.blockName}"?`}
+        confirmLabel="Xóa Block"
         tone="danger"
         onClose={() => setIsDeleteBlockOpen(false)}
         onConfirm={handleConfirmDeleteBlock}

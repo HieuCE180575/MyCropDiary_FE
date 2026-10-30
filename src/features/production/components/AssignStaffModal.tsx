@@ -139,7 +139,7 @@ export function AssignStaffModal({
         <div className="modal-header">
           <div>
             <span className="eyebrow">Phân công quản lý</span>
-            <h2>Phân công nhân sự: {resolvedZoneName}</h2>
+            <h2>Assign Staff: {resolvedZoneName}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng">
             ✕
@@ -217,7 +217,7 @@ export function AssignStaffModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="assign-staff-select" className="structured-field-label">
-                Chọn nhân sự phụ trách <span style={{ color: '#dc2626' }}>*</span>
+                Select Staff Member phụ trách <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">Nhân sự trang trại</span>
             </div>
@@ -285,14 +285,14 @@ export function AssignStaffModal({
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
             <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
-              Hủy
+              Cancel
             </button>
             <button
               type="submit"
               className="primary-button"
               disabled={loading || loadingStaff || staffOptions.length === 0}
             >
-              {loading ? 'Đang lưu...' : 'Lưu phân công'}
+              {loading ? 'Saving...' : 'Lưu phân công'}
             </button>
           </div>
         </form>

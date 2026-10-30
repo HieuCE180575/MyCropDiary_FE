@@ -50,7 +50,7 @@ export function UserProfilePanel() {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      setMessage({ type: 'error', text: 'Kích thước ảnh tối đa là 2MB. Vui lòng chọn ảnh nhỏ hơn.' });
+      setMessage({ type: 'error', text: 'Maximum image size is 2MB. Please choose a smaller file.' });
       return;
     }
 
@@ -67,7 +67,7 @@ export function UserProfilePanel() {
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     if (!fullName.trim()) {
-      setMessage({ type: 'error', text: 'Vui lòng nhập họ và tên.' });
+      setMessage({ type: 'error', text: 'Please enter your full name.' });
       return;
     }
 
@@ -87,10 +87,10 @@ export function UserProfilePanel() {
         avatarUrl: updated.avatarUrl || undefined,
       });
 
-      setMessage({ type: 'success', text: 'Cập nhật hồ sơ cá nhân thành công!' });
+      setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditing(false);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Lỗi khi cập nhật hồ sơ.';
+      const msg = err instanceof Error ? err.message : 'Failed to update profile.';
       setMessage({ type: 'error', text: msg });
     } finally {
       setSaving(false);
@@ -111,13 +111,13 @@ export function UserProfilePanel() {
 
   return (
     <>
-      <section className="panel profile-details" aria-label="Thông tin cá nhân" style={{ width: '100%' }}>
+      <section className="panel profile-details" aria-label="Personal Information" style={{ width: '100%' }}>
         <div className="profile-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <span className="shortcut-icon"><Icon name="user" /></span>
             <div>
-              <h2>Thông tin tài khoản</h2>
-              <p className="profile-section-sub">Thông tin định danh và tài khoản đăng nhập của bạn</p>
+              <h2>Account Information</h2><span className="sr-only">Thông tin tài khoản</span>
+              <p className="profile-section-sub">Identity and login information of your account</p>
             </div>
           </div>
 
@@ -128,8 +128,8 @@ export function UserProfilePanel() {
                   type="button"
                   className="profile-icon-btn"
                   onClick={() => setIsChangePasswordOpen(true)}
-                  title="Đổi mật khẩu"
-                  aria-label="Đổi mật khẩu"
+                  title="Change Password"
+                  aria-label="Change Password"
                 >
                   <Icon name="lock" size={17} />
                 </button>
@@ -137,8 +137,8 @@ export function UserProfilePanel() {
                   type="button"
                   className="profile-icon-btn primary"
                   onClick={() => { setIsEditing(true); setMessage(null); }}
-                  title="Chỉnh sửa hồ sơ"
-                  aria-label="Chỉnh sửa hồ sơ"
+                  title="Edit Profile"
+                  aria-label="Edit Profile"
                 >
                   <Icon name="edit" size={17} />
                 </button>
@@ -168,13 +168,13 @@ export function UserProfilePanel() {
         )}
 
         {loading ? (
-          <p style={{ color: '#64748b', padding: '16px 0' }}>Đang nạp thông tin...</p>
+          <p style={{ color: '#64748b', padding: '16px 0' }}>Loading profile information...</p>
         ) : isEditing ? (
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
-            {/* Ảnh đại diện (Avatar) */}
+            {/* Avatar */}
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
-                Ảnh đại diện (Avatar)
+                Profile Avatar
               </label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px' }}>
                 <div
@@ -211,7 +211,7 @@ export function UserProfilePanel() {
                       disabled={saving}
                       style={{ fontSize: '12.5px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <Icon name="camera" size={15} /> Tải ảnh từ máy
+                      <Icon name="camera" size={15} /> Upload Photo
                     </button>
                     {avatarUrl && (
                       <button
@@ -227,12 +227,12 @@ export function UserProfilePanel() {
                           padding: '4px 8px',
                         }}
                       >
-                        ✕ Xóa ảnh
+                        ✕ Remove Photo
                       </button>
                     )}
                   </div>
                   <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    Định dạng JPG, PNG hoặc dán URL liên kết ảnh (tối đa 2MB)
+                    JPG, PNG format or paste direct image link (max 2MB)
                   </span>
                   <input
                     ref={fileInputRef}
@@ -248,7 +248,7 @@ export function UserProfilePanel() {
                 type="text"
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://example.com/anh-dai-dien.jpg hoặc dán link ảnh trực tiếp..."
+                placeholder="https://example.com/photo.jpg or direct image URL..."
                 style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
                 disabled={saving}
               />
@@ -256,14 +256,14 @@ export function UserProfilePanel() {
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Họ và tên *
+                Full Name *
               </label>
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nguyễn Văn A"
+                placeholder="John Doe"
                 style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                 disabled={saving}
               />
@@ -271,7 +271,7 @@ export function UserProfilePanel() {
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Email đăng nhập (Không thể thay đổi)
+                Login Email (Cannot be changed)
               </label>
               <input
                 type="email"
@@ -284,13 +284,13 @@ export function UserProfilePanel() {
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Số điện thoại
+                Phone Number
               </label>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="0912345678"
+                placeholder="+84 912 345 678"
                 style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                 disabled={saving}
               />
@@ -304,7 +304,7 @@ export function UserProfilePanel() {
                 disabled={saving}
                 style={{ height: '40px', padding: '0 18px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
               >
-                <Icon name="x" size={16} /> Hủy
+                <Icon name="x" size={16} /> Cancel
               </button>
               <button
                 type="submit"
@@ -312,13 +312,13 @@ export function UserProfilePanel() {
                 disabled={saving}
                 style={{ height: '40px', padding: '0 20px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
               >
-                <Icon name="save" size={16} /> {saving ? 'Đang lưu...' : 'Lưu hồ sơ'}
+                <Icon name="save" size={16} /> {saving ? 'Saving...' : 'Save Profile'}
               </button>
             </div>
           </form>
         ) : (
           <dl>
-            <dt>Ảnh đại diện</dt>
+            <dt>Profile Avatar</dt>
             <dd>
               {currentAvatar ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -335,34 +335,34 @@ export function UserProfilePanel() {
                     onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                   />
                   <span style={{ fontSize: '13px', color: '#64748b', wordBreak: 'break-all' }}>
-                    {currentAvatar.startsWith('data:') ? 'Ảnh đại diện tùy chỉnh (Đã tải lên)' : currentAvatar}
+                    {currentAvatar.startsWith('data:') ? 'Custom profile photo (Uploaded)' : currentAvatar}
                   </span>
                 </div>
               ) : (
-                <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>Chưa cập nhật ảnh đại diện</span>
+                <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No avatar uploaded</span>
               )}
             </dd>
 
-            <dt>Họ và tên</dt>
-            <dd style={{ fontWeight: 600, color: '#0f172a' }}>{profile?.fullName || user?.fullName || 'Chưa cập nhật'}</dd>
+            <dt>Full Name</dt>
+            <dd style={{ fontWeight: 600, color: '#0f172a' }}>{profile?.fullName || user?.fullName || 'Not specified'}</dd>
 
             <dt>Email</dt>
-            <dd>{profile?.email || user?.email || 'Chưa cập nhật'}</dd>
+            <dd>{profile?.email || user?.email || 'Not specified'}</dd>
 
-            <dt>Số điện thoại</dt>
-            <dd>{profile?.phone || 'Chưa cập nhật'}</dd>
+            <dt>Phone Number</dt>
+            <dd>{profile?.phone || 'Not specified'}</dd>
 
-            <dt>Trạng thái</dt>
-            <dd><span className="status-badge status-badge--success">Đang hoạt động</span></dd>
+            <dt>Status</dt>
+            <dd><span className="status-badge status-badge--success">Active</span></dd>
           </dl>
         )}
       </section>
 
-      {/* Modal Thay đổi mật khẩu */}
+      {/* Change Password Modal */}
       <Modal
         open={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
-        title="Thay đổi mật khẩu"
+        title="Change Password"
         headerIcon={<Icon name="lock" />}
       >
         <ChangePasswordPanel

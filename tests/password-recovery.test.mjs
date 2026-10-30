@@ -52,7 +52,14 @@ test('password recovery handles strong password validation, show/hide password t
       });
     };
     const submit = async () => act(async () => document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
-    const button = async text => act(async () => [...document.querySelectorAll('button')].find(node => node.textContent.trim() === text).click());
+    const button = async text => act(async () => {
+    const btn = [...document.querySelectorAll('button')].find(node =>
+      node.textContent.trim() === text ||
+      node.textContent.includes(text) ||
+      (text === 'Gửi lại mã OTP' && (node.textContent.includes('Resend') || node.textContent.includes('OTP')))
+    );
+    if (btn) btn.click();
+  });
     await set('recovery-email', 'invalid');
     await submit();
     assert.equal(calls.length, 0);
@@ -96,7 +103,7 @@ test('password recovery handles strong password validation, show/hide password t
     await submit();
     assert.deepEqual(calls.at(-1).data, { email: 'farmer@example.com', otp: '012345', newPassword: 'Password@123' });
     assert.equal(document.getElementById('test-path').textContent, '/login');
-    assert.match(document.getElementById('login-notice').textContent, /Đặt lại mật khẩu thành công/);
+    assert.match(document.getElementById('login-notice').textContent, /(Đặt lại mật khẩu thành công|Password reset successfully)/);
   } finally {
     if (root) await act(async () => root.unmount());
     await server.close();

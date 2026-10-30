@@ -1,16 +1,65 @@
 import { useState } from 'react';
 import { Icon } from '../../shared/components/Icon';
 
-export const MATERIAL_UNITS = ['kg', 'g', 'tấn', 'L', 'mL', 'chai', 'gói', 'bao', 'can', 'thùng', 'hạt', 'cây', 'khay', 'viên', 'm³'];
+export const MATERIAL_UNITS = [
+  'bao (50kg)',
+  'bao (25kg)',
+  'bao',
+  'tấn',
+  'tạ',
+  'kg',
+  'g',
+  'chai (1L)',
+  'chai (500ml)',
+  'chai',
+  'can (5L)',
+  'can (10L)',
+  'can',
+  'thùng',
+  'gói',
+  'lon',
+  'L',
+  'mL',
+  'khay',
+  'cây',
+  'hạt',
+  'viên',
+  'm³',
+];
 
 export function getMaterialUnitOptions(currentUnit: string) {
-  // Show L while retaining legacy "lít" values to match the material in the API.
+  const labelMap: Record<string, string> = {
+    'bao (50kg)': 'Bao (50kg - Chuẩn phân bón)',
+    'bao (25kg)': 'Bao (25kg)',
+    'bao': 'Bao (Bao bì chung)',
+    'tấn': 'Tấn (1.000 kg)',
+    'tạ': 'Tạ (100 kg)',
+    'kg': 'Kilogram (kg)',
+    'g': 'Gram (g)',
+    'chai (1L)': 'Chai 1 Lít (Thuốc BVTV/Dinh dưỡng)',
+    'chai (500ml)': 'Chai 500ml',
+    'chai': 'Chai',
+    'can (5L)': 'Can 5 Lít (Chế phẩm sinh học)',
+    'can (10L)': 'Can 10 Lít',
+    'can': 'Can',
+    'thùng': 'Thùng đóng gói',
+    'gói': 'Gói (Hạt giống/Vi sinh)',
+    'lon': 'Lon',
+    'L': 'Lít (L)',
+    'mL': 'Mililit (mL)',
+    'khay': 'Khay giống',
+    'cây': 'Cây con',
+    'hạt': 'Hạt giống',
+    'viên': 'Viên nén',
+    'm³': 'Mét khối (m³)',
+  };
+
   const options = MATERIAL_UNITS.map(unit => ({
     value: unit === 'L' && currentUnit === 'lít' ? currentUnit : unit,
-    label: unit,
+    label: labelMap[unit] || unit,
   }));
   if (currentUnit && !options.some(option => option.value === currentUnit)) {
-    options.push({ value: currentUnit, label: currentUnit });
+    options.unshift({ value: currentUnit, label: labelMap[currentUnit] || currentUnit });
   }
   return options;
 }
@@ -43,10 +92,15 @@ export const AREA_UNITS = ['m²', 'sào', 'ha'];
 export function defaultMaterialForm(materialType?: string | null, unit?: string | null): string {
   const type = (materialType ?? '').toLocaleLowerCase('vi-VN');
   const u = (unit ?? '').toLocaleLowerCase('vi-VN');
-  if (type.includes('lỏng') || u === 'l' || u === 'lít' || u === 'ml' || u === 'can') {
+  if (u.includes('bao')) {
+    if (type.includes('hữu cơ') || type.includes('sinh học')) return 'Dạng hữu cơ vi sinh';
+    if (type.includes('hòa tan') || type.includes('bột')) return 'Dạng bột';
+    return 'Dạng hạt';
+  }
+  if (type.includes('lỏng') || u === 'l' || u === 'lít' || u === 'ml' || u.includes('can')) {
     return 'Dạng lỏng / dung dịch';
   }
-  if (type.includes('bvtv') || u === 'chai') {
+  if (type.includes('bvtv') || u.includes('chai')) {
     return 'Dạng nhũ dầu';
   }
   if (type.includes('hòa tan')) {

@@ -7,7 +7,7 @@ export function PublicHeader() {
   const { isAuthenticated, user, signOut } = useAuth();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const displayName = user?.fullName?.trim() || user?.email || 'Tài khoản của bạn';
+  const displayName = user?.fullName?.trim() || user?.email || 'My Account';
   const portalPath = user?.systemRole?.toUpperCase() === 'ADMIN' ? '/admin' : '/dashboard';
 
   const isActive = (path: string) => location.pathname === path;
@@ -16,36 +16,36 @@ export function PublicHeader() {
     <header className="public-header" role="banner">
       <div className="public-header-inner">
         <div className="header-brand-wrap">
-          <Link to="/" className="public-brand" aria-label="Trang chủ MyCropDiary">
+          <Link to="/" className="public-brand" aria-label="MyCropDiary Home">
             <span className="brand-icon-box">
               <Icon name="leaf" className="brand-leaf-icon" />
             </span>
             <div className="brand-text-group">
               <strong className="brand-name">MyCropDiary</strong>
-              <span className="brand-tag">Nông nghiệp VietGAP</span>
+              <span className="brand-tag">VietGAP Agriculture</span>
             </div>
           </Link>
         </div>
 
-        <nav className="public-nav-desktop" aria-label="Điều hướng chính">
+        <nav className="public-nav-desktop" aria-label="Main Navigation">
           <Link
             to="/"
             className={`nav-link ${isActive('/') ? 'is-active' : ''}`}
             aria-current={isActive('/') ? 'page' : undefined}
           >
-            Trang chủ
+            Home
           </Link>
           <Link
             to="/knowledge"
             className={`nav-link ${isActive('/knowledge') ? 'is-active' : ''}`}
           >
-            Kiến thức VietGAP
+            VietGAP Knowledge
           </Link>
           <Link to="/features" className={`nav-link ${isActive('/features') ? 'is-active' : ''}`} aria-current={isActive('/features') ? 'page' : undefined}>
-            Tính năng nổi bật
+            Features
           </Link>
           <Link to="/about" className={`nav-link ${isActive('/about') ? 'is-active' : ''}`} aria-current={isActive('/about') ? 'page' : undefined}>
-            Về chúng tôi
+            About Us
           </Link>
         </nav>
 
@@ -54,30 +54,30 @@ export function PublicHeader() {
             <div className="public-auth-logged-in">
               <Link to={portalPath} className="btn-portal-entry">
                 <Icon name="home" />
-                <span>Vào trang quản lý</span>
+                <span>Dashboard</span>
               </Link>
               <Link
                 className="account-profile"
                 to="/profile"
-                title="Xem hồ sơ cá nhân"
-                aria-label="Hồ sơ cá nhân"
+                title="View user profile"
+                aria-label="User Profile"
               >
                 <span className="avatar">
                   <Icon name="user" />
                 </span>
                 <div className="account-profile-info">
                   <strong title={displayName}>{displayName}</strong>
-                  <small className="account-sub-label">Hồ sơ cá nhân</small>
+                  <small className="account-sub-label">Profile</small>
                 </div>
               </Link>
               <button
                 className="account-logout"
                 type="button"
                 onClick={signOut}
-                title="Đăng xuất khỏi hệ thống"
+                title="Sign out of system"
               >
                 <Icon name="logout" />
-                <span>Đăng xuất</span>
+                <span>Sign Out</span>
               </button>
             </div>
           ) : (
@@ -87,14 +87,14 @@ export function PublicHeader() {
                 className={`btn-auth-secondary ${isActive('/login') ? 'is-active' : ''}`}
               >
                 <Icon name="login" />
-                <span>Đăng nhập</span>
+                <span>Sign In</span>
               </Link>
               <Link
                 to="/register"
                 className={`btn-auth-primary ${isActive('/register') ? 'is-active' : ''}`}
               >
                 <Icon name="user-plus" />
-                <span>Đăng ký ngay</span>
+                <span>Register</span>
               </Link>
             </div>
           )}
@@ -104,7 +104,7 @@ export function PublicHeader() {
             className="mobile-menu-toggle"
             onClick={() => setMobileMenuOpen((open) => !open)}
             aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? 'Đóng menu' : 'Mở menu'}
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
           >
             <Icon name={mobileMenuOpen ? 'close' : 'menu'} />
           </button>
@@ -120,14 +120,14 @@ export function PublicHeader() {
               aria-current={isActive('/') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Trang chủ
+              Home
             </Link>
             <Link
               to="/knowledge"
               className={`mobile-nav-link ${isActive('/knowledge') ? 'is-active' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Kiến thức VietGAP
+              VietGAP Knowledge
             </Link>
             <Link
               to="/features"
@@ -135,7 +135,7 @@ export function PublicHeader() {
               aria-current={isActive('/features') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Tính năng nổi bật
+              Features
             </Link>
             <Link
               to="/about"
@@ -143,7 +143,7 @@ export function PublicHeader() {
               aria-current={isActive('/about') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Về chúng tôi
+              About Us
             </Link>
 
             <div className="mobile-drawer-auth">
@@ -153,15 +153,15 @@ export function PublicHeader() {
                     to="/profile"
                     className="account-profile mobile-profile"
                     onClick={() => setMobileMenuOpen(false)}
-                    title="Xem hồ sơ cá nhân"
-                    aria-label="Hồ sơ cá nhân"
+                    title="View user profile"
+                    aria-label="User Profile"
                   >
                     <span className="avatar">
                       <Icon name="user" />
                     </span>
                     <div className="account-profile-info">
                       <strong>{displayName}</strong>
-                      <small className="account-sub-label">Hồ sơ cá nhân</small>
+                      <small className="account-sub-label">Profile</small>
                     </div>
                   </Link>
                   <Link
@@ -170,7 +170,7 @@ export function PublicHeader() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Icon name="home" />
-                    <span>Vào trang quản lý</span>
+                    <span>Dashboard</span>
                   </Link>
                   <button
                     type="button"
@@ -181,7 +181,7 @@ export function PublicHeader() {
                     }}
                   >
                     <Icon name="logout" />
-                    <span>Đăng xuất</span>
+                    <span>Sign Out</span>
                   </button>
                 </div>
               ) : (
@@ -192,7 +192,7 @@ export function PublicHeader() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Icon name="login" />
-                    <span>Đăng nhập</span>
+                    <span>Sign In</span>
                   </Link>
                   <Link
                     to="/register"
@@ -200,7 +200,7 @@ export function PublicHeader() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Icon name="user-plus" />
-                    <span>Đăng ký tài khoản</span>
+                    <span>Register</span>
                   </Link>
                 </div>
               )}

@@ -6,33 +6,33 @@ import { Icon } from '../shared/components/Icon';
 const recoveryBenefits = [
   {
     icon: 'mail',
-    title: 'Xác thực OTP qua Email',
-    desc: 'Mã xác thực 6 chữ số bảo mật được gửi trực tiếp tới hộp thư điện tử đã đăng ký tài khoản của bạn.',
+    title: 'Email OTP Verification',
+    desc: 'A secure 6-digit verification code is delivered directly to your registered email address.',
   },
   {
     icon: 'shield',
-    title: 'Tiêu chuẩn mật khẩu an toàn',
-    desc: 'Mật khẩu mới được kiểm tra chặt chẽ kết hợp chữ hoa, chữ thường và ký tự đặc biệt để chống xâm nhập.',
+    title: 'High Security Standards',
+    desc: 'Passwords are validated against strict criteria combining uppercase, lowercase, and special characters.',
   },
   {
     icon: 'leaf',
-    title: 'Bảo toàn dữ liệu mùa vụ',
-    desc: 'Toàn bộ nhật ký canh tác, phân khu, lô thửa và lịch sử hội thoại AI của bạn được giữ nguyên vẹn 100%.',
+    title: 'Farm Data Preservation',
+    desc: 'All cultivation diaries, zones, plots, and AI chat history remain 100% intact and secured.',
   },
   {
     icon: 'lock',
-    title: 'Đăng nhập lại tức thì',
-    desc: 'Ngay sau khi cập nhật mật khẩu mới thành công, hệ thống tự động chuyển về trang đăng nhập để bạn tiếp tục.',
+    title: 'Instant Sign In',
+    desc: 'Once your new password is saved, return straight to the sign-in page to resume operations.',
   },
 ];
 
 function validateNewPassword(value: string): string {
-  if (!value || !value.trim()) return 'Mật khẩu không được chỉ chứa khoảng trắng.';
-  if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự.';
-  if (value.length > 100) return 'Mật khẩu không được vượt quá 100 ký tự.';
-  if (!/[A-Z]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 chữ in hoa.';
-  if (!/[a-z]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 chữ in thường.';
-  if (!/[^a-zA-Z0-9]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.';
+  if (!value || !value.trim()) return 'Password cannot contain only whitespace.';
+  if (value.length < 8) return 'Password must have at least 8 characters.';
+  if (value.length > 100) return 'Password cannot exceed 100 characters.';
+  if (!/[A-Z]/.test(value)) return 'Password must contain at least 1 uppercase letter (in hoa).';
+  if (!/[a-z]/.test(value)) return 'Password must contain at least 1 lowercase letter.';
+  if (!/[^a-zA-Z0-9]/.test(value)) return 'Password must contain at least 1 special character.';
   return '';
 }
 
@@ -53,9 +53,9 @@ export function ForgotPasswordPage() {
 
   const passwordRuleError = validateNewPassword(password);
   const confirmationRuleError = !confirmation
-    ? 'Vui lòng nhập lại mật khẩu mới.'
+    ? 'Please re-enter your new password.'
     : confirmation !== password
-      ? 'Mật khẩu nhập lại không khớp.'
+      ? 'Password confirmation does not match (không khớp).'
       : '';
 
   const hasMinLength = password.length >= 8 && password.length <= 100;
@@ -73,9 +73,9 @@ export function ForgotPasswordPage() {
       setEmail(email.trim());
       setOtp('');
       setStep('reset');
-      setNotice('Nếu email thuộc tài khoản đã kích hoạt, mã OTP đã được gửi. Vui lòng kiểm tra cả thư rác.');
+      setNotice('If the email belongs to an activated account, an OTP code has been sent. Please also check your spam folder. (Nếu email...)');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không gửi được mã OTP. Vui lòng thử lại.');
+      setError(reason instanceof Error ? reason.message : 'Could not send OTP code. Please try again.');
     } finally {
       setPending(false);
     }
@@ -100,7 +100,7 @@ export function ForgotPasswordPage() {
       return;
     }
     if (password !== confirmation) {
-      setError('Mật khẩu nhập lại không khớp.');
+      setError('Password confirmation does not match (không khớp).');
       return;
     }
 
@@ -114,11 +114,11 @@ export function ForgotPasswordPage() {
       navigate('/login', {
         replace: true,
         state: {
-          notice: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.',
+          notice: 'Password reset successfully! Please sign in with your new password.',
         },
       });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không đặt lại được mật khẩu. Vui lòng thử lại.');
+      setError(reason instanceof Error ? reason.message : 'Failed to reset password. Please try again.');
     } finally {
       setPending(false);
     }
@@ -126,22 +126,22 @@ export function ForgotPasswordPage() {
 
   return (
     <main className="auth-page forgot-password-page">
-      {/* Cột trái: Showcase bảo mật & hướng dẫn khôi phục mật khẩu */}
+      {/* Left Column: Security & Recovery Showcase */}
       <section className="auth-showcase" aria-labelledby="forgot-showcase-title">
         <div className="showcase-inner">
           <div className="showcase-badge">
             <Icon name="shield" />
-            <span>Bảo mật Tài khoản &amp; Dữ liệu VietGAP</span>
+            <span>Account Security &amp; VietGAP Data</span>
           </div>
 
           <div className="showcase-content">
             <h1 id="forgot-showcase-title">
-              Khôi phục truy cập<br />
-              <span className="gradient-text">Tài khoản MyCropDiary</span><br />
-              An toàn &amp; Nhanh chóng.
+              Recover Access to<br />
+              <span className="gradient-text">MyCropDiary Account</span><br />
+              Safely &amp; Quickly.
             </h1>
             <p className="showcase-desc">
-              Xác thực bảo mật hai lớp qua mã OTP email giúp bạn đặt lại mật khẩu mới chỉ trong vài bước mà vẫn bảo vệ tuyệt đối dữ liệu trang trại.
+              Two-factor email OTP verification allows you to set a new password in minutes while keeping your farm data completely confidential.
             </p>
           </div>
 
@@ -161,31 +161,31 @@ export function ForgotPasswordPage() {
 
           <div className="showcase-highlight-card">
             <div className="highlight-stat">
-              <span className="stat-number">OTP 6 số</span>
-              <span className="stat-label">Xác thực email tức thì</span>
+              <span className="stat-number">6-Digit OTP</span>
+              <span className="stat-label">Instant email verification</span>
             </div>
             <div className="highlight-divider" />
             <div className="highlight-stat">
               <span className="stat-number">100%</span>
-              <span className="stat-label">An toàn dữ liệu nông trại</span>
+              <span className="stat-label">Farm data secured</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Cột phải: Form Quên mật khẩu & Đặt lại mật khẩu */}
+      {/* Right Column: Reset Password Form */}
       <section className="auth-panel" aria-labelledby="forgot-password-title">
         <div className="auth-card">
-          {/* Thanh chỉ báo bước (Step indicator) */}
-          <div className="step-indicator-bar" aria-label="Các bước khôi phục mật khẩu">
+          {/* Step Indicator */}
+          <div className="step-indicator-bar" aria-label="Password recovery steps">
             <div className={`step-item ${step === 'email' ? 'is-current' : 'is-done'}`}>
               <span className="step-badge">{step === 'reset' ? <Icon name="check" /> : '1'}</span>
-              <span className="step-label">Xác nhận Email</span>
+              <span className="step-label">Confirm Email</span>
             </div>
             <div className="step-connector" />
             <div className={`step-item ${step === 'reset' ? 'is-current' : ''}`}>
               <span className="step-badge">2</span>
-              <span className="step-label">Đặt mật khẩu mới</span>
+              <span className="step-label">Set New Password</span>
             </div>
           </div>
 
@@ -194,12 +194,12 @@ export function ForgotPasswordPage() {
               <Icon name={step === 'email' ? 'lock' : 'shield'} />
             </div>
             <h2 id="forgot-password-title">
-              {step === 'email' ? 'Quên mật khẩu' : 'Đặt lại mật khẩu mới'}
+              {step === 'email' ? 'Forgot Password' : 'Set New Password'}
             </h2>
             <p>
               {step === 'email'
-                ? 'Nhập email tài khoản để nhận mã OTP đặt lại mật khẩu.'
-                : `Nhập mã OTP gửi tới ${email} và thiết lập mật khẩu mới an toàn.`}
+                ? 'Enter your account email to receive an OTP code to reset your password.'
+                : `Enter the OTP code sent to ${email} and set a secure new password.`}
             </p>
           </div>
 
@@ -221,7 +221,7 @@ export function ForgotPasswordPage() {
             {step === 'email' ? (
               <div className="form-group">
                 <label htmlFor="recovery-email">
-                  Địa chỉ Email <span className="required-star">*</span>
+                  Email Address <span className="required-star">*</span>
                 </label>
                 <div className="input-with-icon">
                   <span className="input-lead-icon"><Icon name="mail" /></span>
@@ -247,7 +247,7 @@ export function ForgotPasswordPage() {
               <>
                 <div className="form-group">
                   <label htmlFor="recovery-otp">
-                    Mã xác thực OTP <span className="required-star">*</span>
+                    OTP Verification Code <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon"><Icon name="shield" /></span>
@@ -261,7 +261,7 @@ export function ForgotPasswordPage() {
                       required
                       pattern="[0-9]{6}"
                       maxLength={6}
-                      placeholder="Nhập mã gồm 6 chữ số"
+                      placeholder="Enter 6-digit code"
                       disabled={pending}
                       value={otp}
                       onChange={(event) => {
@@ -274,7 +274,7 @@ export function ForgotPasswordPage() {
 
                 <div className="form-group">
                   <label htmlFor="recovery-password">
-                    Mật khẩu mới <span className="required-star">*</span>
+                    New Password <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon"><Icon name="lock" /></span>
@@ -286,7 +286,7 @@ export function ForgotPasswordPage() {
                       required
                       minLength={8}
                       maxLength={100}
-                      placeholder="Từ 8 đến 100 ký tự"
+                      placeholder="From 8 to 100 characters"
                       disabled={pending}
                       value={password}
                       onChange={(event) => {
@@ -331,7 +331,7 @@ export function ForgotPasswordPage() {
                     }}
                   >
                     <span style={{ fontWeight: 650, color: '#334155', marginBottom: '2px' }}>
-                      Yêu cầu mật khẩu an toàn:
+                      Security Requirements:
                     </span>
                     <span
                       style={{
@@ -343,7 +343,7 @@ export function ForgotPasswordPage() {
                       }}
                     >
                       <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />
-                      Từ 8 đến 100 ký tự
+                      8 to 100 characters
                     </span>
                     <span
                       style={{
@@ -355,7 +355,7 @@ export function ForgotPasswordPage() {
                       }}
                     >
                       <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />
-                      Có ít nhất 1 chữ in hoa (A-Z)
+                      At least 1 uppercase letter (A-Z)
                     </span>
                     <span
                       style={{
@@ -367,7 +367,7 @@ export function ForgotPasswordPage() {
                       }}
                     >
                       <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />
-                      Có ít nhất 1 chữ in thường (a-z)
+                      At least 1 lowercase letter (a-z)
                     </span>
                     <span
                       style={{
@@ -379,14 +379,14 @@ export function ForgotPasswordPage() {
                       }}
                     >
                       <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />
-                      Có ít nhất 1 ký tự đặc biệt (!@#$%^&amp;*...)
+                      At least 1 special character (!@#$%^&*...)
                     </span>
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="recovery-confirmation">
-                    Nhập lại mật khẩu mới <span className="required-star">*</span>
+                    Confirm New Password <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon"><Icon name="lock" /></span>
@@ -398,7 +398,7 @@ export function ForgotPasswordPage() {
                       required
                       minLength={8}
                       maxLength={100}
-                      placeholder="Nhập lại chính xác mật khẩu mới"
+                      placeholder="Re-enter your new password"
                       disabled={pending}
                       value={confirmation}
                       onChange={(event) => {
@@ -435,13 +435,13 @@ export function ForgotPasswordPage() {
                 name={pending ? 'loader' : step === 'email' ? 'mail' : 'check'}
                 className={pending ? 'icon-spin' : undefined}
               />
-              <span>{pending ? 'Đang xử lý…' : step === 'email' ? 'Gửi mã OTP' : 'Đặt lại mật khẩu'}</span>
+              <span>{pending ? 'Processing…' : step === 'email' ? 'Send OTP Code' : 'Reset Password'}</span>
             </button>
 
             {step === 'reset' && (
               <div className="auth-verify-actions">
                 <button className="btn-link-action" type="button" disabled={pending} onClick={sendCode}>
-                  Gửi lại mã OTP
+                  Resend OTP Code
                 </button>
                 <button
                   className="btn-link-subtle"
@@ -458,15 +458,15 @@ export function ForgotPasswordPage() {
                     setTouchedConfirmation(false);
                   }}
                 >
-                  Đổi email
+                  Change Email
                 </button>
               </div>
             )}
 
             <p className="auth-switch-prompt">
-              Đã nhớ mật khẩu?{' '}
+              Remembered your password?{' '}
               <Link className="auth-switch-link" to="/login">
-                Quay về đăng nhập <Icon name="arrow" />
+                Back to sign in <Icon name="arrow" />
               </Link>
             </p>
           </form>

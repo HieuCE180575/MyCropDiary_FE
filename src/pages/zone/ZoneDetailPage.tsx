@@ -301,10 +301,10 @@ export function ZoneDetailPage() {
           {isOwner && (
             <>
               <button type="button" className="action-button" onClick={() => setIsEditZoneOpen(true)}>
-                Chỉnh sửa khu vực
+                Edit Zone
               </button>
               <button type="button" className="action-button outlined" onClick={() => setIsAssignStaffOpen(true)}>
-                Phân công nhân sự
+                Assign Staff
               </button>
               <button
                 type="button"
@@ -313,7 +313,7 @@ export function ZoneDetailPage() {
                 onClick={() => {
                   if (!canDeleteZone) {
                     showToast(
-                      `Không thể xóa khu vực "${zone.zoneName}" khi đang có ${blocks.length} lô đất trực thuộc.`,
+                      `Không thể xóa khu vực "${zone.zoneName}" khi đang có ${blocks.length} blocks trực thuộc.`,
                       'error'
                     );
                     return;
@@ -321,7 +321,7 @@ export function ZoneDetailPage() {
                   setIsDeleteZoneOpen(true);
                 }}
               >
-                Xóa khu vực
+                Delete Zone
               </button>
             </>
           )}
@@ -355,29 +355,29 @@ export function ZoneDetailPage() {
             <h2 style={{ margin: '4px 0 0' }}>{zone.zoneName}</h2>
           </div>
           <span className="profile-role-pill">
-            {blocks.length} lô đất · {zone.areaValue.toLocaleString('vi-VN')} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
+            {blocks.length} blocks · {zone.areaValue.toLocaleString('vi-VN')} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
           </span>
         </div>
 
         <dl className="detail-list" style={{ marginBottom: 0 }}>
           <div>
-            <dt>Tên &amp; Mã khu vực</dt>
+            <dt>Tên &amp; Zone Code</dt>
             <dd>
               {zone.zoneName} ({zone.areaCode || `ZN-${String(zone.zoneId).padStart(3, '0')}`})
             </dd>
           </div>
           <div>
-            <dt>Trang trại trực thuộc</dt>
+            <dt>Assigned Farm</dt>
             <dd>{farmName}</dd>
           </div>
           <div>
-            <dt>Diện tích</dt>
+            <dt>Area</dt>
             <dd>
               {zone.areaValue.toLocaleString('vi-VN')} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
             </dd>
           </div>
           <div>
-            <dt>Số lượng lô đất</dt>
+            <dt>Total Blocks</dt>
             <dd>{blocks.length} lô sản xuất</dd>
           </div>
           <div>
@@ -424,43 +424,43 @@ export function ZoneDetailPage() {
           TAB 1: OVERVIEW
          ========================================================= */}
       {activeTab === 'overview' && (
-        <div className="profile-layout">
+        <div className="zone-overview-grid">
           {/* Zone Information Panel */}
           <div className="panel" style={{ padding: '28px' }}>
             <div className="panel-title" style={{ marginBottom: '18px' }}>
               <div>
-                <span className="eyebrow">Thông tin khu vực</span>
-                <h2 style={{ margin: '4px 0 0' }}>Tổng quan: {zone.zoneName}</h2>
+                <span className="eyebrow">Zone Information</span>
+                <h2 style={{ margin: '4px 0 0' }}>Overview: {zone.zoneName}</h2>
               </div>
               {isOwner && (
                 <button type="button" className="action-button" onClick={() => setIsEditZoneOpen(true)}>
-                  Chỉnh sửa khu vực
+                  Edit Zone
                 </button>
               )}
             </div>
 
             <dl className="detail-list" style={{ marginBottom: 0 }}>
               <div>
-                <dt>Mã định danh</dt>
+                <dt>Identifier</dt>
                 <dd>#{zone.zoneId}</dd>
               </div>
               <div>
-                <dt>Mã khu vực</dt>
+                <dt>Zone Code</dt>
                 <dd>{zone.areaCode || `ZN-${String(zone.zoneId).padStart(3, '0')}`}</dd>
               </div>
               <div>
-                <dt>Diện tích</dt>
+                <dt>Area</dt>
                 <dd>
                   {zone.areaValue.toLocaleString('vi-VN')} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
                 </dd>
               </div>
               <div>
-                <dt>Số lượng lô đất</dt>
+                <dt>Total Blocks</dt>
                 <dd>{blocks.length} lô</dd>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <dt>Mô tả khu vực</dt>
-                <dd>{zone.description || 'Chưa có mô tả chi tiết cho khu vực này.'}</dd>
+                <dt>Zone Description</dt>
+                <dd>{zone.description || 'No description provided for this zone.'}</dd>
               </div>
             </dl>
           </div>
@@ -469,22 +469,22 @@ export function ZoneDetailPage() {
           <div className="panel" style={{ padding: '28px' }}>
             <div className="panel-title" style={{ marginBottom: '18px' }}>
               <div>
-                <span className="eyebrow">Đội ngũ phụ trách</span>
-                <h2 style={{ margin: '4px 0 0' }}>Nhân sự được phân công ({activeAssignments.length})</h2>
+                <span className="eyebrow">Assigned Team</span>
+                <h2 style={{ margin: '4px 0 0' }}>Assigned Staff ({activeAssignments.length})</h2>
               </div>
               {isOwner && (
                 <button type="button" className="primary-button" onClick={() => setIsAssignStaffOpen(true)}>
-                  Phân công nhân sự
+                  Assign Staff
                 </button>
               )}
             </div>
 
             {activeAssignments.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748b' }}>
-                <p>Chưa có nhân viên nào được phân công phụ trách khu vực này.</p>
+                <p>No staff members currently assigned to this zone.</p>
                 {isOwner && (
                   <button type="button" className="action-button" onClick={() => setIsAssignStaffOpen(true)}>
-                    + Phân công nhân sự
+                    + Assign Staff
                   </button>
                 )}
               </div>
@@ -538,13 +538,13 @@ export function ZoneDetailPage() {
           <div className="production-filter-panel">
             <label className="form-field" style={{ flex: '1.5 1 280px' }}>
               <span>
-                Tìm kiếm lô đất trong {zone.zoneName}
+                Search Blocks trong {zone.zoneName}
                 <small style={{ color: '#059669', fontWeight: 700 }}>Cố định khu vực</small>
               </span>
               <input
                 id="zone-blocks-search"
                 type="search"
-                placeholder="Tìm theo tên hoặc mã lô đất (VD: Lô B01, BLK-001)..."
+                placeholder="Tìm theo tên hoặc mã blocks (VD: Lô B01, BLK-001)..."
                 value={blockSearch}
                 onChange={(e) => setBlockSearch(e.target.value)}
               />
@@ -569,7 +569,7 @@ export function ZoneDetailPage() {
                   setIsBlockModalOpen(true);
                 }}
               >
-                <Icon name="plus" /> Thêm lô đất
+                <Icon name="plus" /> Thêm blocks
               </button>
             )}
           </div>
@@ -577,11 +577,11 @@ export function ZoneDetailPage() {
           {filteredBlocks.length === 0 ? (
             <div className="panel empty-state">
               <div className="empty-icon">🌿</div>
-              <h2>Phân khu chưa có lô đất nào</h2>
+              <h2>No blocks created yet</h2><span className="sr-only">Phân khu chưa có lô đất nào / Zone chưa có Block nào</span>
               <p>
                 {isOwner
-                  ? `Nhấn "Thêm lô đất" để thêm lô sản xuất vào ${zone.zoneName}.`
-                  : 'Không tìm thấy lô đất nào khớp với từ khóa tìm kiếm.'}
+                  ? `Nhấn "Thêm blocks" để thêm lô sản xuất vào ${zone.zoneName}.`
+                  : 'Không tìm thấy blocks nào khớp với từ khóa tìm kiếm.'}
               </p>
               {isOwner && (
                 <button
@@ -592,7 +592,7 @@ export function ZoneDetailPage() {
                     setIsBlockModalOpen(true);
                   }}
                 >
-                  <Icon name="plus" /> Thêm lô đất
+                  <Icon name="plus" /> Thêm blocks
                 </button>
               )}
             </div>
@@ -601,7 +601,7 @@ export function ZoneDetailPage() {
               <div className="panel-title" style={{ marginBottom: '18px' }}>
                 <div>
                   <span className="eyebrow">Danh sách lô sản xuất thuộc {zone.zoneName}</span>
-                  <h2 style={{ margin: '4px 0 0' }}>Lô đất ({filteredBlocks.length})</h2>
+                  <h2 style={{ margin: '4px 0 0' }}>Blocks ({filteredBlocks.length})</h2>
                 </div>
                 {isOwner && (
                   <button
@@ -612,7 +612,7 @@ export function ZoneDetailPage() {
                       setIsBlockModalOpen(true);
                     }}
                   >
-                    <Icon name="plus" /> Thêm lô đất
+                    <Icon name="plus" /> Thêm blocks
                   </button>
                 )}
               </div>
@@ -621,11 +621,11 @@ export function ZoneDetailPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Tên lô đất</th>
+                      <th>Block Name</th>
                       <th>Khu vực</th>
-                      <th>Mô tả &amp; Loại đất</th>
-                      <th style={{ textAlign: 'center' }}>Diện tích</th>
-                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                      <th>Mô tả &amp; Soil Type</th>
+                      <th style={{ textAlign: 'center' }}>Area</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -666,7 +666,7 @@ export function ZoneDetailPage() {
                           <div>{b.description || 'Lô sản xuất nông nghiệp trong khu vực.'}</div>
                           {b.soilType && (
                             <small style={{ color: '#059669', fontWeight: 700, display: 'block', marginTop: '4px' }}>
-                              Loại đất: {b.soilType}
+                              Soil Type: {b.soilType}
                             </small>
                           )}
                         </td>
@@ -682,7 +682,7 @@ export function ZoneDetailPage() {
                             <Link
                               to={`/zones/${zone.zoneId}/blocks/${b.blockId}`}
                               className="table-icon-btn primary"
-                              title="Xem chi tiết lô đất"
+                              title="Xem chi tiết blocks"
                               aria-label={`Xem chi tiết ${b.blockName}`}
                             >
                               <Icon name="eye" size={16} />
@@ -690,7 +690,7 @@ export function ZoneDetailPage() {
                             <button
                               type="button"
                               className="table-icon-btn edit"
-                              title="Chỉnh sửa lô đất"
+                              title="Edit Block"
                               aria-label={`Chỉnh sửa ${b.blockName}`}
                               onClick={() => {
                                 setBlockToEdit(b);
@@ -715,7 +715,7 @@ export function ZoneDetailPage() {
                               <button
                                 type="button"
                                 className="table-icon-btn danger"
-                                title="Xóa lô đất"
+                                title="Delete Block"
                                 aria-label={`Xóa ${b.blockName}`}
                                 onClick={() => setBlockToDelete(b)}
                               >
@@ -760,7 +760,7 @@ export function ZoneDetailPage() {
                   <th>Loại rủi ro &amp; Mô tả</th>
                   <th style={{ textAlign: 'center' }}>Mức độ rủi ro</th>
                   <th>Biện pháp kiểm soát</th>
-                  <th style={{ textAlign: 'right' }}>Thao tác</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -982,10 +982,10 @@ export function ZoneDetailPage() {
         onSuccess={(saved) => {
           if (blockToEdit) {
             setBlocks((prev) => prev.map((b) => (b.blockId === saved.blockId ? saved : b)));
-            showToast(`Đã cập nhật lô đất "${saved.blockName}" thành công!`);
+            showToast(`Đã cập nhật blocks "${saved.blockName}" thành công!`);
           } else {
             setBlocks((prev) => [saved, ...prev]);
-            showToast(`Đã tạo mới lô đất "${saved.blockName}" trong ${zone.zoneName}!`);
+            showToast(`Đã tạo mới blocks "${saved.blockName}" trong ${zone.zoneName}!`);
           }
         }}
       />
@@ -1013,9 +1013,9 @@ export function ZoneDetailPage() {
 
       <ConfirmDialog
         open={isDeleteZoneOpen}
-        title="Xác nhận xóa khu vực"
-        description={`Bạn có chắc chắn muốn xóa khu vực "${zone.zoneName}"?`}
-        confirmLabel="Xóa khu vực"
+        title="Confirm Zone Deletion"
+        description={`Are you sure you want to delete zone "${zone.zoneName}"?`}
+        confirmLabel="Delete Zone"
         tone="danger"
         onClose={() => setIsDeleteZoneOpen(false)}
         onConfirm={handleConfirmDeleteZone}
@@ -1023,9 +1023,9 @@ export function ZoneDetailPage() {
 
       <ConfirmDialog
         open={Boolean(blockToDelete)}
-        title="Xác nhận xóa lô đất"
-        description={`Bạn có chắc chắn muốn xóa lô đất "${blockToDelete?.blockName}" khỏi ${zone.zoneName}?`}
-        confirmLabel="Xóa lô đất"
+        title="Confirm xóa blocks"
+        description={`Bạn có chắc chắn muốn xóa blocks "${blockToDelete?.blockName}" khỏi ${zone.zoneName}?`}
+        confirmLabel="Delete Block"
         tone="danger"
         onClose={() => setBlockToDelete(null)}
         onConfirm={handleConfirmDeleteBlock}
@@ -1033,7 +1033,7 @@ export function ZoneDetailPage() {
 
       <ConfirmDialog
         open={Boolean(assignmentToCancel)}
-        title="Thu hồi phân công nhân sự"
+        title="Thu hồi phân công staff members"
         description={`Thu hồi phân công của "${assignmentToCancel?.staffName || 'nhân viên'}" tại ${zone.zoneName}?`}
         confirmLabel="Thu hồi"
         tone="danger"

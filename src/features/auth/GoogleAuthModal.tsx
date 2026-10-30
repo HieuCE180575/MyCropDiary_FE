@@ -26,21 +26,21 @@ declare global {
 const PRESET_GOOGLE_ACCOUNTS = [
   {
     email: 'hieuntce180575@fpt.edu.vn',
-    name: 'Hiếu Nguyễn',
+    name: 'Hieu Nguyen',
     avatar: 'https://lh3.googleusercontent.com/a/default-user=s96-c',
-    desc: 'Tài khoản Google sinh viên FPT',
+    desc: 'FPT University Student Account',
   },
   {
     email: 'nongdan.vietgap@gmail.com',
-    name: 'Nguyễn Văn Nông (VietGAP)',
+    name: 'Nguyen Van Nong (VietGAP)',
     avatar: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=150',
-    desc: 'Hộ nông dân liên kết tiêu chuẩn VietGAP',
+    desc: 'VietGAP Certified Farmer Account',
   },
   {
     email: 'kythuat.dalatfarm@gmail.com',
-    name: 'Lê Hoàng Kỹ Thuật',
+    name: 'Le Hoang Technical',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-    desc: 'Kỹ sư nông nghiệp quản lý vùng trồng',
+    desc: 'Agricultural Area Field Engineer',
   },
 ];
 
@@ -91,7 +91,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
       onSuccess(session);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Xác thực Google thất bại. Vui lòng thử lại.');
+      setError(err instanceof Error ? err.message : 'Google authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
     e.preventDefault();
     const email = customEmail.trim();
     if (!email || !email.includes('@')) {
-      setError('Vui lòng nhập địa chỉ email Google hợp lệ.');
+      setError('Please enter a valid Google email address.');
       return;
     }
     void handleGooglePayload({
@@ -151,17 +151,17 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
             </svg>
             <div>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>
-                {mode === 'login' ? 'Đăng nhập với Google' : 'Đăng ký nhanh với Google'}
+                {mode === 'login' ? 'Sign in with Google' : 'Register with Google'}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748b' }}>
-                Đăng nhập tức thì, bảo mật và an toàn qua Google OAuth2
+                Instant, secure login via Google OAuth2
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Đóng"
+            aria-label="Close"
             style={{
               background: 'transparent',
               border: 'none',
@@ -197,7 +197,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
         {!isCustom ? (
           <div>
             <p style={{ fontSize: '13px', fontWeight: 600, color: '#475569', margin: '0 0 10px' }}>
-              Chọn tài khoản Google để tiếp tục:
+              Choose a Google account to continue:
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
               {PRESET_GOOGLE_ACCOUNTS.map((acc) => (
@@ -267,7 +267,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
                   textDecoration: 'underline',
                 }}
               >
-                + Sử dụng tài khoản Google khác...
+                + Use another Google account...
               </button>
             </div>
           </div>
@@ -275,12 +275,12 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
           <form onSubmit={handleCustomSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                Email tài khoản Google *
+                Google Account Email *
               </label>
               <input
                 type="email"
                 required
-                placeholder="ten.nguoidung@gmail.com"
+                placeholder="user.name@gmail.com"
                 value={customEmail}
                 onChange={(e) => setCustomEmail(e.target.value)}
                 style={{
@@ -295,11 +295,11 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                Họ và tên
+                Full Name
               </label>
               <input
                 type="text"
-                placeholder="Nguyễn Văn A"
+                placeholder="John Doe"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 style={{
@@ -326,7 +326,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
                   cursor: 'pointer',
                 }}
               >
-                Quay lại
+                Back
               </button>
               <button
                 type="submit"
@@ -342,7 +342,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
                   cursor: loading ? 'not-allowed' : 'pointer',
                 }}
               >
-                {loading ? 'Đang xác thực...' : 'Đăng nhập ngay'}
+                {loading ? 'Authenticating...' : 'Sign In Now'}
               </button>
             </div>
           </form>
@@ -351,4 +351,3 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
     </div>
   );
 }
-

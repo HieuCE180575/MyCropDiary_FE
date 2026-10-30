@@ -56,7 +56,7 @@ export function TasksPage() {
 
   // Form states
   const [formTaskName, setFormTaskName] = useState('');
-  const [formTaskType, setFormTaskType] = useState('Chăm sóc cây trồng');
+  const [formTaskType, setFormTaskType] = useState('Crop Care');
   const [formPriority, setFormPriority] = useState('normal');
   const [formStatus, setFormStatus] = useState('planned');
   const [formSeasonId, setFormSeasonId] = useState<number | ''>('');
@@ -153,7 +153,7 @@ export function TasksPage() {
     } catch (err) {
       if (!controller.signal.aborted && !silent) {
         setNotification({
-          text: err instanceof Error ? err.message : 'Không thể tải danh sách công việc.',
+          text: err instanceof Error ? err.message : 'Không thể tải danh sách tasks.',
           type: 'error',
         });
       }
@@ -170,7 +170,7 @@ export function TasksPage() {
   const openCreateModal = () => {
     setEditingTask(null);
     setFormTaskName('');
-    setFormTaskType('Chăm sóc cây trồng');
+    setFormTaskType('Crop Care');
     setFormPriority('normal');
     setFormStatus('planned');
     setFormSeasonId(seasons.length > 0 ? seasons[0].cropSeasonId : '');
@@ -187,7 +187,7 @@ export function TasksPage() {
   const openEditModal = (task: FarmTaskResp) => {
     setEditingTask(task);
     setFormTaskName(task.taskName);
-    setFormTaskType(task.taskType || 'Chăm sóc cây trồng');
+    setFormTaskType(task.taskType || 'Crop Care');
     setFormPriority(task.priority || 'normal');
     setFormStatus(task.status || 'planned');
     setFormSeasonId(task.cropSeasonId ?? '');
@@ -207,7 +207,7 @@ export function TasksPage() {
 
     const trimmedTaskName = formTaskName.trim();
     if (!trimmedTaskName) {
-      setTaskModalError('Vui lòng nhập tên công việc / nhiệm vụ.');
+      setTaskModalError('Vui lòng nhập tên tasks / nhiệm vụ.');
       return;
     }
 
@@ -226,7 +226,7 @@ export function TasksPage() {
         t.status !== 'cancelled'
     );
     if (isDuplicate) {
-      setTaskModalError(`Công việc "${trimmedTaskName}" đã tồn tại và đang diễn ra trong phạm vi mùa vụ/lô đất này. Vui lòng kiểm tra lại để tránh giao việc trùng lặp.`);
+      setTaskModalError(`Công việc "${trimmedTaskName}" đã tồn at và đang diễn ra trong phạm vi mùa vụ/plot đất này. Vui lòng kiểm tra lại để tránh giao việc trùng lặp.`);
       return;
     }
 
@@ -251,7 +251,7 @@ export function TasksPage() {
     try {
       if (editingTask) {
         await updateFarmTask(editingTask.taskId, payload as UpdateFarmTaskReq);
-        setNotification({ text: 'Cập nhật công việc thành công!', type: 'success' });
+        setNotification({ text: 'Cập nhật tasks thành công!', type: 'success' });
       } else {
         await createFarmTask(farmId, payload);
         setNotification({ text: 'Giao việc mới thành công!', type: 'success' });
@@ -259,7 +259,7 @@ export function TasksPage() {
       setIsCreateModalOpen(false);
       void loadTasks();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Lỗi khi lưu công việc.';
+      const msg = err instanceof Error ? err.message : 'Lỗi khi lưu tasks.';
       setTaskModalError(msg);
       setNotification({
         text: msg,
@@ -277,7 +277,7 @@ export function TasksPage() {
         prev.map((t) => (t.taskId === taskId ? { ...t, status: newStatus } : t))
       );
       setNotification({
-        text: `Đã chuyển công việc sang "${getStatusLabel(newStatus)}"`,
+        text: `Đã chuyển tasks sang "${getStatusLabel(newStatus)}"`,
         type: 'success',
       });
     } catch (err) {
@@ -294,11 +294,11 @@ export function TasksPage() {
     try {
       await deleteFarmTask(deletingTask.taskId);
       setTasks((prev) => prev.filter((t) => t.taskId !== deletingTask.taskId));
-      setNotification({ text: 'Đã xóa công việc thành công!', type: 'success' });
+      setNotification({ text: 'Đã xóa tasks thành công!', type: 'success' });
       setDeletingTask(null);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể xóa công việc.',
+        text: err instanceof Error ? err.message : 'Không thể xóa tasks.',
         type: 'error',
       });
     } finally {
@@ -322,10 +322,10 @@ export function TasksPage() {
 
   const getStatusLabel = (s: string) => {
     const norm = (s || '').toLowerCase();
-    if (norm === 'in_progress' || norm === 'doing') return 'Đang triển khai';
-    if (norm === 'completed' || norm === 'done') return 'Đã hoàn thành';
+    if (norm === 'in_progress' || norm === 'doing') return 'In Progress';
+    if (norm === 'completed' || norm === 'done') return 'Completed';
     if (norm === 'cancelled') return 'Đã hủy';
-    return 'Cần thực hiện';
+    return 'To Do';
   };
 
   // Metrics computation
@@ -375,7 +375,7 @@ export function TasksPage() {
                 </span>
               ))
             ) : (
-              <span style={{ color: '#94a3b8', fontSize: '12px' }}>Chưa phân công</span>
+              <span style={{ color: '#94a3b8', fontSize: '12px' }}>Unassigned</span>
             )}
           </div>
 
@@ -396,7 +396,7 @@ export function TasksPage() {
                 className="task-btn-action task-btn-primary"
                 onClick={() => handleQuickStatusChange(t.taskId, 'in_progress')}
               >
-                ▶ Bắt đầu làm
+                ▶ Start làm
               </button>
             )}
             {t.status === 'in_progress' && (
@@ -405,7 +405,7 @@ export function TasksPage() {
                 className="task-btn-action task-btn-done"
                 onClick={() => handleQuickStatusChange(t.taskId, 'completed')}
               >
-                ✓ Hoàn thành
+                ✓ Complete
               </button>
             )}
             {t.status === 'completed' && (
@@ -414,7 +414,7 @@ export function TasksPage() {
                 className="task-btn-action"
                 onClick={() => handleQuickStatusChange(t.taskId, 'in_progress')}
               >
-                ↺ Mở lại việc
+                ↺ Reopen việc
               </button>
             )}
           </div>
@@ -475,10 +475,10 @@ export function TasksPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', marginBottom: '16px', paddingTop: '4px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
-            Phân công &amp; Quản lý công việc
+            Phân công &amp; Quản lý tasks
           </h1>
           <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b', fontWeight: 500 }}>
-            {totalTasks} công việc · {todoTasks.length} cần thực hiện · {inProgressTasks.length} đang triển khai · {completedTasks.length} đã xong tại {selectedFarm?.farmName || 'Trang trại'}
+            {totalTasks} tasks · {todoTasks.length} to do · {inProgressTasks.length} in progress · {completedTasks.length} completed at {selectedFarm?.farmName || 'Trang trại'}
           </p>
         </div>
 
@@ -516,7 +516,7 @@ export function TasksPage() {
             </span>
             <input
               type="search"
-              placeholder="Tìm theo tên việc, ghi chú, người phụ trách..."
+              placeholder="Search by task name, notes, assignee..."
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
             />
@@ -529,7 +529,7 @@ export function TasksPage() {
               onChange={(e) => setPriorityFilter(e.target.value)}
               aria-label="Lọc theo độ ưu tiên"
             >
-              <option value="all">Tất cả độ ưu tiên</option>
+              <option value="all">All Priorities</option>
               <option value="urgent">Khẩn cấp</option>
               <option value="high">Ưu tiên cao</option>
               <option value="normal">Bình thường</option>
@@ -544,7 +544,7 @@ export function TasksPage() {
               onChange={(e) => setSeasonFilter(e.target.value ? Number(e.target.value) : '')}
               aria-label="Lọc theo mùa vụ"
             >
-              <option value="">Tất cả mùa vụ</option>
+              <option value="">All Seasons</option>
               {seasons.map((s) => (
                 <option key={s.cropSeasonId} value={s.cropSeasonId}>
                   {s.seasonName}
@@ -558,9 +558,9 @@ export function TasksPage() {
             <select
               value={zoneFilter}
               onChange={(e) => setZoneFilter(e.target.value ? Number(e.target.value) : '')}
-              aria-label="Lọc theo khu vực"
+              aria-label="Lọc theo zone vực"
             >
-              <option value="">Tất cả khu vực</option>
+              <option value="">All Zones</option>
               {zones.map((z) => (
                 <option key={z.zoneId} value={z.zoneId}>
                   {z.zoneName}
@@ -594,14 +594,14 @@ export function TasksPage() {
               className={`tasks-view-btn ${viewMode === 'TABLE' ? 'active' : ''}`}
               onClick={() => setViewMode('TABLE')}
             >
-              📑 Danh sách
+              📑 List View
             </button>
             <button
               type="button"
               className={`tasks-view-btn ${viewMode === 'KANBAN' ? 'active' : ''}`}
               onClick={() => setViewMode('KANBAN')}
             >
-              📊 Bảng Kanban
+              📊 Kanban Board
             </button>
           </div>
         </div>
@@ -619,7 +619,7 @@ export function TasksPage() {
           }}
         >
           <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>
-            Trạng thái:
+            Status:
           </span>
           <button
             type="button"
@@ -637,7 +637,7 @@ export function TasksPage() {
               transition: 'all 0.15s ease',
             }}
           >
-            Tất cả ({totalTasks})
+            All ({totalTasks})
           </button>
           <button
             type="button"
@@ -655,7 +655,7 @@ export function TasksPage() {
               transition: 'all 0.15s ease',
             }}
           >
-            ⏳ Cần thực hiện ({todoTasks.length})
+            ⏳ To Do ({todoTasks.length})
           </button>
           <button
             type="button"
@@ -673,7 +673,7 @@ export function TasksPage() {
               transition: 'all 0.15s ease',
             }}
           >
-            🚀 Đang triển khai ({inProgressTasks.length})
+            🚀 In Progress ({inProgressTasks.length})
           </button>
           <button
             type="button"
@@ -691,7 +691,7 @@ export function TasksPage() {
               transition: 'all 0.15s ease',
             }}
           >
-            ✅ Đã hoàn thành ({completedTasks.length})
+            ✅ Completed ({completedTasks.length})
           </button>
           {urgentTasks.length > 0 && (
             <button
@@ -713,7 +713,7 @@ export function TasksPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              🚨 Khẩn cấp ({urgentTasks.length})
+              🚨 Urgent ({urgentTasks.length})
             </button>
           )}
         </div>
@@ -723,7 +723,7 @@ export function TasksPage() {
           loading ? (
             <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
               <div className="empty-icon">⏳</div>
-              <h2>Đang tải danh sách công việc...</h2>
+              <h2>Đang tải danh sách tasks...</h2>
             </div>
           ) : tasks.length === 0 ? (
             <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
@@ -742,7 +742,7 @@ export function TasksPage() {
                 <Icon name="check-circle" size={32} />
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
-                Không tìm thấy công việc nào phù hợp
+                Không tìm thấy tasks nào phù hợp
               </h2>
               <p style={{ color: '#64748b', fontSize: '14.5px', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
                 Giao việc và phân công nhân viên kỹ thuật để giám sát tiến độ chăm sóc cây trồng theo tiêu chuẩn VietGAP.
@@ -769,14 +769,14 @@ export function TasksPage() {
           ) : (
             <>
               <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, overflowX: 'auto' }}>
-                <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+                <table className="data-table" style={{ width: '100%', minWidth: '960px', borderCollapse: 'separate', borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ background: '#f8fafc' }}>
                       <th style={{ width: '38px', padding: '10px 8px', textAlign: 'center' }}>
                         <input type="checkbox" aria-label="Chọn tất cả việc" style={{ cursor: 'pointer' }} />
                       </th>
                       <th style={{ width: '23%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                        Tên công việc &amp; Phân loại
+                        Tên tasks &amp; Phân loại
                       </th>
                       <th style={{ width: '13%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         Mùa vụ &amp; Vị trí
@@ -937,7 +937,7 @@ export function TasksPage() {
                               </div>
                             ) : (
                               <span style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
-                                Chưa phân công
+                                Unassigned
                               </span>
                             )}
                           </td>
@@ -972,10 +972,10 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="btn-status-quick start"
-                                title="Bắt đầu thực hiện công việc"
+                                title="Start thực hiện tasks"
                                 onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
                               >
-                                ▶ Bắt đầu
+                                ▶ Start
                               </button>
                             )}
                             {t.status === 'in_progress' && (
@@ -985,17 +985,17 @@ export function TasksPage() {
                                 title="Nghiệm thu hoàn thành"
                                 onClick={() => void handleQuickStatusChange(t.taskId, 'completed')}
                               >
-                                ✓ Hoàn thành
+                                ✓ Complete
                               </button>
                             )}
                             {t.status === 'completed' && (
                               <button
                                 type="button"
                                 className="btn-status-quick reopen"
-                                title="Mở lại công việc"
+                                title="Reopen tasks"
                                 onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
                               >
-                                ↺ Mở lại
+                                ↺ Reopen
                               </button>
                             )}
                           </td>
@@ -1006,7 +1006,7 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="table-icon-btn primary"
-                                title="Xem chi tiết công việc"
+                                title="Xem chi tiết tasks"
                                 aria-label={`Chi tiết ${t.taskName}`}
                                 onClick={() => setSelectedTaskDetail(t)}
                               >
@@ -1015,7 +1015,7 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="table-icon-btn edit"
-                                title="Chỉnh sửa công việc"
+                                title="Chỉnh sửa tasks"
                                 aria-label={`Chỉnh sửa ${t.taskName}`}
                                 onClick={() => openEditModal(t)}
                               >
@@ -1024,7 +1024,7 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="table-icon-btn danger"
-                                title="Xóa công việc"
+                                title="Xóa tasks"
                                 aria-label={`Xóa ${t.taskName}`}
                                 onClick={() => setDeletingTask(t)}
                               >
@@ -1042,7 +1042,7 @@ export function TasksPage() {
               {/* Table Footer */}
               <div className="zone-table-footer">
                 <div>
-                  Hiển thị 1–{tasks.length} trong {totalTasks} công việc
+                  Hiển thị 1–{tasks.length} trong {totalTasks} tasks
                 </div>
                 <div className="zone-pagination-wrap">
                   <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
@@ -1067,7 +1067,7 @@ export function TasksPage() {
                 <div className="tasks-column-header">
                   <div className="tasks-column-title">
                     <span className="tasks-column-dot" />
-                    <span>Cần thực hiện</span>
+                    <span>To Do</span>
                   </div>
                   <span className="tasks-column-count">{todoTasks.length}</span>
                 </div>
@@ -1087,7 +1087,7 @@ export function TasksPage() {
                 <div className="tasks-column-header">
                   <div className="tasks-column-title">
                     <span className="tasks-column-dot" />
-                    <span>Đang triển khai</span>
+                    <span>In Progress</span>
                   </div>
                   <span className="tasks-column-count">{inProgressTasks.length}</span>
                 </div>
@@ -1107,7 +1107,7 @@ export function TasksPage() {
                 <div className="tasks-column-header">
                   <div className="tasks-column-title">
                     <span className="tasks-column-dot" />
-                    <span>Đã hoàn thành</span>
+                    <span>Completed</span>
                   </div>
                   <span className="tasks-column-count">{completedTasks.length}</span>
                 </div>
@@ -1126,13 +1126,13 @@ export function TasksPage() {
         )}
       </div>
 
-      {/* Modal 1: Tạo mới / Chỉnh sửa công việc */}
+      {/* Modal 1: Tạo mới / Chỉnh sửa tasks */}
       <Modal
         open={isCreateModalOpen}
         onClose={() => {
           if (!submitting) setIsCreateModalOpen(false);
         }}
-        title={editingTask ? 'Chỉnh sửa công việc' : 'Giao việc mới (VietGAP)'}
+        title={editingTask ? 'Chỉnh sửa tasks' : 'Giao việc mới (VietGAP)'}
       >
         <form onSubmit={handleSaveTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {taskModalError && (
@@ -1142,7 +1142,7 @@ export function TasksPage() {
           )}
           <div className="task-form-grid">
             <div className="task-form-field task-field-full">
-              <label htmlFor="task-name">Tên công việc / Nhiệm vụ *</label>
+              <label htmlFor="task-name">Tên tasks / Nhiệm vụ *</label>
               <input
                 id="task-name"
                 required
@@ -1154,7 +1154,7 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-type">Phân loại công việc *</label>
+              <label htmlFor="task-type">Phân loại tasks *</label>
               <select
                 id="task-type"
                 value={formTaskType}
@@ -1163,10 +1163,10 @@ export function TasksPage() {
                 <option value="Làm đất">Làm đất &amp; Xử lý giá thể</option>
                 <option value="Gieo trồng">Gieo hạt &amp; Cấy cây con</option>
                 <option value="Bón phân & Tưới">Bón phân &amp; Tưới tiêu</option>
-                <option value="Chăm sóc sinh trưởng">Chăm sóc sinh trưởng &amp; Tỉa cành</option>
-                <option value="Bảo vệ thực vật">Bảo vệ thực vật &amp; Phun vi sinh</option>
+                <option value="Growth Monitoring">Growth Monitoring &amp; Tỉa cành</option>
+                <option value="Plant Protection">Plant Protection &amp; Phun vi sinh</option>
                 <option value="Thu hoạch">Thu hoạch &amp; Đóng gói</option>
-                <option value="Tuân thủ VietGAP">Giám sát &amp; Tuân thủ VietGAP</option>
+                <option value="VietGAP Compliance">Giám sát &amp; VietGAP Compliance</option>
                 <option value="Khác">Công việc khác</option>
               </select>
             </div>
@@ -1178,7 +1178,7 @@ export function TasksPage() {
                 value={formPriority}
                 onChange={(e) => setFormPriority(e.target.value)}
               >
-                <option value="urgent">Khẩn cấp (Xử lý ngay)</option>
+                <option value="urgent">Urgent (Xử lý ngay)</option>
                 <option value="high">Ưu tiên cao</option>
                 <option value="normal">Bình thường</option>
                 <option value="low">Mức thấp</option>
@@ -1202,15 +1202,15 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-status">Trạng thái công việc</label>
+              <label htmlFor="task-status">Trạng thái tasks</label>
               <select
                 id="task-status"
                 value={formStatus}
                 onChange={(e) => setFormStatus(e.target.value)}
               >
-                <option value="planned">Cần thực hiện</option>
-                <option value="in_progress">Đang triển khai</option>
-                <option value="completed">Đã hoàn thành</option>
+                <option value="planned">To Do</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
                 <option value="cancelled">Đã hủy</option>
               </select>
             </div>
@@ -1225,7 +1225,7 @@ export function TasksPage() {
                   setFormBlockId('');
                 }}
               >
-                <option value="">Chọn khu vực</option>
+                <option value="">Chọn zone vực</option>
                 {zones.map((z) => (
                   <option key={z.zoneId} value={z.zoneId}>
                     {z.zoneName}
@@ -1239,7 +1239,7 @@ export function TasksPage() {
                 Lô đất canh tác (Block){' '}
                 {seasonBlocks.length > 0 && (
                   <span style={{ color: '#059669', fontSize: '11.5px', fontWeight: 700 }}>
-                    (Thuộc mùa vụ: {seasonBlocks.length} lô)
+                    (Thuộc mùa vụ: {seasonBlocks.length} plot)
                   </span>
                 )}
               </label>
@@ -1256,7 +1256,7 @@ export function TasksPage() {
                   }
                 }}
               >
-                <option value="">Chọn lô đất</option>
+                <option value="">Chọn plot đất</option>
                 {seasonBlocks.length > 0
                   ? seasonBlocks.map((sb) => (
                     <option key={sb.blockId} value={sb.blockId}>
@@ -1309,7 +1309,7 @@ export function TasksPage() {
               >
                 {staffList.length === 0 ? (
                   <span style={{ color: '#94a3b8', fontSize: '13px' }}>
-                    Chưa có nhân sự trong trang trại. Hãy thêm nhân sự tại mục &quot;Người lao động&quot;.
+                    Chưa có nhân sự trong trang trại. Hãy thêm nhân sự at mục &quot;Người lao động&quot;.
                   </span>
                 ) : (
                   staffList.map((s) => {
@@ -1375,12 +1375,12 @@ export function TasksPage() {
         </form>
       </Modal>
 
-      {/* Modal 2: Xem chi tiết công việc */}
+      {/* Modal 2: Xem chi tiết tasks */}
       {selectedTaskDetail && (
         <Modal
           open
           onClose={() => setSelectedTaskDetail(null)}
-          title={`Chi tiết công việc #${selectedTaskDetail.taskId}`}
+          title={`Chi tiết tasks #${selectedTaskDetail.taskId}`}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="task-type-pill">{selectedTaskDetail.taskType || 'Chăm sóc'}</span>
@@ -1396,7 +1396,7 @@ export function TasksPage() {
           </p>
 
           <dl className="task-detail-grid">
-            <dt>Trạng thái hiện tại:</dt>
+            <dt>Trạng thái hiện at:</dt>
             <dd>
               <span
                 style={{
@@ -1427,7 +1427,7 @@ export function TasksPage() {
 
             <dt>Khu vực &amp; Thửa đất:</dt>
             <dd>
-              {selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : 'Chưa gắn khu vực'}
+              {selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : 'Chưa gắn zone vực'}
               {selectedTaskDetail.blockName ? ` / ${selectedTaskDetail.blockName}` : ''}
             </dd>
 
@@ -1442,7 +1442,7 @@ export function TasksPage() {
                   ))}
                 </div>
               ) : (
-                'Chưa phân công nhân sự'
+                'Unassigned nhân sự'
               )}
             </dd>
 
@@ -1487,22 +1487,22 @@ export function TasksPage() {
         </Modal>
       )}
 
-      {/* Modal 3: Xác nhận xóa công việc */}
+      {/* Modal 3: Xác nhận xóa tasks */}
       {deletingTask && (
         <Modal
           open
           onClose={() => {
             if (!submitting) setDeletingTask(null);
           }}
-          title="Xác nhận xóa công việc"
+          title="Xác nhận xóa tasks"
         >
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: '38px', marginBottom: '12px' }}>⚠️</div>
             <h3 style={{ margin: '0 0 8px', fontSize: '17px', color: '#0f172a' }}>
-              Xóa công việc &quot;{deletingTask.taskName}&quot;?
+              Xóa tasks &quot;{deletingTask.taskName}&quot;?
             </h3>
             <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
-              Hành động này sẽ xóa công việc và các phân công lao động liên quan. Không thể hoàn tác.
+              Hành động này sẽ xóa tasks và các phân công lao động liên quan. Không thể hoàn tác.
             </p>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>

@@ -53,7 +53,7 @@ export function FarmingActivitiesPage() {
 
   // Form states
   const [selectedBlockId, setSelectedBlockId] = useState<number | ''>('');
-  const [actType, setActType] = useState('Bón phân');
+  const [actType, setActType] = useState('Fertilizing');
   const [actName, setActName] = useState('');
   const [startedAt, setStartedAt] = useState(new Date().toISOString().slice(0, 16));
   const [endedAt, setEndedAt] = useState('');
@@ -302,7 +302,7 @@ export function FarmingActivitiesPage() {
 
   const getActivityMeta = (type: string) => {
     switch (type) {
-      case 'Làm đất':
+      case 'Soil Preparation':
         return {
           icon: 'plots',
           bg: '#eff6ff',
@@ -320,7 +320,7 @@ export function FarmingActivitiesPage() {
           pillBg: '#ecfdf5',
           pillColor: '#065f46',
         };
-      case 'Bón phân':
+      case 'Fertilizing':
         return {
           icon: 'granules',
           bg: '#fffbeb',
@@ -329,7 +329,7 @@ export function FarmingActivitiesPage() {
           pillBg: '#fef3c7',
           pillColor: '#92400e',
         };
-      case 'Tưới nước':
+      case 'Irrigation':
         return {
           icon: 'drop',
           bg: '#f0fdfa',
@@ -338,7 +338,7 @@ export function FarmingActivitiesPage() {
           pillBg: '#ccfbf1',
           pillColor: '#115e59',
         };
-      case 'Phun thuốc':
+      case 'Spraying':
         return {
           icon: 'flask',
           bg: '#fef2f2',
@@ -347,7 +347,7 @@ export function FarmingActivitiesPage() {
           pillBg: '#fee2e2',
           pillColor: '#991b1b',
         };
-      case 'Thu hoạch':
+      case 'Harvest':
         return {
           icon: 'box',
           bg: '#f5f3ff',
@@ -392,7 +392,7 @@ export function FarmingActivitiesPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-            Nhật ký canh tác số (VietGAP)
+            Farming Diary số (VietGAP)
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
             Ghi nhận và minh bạch hoạt động làm đất, gieo cấy, bón phân, tưới tiêu và BVTV trên từng lô đất thuộc mùa vụ
@@ -497,13 +497,13 @@ export function FarmingActivitiesPage() {
               aria-label="Lọc theo loại hoạt động"
             >
               <option value="ALL">Tất cả loại hoạt động</option>
-              <option value="Làm đất">Làm đất &amp; Xử lý giá thể</option>
-              <option value="Gieo cấy">Gieo hạt &amp; Cấy cây con</option>
-              <option value="Bón phân">Bón phân</option>
-              <option value="Tưới nước">Tưới nước</option>
-              <option value="Phun thuốc">Phun thuốc BVTV</option>
+              <option value="Soil Preparation">Soil Preparation &amp; Xử lý giá thể</option>
+              <option value="Gieo cấy">Seeding &amp; Cấy cây con</option>
+              <option value="Fertilizing">Fertilizing</option>
+              <option value="Irrigation">Irrigation</option>
+              <option value="Spraying">Spraying BVTV</option>
               <option value="Làm cỏ">Làm cỏ &amp; Tỉa cành</option>
-              <option value="Thu hoạch">Thu hoạch</option>
+              <option value="Harvest">Harvest</option>
             </select>
             <span className="select-arrow">
               <Icon name="chevron" size={16} />
@@ -674,7 +674,7 @@ export function FarmingActivitiesPage() {
                       Phân loại
                     </th>
                     <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                      Lô canh tác
+                      Cultivation Plot
                     </th>
                     <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
                       Thời gian
@@ -952,13 +952,13 @@ export function FarmingActivitiesPage() {
                   value={actType}
                   onChange={(e) => setActType(e.target.value)}
                 >
-                  <option value="Làm đất">Làm đất &amp; Xử lý giá thể</option>
-                  <option value="Gieo cấy">Gieo hạt &amp; Cấy cây con</option>
-                  <option value="Bón phân">Bón lót &amp; Bón thúc phân bón</option>
-                  <option value="Tưới nước">Tưới tiêu &amp; Châm phân</option>
-                  <option value="Phun thuốc">Phun thuốc BVTV sinh học</option>
+                  <option value="Soil Preparation">Soil Preparation &amp; Xử lý giá thể</option>
+                  <option value="Gieo cấy">Seeding &amp; Cấy cây con</option>
+                  <option value="Fertilizing">Bón lót &amp; Bón thúc phân bón</option>
+                  <option value="Irrigation">Tưới tiêu &amp; Châm phân</option>
+                  <option value="Spraying">Spraying BVTV sinh học</option>
                   <option value="Làm cỏ">Làm cỏ &amp; Tỉa cành</option>
-                  <option value="Thu hoạch">Thu hoạch nông sản</option>
+                  <option value="Harvest">Harvest nông sản</option>
                 </select>
               </div>
             </div>
@@ -995,7 +995,7 @@ export function FarmingActivitiesPage() {
                 id="act-name-input"
                 type="text"
                 required
-                placeholder="VD: Bón phân NPK đầu vụ cho Vụ Hè Thu tại Lô A01"
+                placeholder="VD: Fertilizing NPK đầu vụ cho Vụ Hè Thu tại Lô A01"
                 value={actName}
                 onChange={(e) => setActName(e.target.value)}
               />
@@ -1070,10 +1070,10 @@ export function FarmingActivitiesPage() {
               }}
               disabled={saving}
             >
-              Hủy
+              Cancel
             </button>
             <button type="submit" className="primary-button" disabled={saving}>
-              {saving ? 'Đang lưu...' : editingActivity ? 'Cập nhật nhật ký' : 'Lưu nhật ký'}
+              {saving ? 'Saving...' : editingActivity ? 'Cập nhật nhật ký' : 'Lưu nhật ký'}
             </button>
           </div>
         </form>

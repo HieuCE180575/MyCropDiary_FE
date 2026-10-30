@@ -5,340 +5,340 @@ export const moduleDefinitions: ModuleDefinition[] = [
   {
     "key": "farm-registration",
     "path": "farm-registration",
-    "title": "Đăng ký trang trại",
+    "title": "Farm Registration",
     "ucRange": "UC-09",
     "group": "farm",
     "access": "user",
     "icon": "plus",
-    "description": "Gửi yêu cầu đăng ký; xem chi tiết, theo dõi trạng thái, sửa hoặc hủy yêu cầu đang chờ duyệt."
+    "description": "Submit farm registration request; view details, track status, update or cancel pending request."
   },
   {
     "key": "knowledge",
     "path": "knowledge",
-    "title": "Kiến thức nông nghiệp",
+    "title": "Agricultural Knowledge",
     "ucRange": "UC-01–03",
     "group": "public",
     "access": "account",
     "icon": "book",
-    "description": "Tìm kiếm, lọc và đọc các bài viết kiến thức VietGAP công khai."
+    "description": "Search, filter, and read public VietGAP farming articles and cultivation guides."
   },
   {
     "key": "ai",
     "path": "ai",
-    "title": "Trợ lý AI",
+    "title": "AI Assistant",
     "ucRange": "UC-10",
     "group": "ai",
     "access": "user",
     "icon": "bot",
-    "description": "Đặt câu hỏi và nhận hướng dẫn từ nguồn kiến thức đã được phê duyệt."
+    "description": "Ask questions and receive farming guidance based on approved agricultural standards."
   },
   {
     "key": "ai-history",
     "path": "ai-history",
-    "title": "Lịch sử hội thoại",
+    "title": "Chat History",
     "ucRange": "UC-11",
     "group": "ai",
     "access": "user",
     "icon": "history",
-    "description": "Xem, tìm kiếm, đọc chi tiết và xóa hội thoại AI của bạn."
+    "description": "View, search, read details, and manage your AI conversations."
   },
   {
     "key": "ai-feedback",
     "path": "ai-feedback",
-    "title": "Phản hồi của tôi",
+    "title": "My Feedback",
     "ucRange": "UC-12",
     "group": "ai",
     "access": "user",
     "icon": "message",
-    "description": "Gửi, sửa và xem phản hồi của bạn; báo cáo câu trả lời AI không chính xác hoặc không phù hợp."
+    "description": "Submit, edit, and review feedback; report inaccurate or unsuitable AI responses."
   },
   {
     "key": "profile",
     "path": "profile",
-    "title": "Hồ sơ cá nhân",
+    "title": "User Profile",
     "ucRange": "UC-07",
     "group": "account",
     "access": "account",
     "icon": "user",
-    "description": "Xem và cập nhật thông tin cá nhân của bạn."
+    "description": "View and update your personal account information."
   },
   {
     "key": "password",
     "path": "change-password",
-    "title": "Đổi mật khẩu",
+    "title": "Change Password",
     "ucRange": "UC-08",
     "group": "account",
     "access": "account",
     "icon": "lock",
-    "description": "Xác minh mật khẩu hiện tại và đặt mật khẩu mới cho tài khoản."
+    "description": "Verify current password and set a new password for your account."
   },
   {
     "key": "farm",
     "path": "farm",
-    "title": "Thông tin trang trại",
+    "title": "Farm Information",
     "ucRange": "UC-13",
     "group": "farm",
     "access": "farm",
     "icon": "home",
-    "description": "Xem thông tin trang trại đang tham gia. Chủ trang trại được cập nhật thông tin."
+    "description": "View active farm information. Farm owners can update farm details."
   },
   {
     "key": "workers",
     "path": "workers",
-    "title": "Người lao động",
+    "title": "Labor & Staff",
     "ucRange": "UC-14–15",
     "group": "farm",
     "access": "farm",
     "icon": "user",
-    "description": "Quản lý hồ sơ người lao động trong phạm vi được phân công."
+    "description": "Manage worker profiles and role assignments within the farm."
   },
   {
     "key": "production",
     "path": "production-areas",
-    "title": "Khu sản xuất & lô đất",
+    "title": "Zones & Blocks",
     "ucRange": "UC-16–17",
     "group": "production",
     "access": "farm",
     "icon": "plots",
-    "description": "Xem khu sản xuất và cập nhật lô đất trong phạm vi được phân công. Chủ trang trại quản lý việc tạo và xóa."
+    "description": "View zones and manage blocks. Farm owners can create and delete zones."
   },
   {
     "key": "environment",
     "path": "environment",
-    "title": "Điều kiện & môi trường",
+    "title": "Conditions & Environment",
     "ucRange": "UC-18–21",
     "group": "production",
     "access": "farm",
     "icon": "drop",
-    "description": "Ghi nhận điều kiện lô đất; quản lý đánh giá rủi ro, đất và nước."
+    "description": "Record block conditions; manage soil, water assessments, and environmental risks."
   },
   {
     "key": "seasons",
     "path": "crop-seasons",
-    "title": "Mùa vụ",
+    "title": "Crop Seasons",
     "ucRange": "UC-22",
     "group": "operations",
     "access": "farm",
     "icon": "calendar",
-    "description": "Quản lý mùa vụ trong phạm vi trang trại được cấp quyền."
+    "description": "Manage crop seasons and planting schedules across farm blocks."
   },
   {
     "key": "tasks",
     "path": "tasks",
-    "title": "Công việc",
+    "title": "Tasks & Assignments",
     "ucRange": "UC-23",
     "group": "operations",
     "access": "farm",
     "icon": "check",
-    "description": "Xem và cập nhật công việc được giao. Chủ trang trại quản lý và xét duyệt công việc."
+    "description": "View and update assigned tasks. Farm owners assign and approve task completion."
   },
   {
     "key": "activities",
     "path": "activities",
-    "title": "Nhật ký canh tác",
+    "title": "Farming Diary",
     "ucRange": "UC-24",
     "group": "operations",
     "access": "farm",
     "icon": "book",
-    "description": "Ghi nhận và cập nhật hoạt động canh tác trong phạm vi được phân công."
+    "description": "Record and monitor daily farming activities within assigned areas."
   },
   {
     "key": "materials",
     "path": "materials",
-    "title": "Sử dụng vật tư",
+    "title": "Material Usage",
     "ucRange": "UC-25",
     "group": "operations",
     "access": "farm",
     "icon": "box",
-    "description": "Ghi nhận và cập nhật việc sử dụng vật tư cho hoạt động canh tác."
+    "description": "Record and monitor fertilizer, pesticide, and seed usage for farming activities."
   },
   {
     "key": "harvests",
     "path": "harvests",
-    "title": "Thu hoạch & truy xuất",
+    "title": "Harvest & Traceability",
     "ucRange": "UC-26, 30",
     "group": "operations",
     "access": "farm",
     "icon": "leaf",
-    "description": "Ghi nhận thu hoạch và xem truy xuất các lô thu hoạch."
+    "description": "Record harvest batches and view origin traceability reports."
   },
   {
     "key": "training",
     "path": "training",
-    "title": "Đào tạo",
+    "title": "Training",
     "ucRange": "UC-27",
     "group": "compliance",
     "access": "farm",
     "icon": "book",
-    "description": "Ghi nhận và cập nhật hoạt động đào tạo trong trang trại."
+    "description": "Record and update internal training sessions and worker certifications."
   },
   {
     "key": "checklists",
     "path": "checklists",
-    "title": "Bảng kiểm VietGAP",
+    "title": "VietGAP Checklists",
     "ucRange": "UC-28",
     "group": "compliance",
     "access": "farm",
     "icon": "check",
-    "description": "Kiểm tra mức độ đầy đủ của hồ sơ sản xuất theo các tiêu chí VietGAP."
+    "description": "Verify production compliance criteria according to VietGAP standards."
   },
   {
     "key": "assessments",
     "path": "assessments",
-    "title": "Đánh giá nội bộ",
+    "title": "Internal Assessments",
     "ucRange": "UC-29",
     "group": "compliance",
     "access": "farm",
     "icon": "check",
-    "description": "Tạo và xem hồ sơ đánh giá nội bộ trong trang trại."
+    "description": "Create and review internal farm inspection and audit reports."
   },
   {
     "key": "reports",
     "path": "reports",
-    "title": "Báo cáo sản xuất",
+    "title": "Production Reports",
     "ucRange": "UC-31",
     "group": "reports",
     "access": "farm",
     "icon": "report",
-    "description": "Xem báo cáo sản xuất và mùa vụ. Chủ trang trại được tạo và xuất báo cáo."
+    "description": "View production analytics and seasonal summaries. Export reports."
   },
   {
     "key": "ai-drafts",
     "path": "ai-drafts",
-    "title": "Bản nháp canh tác AI",
+    "title": "AI Farming Drafts",
     "ucRange": "UC-32",
     "group": "ai",
     "access": "farm",
     "icon": "bot",
-    "description": "Tạo, xem lại, sửa, xác nhận hoặc hủy bản nháp canh tác do AI hỗ trợ."
+    "description": "Generate, review, confirm, or discard AI-assisted cultivation drafts."
   },
   {
     "key": "members",
     "path": "members",
-    "title": "Nhân sự & phân công",
+    "title": "Staff & Assignments",
     "ucRange": "UC-33–34",
     "group": "farm",
     "access": "owner",
     "icon": "user",
-    "description": "Quản lý thành viên và phân công nhân viên theo khu sản xuất của trang trại."
+    "description": "Manage farm members and technical staff assigned to production areas."
   },
   {
     "key": "suppliers",
     "path": "suppliers",
-    "title": "Nhà cung cấp",
+    "title": "Suppliers",
     "ucRange": "UC-35",
     "group": "operations",
     "access": "owner",
     "icon": "box",
-    "description": "Quản lý các nhà cung cấp vật tư của trang trại."
+    "description": "Manage agricultural material and equipment suppliers."
   },
   {
     "key": "purchases",
     "path": "purchases",
-    "title": "Mua vật tư",
+    "title": "Material Purchases",
     "ucRange": "UC-36",
     "group": "operations",
     "access": "owner",
     "icon": "box",
-    "description": "Ghi nhận, tìm kiếm và cập nhật các lần mua vật tư đầu vào."
+    "description": "Record, search, and update procurement logs for agricultural inputs."
   },
   {
     "key": "expenses",
     "path": "expenses",
-    "title": "Chi phí",
+    "title": "Costs & Expenses",
     "ucRange": "UC-37",
     "group": "reports",
     "access": "owner",
     "icon": "money",
-    "description": "Quản lý chi phí sản xuất và xem tổng hợp chi phí theo mùa vụ."
+    "description": "Track production expenditures and view season cost summaries."
   },
   {
     "key": "admin",
     "path": "admin",
-    "title": "Quản trị hệ thống",
+    "title": "System Administration",
     "ucRange": "UC-38–44",
     "group": "admin",
     "access": "admin",
     "icon": "report",
-    "description": "Xét duyệt đăng ký trang trại; quản lý tài khoản, nội dung, phản hồi AI và thống kê hệ thống."
+    "description": "Review farm registrations; manage users, content, AI feedback, and system analytics."
   },
   {
     "key": "admin-registrations",
     "path": "admin/registrations",
-    "title": "Duyệt đăng ký trang trại",
+    "title": "Farm Registrations",
     "ucRange": "UC-38",
     "icon": "plots",
-    "description": "Xem, duyệt hoặc từ chối hồ sơ đăng ký trang trại.",
+    "description": "Review, approve, or reject pending farm registrations.",
     "group": "admin",
     "access": "admin"
   },
   {
     "key": "admin-users",
     "path": "admin/users",
-    "title": "Quản lý tài khoản",
+    "title": "User Accounts",
     "ucRange": "UC-39",
     "icon": "user",
-    "description": "Tìm kiếm, xem chi tiết và khóa hoặc mở khóa tài khoản.",
+    "description": "Search, view details, and lock or unlock user accounts.",
     "group": "admin",
     "access": "admin"
   },
   {
     "key": "admin-crops",
     "path": "admin/crops",
-    "title": "Danh mục cây trồng",
+    "title": "Crop Categories",
     "ucRange": "UC-40",
     "icon": "leaf",
-    "description": "Tạo, sửa và quản lý trạng thái danh mục cây trồng.",
+    "description": "Create, edit, and manage crop category catalog.",
     "group": "admin",
     "access": "admin"
   },
   {
     "key": "admin-rules",
     "path": "admin/rules",
-    "title": "Quy tắc bảng kiểm",
+    "title": "Checklist Rules",
     "ucRange": "UC-41",
     "icon": "check",
-    "description": "Quản lý trường kiểm tra, phạm vi và mức yêu cầu.",
+    "description": "Manage inspection criteria, scopes, and compliance thresholds.",
     "group": "admin",
     "access": "admin"
   },
   {
     "key": "admin-articles",
     "path": "admin/articles",
-    "title": "Bài viết kiến thức",
+    "title": "Knowledge Articles",
     "ucRange": "UC-42",
     "icon": "book",
-    "description": "Biên soạn, duyệt, công bố và lưu trữ bài viết kiến thức.",
+    "description": "Draft, review, publish, and archive farming knowledge articles.",
     "group": "admin",
     "access": "admin"
   },
   {
     "key": "admin-feedback",
     "path": "admin/feedback",
-    "title": "Phản hồi AI",
+    "title": "AI Feedback Review",
     "ucRange": "UC-43",
     "icon": "message",
-    "description": "Xem, trả lời và cập nhật trạng thái phản hồi của người dùng.",
+    "description": "Review, respond to, and manage user feedback on AI responses.",
     "group": "admin",
     "access": "admin"
   },
   {
     "key": "admin-statistics",
     "path": "admin/statistics",
-    "title": "Thống kê hệ thống",
+    "title": "System Analytics",
     "ucRange": "UC-44",
     "icon": "report",
-    "description": "Xem thống kê người dùng, mùa vụ, chi phí và bảng kiểm.",
+    "description": "View system analytics for users, seasons, costs, and compliance.",
     "group": "admin",
     "access": "admin"
   },
   {
     "key": "admin-audit",
     "path": "admin/audit",
-    "title": "Nhật ký quản trị",
+    "title": "Audit Logs",
     "ucRange": "§3.9.5",
     "icon": "history",
-    "description": "Tra cứu lịch sử thao tác quản trị.",
+    "description": "Look up administrative activity and audit history.",
     "group": "admin",
     "access": "admin"
   }

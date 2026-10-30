@@ -62,7 +62,7 @@ export function BlockModal({
           blockName: '',
           areaValue: '',
           areaUnit: 'm2',
-          soilType: 'Đất thịt nhẹ pha cát (Sandy Loam)',
+          soilType: 'Loam nhẹ pha cát (Sandy Loam)',
           description: '',
           imageUrl: '',
           latitude: '',
@@ -95,7 +95,7 @@ export function BlockModal({
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError('Diện tích Block (Area) phải lớn hơn 0.');
+      setError('Area Block (Area) phải lớn hơn 0.');
       return;
     }
 
@@ -113,7 +113,7 @@ export function BlockModal({
     }
     if (targetZone && targetZone.areaValue && areaNum > targetZone.areaValue) {
       setError(
-        `Diện tích lô đất (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`
+        `Diện tích Block (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`
       );
       return;
     }
@@ -170,7 +170,7 @@ export function BlockModal({
                 Khu vực quản lý trực thuộc <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">
-                {isZoneLocked ? 'Cố định khu vực' : 'Chọn khu vực'}
+                {isZoneLocked ? 'Cố định khu vực' : 'Select Zone'}
               </span>
             </div>
             {isZoneLocked ? (
@@ -225,7 +225,7 @@ export function BlockModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="block-area-input" className="structured-field-label">
-                  Diện tích lô sản xuất <span style={{ color: '#dc2626' }}>*</span>
+                  Zone lô sản xuất <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <span className="structured-field-badge">&gt; 0</span>
               </div>
@@ -246,7 +246,7 @@ export function BlockModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="block-unit-select" className="structured-field-label">
-                  Đơn vị diện tích
+                  Zone Unit
                 </label>
                 <span className="structured-field-badge">Đơn vị</span>
               </div>
@@ -256,8 +256,8 @@ export function BlockModal({
                   value={values.areaUnit}
                   onChange={(e) => setValues({ ...values, areaUnit: e.target.value })}
                 >
-                  <option value="m2">m² (Mét vuông)</option>
-                  <option value="ha">ha (Hecta)</option>
+                  <option value="m2">m²</option>
+                  <option value="ha">ha</option>
                 </select>
               </div>
             </div>
@@ -267,7 +267,7 @@ export function BlockModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="block-soil-input" className="structured-field-label">
-                Loại đất &amp; nền thổ nhưỡng
+                Soil Type &amp; nền thổ nhưỡng
               </label>
               <span className="structured-field-badge">{values.soilType.length}/120 ký tự</span>
             </div>
@@ -276,7 +276,7 @@ export function BlockModal({
                 id="block-soil-input"
                 type="text"
                 maxLength={120}
-                placeholder="VD: Đất thịt nhẹ pha cát, Đất phù sa cổ, Giá thể xơ dừa..."
+                placeholder="VD: Loam nhẹ pha cát, Alluvial cổ, Giá thể xơ dừa..."
                 value={values.soilType}
                 onChange={(e) => setValues({ ...values, soilType: e.target.value })}
               />
@@ -293,7 +293,7 @@ export function BlockModal({
             </div>
             <div className="farm-registration-location-fields" style={{ gap: '12px', marginBottom: '12px' }}>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <span>Vĩ độ</span>
+                <span>Latitude</span>
                 <input
                   id="block-lat-input"
                   type="number"
@@ -304,7 +304,7 @@ export function BlockModal({
                 />
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <span>Kinh độ</span>
+                <span>Longitude</span>
                 <input
                   id="block-lng-input"
                   type="number"
@@ -336,7 +336,7 @@ export function BlockModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="block-desc-input" className="structured-field-label">
-                Mô tả chi tiết lô sản xuất
+                Description lô sản xuất
               </label>
               <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
             </div>
@@ -345,7 +345,7 @@ export function BlockModal({
                 id="block-desc-input"
                 rows={3}
                 maxLength={500}
-                placeholder="Ghi chú đặc điểm mặt luống, hệ thống tưới nhỏ giọt, lịch sử canh tác trên lô đất..."
+                placeholder="Ghi chú đặc điểm mặt luống, hệ thống tưới nhỏ giọt, lịch sử canh tác trên Block..."
                 value={values.description}
                 onChange={(e) => setValues({ ...values, description: e.target.value })}
               />
@@ -354,10 +354,10 @@ export function BlockModal({
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
             <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
-              Hủy
+              Cancel
             </button>
             <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? 'Đang lưu...' : mode === 'create' ? 'Tạo lô đất' : 'Lưu thay đổi'}
+              {loading ? 'Saving...' : mode === 'create' ? 'Tạo Block' : 'Lưu thay đổi'}
             </button>
           </div>
         </form>

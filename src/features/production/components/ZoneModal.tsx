@@ -84,7 +84,7 @@ export function ZoneModal({
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError('Diện tích Zone phải là số dương hợp lệ (> 0).');
+      setError('Area Zone phải là số dương hợp lệ (> 0).');
       return;
     }
 
@@ -92,7 +92,7 @@ export function ZoneModal({
       const currentBlocksTotal = initialZone.blocks.reduce((sum, b) => sum + (b.areaValue || 0), 0);
       if (areaNum < currentBlocksTotal) {
         setError(
-          `Diện tích phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`
+          `Area phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`
         );
         return;
       }
@@ -151,7 +151,7 @@ export function ZoneModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="zone-name-input" className="structured-field-label">
-                Tên khu vực quản lý <span style={{ color: '#dc2626' }}>*</span>
+                Zone Name quản lý <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">{values.zoneName.length}/100 ký tự · Bắt buộc</span>
             </div>
@@ -172,7 +172,7 @@ export function ZoneModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="zone-area-input" className="structured-field-label">
-                  Diện tích quy hoạch <span style={{ color: '#dc2626' }}>*</span>
+                  Zone quy hoạch <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <span className="structured-field-badge">&gt; 0</span>
               </div>
@@ -193,7 +193,7 @@ export function ZoneModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="zone-unit-select" className="structured-field-label">
-                  Đơn vị diện tích
+                  Zone Unit
                 </label>
                 <span className="structured-field-badge">Đơn vị</span>
               </div>
@@ -203,8 +203,8 @@ export function ZoneModal({
                   value={values.areaUnit}
                   onChange={(e) => setValues({ ...values, areaUnit: e.target.value })}
                 >
-                  <option value="m2">m² (Mét vuông)</option>
-                  <option value="ha">ha (Hecta)</option>
+                  <option value="m2">m²</option>
+                  <option value="ha">ha</option>
                 </select>
               </div>
             </div>
@@ -213,7 +213,7 @@ export function ZoneModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="zone-desc-input" className="structured-field-label">
-                Mô tả đặc điểm khu vực &amp; hạ tầng
+                Description đặc điểm Zone &amp; hạ tầng
               </label>
               <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
             </div>
@@ -222,7 +222,7 @@ export function ZoneModal({
                 id="zone-desc-input"
                 rows={3}
                 maxLength={500}
-                placeholder="Mô tả vị trí tiếp giáp, điều kiện nhà màng/nhà lưới, nguồn nước và nhóm cây trồng..."
+                placeholder="Description vị trí tiếp giáp, điều kiện nhà màng/nhà lưới, nguồn nước và nhóm cây trồng..."
                 value={values.description}
                 onChange={(e) => setValues({ ...values, description: e.target.value })}
               />
@@ -249,10 +249,10 @@ export function ZoneModal({
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
             <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
-              Hủy
+              Cancel
             </button>
             <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? 'Đang lưu...' : mode === 'create' ? 'Tạo khu vực' : 'Lưu thay đổi'}
+              {loading ? 'Saving...' : mode === 'create' ? 'Tạo Zone' : 'Lưu thay đổi'}
             </button>
           </div>
         </form>

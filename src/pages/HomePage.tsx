@@ -155,7 +155,7 @@ export function HomePage() {
             <div className="hero-text-block">
               <div className="hero-badge-pill">
                 <Icon name="sparkles" className="badge-sparkle-icon" />
-                <span>Nền tảng Nông nghiệp Số Chuẩn VietGAP hàng đầu</span>
+                <span>VietGAP Digital Agriculture Platform hàng đầu</span>
               </div>
 
               <h1 id="showcase-title" className="hero-main-title">
@@ -524,7 +524,7 @@ export function HomePage() {
                 Sẵn sàng nâng tầm trang trại của bạn hôm nay?
               </h2>
               <p className="cta-desc">
-                Đăng ký tài khoản miễn phí chỉ trong 2 phút. Bắt đầu ghi nhật ký mùa vụ,
+                Register Account miễn phí chỉ trong 2 phút. Bắt đầu ghi nhật ký mùa vụ,
                 chuẩn hóa quy trình và khẳng định thương hiệu nông sản sạch của bạn.
               </p>
               <div className="cta-buttons">

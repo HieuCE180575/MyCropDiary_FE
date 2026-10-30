@@ -114,7 +114,7 @@ export function ZoneListPage() {
       if (isSilent) setError(null);
     } catch (err) {
       if (!isSilent) {
-        setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu phân khu & lô đất.');
+        setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu phân khu & Block.');
       }
     } finally {
       if (!isSilent) setLoading(false);
@@ -333,8 +333,8 @@ export function ZoneListPage() {
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
             {statsReady
-              ? `${zones.length} khu vực · ${blocks.length} lô đất · Tổng diện tích: ${totalZoneAreaM2.toLocaleString('vi-VN')} m²`
-              : 'Đang tải dữ liệu khu vực và lô đất...'}
+              ? `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${totalZoneAreaM2.toLocaleString('vi-VN')} m²`
+              : 'Đang tải dữ liệu khu vực và Block...'}
           </p>
         </div>
 
@@ -377,7 +377,7 @@ export function ZoneListPage() {
                 boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
               }}
             >
-              <Icon name="plus" size={17} /> Thêm lô đất
+              <Icon name="plus" size={17} /> Thêm Block
             </button>
           )}
         </div>
@@ -420,7 +420,7 @@ export function ZoneListPage() {
               className={`zone-integrated-tab-btn ${activeTab === 'blocks' ? 'active' : ''}`}
               onClick={() => setActiveTab('blocks')}
             >
-              <Icon name="leaf" size={17} /> Lô đất <span className="tab-count">({visibleBlocks.length})</span>
+              <Icon name="leaf" size={17} /> Block <span className="tab-count">({visibleBlocks.length})</span>
             </button>
           </div>
 
@@ -468,8 +468,8 @@ export function ZoneListPage() {
                 <button
                   type="button"
                   className="zone-clean-reload-btn"
-                  title="Làm mới bộ lọc"
-                  aria-label="Làm mới bộ lọc"
+                  title="Refresh bộ lọc"
+                  aria-label="Refresh bộ lọc"
                   onClick={handleResetZoneFilters}
                 >
                   <Icon name="refresh" size={16} />
@@ -501,16 +501,16 @@ export function ZoneListPage() {
                             <input type="checkbox" aria-label="Chọn tất cả" style={{ cursor: 'pointer' }} />
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Tên khu vực
+                            Zone Name
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Mã khu vực
+                            Zone Code
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Diện tích
+                            Area
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Lô đất
+                            Block
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
                             Phụ trách
@@ -593,8 +593,8 @@ export function ZoneListPage() {
                                   <Link
                                     to={`/zones/${zone.zoneId}`}
                                     className="table-icon-btn primary"
-                                    title="Xem chi tiết phân khu"
-                                    aria-label={`Xem chi tiết ${zone.zoneName}`}
+                                    title="View Details phân khu"
+                                    aria-label={`View Details ${zone.zoneName}`}
                                   >
                                     <Icon name="eye" size={15} />
                                   </Link>
@@ -603,8 +603,8 @@ export function ZoneListPage() {
                                       <button
                                         type="button"
                                         className="table-icon-btn edit"
-                                        title="Chỉnh sửa khu vực"
-                                        aria-label={`Chỉnh sửa ${zone.zoneName}`}
+                                        title="Edit khu vực"
+                                        aria-label={`Edit ${zone.zoneName}`}
                                         onClick={() => handleEditZoneClick(zone)}
                                       >
                                         <Icon name="edit" size={15} />
@@ -627,10 +627,10 @@ export function ZoneListPage() {
                                         }}
                                         title={
                                           canDelete
-                                            ? 'Xóa khu vực'
-                                            : `Không thể xóa khi còn ${blockCount} lô đất liên kết`
+                                            ? 'Delete khu vực'
+                                            : `Không thể xóa khi còn ${blockCount} Block liên kết`
                                         }
-                                        aria-label={`Xóa ${zone.zoneName}`}
+                                        aria-label={`Delete ${zone.zoneName}`}
                                         onClick={() => handleAttemptDeleteZone(zone)}
                                       >
                                         <Icon name="trash" size={15} />
@@ -669,7 +669,7 @@ export function ZoneListPage() {
           )}
 
           {/* =========================================================
-              TAB 2: BLOCKS (Danh sách Lô đất)
+              TAB 2: BLOCKS (Danh sách Block)
              ========================================================= */}
           {activeTab === 'blocks' && (
             <>
@@ -682,7 +682,7 @@ export function ZoneListPage() {
                   <input
                     id="search-blocks-input"
                     type="search"
-                    placeholder="Tìm theo tên hoặc mã lô đất"
+                    placeholder="Tìm theo tên hoặc mã Block"
                     value={blockKeyword}
                     onChange={(e) => setBlockKeyword(e.target.value)}
                   />
@@ -712,8 +712,8 @@ export function ZoneListPage() {
                 <button
                   type="button"
                   className="zone-clean-reload-btn"
-                  title="Làm mới bộ lọc"
-                  aria-label="Làm mới bộ lọc"
+                  title="Refresh bộ lọc"
+                  aria-label="Refresh bộ lọc"
                   onClick={handleResetBlockFilters}
                 >
                   <Icon name="refresh" size={16} />
@@ -726,12 +726,12 @@ export function ZoneListPage() {
                   <h2>Chưa tìm thấy lô sản xuất nào</h2>
                   <p>
                     {isOwner
-                      ? 'Nhấn "Thêm lô đất" để thêm lô sản xuất mới bên trong khu vực.'
-                      : 'Không có lô đất nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.'}
+                      ? 'Nhấn "Thêm Block" để thêm lô sản xuất mới bên trong khu vực.'
+                      : 'Không có Block nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.'}
                   </p>
                   {isOwner && visibleZones.length > 0 && (
                     <button type="button" className="primary-button" onClick={() => handleCreateBlockClick()}>
-                      <Icon name="plus" size={16} /> Thêm lô đất
+                      <Icon name="plus" size={16} /> Thêm Block
                     </button>
                   )}
                 </div>
@@ -745,19 +745,19 @@ export function ZoneListPage() {
                             <input type="checkbox" aria-label="Chọn tất cả lô" style={{ cursor: 'pointer' }} />
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Tên lô đất
+                            Block Name
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Mã lô đất
+                            Block Code đất
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Khu vực trực thuộc
+                            Parent Zone
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Diện tích
+                            Area
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Loại đất / Điều kiện
+                            Soil Type / Điều kiện
                           </th>
                           <th style={{ width: '130px', padding: '14px 16px', textAlign: 'right' }}>
                             &nbsp;
@@ -838,8 +838,8 @@ export function ZoneListPage() {
                                   <button
                                     type="button"
                                     className="table-icon-btn primary"
-                                    title="Xem chi tiết lô đất"
-                                    aria-label={`Xem chi tiết ${b.blockName}`}
+                                    title="View Details Block"
+                                    aria-label={`View Details ${b.blockName}`}
                                     onClick={() => navigate(`/zones/${b.zoneId}/blocks/${b.blockId}`)}
                                   >
                                     <Icon name="eye" size={15} />
@@ -847,8 +847,8 @@ export function ZoneListPage() {
                                   <button
                                     type="button"
                                     className="table-icon-btn edit"
-                                    title="Chỉnh sửa thông tin lô đất"
-                                    aria-label={`Chỉnh sửa ${b.blockName}`}
+                                    title="Edit thông tin Block"
+                                    aria-label={`Edit ${b.blockName}`}
                                     onClick={() => handleEditBlockClick(b)}
                                   >
                                     <Icon name="edit" size={15} />
@@ -869,8 +869,8 @@ export function ZoneListPage() {
                                     <button
                                       type="button"
                                       className="table-icon-btn danger"
-                                      title="Xóa lô đất"
-                                      aria-label={`Xóa ${b.blockName}`}
+                                      title="Delete Block"
+                                      aria-label={`Delete ${b.blockName}`}
                                       onClick={() => setBlockToDelete(b)}
                                     >
                                       <Icon name="trash" size={15} />
@@ -888,7 +888,7 @@ export function ZoneListPage() {
                   {/* Table Footer for Blocks */}
                   <div className="zone-table-footer">
                     <div>
-                      Hiển thị 1–{filteredBlocks.length} trong {filteredBlocks.length} lô đất
+                      Hiển thị 1–{filteredBlocks.length} trong {filteredBlocks.length} Block
                     </div>
                     <div className="zone-pagination-wrap">
                       <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
@@ -943,10 +943,10 @@ export function ZoneListPage() {
         onSuccess={(saved) => {
           if (blockToEdit) {
             setBlocks((prev) => prev.map((b) => (b.blockId === saved.blockId ? saved : b)));
-            showToast(`Đã cập nhật lô đất "${saved.blockName}" thành công!`);
+            showToast(`Đã cập nhật Block "${saved.blockName}" thành công!`);
           } else {
             setBlocks((prev) => [saved, ...prev]);
-            showToast(`Đã tạo mới lô đất "${saved.blockName}" thành công!`);
+            showToast(`Đã tạo mới Block "${saved.blockName}" thành công!`);
           }
         }}
       />
@@ -976,8 +976,8 @@ export function ZoneListPage() {
       <ConfirmDialog
         open={Boolean(zoneToDelete)}
         title="Xác nhận xóa khu vực"
-        description={`Bạn có chắc chắn muốn xóa khu vực "${zoneToDelete?.zoneName}"? Khu vực này hiện không có lô đất hay mùa vụ liên kết.`}
-        confirmLabel="Xóa khu vực"
+        description={`Bạn có chắc chắn muốn xóa khu vực "${zoneToDelete?.zoneName}"? Khu vực này hiện không có Block hay mùa vụ liên kết.`}
+        confirmLabel="Delete khu vực"
         tone="danger"
         onClose={() => setZoneToDelete(null)}
         onConfirm={handleConfirmDeleteZone}
@@ -985,9 +985,9 @@ export function ZoneListPage() {
 
       <ConfirmDialog
         open={Boolean(blockToDelete)}
-        title="Xác nhận xóa lô đất"
-        description={`Bạn có chắc chắn muốn xóa lô đất "${blockToDelete?.blockName}"? Hệ thống chỉ cho phép xóa khi lô đất chưa phát sinh mùa vụ hoặc nhật ký liên kết.`}
-        confirmLabel="Xóa lô đất"
+        title="Xác nhận xóa Block"
+        description={`Bạn có chắc chắn muốn xóa Block "${blockToDelete?.blockName}"? Hệ thống chỉ cho phép xóa khi Block chưa phát sinh mùa vụ hoặc nhật ký liên kết.`}
+        confirmLabel="Delete Block"
         tone="danger"
         onClose={() => setBlockToDelete(null)}
         onConfirm={handleConfirmDeleteBlock}

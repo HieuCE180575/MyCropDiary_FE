@@ -7,23 +7,23 @@ import { Icon } from '../shared/components/Icon';
 const loginBenefits = [
   {
     icon: 'leaf',
-    title: 'Nhật ký canh tác số VietGAP',
-    desc: 'Ghi chép đợt gieo trồng, bón phân, tưới tiêu và cách ly minh bạch, chính xác từng ngày.',
+    title: 'VietGAP Digital Diary',
+    desc: 'Record planting batches, fertilizing, irrigation, and harvest intervals transparently every day.',
   },
   {
     icon: 'plots',
-    title: 'Quản trị Phân khu & Lô thửa',
-    desc: 'Cấu trúc Zone & Block đồng bộ, giám sát thổ nhưỡng và điều kiện môi trường thực tế.',
+    title: 'Zone & Block Management',
+    desc: 'Synchronized Zone & Block architecture, monitoring soil health and field conditions in real time.',
   },
   {
     icon: 'shield',
-    title: 'Bảo mật & Phân quyền',
-    desc: 'Kiểm soát truy cập chặt chẽ cho Quản trị viên, Chủ nông trại và Kỹ thuật viên.',
+    title: 'Security & Access Control',
+    desc: 'Fine-grained role permissions for Administrators, Farm Owners, and Technical Staff.',
   },
   {
     icon: 'bot',
-    title: 'Trợ lý AI & Báo cáo thông minh',
-    desc: 'Tư vấn phòng trừ sâu bệnh, cảnh báo rủi ro cách ly và tự động tổng hợp hồ sơ thẩm định.',
+    title: 'AI Assistant & Reports',
+    desc: 'Receive disease advisory, quarantine safety alerts, and generate automated audit portfolios.',
   },
 ];
 
@@ -53,7 +53,7 @@ export function LoginPage() {
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setError('Vui lòng nhập đầy đủ email và mật khẩu.');
+      setError('Please enter both email and password.');
       return;
     }
 
@@ -64,7 +64,7 @@ export function LoginPage() {
       const authorization = await authenticate(trimmedEmail, password);
       setSession(authorization);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không đăng nhập được. Vui lòng thử lại.');
+      setError(reason instanceof Error ? reason.message : 'Login failed. Please try again.');
     } finally {
       setPending(false);
     }
@@ -72,22 +72,22 @@ export function LoginPage() {
 
   return (
     <main className="auth-page login-page-root">
-      {/* Cột trái: Showcase banner thương hiệu chuẩn phong cách Register */}
+      {/* Left Column: Showcase Banner */}
       <section className="auth-showcase" aria-labelledby="login-showcase-title">
         <div className="showcase-inner">
           <div className="showcase-badge">
             <Icon name="shield" />
-            <span>Nông nghiệp Thông minh &amp; Bền vững</span>
+            <span>Smart &amp; Sustainable Agriculture</span>
           </div>
 
           <div className="showcase-content">
             <h1 id="login-showcase-title">
-              Chào mừng trở lại<br />
-              <span className="gradient-text">Hệ thống MyCropDiary</span><br />
-              Nhật ký số VietGAP.
+              Welcome back to<br />
+              <span className="gradient-text">MyCropDiary</span><br />
+              VietGAP Digital Diary.
             </h1>
             <p className="showcase-desc">
-              Đăng nhập để tiếp tục quản lý mùa vụ, cập nhật nhật ký canh tác theo Zone &amp; Block và đồng bộ hồ sơ truy xuất nguồn gốc.
+              Log in to manage crop seasons, update farming diaries by Zone &amp; Block, and synchronize origin traceability records.
             </p>
           </div>
 
@@ -108,26 +108,26 @@ export function LoginPage() {
           <div className="showcase-highlight-card">
             <div className="highlight-stat">
               <span className="stat-number">10,000+</span>
-              <span className="stat-label">Bản ghi nhật ký đã tạo</span>
+              <span className="stat-label">Diaries Logged</span>
             </div>
             <div className="highlight-divider" />
             <div className="highlight-stat">
               <span className="stat-number">100%</span>
-              <span className="stat-label">Chuẩn hóa VietGAP</span>
+              <span className="stat-label">VietGAP Standardized</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Cột phải: Form Đăng nhập */}
-      <section className="auth-panel" aria-label="Đăng nhập tài khoản">
+      {/* Right Column: Login Form */}
+      <section className="auth-panel" aria-label="Sign in to your account">
         <div className="auth-card">
           <div className="auth-card-header">
             <div className="auth-card-icon">
               <Icon name="login" />
             </div>
-            <h2>Chào mừng bạn trở lại!</h2>
-            <p>Đăng nhập để quản lý trang trại và nhật ký canh tác của bạn</p>
+            <h2>Welcome Back!</h2>
+            <p>Sign in to manage your digital farm and cultivation diaries</p>
           </div>
 
           {error && (
@@ -146,7 +146,7 @@ export function LoginPage() {
 
           <form id="login-form" className="auth-form" autoComplete="on" onSubmit={submit} noValidate>
             <div className="form-group">
-              <label htmlFor="login-email">Địa chỉ Email</label>
+              <label htmlFor="login-email">Email Address</label>
               <div className="input-with-icon">
                 <span className="input-lead-icon">
                   <Icon name="mail" />
@@ -171,12 +171,12 @@ export function LoginPage() {
 
             <div className="form-group">
               <div className="label-with-action">
-                <label htmlFor="login-password">Mật khẩu</label>
+                <label htmlFor="login-password">Password</label>
                 <Link
                   to="/forgot-password"
                   className="link-forgot-password"
                 >
-                  Quên mật khẩu?
+                  Forgot password?
                 </Link>
               </div>
               <div className="input-with-icon">
@@ -188,7 +188,7 @@ export function LoginPage() {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  placeholder="Nhập mật khẩu tài khoản"
+                  placeholder="Enter your password"
                   required
                   disabled={pending}
                   value={password}
@@ -201,7 +201,7 @@ export function LoginPage() {
                   type="button"
                   className="input-trailing-toggle"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   tabIndex={-1}
                 >
                   <Icon name={showPassword ? 'eye-off' : 'eye'} />
@@ -219,11 +219,11 @@ export function LoginPage() {
                 name={pending ? 'loader' : 'login'}
                 className={pending ? 'icon-spin' : undefined}
               />
-              <span>{pending ? 'Đang xác thực…' : 'Đăng nhập vào hệ thống'}</span>
+              <span>{pending ? 'Authenticating…' : 'Sign In'}</span>
             </button>
 
             <div className="auth-divider">
-              <span>hoặc</span>
+              <span>or</span>
             </div>
 
             <button
@@ -231,7 +231,7 @@ export function LoginPage() {
               type="button"
               disabled={pending}
               onClick={() => setIsGoogleModalOpen(true)}
-              title="Đăng nhập bằng tài khoản Google"
+              title="Sign in with Google"
             >
               <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                 <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -239,13 +239,13 @@ export function LoginPage() {
                 <path fill="#FBBC05" d="M5.28 14.27A7.195 7.195 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.966 11.966 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
                 <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
               </svg>
-              <span>Tiếp tục với Google</span>
+              <span>Continue with Google</span>
             </button>
 
             <p className="auth-switch-prompt">
-              Bạn chưa có tài khoản?{' '}
+              Don't have an account yet?{' '}
               <Link to="/register" className="auth-switch-link">
-                Đăng ký tài khoản mới <Icon name="arrow" />
+                Register now <Icon name="arrow" />
               </Link>
             </p>
           </form>

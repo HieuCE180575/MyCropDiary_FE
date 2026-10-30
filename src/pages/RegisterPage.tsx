@@ -29,51 +29,51 @@ function validateField(field: keyof FormValues, value: string, values: FormValue
   switch (field) {
     case 'fullName': {
       const trimmed = value.trim();
-      if (!trimmed) return 'Vui lòng nhập họ tên.';
-      if (trimmed.length < 2) return 'Họ tên phải có ít nhất 2 ký tự.';
-      if (trimmed.length > 150) return 'Họ tên không được vượt quá 150 ký tự.';
+      if (!trimmed) return 'Please enter your full name.';
+      if (trimmed.length < 2) return 'Full name must have at least 2 characters.';
+      if (trimmed.length > 150) return 'Full name cannot exceed 150 characters.';
       return '';
     }
     case 'email': {
       const trimmed = value.trim();
-      if (!trimmed) return 'Vui lòng nhập email.';
-      if (!EMAIL_REGEX.test(trimmed)) return 'Email không đúng định dạng (ví dụ: ten@gmail.com).';
+      if (!trimmed) return 'Please enter your email.';
+      if (!EMAIL_REGEX.test(trimmed)) return 'Invalid email format (e.g. user@gmail.com).';
       return '';
     }
     case 'phoneNumber': {
       const raw = value.trim();
-      if (!raw) return ''; // Số điện thoại là không bắt buộc
+      if (!raw) return ''; // Phone number is optional
       if (/[a-zA-Z]/.test(raw)) {
-        return 'Số điện thoại chỉ được chứa chữ số, không được chứa chữ cái.';
+        return 'Phone number must only contain digits, not letters.';
       }
       if (!PHONE_CHARS_REGEX.test(raw)) {
-        return 'Số điện thoại chỉ được chứa chữ số và dấu +.';
+        return 'Phone number can only contain digits and + sign.';
       }
       const cleaned = raw.replace(/[\s.-]/g, '');
       if (!/^(0|\+84)\d{9}$/.test(cleaned)) {
-        return 'Số điện thoại không đúng định dạng (gồm 10 số, bắt đầu bằng 0).';
+        return 'Phone number must be a valid 10-digit number starting with 0 or +84.';
       }
       return '';
     }
     case 'password': {
-      if (!value) return 'Vui lòng nhập mật khẩu.';
-      if (value.length < 8) return 'Mật khẩu phải có ít nhất 8 ký tự.';
-      if (value.length > 100) return 'Mật khẩu không được vượt quá 100 ký tự.';
-      if (!/[A-Z]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 chữ in hoa.';
-      if (!/[a-z]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 chữ in thường.';
-      if (!/[^a-zA-Z0-9]/.test(value)) return 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.';
+      if (!value) return 'Please enter your password.';
+      if (value.length < 8) return 'Password must have at least 8 characters.';
+      if (value.length > 100) return 'Password cannot exceed 100 characters.';
+      if (!/[A-Z]/.test(value)) return 'Password must contain at least 1 uppercase letter.';
+      if (!/[a-z]/.test(value)) return 'Password must contain at least 1 lowercase letter.';
+      if (!/[^a-zA-Z0-9]/.test(value)) return 'Password must contain at least 1 special character.';
       return '';
     }
     case 'confirmation': {
-      if (!value) return 'Vui lòng nhập lại mật khẩu.';
-      if (value !== values.password) return 'Mật khẩu xác nhận không khớp.';
+      if (!value) return 'Please confirm your password.';
+      if (value !== values.password) return 'Password confirmation does not match.';
       return '';
     }
     case 'otp': {
       const trimmed = value.trim();
-      if (!trimmed) return 'Vui lòng nhập mã OTP.';
-      if (/[^0-9]/.test(trimmed)) return 'Mã OTP chỉ được chứa chữ số.';
-      if (trimmed.length !== 6) return 'Mã OTP phải gồm đúng 6 chữ số.';
+      if (!trimmed) return 'Please enter the OTP code.';
+      if (/[^0-9]/.test(trimmed)) return 'OTP code can only contain digits.';
+      if (trimmed.length !== 6) return 'OTP code must be exactly 6 digits.';
       return '';
     }
     default:
@@ -84,23 +84,23 @@ function validateField(field: keyof FormValues, value: string, values: FormValue
 const registerBenefits = [
   {
     icon: 'leaf',
-    title: 'Khởi tạo nhanh chóng',
-    desc: 'Đăng ký tài khoản miễn phí chỉ trong 2 phút, kích hoạt xác thực bảo mật OTP email.',
+    title: 'Quick Registration',
+    desc: 'Create a free account in 2 minutes with secure email OTP verification.',
   },
   {
     icon: 'plots',
-    title: 'Số hoá trang trại chuẩn VietGAP',
-    desc: 'Dễ dàng tạo vùng canh tác, quản lý lô thửa và theo dõi tình trạng cây trồng khoa học.',
+    title: 'VietGAP Digital Farm',
+    desc: 'Easily create production zones, manage plots, and monitor crops scientifically.',
   },
   {
     icon: 'shield',
-    title: 'Lưu trữ an toàn đám mây',
-    desc: 'Toàn bộ hồ sơ mùa vụ và chứng từ nông trại được bảo mật, sao lưu định kỳ 24/7.',
+    title: 'Secure Cloud Storage',
+    desc: 'All season diaries and farm records are encrypted and backed up 24/7.',
   },
   {
     icon: 'bot',
-    title: 'Hỗ trợ kỹ thuật thông minh',
-    desc: 'Tra cứu kiến thức phòng trừ sâu bệnh, cách ly thuốc BVTV đạt chuẩn xuất khẩu.',
+    title: 'Smart AI Assistance',
+    desc: 'Lookup pest treatments and harvest intervals compliant with export standards.',
   },
 ];
 
@@ -147,7 +147,7 @@ export function RegisterPage() {
     try {
       await action();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Yêu cầu không thành công. Vui lòng thử lại.');
+      setError(reason instanceof Error ? reason.message : 'Action failed. Please try again.');
     } finally {
       busy.current = false;
       setPending(false);
@@ -205,7 +205,7 @@ export function RegisterPage() {
       setValues((prev) => ({ ...prev, password: '', confirmation: '', otp: '' }));
       setTouched({});
       setStep('verify');
-      setNotice('Đã tạo tài khoản thành công! Vui lòng kiểm tra email và thư rác để lấy mã OTP.');
+      setNotice('Account created successfully! Please check your email inbox and spam folder for your 6-digit OTP code.');
     });
   }
 
@@ -216,22 +216,22 @@ export function RegisterPage() {
 
   return (
     <main className="auth-page register-page-root">
-      {/* Cột trái: Showcase lợi ích tạo tài khoản */}
+      {/* Left Column: Benefits Showcase */}
       <section className="auth-showcase" aria-labelledby="register-showcase-title">
         <div className="showcase-inner">
           <div className="showcase-badge">
             <Icon name="shield" />
-            <span>Nông nghiệp Thông minh &amp; Bền vững</span>
+            <span>Smart &amp; Sustainable Agriculture</span>
           </div>
 
           <div className="showcase-content">
             <h1 id="register-showcase-title">
-              Bắt đầu hành trình<br />
-              <span className="gradient-text">Số hoá nông trại</span><br />
-              cùng MyCropDiary.
+              Start your<br />
+              <span className="gradient-text">Digital Farming</span><br />
+              journey with MyCropDiary.
             </h1>
             <p className="showcase-desc">
-              Tạo tài khoản cá nhân để chuẩn bị đăng ký thông tin trang trại, lưu trữ dữ liệu canh tác và theo dõi sản xuất theo chuẩn VietGAP.
+              Create a personal account to register your farm, store cultivation logs, and track production according to VietGAP standards.
             </p>
           </div>
 
@@ -252,30 +252,30 @@ export function RegisterPage() {
           <div className="showcase-highlight-card">
             <div className="highlight-stat">
               <span className="stat-number">10,000+</span>
-              <span className="stat-label">Bản ghi nhật ký đã tạo</span>
+              <span className="stat-label">Diaries Logged</span>
             </div>
             <div className="highlight-divider" />
             <div className="highlight-stat">
-              <span className="stat-number">Miễn phí</span>
-              <span className="stat-label">Bắt đầu trải nghiệm ngay</span>
+              <span className="stat-number">Free</span>
+              <span className="stat-label">Get started today</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Cột phải: Form Đăng ký / Xác thực */}
-      <section className="auth-panel" aria-label="Tạo tài khoản">
+      {/* Right Column: Register / OTP Form */}
+      <section className="auth-panel" aria-label="Create account">
         <div className="auth-card">
-          {/* Thanh chỉ báo bước (Step indicator) */}
-          <div className="step-indicator-bar" aria-label="Các bước đăng ký">
+          {/* Step Indicator */}
+          <div className="step-indicator-bar" aria-label="Registration steps">
             <div className={`step-item ${step === 'register' ? 'is-current' : 'is-done'}`}>
               <span className="step-badge">{step === 'verify' ? <Icon name="check" /> : '1'}</span>
-              <span className="step-label">Thông tin</span>
+              <span className="step-label">Information</span>
             </div>
             <div className="step-connector" />
             <div className={`step-item ${step === 'verify' ? 'is-current' : ''}`}>
               <span className="step-badge">2</span>
-              <span className="step-label">Xác thực OTP</span>
+              <span className="step-label">OTP Verification</span>
             </div>
           </div>
 
@@ -283,11 +283,11 @@ export function RegisterPage() {
             <div className="auth-card-icon">
               <Icon name={step === 'register' ? 'user-plus' : 'shield'} />
             </div>
-            <h2>{step === 'register' ? 'Tạo tài khoản mới' : 'Xác thực địa chỉ Email'}</h2>
+            <h2>{step === 'register' ? 'Create New Account' : 'Verify Email Address'}</h2>
             <p>
               {step === 'register'
-                ? 'Đăng ký tài khoản để bắt đầu quản lý trang trại của bạn'
-                : `Nhập mã xác thực gồm 6 chữ số vừa được gửi tới email ${values.email || 'của bạn'}.`}
+                ? 'Sign up to start managing your digital farm and crop seasons'
+                : `Enter the 6-digit verification code sent to ${values.email || 'your email'}.`}
             </p>
           </div>
 
@@ -310,7 +310,7 @@ export function RegisterPage() {
               <>
                 <div className="form-group">
                   <label htmlFor="reg-fullname">
-                    Họ và tên <span className="required-star">*</span>
+                    Full Name <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon">
@@ -321,7 +321,7 @@ export function RegisterPage() {
                       name="fullName"
                       autoComplete="name"
                       maxLength={150}
-                      placeholder="VD: Nguyễn Văn Nông"
+                      placeholder="e.g. John Doe"
                       required
                       value={values.fullName}
                       onChange={(e) => handleChange('fullName', e.target.value)}
@@ -341,7 +341,7 @@ export function RegisterPage() {
 
                 <div className="form-group">
                   <label htmlFor="reg-email">
-                    Địa chỉ Email <span className="required-star">*</span>
+                    Email Address <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon">
@@ -353,7 +353,7 @@ export function RegisterPage() {
                       type="email"
                       autoComplete="email"
                       maxLength={254}
-                      placeholder="nongdan@gmail.com"
+                      placeholder="user@gmail.com"
                       required
                       value={values.email}
                       onChange={(e) => handleChange('email', e.target.value)}
@@ -373,7 +373,7 @@ export function RegisterPage() {
 
                 <div className="form-group">
                   <label htmlFor="reg-phone">
-                    Số điện thoại <span className="optional-tag">(không bắt buộc)</span>
+                    Phone Number <span className="optional-tag">(optional)</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon">
@@ -385,7 +385,7 @@ export function RegisterPage() {
                       type="tel"
                       autoComplete="tel"
                       maxLength={20}
-                      placeholder="VD: 0912345678"
+                      placeholder="e.g. 0912345678"
                       value={values.phoneNumber}
                       onChange={(e) => handleChange('phoneNumber', e.target.value)}
                       onBlur={() => handleBlur('phoneNumber')}
@@ -404,7 +404,7 @@ export function RegisterPage() {
 
                 <div className="form-group">
                   <label htmlFor="reg-password">
-                    Mật khẩu <span className="required-star">*</span>
+                    Password <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon">
@@ -417,7 +417,7 @@ export function RegisterPage() {
                       autoComplete="new-password"
                       minLength={8}
                       maxLength={100}
-                      placeholder="Từ 8 đến 100 ký tự"
+                      placeholder="From 8 to 100 characters"
                       required
                       value={values.password}
                       onChange={(e) => handleChange('password', e.target.value)}
@@ -430,7 +430,7 @@ export function RegisterPage() {
                       type="button"
                       className="input-trailing-toggle"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                       tabIndex={-1}
                     >
                       <Icon name={showPassword ? 'eye-off' : 'eye'} />
@@ -459,7 +459,7 @@ export function RegisterPage() {
                     }}
                   >
                     <span style={{ fontWeight: 650, color: '#334155', marginBottom: '2px' }}>
-                      Yêu cầu mật khẩu an toàn:
+                      Security Requirements:
                     </span>
                     <span
                       style={{
@@ -471,7 +471,7 @@ export function RegisterPage() {
                       }}
                     >
                       <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />
-                      Từ 8 đến 100 ký tự
+                      8 to 100 characters
                     </span>
                     <span
                       style={{
@@ -483,7 +483,7 @@ export function RegisterPage() {
                       }}
                     >
                       <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />
-                      Có ít nhất 1 chữ in hoa (A-Z)
+                      At least 1 uppercase letter (A-Z)
                     </span>
                     <span
                       style={{
@@ -495,7 +495,7 @@ export function RegisterPage() {
                       }}
                     >
                       <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />
-                      Có ít nhất 1 chữ in thường (a-z)
+                      At least 1 lowercase letter (a-z)
                     </span>
                     <span
                       style={{
@@ -507,14 +507,14 @@ export function RegisterPage() {
                       }}
                     >
                       <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />
-                      Có ít nhất 1 ký tự đặc biệt (!@#$%^&*...)
+                      At least 1 special character (!@#$%^&*...)
                     </span>
                   </div>
                 </div>
 
                 <div className="form-group">
                   <label htmlFor="reg-confirmation">
-                    Nhập lại mật khẩu <span className="required-star">*</span>
+                    Confirm Password <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
                     <span className="input-lead-icon">
@@ -527,7 +527,7 @@ export function RegisterPage() {
                       autoComplete="new-password"
                       minLength={8}
                       maxLength={100}
-                      placeholder="Nhập lại chính xác mật khẩu"
+                      placeholder="Re-enter password"
                       required
                       value={values.confirmation}
                       onChange={(e) => handleChange('confirmation', e.target.value)}
@@ -540,7 +540,7 @@ export function RegisterPage() {
                       type="button"
                       className="input-trailing-toggle"
                       onClick={() => setShowConfirmation((prev) => !prev)}
-                      aria-label={showConfirmation ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      aria-label={showConfirmation ? 'Hide password' : 'Show password'}
                       tabIndex={-1}
                     >
                       <Icon name={showConfirmation ? 'eye-off' : 'eye'} />
@@ -557,7 +557,7 @@ export function RegisterPage() {
             ) : (
               <div className="form-group otp-form-group">
                 <label htmlFor="reg-otp">
-                  Nhập mã OTP gồm 6 chữ số
+                  Enter 6-digit OTP Code
                 </label>
                 <div className="input-with-icon otp-input-wrap">
                   <span className="input-lead-icon">
@@ -601,13 +601,13 @@ export function RegisterPage() {
                 name={pending ? 'loader' : step === 'register' ? 'user-plus' : 'shield'}
                 className={pending ? 'icon-spin' : undefined}
               />
-              <span>{pending ? 'Đang xử lý…' : step === 'register' ? 'Đăng ký tài khoản' : 'Xác thực và đăng nhập'}</span>
+              <span>{pending ? 'Processing…' : step === 'register' ? 'Register Account' : 'Verify and Sign In'}</span>
             </button>
 
             {step === 'register' && (
               <>
                 <div className="auth-divider">
-                  <span>hoặc</span>
+                  <span>or</span>
                 </div>
 
                 <button
@@ -615,7 +615,7 @@ export function RegisterPage() {
                   type="button"
                   disabled={pending}
                   onClick={() => setIsGoogleModalOpen(true)}
-                  title="Đăng ký nhanh bằng tài khoản Google"
+                  title="Sign up quickly with Google"
                 >
                   <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                     <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -623,7 +623,7 @@ export function RegisterPage() {
                     <path fill="#FBBC05" d="M5.28 14.27A7.195 7.195 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.966 11.966 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
                     <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                   </svg>
-                  <span>Đăng ký nhanh với Google</span>
+                  <span>Quick Register with Google</span>
                 </button>
               </>
             )}
@@ -638,12 +638,12 @@ export function RegisterPage() {
                 onClick={() =>
                   void perform(async () => {
                     await resendOtp(values.email);
-                    setNotice('Đã gửi lại mã OTP. Vui lòng kiểm tra email của bạn.');
+                    setNotice('OTP code resent. Please check your email.');
                   })
                 }
               >
                 <Icon name="refresh" />
-                <span>Gửi lại mã OTP</span>
+                <span>Resend OTP Code</span>
               </button>
               <span className="action-divider">•</span>
               <button
@@ -656,7 +656,7 @@ export function RegisterPage() {
                   setNotice('');
                 }}
               >
-                <span>Đổi email / Quay lại</span>
+                <span>Change Email / Back</span>
               </button>
             </div>
           )}
@@ -671,28 +671,28 @@ export function RegisterPage() {
                   const trimmedEmail = values.email.trim();
                   if (!trimmedEmail) {
                     setTouched((prev) => ({ ...prev, email: true }));
-                    setError('Nhập email đã đăng ký để tiếp tục xác thực.');
+                    setError('Please enter your registered email to continue verification.');
                     return;
                   }
                   if (!EMAIL_REGEX.test(trimmedEmail)) {
                     setTouched((prev) => ({ ...prev, email: true }));
-                    setError('Vui lòng nhập đúng định dạng email đã đăng ký.');
+                    setError('Please enter a valid registered email address.');
                     return;
                   }
                   setStep('verify');
                   setError('');
-                  setNotice('Bạn có thể nhập mã OTP đã nhận hoặc yêu cầu gửi lại mã mới.');
+                  setNotice('You can enter your received OTP code or request a new one.');
                 }}
               >
-                Đã đăng ký nhưng chưa xác thực email?
+                Already registered but haven't verified email?
               </button>
             </div>
           )}
 
           <p className="auth-switch-prompt">
-            Đã có tài khoản?{' '}
+            Already have an account?{' '}
             <Link to="/login" className="auth-switch-link">
-              Đăng nhập ngay <Icon name="arrow" />
+              Sign in now <Icon name="arrow" />
             </Link>
           </p>
         </div>

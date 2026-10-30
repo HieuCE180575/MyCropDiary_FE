@@ -24,7 +24,8 @@ export interface FarmStaffRecord {
   fullName: string;
   email: string;
   phoneNumber?: string;
-  status: 'ACTIVE' | 'SUSPENDED';
+  status: 'ACTIVE' | 'SUSPENDED' | 'INVITED';
+  membershipStatus: string;
   farmRole: string;
   roleLabel: string;
   joinedAt: string;
@@ -50,6 +51,7 @@ function mapDtoToStaffRecord(dto: BackendFarmMemberResp): FarmStaffRecord {
     email: dto.email,
     phoneNumber: dto.phoneNumber ?? undefined,
     status: isActive ? 'ACTIVE' : 'SUSPENDED',
+    membershipStatus: dto.status || 'active',
     farmRole: rawRole.toUpperCase(),
     roleLabel,
     joinedAt: dto.joinedAt || new Date().toISOString(),
@@ -255,4 +257,42 @@ export async function activateStaff(farmMemberId: string, farmId = 1): Promise<S
     joinedAt: updated.joinedAt,
     createdAt: updated.joinedAt,
   };
+}
+
+export interface CandidateUser {
+  userId: number;
+  fullName: string;
+  email: string;
+  phoneNumber?: string | null;
+  avatarUrl?: string | null;
+  systemRole: string;
+}
+
+export interface FarmInvitation {
+  memberId: number;
+  farmId: number;
+  farmName: string;
+  farmAddress?: string | null;
+  ownerName: string;
+  farmRole: string;
+  jobTitle?: string | null;
+  invitedAt: string;
+}
+
+export async function fetchCandidateUsers(farmId: number, keyword?: string): Promise<CandidateUser[]> {
+  const query = keyword ? `?keyword=${encodeURIComponent(keyword)}` : '';
+  const res = await apiRequest<ApiResponse<CandidateUser[]>>(`/farms/${farmId}/members/candidates${query}`);
+  return res.data || [];
+}
+
+export async function fetchMyFarmInvitations(): Promise<FarmInvitation[]> {
+  const res = await apiRequest<ApiResponse<FarmInvitation[]>>('/user/farm-invitations');
+  return res.data || [];
+}
+
+export async function respondFarmInvitation(memberId: number, action: 'approve' | 'reject'): Promise<void> {
+  const res = await apiRequest<ApiResponse<void>>(`/user/farm-invitations/${memberId}/${action}`, {
+    method: 'POST',
+  });
+  if (!res.success) throw new Error(res.message || 'Không thể phản hồi lời mời tham gia trang trại.');
 }

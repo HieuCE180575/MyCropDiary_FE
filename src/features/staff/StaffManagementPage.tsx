@@ -9,6 +9,8 @@ import {
   updateFarmStaffMember,
   deactivateFarmStaffMember,
   deleteFarmStaffMember,
+  fetchCandidateUsers,
+  type CandidateUser,
   type FarmStaffRecord,
 } from './staffService';
 import {
@@ -46,6 +48,12 @@ export function StaffManagementPage() {
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Add Staff Modal
+    // Candidate Users for Add Staff
+  const [candidates, setCandidates] = useState<CandidateUser[]>([]);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [candidateKeyword, setCandidateKeyword] = useState('');
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateUser | null>(null);
+  const [useManualEmail, setUseManualEmail] = useState(false);
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('STAFF');
@@ -112,12 +120,34 @@ export function StaffManagementPage() {
     } catch (err) {
       if (!silent) {
         setNotification({
-          text: err instanceof Error ? err.message : 'Không thể tải dữ liệu nhân sự trang trại.',
+          text: err instanceof Error ? err.message : 'Không thể tải dữ liệu staff trang trại.',
           type: 'error',
         });
       }
     } finally {
       if (!silent) setLoading(false);
+    }
+  };
+
+  const openAddStaffModal = async () => {
+    setIsAddStaffOpen(true);
+    setAddStaffError(null);
+    setEmail('');
+    setSelectedCandidate(null);
+    setCandidateKeyword('');
+    setUseManualEmail(false);
+    setRole('STAFF');
+    setJobTitle('Kỹ sư nông nghiệp');
+    if (farmId) {
+      setLoadingCandidates(true);
+      try {
+        const list = await fetchCandidateUsers(farmId);
+        setCandidates(list);
+      } catch {
+        setCandidates([]);
+      } finally {
+        setLoadingCandidates(false);
+      }
     }
   };
 
@@ -132,7 +162,7 @@ export function StaffManagementPage() {
 
     const existing = staffList.find((s) => s.email.toLowerCase() === trimmedEmail);
     if (existing) {
-      setAddStaffError(`Tài khoản "${email.trim()}" đã là thành viên trong trang trại (Trạng thái: ${existing.status || 'Active'}). Không thể thêm trùng lặp!`);
+      setAddStaffError(`Tài khoản "${email.trim()}" đã là thành viên of trang trại (Trạng thái: ${existing.status || 'Active'}). Không thể thêm trùng lặp!`);
       return;
     }
 
@@ -392,7 +422,7 @@ export function StaffManagementPage() {
             Người lao động &amp; Phân công
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
-            {staffList.length} nhân sự · {assignments.length} phân công vùng canh tác VietGAP tại {selectedFarm?.farmName || 'Trang trại'}
+            {staffList.length} staff · {assignments.length} phân công vùng canh tác VietGAP tại {selectedFarm?.farmName || 'Trang trại'}
           </p>
         </div>
 
@@ -402,7 +432,7 @@ export function StaffManagementPage() {
               <button
                 type="button"
                 className="primary-button"
-                onClick={() => setIsAddStaffOpen(true)}
+                onClick={openAddStaffModal}
                 style={{
                   padding: '10px 18px',
                   fontSize: '14px',
@@ -449,14 +479,14 @@ export function StaffManagementPage() {
             className={`zone-integrated-tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
             onClick={() => setActiveTab('staff')}
           >
-            <Icon name="users" size={17} /> Danh sách nhân sự <span className="tab-count">({staffList.length})</span>
+            <Icon name="users" size={17} /> Staff List <span className="tab-count">({staffList.length})</span>
           </button>
           <button
             type="button"
             className={`zone-integrated-tab-btn ${activeTab === 'assignments' ? 'active' : ''}`}
             onClick={() => setActiveTab('assignments')}
           >
-            <Icon name="plots" size={17} /> Phân công vùng sản xuất <span className="tab-count">({assignments.length})</span>
+            <Icon name="blocks" size={17} /> Zone Assignments <span className="tab-count">({assignments.length})</span>
           </button>
         </div>
 
@@ -470,7 +500,7 @@ export function StaffManagementPage() {
                 </span>
                 <input
                   type="search"
-                  placeholder="Tìm theo họ tên, email hoặc số điện thoại..."
+                  placeholder="Search by name, email, or phone..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -482,8 +512,8 @@ export function StaffManagementPage() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                   aria-label="Lọc theo trạng thái hoạt động"
                 >
-                  <option value="ALL">Tất cả trạng thái</option>
-                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
                   <option value="SUSPENDED">Đã ngưng hoạt động</option>
                 </select>
                 <span className="select-arrow">
@@ -508,16 +538,16 @@ export function StaffManagementPage() {
             {loading ? (
               <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
                 <div className="empty-icon">⏳</div>
-                <h2>Đang tải danh sách nhân sự...</h2>
+                <h2>Đang tải danh sách staff...</h2>
               </div>
             ) : (
               <>
                 <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
-                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+                  <table className="data-table" style={{ width: '100%', minWidth: '960px', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'auto' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
-                          <input type="checkbox" aria-label="Chọn tất cả nhân sự" style={{ cursor: 'pointer' }} />
+                        <th style={{ width: '44px', minWidth: '44px', padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <input type="checkbox" aria-label="Chọn tất cả staff" style={{ cursor: 'pointer' }} />
                         </th>
                         <th style={{ width: isOwner ? '23%' : '26%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
                           Thành viên
@@ -529,7 +559,7 @@ export function StaffManagementPage() {
                           Vai trò
                         </th>
                         <th style={{ width: isOwner ? '11%' : '13%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                          Số vùng phụ trách
+                          Vùng tham gia
                         </th>
                         <th style={{ width: isOwner ? '11%' : '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
                           Ngày tham gia
@@ -564,7 +594,7 @@ export function StaffManagementPage() {
                                 <Icon name="users" size={28} />
                               </div>
                               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
-                                Chưa có nhân sự phù hợp
+                                Chưa có staff phù hợp
                               </h3>
                               <p style={{ color: '#64748b', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
                                 Hãy thử tìm kiếm với từ khóa khác hoặc bấm &quot;Thêm nhân viên&quot; bằng email tài khoản đã kích hoạt.
@@ -573,7 +603,7 @@ export function StaffManagementPage() {
                                 <button
                                   type="button"
                                   className="primary-button"
-                                  onClick={() => setIsAddStaffOpen(true)}
+                                  onClick={openAddStaffModal}
                                   style={{
                                     padding: '8px 18px',
                                     fontSize: '13.5px',
@@ -715,7 +745,7 @@ export function StaffManagementPage() {
                             <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
                                 <span className="dot" />
-                                {isActive ? 'Hoạt động' : 'Đã ngưng'}
+                                {isActive ? 'Active' : 'Đã ngưng'}
                               </span>
                             </td>
 
@@ -725,7 +755,7 @@ export function StaffManagementPage() {
                                   <button
                                     type="button"
                                     className="table-icon-btn edit"
-                                    title="Chỉnh sửa thông tin nhân sự"
+                                    title="Chỉnh sửa thông tin staff"
                                     aria-label={`Chỉnh sửa ${displayName}`}
                                     onClick={() => openEditModal(staff)}
                                   >
@@ -758,7 +788,7 @@ export function StaffManagementPage() {
                                   <button
                                     type="button"
                                     className="table-icon-btn danger"
-                                    title="Xóa nhân sự khỏi trang trại"
+                                    title="Xóa staff khỏi trang trại"
                                     aria-label={`Xóa ${displayName}`}
                                     onClick={() => handleDeleteStaff(staff.farmMemberId, displayName)}
                                   >
@@ -779,7 +809,7 @@ export function StaffManagementPage() {
                 {/* Table Footer */}
                 <div className="zone-table-footer">
                   <div>
-                    Hiển thị {filteredStaff.length > 0 ? `1–${filteredStaff.length}` : '0'} trong {filteredStaff.length} nhân sự
+                    Showing {filteredStaff.length > 0 ? `1–${filteredStaff.length}` : '0'} of {filteredStaff.length} staff
                   </div>
                   <div className="zone-pagination-wrap">
                     <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
@@ -808,7 +838,7 @@ export function StaffManagementPage() {
                 </span>
                 <input
                   type="search"
-                  placeholder="Tìm theo tên nhân sự hoặc phân khu phụ trách..."
+                  placeholder="Search by staff name or assigned zone..."
                   value={assignSearch}
                   onChange={(e) => setAssignSearch(e.target.value)}
                 />
@@ -820,7 +850,7 @@ export function StaffManagementPage() {
                   onChange={(e) => setAssignZoneFilter(e.target.value)}
                   aria-label="Lọc theo phân khu sản xuất"
                 >
-                  <option value="ALL">Tất cả phân khu ({zones.length})</option>
+                  <option value="ALL">All Zones ({zones.length})</option>
                   {zones.map((z) => (
                     <option key={z.zoneId} value={String(z.zoneId)}>
                       {z.zoneName}
@@ -899,14 +929,14 @@ export function StaffManagementPage() {
                                   marginBottom: '14px',
                                 }}
                               >
-                                <Icon name="plots" size={28} />
+                                <Icon name="blocks" size={28} />
                               </div>
                               <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
-                                {assignments.length === 0 ? 'Chưa có phân công nào' : 'Không tìm thấy phân công phù hợp'}
+                                {assignments.length === 0 ? 'No assignments yet' : 'Không tìm thấy phân công phù hợp'}
                               </h3>
                               <p style={{ color: '#64748b', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
                                 {assignments.length === 0
-                                  ? 'Phân công nhân viên kỹ thuật phụ trách từng phân khu sản xuất để quản lý mùa vụ, lô đất và giám sát quy trình VietGAP.'
+                                  ? 'Assign technical personnel to production zones to oversee seasons, blocks, and VietGAP compliance.'
                                   : 'Hãy thử tìm kiếm với từ khóa khác hoặc làm mới bộ lọc phân khu.'}
                               </p>
                               {isOwner && assignments.length === 0 && (
@@ -960,7 +990,7 @@ export function StaffManagementPage() {
                                     flexShrink: 0,
                                   }}
                                 >
-                                  <Icon name="plots" size={17} />
+                                  <Icon name="blocks" size={17} />
                                 </span>
                                 <div style={{ minWidth: 0, overflow: 'hidden' }}>
                                   <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.zoneName || `Phân khu #${item.zoneId}`}>
@@ -999,7 +1029,7 @@ export function StaffManagementPage() {
                                 className="crop-cat-pill"
                                 style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 650 }}
                               >
-                                {item.jobTitle || 'Kỹ thuật viên phụ trách'}
+                                {item.jobTitle || 'Technical Staff phụ trách'}
                               </span>
                             </td>
 
@@ -1008,8 +1038,8 @@ export function StaffManagementPage() {
                             </td>
 
                             <td style={{ padding: '12px 12px', color: '#334155', fontSize: '13px', fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden' }}>
-                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }} title={item.assignedByName || 'Chủ trang trại'}>
-                                {item.assignedByName || 'Chủ trang trại'}
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }} title={item.assignedByName || 'Farm Owner'}>
+                                {item.assignedByName || 'Farm Owner'}
                               </span>
                             </td>
 
@@ -1019,7 +1049,7 @@ export function StaffManagementPage() {
                                   <button
                                     type="button"
                                     className="table-icon-btn danger"
-                                    title="Hủy phân công nhân sự khỏi phân khu"
+                                    title="Hủy phân công staff khỏi phân khu"
                                     aria-label={`Hủy phân công cho ${displayName}`}
                                     onClick={() => handleUnassign(item.assignmentId)}
                                   >
@@ -1040,7 +1070,7 @@ export function StaffManagementPage() {
                 {/* Table Footer */}
                 <div className="zone-table-footer">
                   <div>
-                    Hiển thị {filteredAssignments.length > 0 ? `1–${filteredAssignments.length}` : '0'} trong {filteredAssignments.length} lượt phân công
+                    Showing {filteredAssignments.length > 0 ? `1–${filteredAssignments.length}` : '0'} of {filteredAssignments.length} lượt phân công
                   </div>
                   <div className="zone-pagination-wrap">
                     <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
@@ -1098,7 +1128,7 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="add-staff-role" className="structured-field-label">
-                Vai trò trong trang trại <span style={{ color: '#dc2626' }}>*</span>
+                Vai trò of trang trại <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">Phân quyền</span>
             </div>
@@ -1119,7 +1149,7 @@ export function StaffManagementPage() {
               <label htmlFor="add-staff-job-title" className="structured-field-label">
                 Chức danh chuyên môn
               </label>
-              <span className="structured-field-badge">Hiển thị</span>
+              <span className="structured-field-badge">Showing</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
@@ -1158,7 +1188,7 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="edit-staff-role" className="structured-field-label">
-                Vai trò trong trang trại <span style={{ color: '#dc2626' }}>*</span>
+                Vai trò of trang trại <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">Quyền hạn</span>
             </div>
@@ -1206,7 +1236,7 @@ export function StaffManagementPage() {
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
               >
-                <option value="ACTIVE">Hoạt động (ACTIVE)</option>
+                <option value="ACTIVE">Active (ACTIVE)</option>
                 <option value="INACTIVE">Tạm ngưng (INACTIVE)</option>
               </select>
             </div>
@@ -1227,8 +1257,8 @@ export function StaffManagementPage() {
       <Modal
         open={isAssignOpen}
         onClose={() => setIsAssignOpen(false)}
-        title="Phân công nhân sự phụ trách phân khu"
-        headerIcon={<Icon name="plots" size={20} />}
+        title="Phân công staff phụ trách phân khu"
+        headerIcon={<Icon name="blocks" size={20} />}
       >
         <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b' }}>
           Chỉ định kỹ sư hoặc nhân viên kỹ thuật chịu trách nhiệm giám sát và ghi chép nhật ký canh tác theo chuẩn VietGAP cho phân khu sản xuất.
@@ -1239,17 +1269,17 @@ export function StaffManagementPage() {
               {assignModalError}
             </p>
           )}
-          {/* Field 1: Chọn nhân sự */}
+          {/* Field 1: Chọn staff */}
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="assign-staff-select" className="structured-field-label">
-                Chọn nhân sự phụ trách <span style={{ color: '#dc2626' }}>*</span>
+                Chọn staff phụ trách <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">{activeStaffOptions.length} nhân sự khả dụng</span>
+              <span className="structured-field-badge">{activeStaffOptions.length} staff khả dụng</span>
             </div>
             {activeStaffOptions.length === 0 ? (
               <p style={{ color: '#dc2626', fontSize: '13.5px', margin: 0 }}>
-                ⚠️ Trang trại chưa có nhân sự đang hoạt động. Vui lòng thêm nhân viên trước khi phân công.
+                ⚠️ Trang trại chưa có staff đang hoạt động. Vui lòng thêm nhân viên trước khi phân công.
               </p>
             ) : (
               <div className="form-field" style={{ marginBottom: 0 }}>
@@ -1280,7 +1310,7 @@ export function StaffManagementPage() {
             </div>
             {zones.length === 0 ? (
               <p style={{ color: '#dc2626', fontSize: '13.5px', margin: 0 }}>
-                ⚠️ Chưa có phân khu sản xuất nào trong trang trại. Vui lòng tạo phân khu trước.
+                ⚠️ Chưa có phân khu sản xuất nào of trang trại. Vui lòng tạo phân khu trước.
               </p>
             ) : (
               <div className="form-field" style={{ marginBottom: 0 }}>

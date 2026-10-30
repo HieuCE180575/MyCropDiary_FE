@@ -32,7 +32,7 @@ function PasswordField({ name, label, value, onChange, current = false, disabled
         <button
           type="button"
           onClick={() => setVisible((prev) => !prev)}
-          aria-label={`${visible ? 'Ẩn' : 'Hiện'} ${label.toLocaleLowerCase('vi-VN')}`}
+          aria-label={`${visible ? 'Hide' : 'Show'} ${label}`}
           aria-pressed={visible}
           tabIndex={-1}
         >
@@ -61,26 +61,26 @@ export function ChangePasswordPanel({
     setStatus(null);
 
     if (!currentPassword) {
-      setStatus({ type: 'error', message: 'Vui lòng nhập mật khẩu hiện tại.' });
+      setStatus({ type: 'error', message: 'Please enter your current password.' });
       return;
     }
     if (newPassword.length < 8) {
-      setStatus({ type: 'error', message: 'Mật khẩu mới phải có ít nhất 8 ký tự.' });
+      setStatus({ type: 'error', message: 'New password must be at least 8 characters long.' });
       return;
     }
     if (newPassword === currentPassword) {
-      setStatus({ type: 'error', message: 'Mật khẩu mới không được trùng với mật khẩu hiện tại.' });
+      setStatus({ type: 'error', message: 'New password cannot be the same as your current password.' });
       return;
     }
     if (newPassword !== confirmPassword) {
-      setStatus({ type: 'error', message: 'Mật khẩu xác nhận không khớp. Vui lòng nhập lại.' });
+      setStatus({ type: 'error', message: 'Password confirmation does not match. Please re-enter.' });
       return;
     }
 
     setLoading(true);
     try {
       await changeUserPassword({ currentPassword, newPassword, confirmPassword });
-      setStatus({ type: 'success', message: 'Đổi mật khẩu thành công! Mật khẩu mới đã được cập nhật.' });
+      setStatus({ type: 'success', message: 'Password changed successfully! Your new password has been updated.' });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -88,7 +88,7 @@ export function ChangePasswordPanel({
         setTimeout(onSuccess, 1200);
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Đổi mật khẩu thất bại. Vui lòng thử lại.';
+      const msg = err instanceof Error ? err.message : 'Failed to change password. Please try again.';
       setStatus({ type: 'error', message: msg });
     } finally {
       setLoading(false);
@@ -122,7 +122,7 @@ export function ChangePasswordPanel({
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: embedded ? '6px' : '14px' }}>
         <PasswordField
           name="currentPassword"
-          label="Mật khẩu hiện tại"
+          label="Current Password"
           value={currentPassword}
           onChange={setCurrentPassword}
           current
@@ -131,18 +131,18 @@ export function ChangePasswordPanel({
         <div>
           <PasswordField
             name="newPassword"
-            label="Mật khẩu mới"
+            label="New Password"
             value={newPassword}
             onChange={setNewPassword}
             disabled={loading}
           />
           <small id="new-password-help" style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-            Mật khẩu mới phải có tối thiểu 8 ký tự.
+            New password must be at least 8 characters long.
           </small>
         </div>
         <PasswordField
           name="confirmPassword"
-          label="Nhập lại mật khẩu mới"
+          label="Confirm New Password"
           value={confirmPassword}
           onChange={setConfirmPassword}
           disabled={loading}
@@ -151,7 +151,7 @@ export function ChangePasswordPanel({
         <div style={{ marginTop: '10px', display: 'flex', justifyContent: embedded ? 'flex-end' : 'flex-start', gap: '10px' }}>
           <button className="action-button solid primary-button" type="submit" disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             <Icon name="save" />
-            {loading ? 'Đang lưu mật khẩu...' : 'Lưu mật khẩu mới'}
+            {loading ? 'Saving password...' : 'Save New Password'}
           </button>
         </div>
       </form>
@@ -169,8 +169,8 @@ export function ChangePasswordPanel({
           <Icon name="lock" />
         </span>
         <div>
-          <h2 id="change-password-heading">Thay đổi mật khẩu</h2>
-          <p className="profile-password-description">Bảo vệ tài khoản bằng mật khẩu riêng, bảo mật và khó đoán.</p>
+          <h2 id="change-password-heading">Change Password</h2>
+          <p className="profile-password-description">Protect your account with a strong, secure, and unique password.</p>
         </div>
       </div>
       {formBody}

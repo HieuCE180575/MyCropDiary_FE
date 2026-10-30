@@ -42,7 +42,8 @@ export interface CropSeasonBlockResp {
 
 export interface CreateCropSeasonReq {
   seasonName: string;
-  cropCategoryId: number;
+  cropCategoryId?: number;
+  cropCategoryName?: string;
   startDate: string;
   endDate?: string | null;
   seasonStatus?: string;
@@ -51,7 +52,8 @@ export interface CreateCropSeasonReq {
 
 export interface UpdateCropSeasonReq {
   seasonName: string;
-  cropCategoryId: number;
+  cropCategoryId?: number;
+  cropCategoryName?: string;
   startDate: string;
   endDate?: string | null;
   notes?: string | null;
@@ -92,6 +94,25 @@ async function request<T>(path: string, options: Parameters<typeof apiRequest>[1
   return res.data;
 }
 
+export const SHORT_TERM_CROPS: CropCategoryResp[] = [
+  { id: 5, categoryName: 'Rau Muống', description: 'Cây ngắn ngày (20-30 ngày), thu hoạch nhiều lứa' },
+  { id: 6, categoryName: 'Xà Lách (Lettuce)', description: 'Cây ngắn ngày (30-45 ngày), VietGAP ăn sống' },
+  { id: 7, categoryName: 'Cải Thìa (Bok Choy)', description: 'Cây ngắn ngày (30-35 ngày), giàu vitamin' },
+  { id: 8, categoryName: 'Cải Bó Xôi (Spinach)', description: 'Cây ngắn ngày (35-45 ngày), giá trị dinh dưỡng cao' },
+  { id: 9, categoryName: 'Cải Ngọt', description: 'Cây ngắn ngày (25-30 ngày), dễ canh tác VietGAP' },
+  { id: 10, categoryName: 'Dưa Leo (Cucumber)', description: 'Cây ngắn ngày (40-50 ngày), leo giàn ăn trái' },
+  { id: 11, categoryName: 'Đậu Cô Ve', description: 'Cây ngắn ngày (50-60 ngày), thu hoạch quả non' },
+  { id: 12, categoryName: 'Đậu Bắp (Okra)', description: 'Cây ngắn ngày (45-55 ngày), thu trái liên tục' },
+  { id: 13, categoryName: 'Cà Rốt Baby', description: 'Cây củ ngắn ngày (60-70 ngày)' },
+  { id: 14, categoryName: 'Củ Cải Trắng', description: 'Cây củ ngắn ngày (45-55 ngày), sinh trưởng nhanh' },
+  { id: 15, categoryName: 'Hành Lá & Gia Vị', description: 'Cây gia vị ngắn ngày (40-50 ngày)' },
+  { id: 16, categoryName: 'Rau Mồng Tơi', description: 'Cây ngắn ngày (30-40 ngày), thanh mát mùa hè' },
+  { id: 17, categoryName: 'Bắp Cải Mini', description: 'Cây ngắn ngày vụ đông xuân (65-75 ngày)' },
+  { id: 18, categoryName: 'Dưa Hấu VietGAP', description: 'Cây ngắn ngày (65-75 ngày), thu hoạch 1 vụ' },
+  { id: 19, categoryName: 'Bí Đao Chanh', description: 'Cây ngắn ngày (60-70 ngày), năng suất cao' },
+  { id: 20, categoryName: 'Bắp Ngọt (Sweet Corn)', description: 'Cây ngắn ngày (65-75 ngày), thu hoạch bắp tươi' },
+];
+
 const DEFAULT_CATEGORIES: CropCategoryResp[] = [
   { id: 1, categoryName: 'Rau ăn lá', description: 'Cải ngọt, cải xanh, xà lách, rau muống, cải bó xôi' },
   { id: 2, categoryName: 'Rau ăn quả', description: 'Cà chua, dưa leo, ớt chuông, đậu bắp, khổ qua' },
@@ -103,14 +124,20 @@ const DEFAULT_CATEGORIES: CropCategoryResp[] = [
 let cachedCategories: CropCategoryResp[] | null = null;
 
 export async function fetchCropCategories(): Promise<CropCategoryResp[]> {
-  if (cachedCategories && cachedCategories.length > 0) return cachedCategories;
   try {
     const list = await request<CropCategoryResp[]>('/crop-categories');
-    cachedCategories = list && list.length > 0 ? list : DEFAULT_CATEGORIES;
+    const existingNames = new Set((list || []).map(c => c.categoryName.trim().toLowerCase()));
+    const merged = [...(list || [])];
+    for (const crop of SHORT_TERM_CROPS) {
+      if (!existingNames.has(crop.categoryName.trim().toLowerCase())) {
+        merged.push(crop);
+      }
+    }
+    cachedCategories = merged.length > 0 ? merged : SHORT_TERM_CROPS;
     return cachedCategories;
   } catch {
-    cachedCategories = DEFAULT_CATEGORIES;
-    return DEFAULT_CATEGORIES;
+    cachedCategories = SHORT_TERM_CROPS;
+    return SHORT_TERM_CROPS;
   }
 }
 

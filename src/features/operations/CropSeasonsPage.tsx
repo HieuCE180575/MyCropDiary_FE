@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { farmRole } from '../auth/accessPolicy';
 import { Icon } from '../../shared/components/Icon';
+import { CropCategoryCombobox } from './CropCategoryCombobox';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import {
   fetchCropCategories,
@@ -62,6 +63,7 @@ export function CropSeasonsPage() {
   const [formValues, setFormValues] = useState({
     seasonName: '',
     cropCategoryId: 1,
+    cropCategoryName: '',
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
     seasonStatus: 'active',
@@ -172,6 +174,7 @@ export function CropSeasonsPage() {
     setFormValues({
       seasonName: '',
       cropCategoryId: categories[0]?.id || 1,
+      cropCategoryName: categories[0]?.categoryName || '',
       startDate: defaultStart,
       endDate: '',
       seasonStatus: 'active',
@@ -199,6 +202,7 @@ export function CropSeasonsPage() {
     setFormValues({
       seasonName: season.seasonName,
       cropCategoryId: season.cropCategoryId || categories[0]?.id || 1,
+      cropCategoryName: season.cropCategoryName || '',
       startDate: defaultStart,
       endDate: season.endDate || '',
       seasonStatus: season.seasonStatus || 'active',
@@ -320,14 +324,14 @@ export function CropSeasonsPage() {
         (modalMode === 'create' || s.cropSeasonId !== selectedSeason?.cropSeasonId)
     );
     if (duplicateSeason) {
-      const msg = `Tên mùa vụ "${trimmedSeasonName}" đã tồn tại trong nông trại này. Vui lòng đặt tên khác.`;
+      const msg = `Season Name "${trimmedSeasonName}" đã tồn tại trong nông trại này. Vui lòng đặt tên khác.`;
       setSeasonModalError(msg);
       showToast(msg, 'error');
       return;
     }
 
     if (formValues.endDate && formValues.endDate < formValues.startDate) {
-      const msg = `Ngày kết thúc mùa vụ (${formValues.endDate}) không thể trước ngày bắt đầu (${formValues.startDate}).`;
+      const msg = `End Date mùa vụ (${formValues.endDate}) không thể trước ngày bắt đầu (${formValues.startDate}).`;
       setSeasonModalError(msg);
       showToast(msg, 'error');
       return;
@@ -368,7 +372,8 @@ export function CropSeasonsPage() {
         // Step 1: POST /farms/{farmId}/crop-seasons
         const created = await createCropSeason(farmId, {
           seasonName: formValues.seasonName.trim(),
-          cropCategoryId: Number(formValues.cropCategoryId),
+          cropCategoryId: Number(formValues.cropCategoryId) || undefined,
+          cropCategoryName: formValues.cropCategoryName?.trim() || undefined,
           startDate: formValues.startDate,
           endDate: formValues.endDate || null,
           seasonStatus: formValues.seasonStatus,
@@ -408,7 +413,8 @@ export function CropSeasonsPage() {
         const seasonId = selectedSeason.cropSeasonId;
         const updated = await updateCropSeason(seasonId, {
           seasonName: formValues.seasonName.trim(),
-          cropCategoryId: Number(formValues.cropCategoryId),
+          cropCategoryId: Number(formValues.cropCategoryId) || undefined,
+          cropCategoryName: formValues.cropCategoryName?.trim() || undefined,
           startDate: formValues.startDate,
           endDate: formValues.endDate || null,
           notes: formValues.notes || null,
@@ -600,7 +606,7 @@ export function CropSeasonsPage() {
           <div className="modal-header">
             <div>
               <span className="eyebrow">Hồ sơ mùa vụ &amp; Phân bổ lô đất (N-N)</span>
-              <h2>{modalMode === 'create' ? 'Tạo mùa vụ canh tác mới' : 'Cập nhật mùa vụ & lô đất áp dụng'}</h2>
+              <h2>{modalMode === 'create' ? 'Create Season canh tác mới' : 'Update Season & lô đất áp dụng'}</h2>
             </div>
             <button type="button" className="modal-close" onClick={() => setModalMode(null)} aria-label="Đóng">
               ✕
@@ -616,43 +622,25 @@ export function CropSeasonsPage() {
             <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <label htmlFor="modal-cs-name" className="structured-field-label">
-                    Tên mùa vụ <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <span className="structured-field-badge">{formValues.seasonName.length}/120 ký tự</span>
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
-                    id="modal-cs-name"
-                    type="text"
-                    maxLength={120}
-                    placeholder="VD: Vụ Dưa lưới Hè Thu 2026, Vụ Cà chua Đông Xuân..."
-                    value={formValues.seasonName}
-                    onChange={(e) => setFormValues({ ...formValues, seasonName: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                <div className="structured-field-header">
                   <label htmlFor="modal-cs-cat" className="structured-field-label">
                     Danh mục cây trồng <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <span className="structured-field-badge">Tiêu chuẩn VietGAP</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <select
+                  <CropCategoryCombobox
                     id="modal-cs-cat"
                     value={formValues.cropCategoryId}
-                    onChange={(e) => setFormValues({ ...formValues, cropCategoryId: Number(e.target.value) })}
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.categoryName}
-                      </option>
-                    ))}
-                  </select>
+                    categoryName={formValues.cropCategoryName}
+                    categories={categories}
+                    onChange={(catId, catName) =>
+                      setFormValues((prev) => ({
+                        ...prev,
+                        cropCategoryId: catId,
+                        cropCategoryName: catName,
+                      }))
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -661,7 +649,7 @@ export function CropSeasonsPage() {
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="modal-cs-start" className="structured-field-label">
-                    Ngày bắt đầu mùa vụ <span style={{ color: '#dc2626' }}>*</span>
+                    Start Date mùa vụ <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <span className="structured-field-badge">Bắt buộc</span>
                 </div>
@@ -679,7 +667,7 @@ export function CropSeasonsPage() {
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="modal-cs-end" className="structured-field-label">
-                    Ngày kết thúc dự kiến
+                    End Date dự kiến
                   </label>
                   <span className="structured-field-badge">Tùy chọn</span>
                 </div>
@@ -958,13 +946,13 @@ export function CropSeasonsPage() {
 
             <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
               <button type="button" className="ghost-button" onClick={() => setModalMode(null)} disabled={saving}>
-                Hủy
+                Cancel
               </button>
               <button type="submit" className="primary-button" disabled={saving}>
                 {saving
-                  ? 'Đang lưu...'
+                  ? 'Saving...'
                   : modalMode === 'create'
-                    ? `Tạo mùa vụ${selectedCount > 0 ? ` & Gán ${selectedCount} lô đất` : ''}`
+                    ? `Create Season${selectedCount > 0 ? ` & Gán ${selectedCount} lô đất` : ''}`
                     : 'Lưu thay đổi'}
               </button>
             </div>
@@ -1156,7 +1144,7 @@ export function CropSeasonsPage() {
                 <dd>#{selectedSeason.cropSeasonId} (CS-{String(selectedSeason.cropSeasonId).padStart(3, '0')})</dd>
               </div>
               <div>
-                <dt>Tên mùa vụ</dt>
+                <dt>Season Name</dt>
                 <dd>{selectedSeason.seasonName}</dd>
               </div>
               <div>
@@ -1169,7 +1157,7 @@ export function CropSeasonsPage() {
               </div>
               <div>
                 <dt>Thời gian canh tác</dt>
-                <dd>{selectedSeason.startDate} → {selectedSeason.endDate || 'Đang diễn ra'}</dd>
+                <dd>{selectedSeason.startDate} → {selectedSeason.endDate || 'Active'}</dd>
               </div>
               <div>
                 <dt>Người khởi tạo</dt>
@@ -1242,7 +1230,7 @@ export function CropSeasonsPage() {
                       <th>Khu vực</th>
                       <th>Diện tích gieo trồng</th>
                       <th>Ngày xuống giống → Dự kiến thu hoạch</th>
-                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1286,7 +1274,7 @@ export function CropSeasonsPage() {
                           </strong>
                         </td>
                         <td className="muted" style={{ fontSize: '13.5px' }}>
-                          {sb.plantedAt || selectedSeason.startDate} → {sb.expectedHarvestAt || selectedSeason.endDate || 'Đang diễn ra'}
+                          {sb.plantedAt || selectedSeason.startDate} → {sb.expectedHarvestAt || selectedSeason.endDate || 'Active'}
                         </td>
                         <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                           <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
@@ -1432,7 +1420,7 @@ export function CropSeasonsPage() {
 
                 <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
                   <button type="button" className="ghost-button" onClick={() => setIsAssignBlockOpen(false)}>
-                    Hủy
+                    Cancel
                   </button>
                   <button type="submit" className="primary-button">
                     Gán lô đất
@@ -1450,7 +1438,7 @@ export function CropSeasonsPage() {
           title="Xác nhận xóa mùa vụ"
           description={`Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`}
           confirmLabel="Xóa mùa vụ"
-          cancelLabel="Hủy"
+          cancelLabel="Cancel"
           tone="danger"
           loading={isDeleting}
           onConfirm={handleConfirmDeleteSeason}
@@ -1516,7 +1504,7 @@ export function CropSeasonsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-            Mùa vụ canh tác
+            Crop Seasons
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
             Quản lý mùa vụ và lô đất áp dụng.
@@ -1588,7 +1576,7 @@ export function CropSeasonsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             aria-label="Lọc theo trạng thái"
           >
-            <option value="all">Tất cả trạng thái</option>
+            <option value="all">All Statuses</option>
             <option value="active">Đang canh tác</option>
             <option value="completed">Đã hoàn thành</option>
             <option value="planned">Dự kiến</option>
@@ -1819,7 +1807,7 @@ export function CropSeasonsPage() {
         title="Xác nhận xóa mùa vụ"
         description={`Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`}
         confirmLabel="Xóa mùa vụ"
-        cancelLabel="Hủy"
+        cancelLabel="Cancel"
         tone="danger"
         loading={isDeleting}
         onConfirm={handleConfirmDeleteSeason}

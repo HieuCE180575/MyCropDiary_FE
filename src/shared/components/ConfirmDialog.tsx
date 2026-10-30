@@ -12,13 +12,13 @@ interface ConfirmDialogProps {
   onClose: () => void;
 }
 
-/** Hộp thoại xác nhận dùng lại cho các hành động cần cảnh báo trước (hủy, xoá...). */
+/** Reusable confirmation modal for warnings/actions (delete, cancel, etc.). */
 export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Xác nhận',
-  cancelLabel = 'Đóng',
+  confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   tone = 'default',
   loading = false,
   onConfirm,
@@ -37,7 +37,7 @@ export function ConfirmDialog({
           onClick={onConfirm}
           disabled={loading}
         >
-          {loading ? 'Đang xử lý...' : confirmLabel}
+          {loading ? 'Processing...' : confirmLabel}
         </button>
       </div>
     </Modal>
