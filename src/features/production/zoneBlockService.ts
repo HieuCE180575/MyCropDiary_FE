@@ -507,3 +507,133 @@ function mapZoneFields(z: Zone): Zone {
     locationDescription: z.description || undefined,
   };
 }
+
+// ==========================================
+// Zone Production Risk Backend APIs (UC-21)
+// ==========================================
+
+export interface ZoneRiskBackendResp {
+  riskId: number;
+  zoneId: number;
+  zoneName?: string;
+  farmId: number;
+  assessedByMemberId?: number | null;
+  assessedByName?: string | null;
+  riskType: string;
+  riskLevel: string;
+  description?: string | null;
+  mitigationPlan?: string | null;
+  imageUrl?: string | null;
+  assessedAt: string;
+}
+
+export interface CreateZoneRiskPayload {
+  riskType: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical' | string;
+  description?: string;
+  mitigationPlan?: string;
+  imageUrl?: string;
+  assessedAt?: string;
+}
+
+export interface UpdateRiskControlPayload {
+  mitigationPlan: string;
+  riskLevel?: string;
+  description?: string;
+  imageUrl?: string;
+}
+
+export async function recordZoneRiskApi(zoneId: number, payload: CreateZoneRiskPayload): Promise<ZoneRiskBackendResp> {
+  const data = await request<ZoneRiskBackendResp>(`/zones/${zoneId}/risks`, {
+    method: 'POST',
+    data: payload,
+  });
+  notifyDataChanged('/production/risks', 'POST');
+  return data;
+}
+
+export async function fetchZoneRiskHistoryApi(zoneId: number): Promise<ZoneRiskBackendResp[]> {
+  return await request<ZoneRiskBackendResp[]>(`/zones/${zoneId}/risks`);
+}
+
+export async function fetchFarmRiskHistoryApi(farmId: number): Promise<ZoneRiskBackendResp[]> {
+  return await request<ZoneRiskBackendResp[]>(`/farms/${farmId}/risks`);
+}
+
+export async function fetchZoneRiskDetailsApi(riskId: number): Promise<ZoneRiskBackendResp> {
+  return await request<ZoneRiskBackendResp>(`/risks/${riskId}`);
+}
+
+export async function updateRiskControlMeasuresApi(riskId: number, payload: UpdateRiskControlPayload): Promise<ZoneRiskBackendResp> {
+  const data = await request<ZoneRiskBackendResp>(`/risks/${riskId}`, {
+    method: 'PUT',
+    data: payload,
+  });
+  notifyDataChanged('/production/risks', 'PUT');
+  return data;
+}
+
+export async function deleteZoneRiskApi(riskId: number): Promise<void> {
+  await request<void>(`/risks/${riskId}`, {
+    method: 'DELETE',
+  });
+  notifyDataChanged('/production/risks', 'DELETE');
+}
+
+// ==========================================
+// Soil Assessment Backend APIs (UC-20)
+// ==========================================
+
+export interface SoilAssessmentBackendResp {
+  assessmentId: number;
+  blockId: number;
+  blockName?: string;
+  zoneId: number;
+  zoneName?: string;
+  farmId: number;
+  conductedByMemberId?: number | null;
+  conductedByName?: string | null;
+  soilPh?: number | null;
+  moisturePercent?: number | null;
+  nutrientData: string;
+  notes?: string | null;
+  imageUrl?: string | null;
+  assessedAt: string;
+}
+
+export interface CreateSoilAssessmentPayload {
+  soilPh?: number;
+  moisturePercent?: number;
+  nutrientData?: string;
+  notes?: string;
+  imageUrl?: string;
+  assessedAt?: string;
+}
+
+export async function createSoilAssessmentApi(blockId: number, payload: CreateSoilAssessmentPayload): Promise<SoilAssessmentBackendResp> {
+  const data = await request<SoilAssessmentBackendResp>(`/blocks/${blockId}/soil-assessments`, {
+    method: 'POST',
+    data: payload,
+  });
+  notifyDataChanged('/production/soil', 'POST');
+  return data;
+}
+
+export async function fetchSoilAssessmentHistoryApi(blockId: number): Promise<SoilAssessmentBackendResp[]> {
+  return await request<SoilAssessmentBackendResp[]>(`/blocks/${blockId}/soil-assessments`);
+}
+
+export async function fetchFarmSoilAssessmentHistoryApi(farmId: number): Promise<SoilAssessmentBackendResp[]> {
+  return await request<SoilAssessmentBackendResp[]>(`/farms/${farmId}/soil-assessments`);
+}
+
+export async function fetchSoilAssessmentDetailsApi(assessmentId: number): Promise<SoilAssessmentBackendResp> {
+  return await request<SoilAssessmentBackendResp>(`/soil-assessments/${assessmentId}`);
+}
+
+export async function deleteSoilAssessmentApi(assessmentId: number): Promise<void> {
+  await request<void>(`/soil-assessments/${assessmentId}`, {
+    method: 'DELETE',
+  });
+  notifyDataChanged('/production/soil', 'DELETE');
+}
