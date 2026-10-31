@@ -1,5 +1,6 @@
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { KnowledgeCard } from './KnowledgeCard';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import type { KnowledgeArticle } from '../types';
 
 interface KnowledgeListProps {
@@ -11,6 +12,7 @@ interface KnowledgeListProps {
 }
 
 export function KnowledgeList({ articles, loading, hasActiveFilters, onOpen, onResetFilters }: KnowledgeListProps) {
+  const { lang } = useLanguage();
   if (loading) {
     return (
       <div className="knowledge-grid">
@@ -30,16 +32,16 @@ export function KnowledgeList({ articles, loading, hasActiveFilters, onOpen, onR
     return (
       <EmptyState
         icon="📖"
-        title="Không tìm thấy kiến thức phù hợp"
+        title={lang === 'en' ? 'No matching knowledge found' : 'Không tìm thấy kiến thức phù hợp'}
         description={
           hasActiveFilters
-            ? 'Hãy thử từ khoá khác hoặc bỏ bớt bộ lọc đang áp dụng.'
-            : 'Thư viện kiến thức VietGAP hiện chưa có nội dung nào.'
+            ? (lang === 'en' ? 'Try different keywords or clear applied filters.' : 'Hãy thử từ khoá khác hoặc bỏ bớt bộ lọc đang áp dụng.')
+            : (lang === 'en' ? 'The VietGAP knowledge library currently has no content.' : 'Thư viện kiến thức VietGAP hiện chưa có nội dung nào.')
         }
         action={
           hasActiveFilters ? (
             <button type="button" className="primary-button" onClick={onResetFilters}>
-              Đặt lại bộ lọc
+              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
             </button>
           ) : undefined
         }

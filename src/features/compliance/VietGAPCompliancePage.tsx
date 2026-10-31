@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface ChecklistItem {
   id: string;
@@ -17,6 +18,7 @@ interface VietGAPComplianceProps {
 
 export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComplianceProps) {
   const { selectedFarm } = useFarmWorkspace();
+  const { lang } = useLanguage();
   const [activeTab, setActiveTab] = useState<'checklists' | 'assessments' | 'environment' | 'training'>(initialTab);
 
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
@@ -89,14 +91,14 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
     <section className="vietgap-compliance-page">
       <div className="page-heading">
         <div>
-          <h1>Đánh giá & Tuân thủ Tiêu chuẩn VietGAP</h1>
+          <h1>{lang === 'en' ? 'VietGAP Compliance & Assessment' : 'Đánh giá & Tuân thủ Tiêu chuẩn VietGAP'}</h1>
           <p className="page-subtitle">
             Hồ sơ kiểm soát chất lượng, đánh giá nội bộ và kiểm định an toàn nông trại {selectedFarm?.farmName || ''}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button type="button" className="action-button" onClick={() => window.print()}>
-            📄 Xuất hồ sơ VietGAP
+            {lang === 'en' ? '📄 Export VietGAP Dossier' : '📄 Xuất hồ sơ VietGAP'}
           </button>
         </div>
       </div>
@@ -272,11 +274,11 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                <th style={{ padding: '12px 16px' }}>Đợt đánh giá</th>
-                <th style={{ padding: '12px 16px' }}>Thời điểm</th>
-                <th style={{ padding: '12px 16px' }}>Trưởng đoàn đánh giá</th>
-                <th style={{ padding: '12px 16px' }}>Số lỗi phát hiện</th>
-                <th style={{ padding: '12px 16px' }}>Kết luận</th>
+                <th style={{ padding: '12px 16px' }}>{lang === 'en' ? 'Audit Batch' : 'Đợt đánh giá'}</th>
+                <th style={{ padding: '12px 16px' }}>{lang === 'en' ? 'Audit Date' : 'Thời điểm'}</th>
+                <th style={{ padding: '12px 16px' }}>{lang === 'en' ? 'Lead Auditor' : 'Trưởng đoàn đánh giá'}</th>
+                <th style={{ padding: '12px 16px' }}>{lang === 'en' ? 'Findings / Deficiencies' : 'Số lỗi phát hiện'}</th>
+                <th style={{ padding: '12px 16px' }}>{lang === 'en' ? 'Conclusion' : 'Kết luận'}</th>
               </tr>
             </thead>
             <tbody>

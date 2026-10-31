@@ -1,0 +1,183 @@
+export type Language = 'en' | 'vi';
+
+export const translations = {
+  en: {
+    // Header & Navigation
+    'nav.home': 'Home',
+    'nav.knowledge': 'VietGAP Knowledge',
+    'nav.features': 'Features',
+    'nav.about': 'About Us',
+    'nav.dashboard': 'Dashboard',
+    'nav.signIn': 'Sign In',
+    'nav.register': 'Register',
+    'nav.signOut': 'Sign Out',
+    'nav.profile': 'Profile',
+    'nav.changePassword': 'Change Password',
+    'nav.notifications': 'System Notifications',
+    'nav.noNotifications': 'All systems operational. No new notifications.',
+    'nav.invitations': 'invitations',
+    'nav.accept': 'Accept',
+    'nav.reject': 'Reject',
+    'nav.personalWorkspace': 'Personal Workspace',
+    'nav.systemAdmin': 'System Administration',
+    'nav.translateBtn': 'Tiếng Việt',
+
+    // Roles
+    'role.admin': 'System Administrator',
+    'role.owner': 'Farm Owner',
+    'role.staff': 'Farm Staff',
+    'role.personal': 'Personal',
+
+    // Common actions & labels
+    'action.create': 'Create New',
+    'action.add': 'Add New',
+    'action.edit': 'Edit',
+    'action.delete': 'Delete',
+    'action.save': 'Save Changes',
+    'action.cancel': 'Cancel',
+    'action.search': 'Search...',
+    'action.filter': 'Filter',
+    'action.reload': 'Reload',
+    'action.back': 'Back',
+    'action.close': 'Close',
+    'action.confirm': 'Confirm',
+    'action.viewDetail': 'View Details',
+    'status.active': 'Active',
+    'status.inactive': 'Inactive',
+    'status.pending': 'Pending',
+    'status.completed': 'Completed',
+    'status.inProgress': 'In Progress',
+
+    // Unit & Measurements
+    'unit.zone': 'Zone',
+    'unit.block': 'Block',
+    'unit.area': 'Area',
+    'unit.sqm': 'm²',
+    'unit.ha': 'ha',
+
+    // Public Home Page
+    'home.hero.title': 'Smart VietGAP Farm Management Platform',
+    'home.hero.subtitle': 'Digitize your crop diary, track inputs with industrial packaging units, manage production zones and blocks, and guarantee food safety compliance effortlessly.',
+    'home.hero.btnExplore': 'Explore System',
+    'home.hero.btnStart': 'Get Started Free',
+    'home.hero.badge': 'VietGAP Agricultural Standard',
+    'home.stats.farms': 'Active Farms',
+    'home.stats.hectares': 'Standard Hectares',
+    'home.stats.diaries': 'Farming Diaries',
+    'home.stats.compliance': 'Compliance Rate',
+    'home.features.title': 'Modern Agricultural Management Solutions',
+    'home.features.subtitle': 'Built specifically for commercial cooperatives, modern farms, and standard agricultural enterprises.',
+    'home.showcase.title': 'Featured High-Tech Model Farms',
+    'home.showcase.subtitle': 'Discover how modern growers are transforming agricultural production with MyCropDiary.',
+    'home.knowledge.title': 'VietGAP Knowledge & Technical Guides',
+    'home.knowledge.subtitle': 'Official farming best practices, chemical safety periods (PHI), and soil/water quality management.',
+    'home.cta.title': 'Ready to Modernize Your Farm Operations?',
+    'home.cta.subtitle': 'Join hundreds of forward-thinking growers adopting VietGAP standards today.',
+    'home.cta.btnRegister': 'Register Your Farm Now',
+
+    // Operations & Diary
+    'ops.materialUsage': 'Material Usage',
+    'ops.recordMaterial': 'Record Material Usage',
+    'ops.harvest': 'Harvest & Batches',
+    'ops.recordHarvest': 'Record Harvest',
+    'ops.cropSeason': 'Crop Seasons',
+    'ops.zoneBlock': 'Zones & Production Blocks',
+
+    // About & Features
+    'about.title': 'About MyCropDiary',
+    'about.subtitle': 'Together with growers: recording today, cultivating tomorrow.',
+    'features.title': 'Comprehensive Farming Features',
+    'features.subtitle': 'Everything you need to run a certified commercial farm from seed to harvest.',
+  },
+  vi: {
+    // Header & Navigation
+    'nav.home': 'Trang chủ',
+    'nav.knowledge': 'Kiến thức VietGAP',
+    'nav.features': 'Tính năng',
+    'nav.about': 'Về chúng tôi',
+    'nav.dashboard': 'Bảng điều khiển',
+    'nav.signIn': 'Đăng nhập',
+    'nav.register': 'Đăng ký',
+    'nav.signOut': 'Đăng xuất',
+    'nav.profile': 'Hồ sơ',
+    'nav.changePassword': 'Đổi mật khẩu',
+    'nav.notifications': 'Thông báo hệ thống',
+    'nav.noNotifications': 'Hệ thống hoạt động bình thường. Không có thông báo mới.',
+    'nav.invitations': 'lời mời',
+    'nav.accept': 'Chấp nhận',
+    'nav.reject': 'Từ chối',
+    'nav.personalWorkspace': 'Không gian làm việc cá nhân',
+    'nav.systemAdmin': 'Quản trị hệ thống',
+    'nav.translateBtn': 'English',
+
+    // Roles
+    'role.admin': 'Quản trị viên hệ thống',
+    'role.owner': 'Chủ trang trại',
+    'role.staff': 'Nhân viên trang trại',
+    'role.personal': 'Cá nhân',
+
+    // Common actions & labels
+    'action.create': 'Thêm mới',
+    'action.add': 'Thêm mới',
+    'action.edit': 'Chỉnh sửa',
+    'action.delete': 'Xóa',
+    'action.save': 'Lưu thay đổi',
+    'action.cancel': 'Hủy',
+    'action.search': 'Tìm kiếm...',
+    'action.filter': 'Bộ lọc',
+    'action.reload': 'Tải lại',
+    'action.back': 'Quay lại',
+    'action.close': 'Đóng',
+    'action.confirm': 'Xác nhận',
+    'action.viewDetail': 'Xem chi tiết',
+    'status.active': 'Hoạt động',
+    'status.inactive': 'Ngừng hoạt động',
+    'status.pending': 'Đang chờ',
+    'status.completed': 'Hoàn thành',
+    'status.inProgress': 'Đang thực hiện',
+
+    // Unit & Measurements
+    'unit.zone': 'Khu sản xuất',
+    'unit.block': 'Lô sản xuất',
+    'unit.area': 'Diện tích',
+    'unit.sqm': 'm²',
+    'unit.ha': 'ha',
+
+    // Public Home Page
+    'home.hero.title': 'Nền tảng Quản lý Nông nghiệp VietGAP Thông minh',
+    'home.hero.subtitle': 'Số hóa nhật ký canh tác, quản lý vật tư chuẩn bao bì lớn (bao/can/chai), tổ chức phân khu lô đất sản xuất và minh bạch hồ sơ tiêu chuẩn an toàn thực phẩm.',
+    'home.hero.btnExplore': 'Khám phá hệ thống',
+    'home.hero.btnStart': 'Bắt đầu miễn phí',
+    'home.hero.badge': 'Tiêu chuẩn Nông nghiệp VietGAP',
+    'home.stats.farms': 'Trang trại hoạt động',
+    'home.stats.hectares': 'Hecta canh tác chuẩn',
+    'home.stats.diaries': 'Nhật ký đồng ruộng',
+    'home.stats.compliance': 'Tỉ lệ đạt chuẩn',
+    'home.features.title': 'Giải pháp Quản lý Nông nghiệp Hiện đại',
+    'home.features.subtitle': 'Thiết kế riêng cho các hợp tác xã, trang trại quy mô lớn và doanh nghiệp nông nghiệp chuẩn hóa.',
+    'home.showcase.title': 'Mô hình Trang trại Tiêu biểu',
+    'home.showcase.subtitle': 'Tìm hiểu các nông hộ và hợp tác xã ứng dụng công nghệ MyCropDiary vào sản xuất.',
+    'home.knowledge.title': 'Kiến thức & Hướng dẫn Kỹ thuật VietGAP',
+    'home.knowledge.subtitle': 'Quy trình canh tác chuẩn, thời gian cách ly (PHI) an toàn và quản lý chất lượng đất nước.',
+    'home.cta.title': 'Sẵn sàng Hiện đại hóa Nông nghiệp của bạn?',
+    'home.cta.subtitle': 'Cùng hàng trăm nông hộ chuẩn hóa quy trình sản xuất theo chuẩn VietGAP ngay hôm nay.',
+    'home.cta.btnRegister': 'Đăng ký trang trại ngay',
+
+    // Operations & Diary
+    'ops.materialUsage': 'Sử dụng vật tư',
+    'ops.recordMaterial': 'Ghi nhận sử dụng vật tư',
+    'ops.harvest': 'Thu hoạch & Lô hàng',
+    'ops.recordHarvest': 'Ghi nhận thu hoạch',
+    'ops.cropSeason': 'Mùa vụ canh tác',
+    'ops.zoneBlock': 'Khu & Lô sản xuất',
+
+    // About & Features
+    'about.title': 'Về MyCropDiary',
+    'about.subtitle': 'Cùng người làm nông: ghi chép hôm nay, vun trồng ngày mai.',
+    'features.title': 'Hệ tính năng Toàn diện',
+    'features.subtitle': 'Đầy đủ công cụ phục vụ nông nghiệp thương mại từ xuống giống đến thu hoạch.',
+  },
+};
+
+export type TranslationKey = keyof typeof translations.en;
+

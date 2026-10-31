@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Block, BlockFormValues, Zone } from '../types';
 import { createBlock, updateBlock } from '../zoneBlockService';
 import { FarmGoongMap } from '../../farm-management/components/FarmGoongMap';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface BlockModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function BlockModal({
   onClose,
   onSuccess,
 }: BlockModalProps) {
+  const { lang } = useLanguage();
   const [selectedZoneId, setSelectedZoneId] = useState<number>(zoneId);
   const [values, setValues] = useState<BlockFormValues>({
     blockName: '',
@@ -144,9 +146,9 @@ export function BlockModal({
         <div className="modal-header">
           <div>
             <span className="eyebrow">
-              {mode === 'create' ? 'Lô sản xuất mới' : `Cập nhật lô sản xuất #${initialBlock?.blockId}`}
+              {mode === 'create' ? (lang === 'en' ? 'New Production Block' : 'Lô sản xuất mới') : (lang === 'en' ? `Update Block #${initialBlock?.blockId}` : `Cập nhật lô sản xuất #${initialBlock?.blockId}`)}
             </span>
-            <h2>{mode === 'create' ? 'Tạo lô sản xuất mới' : 'Cập nhật lô sản xuất'}</h2>
+            <h2>{mode === 'create' ? (lang === 'en' ? 'Create New Production Block' : 'Tạo lô sản xuất mới') : (lang === 'en' ? 'Update Production Block' : 'Cập nhật lô sản xuất')}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
             ✕
@@ -167,19 +169,17 @@ export function BlockModal({
           >
             <div className="structured-field-header" style={{ borderBottomColor: isZoneLocked ? '#a7f3d0' : '#cbd5e1' }}>
               <label htmlFor="block-zone-select" className="structured-field-label">
-                Khu vực quản lý trực thuộc <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Parent Zone' : 'Khu vực quản lý trực thuộc'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">
-                {isZoneLocked ? 'Cố định khu vực' : 'Select Zone'}
+                {isZoneLocked ? (lang === 'en' ? 'Fixed Zone' : 'Cố định khu vực') : (lang === 'en' ? 'Select Zone' : 'Chọn khu vực')}
               </span>
             </div>
             {isZoneLocked ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                 <strong style={{ color: '#047857', fontSize: '15px' }}>🗺️ {resolvedZoneName}</strong>
                 <small style={{ color: '#065f46', fontWeight: 600 }}>
-                  {mode === 'edit'
-                    ? 'Không chuyển lô sang khu vực khác khi chỉnh sửa'
-                    : 'Tự động điền theo khu vực hiện tại'}
+                  {mode === 'edit' ? (lang === 'en' ? 'Block zone cannot be changed during edit' : 'Không chuyển lô sang khu vực khác khi chỉnh sửa') : (lang === 'en' ? 'Auto-filled based on current zone' : 'Tự động điền theo khu vực hiện tại')}
                 </small>
               </div>
             ) : (
@@ -203,16 +203,16 @@ export function BlockModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="block-name-input" className="structured-field-label">
-                Tên lô sản xuất <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Block Name' : 'Tên lô sản xuất'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">{values.blockName.length}/100 ký tự · Bắt buộc</span>
+              <span className="structured-field-badge">{values.blockName.length}/100 {lang === 'en' ? 'chars · Required' : 'ký tự · Bắt buộc'}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
                 id="block-name-input"
                 type="text"
                 maxLength={100}
-                placeholder="VD: Lô B01 - Lô sản xuất rau cải"
+                placeholder={lang === 'en' ? 'e.g. Block B01 - Cabbage cultivation block' : 'VD: Lô B01 - Lô sản xuất rau cải'}
                 value={values.blockName}
                 onChange={(e) => setValues({ ...values, blockName: e.target.value })}
                 required
@@ -225,7 +225,7 @@ export function BlockModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="block-area-input" className="structured-field-label">
-                  Zone lô sản xuất <span style={{ color: '#dc2626' }}>*</span>
+                  {lang === 'en' ? 'Block Area' : 'Diện tích lô sản xuất'} <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <span className="structured-field-badge">&gt; 0</span>
               </div>
@@ -245,10 +245,8 @@ export function BlockModal({
 
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
-                <label htmlFor="block-unit-select" className="structured-field-label">
-                  Zone Unit
-                </label>
-                <span className="structured-field-badge">Đơn vị</span>
+                <label htmlFor="block-unit-select" className="structured-field-label">{lang === 'en' ? 'Area Unit' : 'Đơn vị diện tích'}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Unit' : 'Đơn vị'}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <select
@@ -267,7 +265,7 @@ export function BlockModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="block-soil-input" className="structured-field-label">
-                Soil Type &amp; nền thổ nhưỡng
+                {lang === 'en' ? 'Soil Type & Substrate' : 'Loại đất & nền thổ nhưỡng'}
               </label>
               <span className="structured-field-badge">{values.soilType.length}/120 ký tự</span>
             </div>
@@ -276,7 +274,7 @@ export function BlockModal({
                 id="block-soil-input"
                 type="text"
                 maxLength={120}
-                placeholder="VD: Loam nhẹ pha cát, Alluvial cổ, Giá thể xơ dừa..."
+                placeholder={lang === 'en' ? 'e.g. Sandy loam, Ancient alluvial, Coco peat substrate...' : 'VD: Loam nhẹ pha cát, Alluvial cổ, Giá thể xơ dừa...'}
                 value={values.soilType}
                 onChange={(e) => setValues({ ...values, soilType: e.target.value })}
               />
@@ -287,9 +285,9 @@ export function BlockModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <span className="structured-field-label">
-                Vị trí tọa độ GPS &amp; Bản đồ lô sản xuất
+                {lang === 'en' ? 'GPS Coordinates & Interactive Block Map' : 'Vị trí tọa độ GPS & Bản đồ lô sản xuất'}
               </span>
-              <span className="structured-field-badge">Tọa độ</span>
+              <span className="structured-field-badge">{lang === 'en' ? 'Coordinates' : 'Tọa độ'}</span>
             </div>
             <div className="farm-registration-location-fields" style={{ gap: '12px', marginBottom: '12px' }}>
               <div className="form-field" style={{ marginBottom: 0 }}>
@@ -336,7 +334,7 @@ export function BlockModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="block-desc-input" className="structured-field-label">
-                Description lô sản xuất
+                {lang === 'en' ? 'Block Description' : 'Mô tả lô sản xuất'}
               </label>
               <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
             </div>
@@ -345,7 +343,7 @@ export function BlockModal({
                 id="block-desc-input"
                 rows={3}
                 maxLength={500}
-                placeholder="Ghi chú đặc điểm mặt luống, hệ thống tưới nhỏ giọt, lịch sử canh tác trên Block..."
+                placeholder={lang === 'en' ? 'Notes on bed characteristics, drip irrigation system, farming history...' : 'Ghi chú đặc điểm mặt luống, hệ thống tưới nhỏ giọt, lịch sử canh tác trên Block...'}
                 value={values.description}
                 onChange={(e) => setValues({ ...values, description: e.target.value })}
               />
@@ -357,7 +355,7 @@ export function BlockModal({
               Cancel
             </button>
             <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? 'Saving...' : mode === 'create' ? 'Tạo Block' : 'Lưu thay đổi'}
+              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : mode === 'create' ? (lang === 'en' ? 'Create Block' : 'Tạo Block') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
             </button>
           </div>
         </form>

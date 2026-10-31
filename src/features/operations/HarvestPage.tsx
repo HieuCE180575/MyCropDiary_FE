@@ -11,6 +11,7 @@ import {
   type CropSeasonBlockResp,
 } from './cropSeasonService';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface HarvestRecord {
   harvestRecordId: number;
@@ -37,6 +38,7 @@ export function HarvestPage() {
 }
 
 function HarvestContent() {
+  const { lang } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const [seasonInput, setSeasonInput] = useState('');
   const [cropSeasonId, setCropSeasonId] = useState<number | null>(null);
@@ -324,15 +326,15 @@ function HarvestContent() {
     <div className="farm-registration-page">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">Thu hoạch &amp; truy xuất nguồn gốc · {selectedFarm?.farmName || 'Trang trại'}</p>
-          <h2>Thu hoạch &amp; Truy xuất nguồn gốc nông sản</h2>
+          <p className="eyebrow">{lang === 'en' ? 'Harvest & Traceability' : 'Thu hoạch & truy xuất nguồn gốc'} · {selectedFarm?.farmName || (lang === 'en' ? 'Farm' : 'Trang trại')}</p>
+          <h2>{lang === 'en' ? 'Harvest & Produce Traceability' : 'Thu hoạch & Truy xuất nguồn gốc nông sản'}</h2>
           <p className="muted">
-            Quản lý lô sản lượng thu hoạch trên từng lô đất canh tác, phẩm cấp chất lượng và cấp mã QR truy xuất nguồn gốc số chuẩn VietGAP.
+            {lang === 'en' ? 'Manage harvested produce batches per block, quality grading, and issue digital VietGAP traceability QR codes.' : 'Quản lý lô sản lượng thu hoạch trên từng lô đất canh tác, phẩm cấp chất lượng và cấp mã QR truy xuất nguồn gốc số chuẩn VietGAP.'}
           </p>
         </div>
         <div className="dashboard-actions">
           <a href="/crop-seasons" className="action-button" style={{ textDecoration: 'none' }}>
-            <Icon name="calendar" size={16} /> Danh sách mùa vụ
+            <Icon name="calendar" size={16} /> {lang === 'en' ? 'Crop Seasons' : 'Danh sách mùa vụ'}
           </a>
           <button
             type="button"
@@ -340,7 +342,7 @@ function HarvestContent() {
             onClick={() => loadHarvests(cropSeasonId)}
             disabled={cropSeasonId === null || loading || saving || detailLoading}
           >
-            <Icon name="refresh" size={16} /> Làm mới
+            <Icon name="refresh" size={16} /> {lang === 'en' ? 'Refresh' : 'Làm mới'}
           </button>
           <button
             type="button"
@@ -351,7 +353,7 @@ function HarvestContent() {
               setIsModalOpen(true);
             }}
           >
-            <Icon name="plus" size={16} /> Ghi nhận đợt thu hoạch
+            <Icon name="plus" size={16} /> {lang === 'en' ? 'Record Harvest Batch' : 'Ghi nhận đợt thu hoạch'}
           </button>
         </div>
       </div>
@@ -363,7 +365,7 @@ function HarvestContent() {
             <Icon name="box" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Tổng sản lượng</h4>
+            <h4>{lang === 'en' ? 'Total Harvest Yield' : 'Tổng sản lượng'}</h4>
             <strong className="stat-number">
               {cropSeasonId === null || loading || loadError || !sameUnit ? (
                 '—'
@@ -381,7 +383,7 @@ function HarvestContent() {
             <Icon name="layers" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Tổng lô hàng</h4>
+            <h4>{lang === 'en' ? 'Total Harvest Batches' : 'Tổng lô hàng'}</h4>
             <strong className="stat-number">
               {cropSeasonId === null || loading || loadError ? (
                 '—'
@@ -399,7 +401,7 @@ function HarvestContent() {
             <Icon name="calendar" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Mùa vụ tra cứu</h4>
+            <h4>{lang === 'en' ? 'Target Season' : 'Mùa vụ tra cứu'}</h4>
             <strong className="stat-number" style={{ fontSize: '1rem' }}>
               {cropSeasonId !== null ? currentSeason?.seasonName || `Mùa vụ #${cropSeasonId}` : 'Chưa chọn'}
             </strong>
@@ -411,7 +413,7 @@ function HarvestContent() {
             <Icon name="check" size={18} />
           </div>
           <div className="zone-stat-content">
-            <h4>Tỷ lệ loại 1</h4>
+            <h4>{lang === 'en' ? 'Grade 1 Quality Rate' : 'Tỷ lệ loại 1'}</h4>
             <strong className="stat-number">
               {cropSeasonId === null || loading || loadError || records.length === 0 ? (
                 '—'
@@ -446,7 +448,7 @@ function HarvestContent() {
               max="2147483647"
               step="1"
               required
-              placeholder="Nhập ID mùa vụ (VD: 1, 17...)"
+              placeholder={lang === 'en' ? 'Enter Season ID (e.g. 1, 17...)' : 'Nhập ID mùa vụ (VD: 1, 17...)'}
               value={seasonInput}
               onChange={(event) => setSeasonInput(event.target.value)}
               disabled={!selectedFarm || loading || saving || detailLoading}
@@ -645,7 +647,7 @@ function HarvestContent() {
         <div className="panel empty-state">
           <div className="empty-icon">📦</div>
           <h2>Chưa có đợt thu hoạch nào được ghi nhận</h2>
-          <p>Khi đến vụ thu hoạch, hãy nhấn &quot;Ghi nhận đợt thu hoạch&quot; để lưu sản lượng theo từng lô đất và cấp mã truy xuất nguồn gốc VietGAP.</p>
+          <p>{lang === 'en' ? 'When harvest time arrives, click "Record Harvest Batch" to log crop yield per block and issue VietGAP traceability codes.' : 'Khi đến vụ thu hoạch, hãy nhấn "Ghi nhận đợt thu hoạch" để lưu sản lượng theo từng lô đất và cấp mã truy xuất nguồn gốc VietGAP.'}</p>
           <div className="button-row" style={{ justifyContent: 'center' }}>
             <button
               type="button"
@@ -656,7 +658,7 @@ function HarvestContent() {
                 setIsModalOpen(true);
               }}
             >
-              <Icon name="plus" size={16} /> Ghi nhận đợt thu hoạch
+              <Icon name="plus" size={16} /> {lang === 'en' ? 'Record Harvest Batch' : 'Ghi nhận đợt thu hoạch'}
             </button>
           </div>
         </div>
@@ -676,7 +678,7 @@ function HarvestContent() {
                 setIsModalOpen(true);
               }}
             >
-              <Icon name="plus" size={16} /> Ghi nhận đợt thu hoạch
+              <Icon name="plus" size={16} /> {lang === 'en' ? 'Record Harvest Batch' : 'Ghi nhận đợt thu hoạch'}
             </button>
           </div>
 
@@ -691,7 +693,7 @@ function HarvestContent() {
                   <input
                     id="harvest-sub-search"
                     type="search"
-                    placeholder="Tìm theo mã lô, mã truy xuất, tên lô đất, nơi lưu kho..."
+                    placeholder={lang === 'en' ? 'Search by lot code, traceability code, block name, warehouse...' : 'Tìm theo mã lô, mã truy xuất, tên lô đất, nơi lưu kho...'}
                     value={keywordFilter}
                     onChange={(e) => setKeywordFilter(e.target.value)}
                   />
@@ -920,7 +922,7 @@ function HarvestContent() {
         onClose={() => {
           if (!saving) setIsModalOpen(false);
         }}
-        title={editingRecord ? 'Chỉnh sửa thu hoạch' : 'Ghi nhận đợt thu hoạch mới'}
+        title={editingRecord ? (lang === 'en' ? 'Edit Harvest Record' : 'Chỉnh sửa thu hoạch') : (lang === 'en' ? 'Record New Harvest Batch' : 'Ghi nhận đợt thu hoạch mới')}
       >
         <form onSubmit={handleSaveHarvest} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div
@@ -1050,7 +1052,7 @@ function HarvestContent() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div className="form-field" style={{ flex: 2, marginBottom: 0 }}>
                   <input
-                    aria-label="Sản lượng thu hoạch"
+                    aria-label={lang === 'en' ? 'Harvest Quantity' : 'Sản lượng thu hoạch'}
                     type="number"
                     step="any"
                     min="0.0001"
@@ -1060,7 +1062,7 @@ function HarvestContent() {
                   />
                 </div>
                 <div className="form-field" style={{ flex: 1, marginBottom: 0 }}>
-                  <select aria-label="Đơn vị" value={unit} onChange={(e) => setUnit(e.target.value)}>
+                  <select aria-label={lang === 'en' ? 'Unit' : 'Đơn vị'} value={unit} onChange={(e) => setUnit(e.target.value)}>
                     {!['kg', 'tấn', 'thùng'].includes(unit) && <option value={unit}>{unit}</option>}
                     <option value="kg">kg</option>
                     <option value="tấn">tấn</option>
@@ -1077,7 +1079,7 @@ function HarvestContent() {
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <select
-                  aria-label="Phân loại phẩm chất"
+                  aria-label={lang === 'en' ? 'Quality Grade' : 'Phân loại phẩm chất'}
                   value={qualityGrade}
                   onChange={(e) => setQualityGrade(e.target.value)}
                 >
@@ -1140,7 +1142,7 @@ function HarvestContent() {
 
       {/* Modal: Tem QR & Thẻ truy xuất nguồn gốc */}
       {selectedTraceRecord && (
-        <Modal open onClose={() => setSelectedTraceRecord(null)} title="Chi tiết thu hoạch">
+        <Modal open onClose={() => setSelectedTraceRecord(null)} title={lang === 'en' ? 'Harvest Batch & Traceability Details' : 'Chi tiết thu hoạch & Tem truy xuất'}>
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '36px', display: 'block', marginBottom: '6px' }}>🏷️</span>
             <h3 style={{ margin: '0 0 4px', fontSize: '19px', color: '#0f172a' }}>Tem truy xuất nguồn gốc VietGAP</h3>

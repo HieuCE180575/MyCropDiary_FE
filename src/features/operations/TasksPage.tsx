@@ -3,6 +3,7 @@ import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import {
   fetchFarmTasks,
   createFarmTask,
@@ -25,6 +26,7 @@ import { getFarmStaffList, type FarmStaffRecord } from '../staff/staffService';
 import '../../styles/tasks.css';
 
 export function TasksPage() {
+  const { lang } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
 
@@ -212,7 +214,7 @@ export function TasksPage() {
     }
 
     if (formStartsAt && formDueAt && formDueAt < formStartsAt) {
-      setTaskModalError(`Hạn hoàn thành (${formDueAt}) không thể trước thời điểm bắt đầu (${formStartsAt}).`);
+      setTaskModalError(`{lang === 'en' ? 'Due Date / Deadline' : 'Hạn hoàn thành'} (${formDueAt}) không thể trước thời điểm bắt đầu (${formStartsAt}).`);
       return;
     }
 
@@ -310,22 +312,22 @@ export function TasksPage() {
     const norm = (p || '').toLowerCase();
     switch (norm) {
       case 'urgent':
-        return <span className="task-priority-badge task-priority-urgent">Khẩn cấp</span>;
+        return <span className="task-priority-badge task-priority-urgent">{lang === 'en' ? 'Urgent' : 'Khẩn cấp'}</span>;
       case 'high':
-        return <span className="task-priority-badge task-priority-high">Ưu tiên cao</span>;
+        return <span className="task-priority-badge task-priority-high">{lang === 'en' ? 'High' : 'Ưu tiên cao'}</span>;
       case 'low':
-        return <span className="task-priority-badge task-priority-low">Mức thấp</span>;
+        return <span className="task-priority-badge task-priority-low">{lang === 'en' ? 'Low' : 'Mức thấp'}</span>;
       default:
-        return <span className="task-priority-badge task-priority-normal">Bình thường</span>;
+        return <span className="task-priority-badge task-priority-normal">{lang === 'en' ? 'Normal' : 'Bình thường'}</span>;
     }
   };
 
   const getStatusLabel = (s: string) => {
     const norm = (s || '').toLowerCase();
-    if (norm === 'in_progress' || norm === 'doing') return 'In Progress';
-    if (norm === 'completed' || norm === 'done') return 'Completed';
-    if (norm === 'cancelled') return 'Đã hủy';
-    return 'To Do';
+    if (norm === 'in_progress' || norm === 'doing') return lang === 'en' ? 'In Progress' : 'Đang thực hiện';
+    if (norm === 'completed' || norm === 'done') return lang === 'en' ? 'Completed' : 'Hoàn thành';
+    if (norm === 'cancelled') return lang === 'en' ? 'Cancelled' : 'Đã hủy';
+    return lang === 'en' ? 'To Do' : 'Cần làm';
   };
 
   // Metrics computation
@@ -396,7 +398,7 @@ export function TasksPage() {
                 className="task-btn-action task-btn-primary"
                 onClick={() => handleQuickStatusChange(t.taskId, 'in_progress')}
               >
-                ▶ Start làm
+                {lang === 'en' ? '▶ Start' : '▶ Start làm'}
               </button>
             )}
             {t.status === 'in_progress' && (
@@ -405,7 +407,7 @@ export function TasksPage() {
                 className="task-btn-action task-btn-done"
                 onClick={() => handleQuickStatusChange(t.taskId, 'completed')}
               >
-                ✓ Complete
+                {lang === 'en' ? '✓ Complete' : '✓ Complete'}
               </button>
             )}
             {t.status === 'completed' && (
@@ -414,7 +416,7 @@ export function TasksPage() {
                 className="task-btn-action"
                 onClick={() => handleQuickStatusChange(t.taskId, 'in_progress')}
               >
-                ↺ Reopen việc
+                {lang === 'en' ? '↺ Reopen' : '↺ Reopen việc'}
               </button>
             )}
           </div>
@@ -475,10 +477,10 @@ export function TasksPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px', marginBottom: '16px', paddingTop: '4px' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>
-            Phân công &amp; Quản lý tasks
+            {lang === 'en' ? 'Task Assignment & Management' : 'Phân công & Quản lý nhiệm vụ'}
           </h1>
           <p style={{ margin: 0, fontSize: '13.5px', color: '#64748b', fontWeight: 500 }}>
-            {totalTasks} tasks · {todoTasks.length} to do · {inProgressTasks.length} in progress · {completedTasks.length} completed at {selectedFarm?.farmName || 'Trang trại'}
+            {lang === 'en' ? `${totalTasks} tasks · ${todoTasks.length} to do · ${inProgressTasks.length} in progress · ${completedTasks.length} completed at ${selectedFarm?.farmName || 'Farm'}` : `${totalTasks} nhiệm vụ · ${todoTasks.length} cần làm · ${inProgressTasks.length} đang làm · ${completedTasks.length} hoàn thành tại ${selectedFarm?.farmName || 'Trang trại'}`}
           </p>
         </div>
 
@@ -500,7 +502,7 @@ export function TasksPage() {
               boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
             }}
           >
-            <Icon name="plus" size={16} /> Giao việc mới
+            <Icon name="plus" size={16} /> {lang === 'en' ? 'Assign New Task' : 'Giao việc mới'}
           </button>
         </div>
       </div>
@@ -530,10 +532,10 @@ export function TasksPage() {
               aria-label="Lọc theo độ ưu tiên"
             >
               <option value="all">All Priorities</option>
-              <option value="urgent">Khẩn cấp</option>
-              <option value="high">Ưu tiên cao</option>
-              <option value="normal">Bình thường</option>
-              <option value="low">Mức thấp</option>
+              <option value="urgent">{lang === 'en' ? 'Urgent' : 'Khẩn cấp'}</option>
+              <option value="high">{lang === 'en' ? 'High Priority' : 'Ưu tiên cao'}</option>
+              <option value="normal">{lang === 'en' ? 'Normal' : 'Bình thường'}</option>
+              <option value="low">{lang === 'en' ? 'Low' : 'Mức thấp'}</option>
             </select>
           </div>
 
@@ -745,7 +747,7 @@ export function TasksPage() {
                 Không tìm thấy tasks nào phù hợp
               </h2>
               <p style={{ color: '#64748b', fontSize: '14.5px', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
-                Giao việc và phân công nhân viên kỹ thuật để giám sát tiến độ chăm sóc cây trồng theo tiêu chuẩn VietGAP.
+                {lang === 'en' ? 'Assign tasks to technical staff to supervise VietGAP crop care progress.' : 'Giao việc và phân công nhân viên kỹ thuật để giám sát tiến độ chăm sóc cây trồng theo tiêu chuẩn VietGAP.'}
               </p>
               <button
                 type="button"
@@ -763,7 +765,7 @@ export function TasksPage() {
                   boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
                 }}
               >
-                <Icon name="plus" size={16} /> Giao việc ngay
+                <Icon name="plus" size={16} /> {lang === 'en' ? 'Assign Task Now' : 'Giao việc ngay'}
               </button>
             </div>
           ) : (
@@ -776,28 +778,28 @@ export function TasksPage() {
                         <input type="checkbox" aria-label="Chọn tất cả việc" style={{ cursor: 'pointer' }} />
                       </th>
                       <th style={{ width: '23%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                        Tên tasks &amp; Phân loại
+                        {lang === 'en' ? 'Task Name & Type' : 'Tên tasks & Phân loại'}
                       </th>
                       <th style={{ width: '13%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                        Mùa vụ &amp; Vị trí
+                        {lang === 'en' ? 'Season & Location' : 'Mùa vụ & Vị trí'}
                       </th>
                       <th style={{ width: '10%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                        Độ ưu tiên
+                        {lang === 'en' ? 'Priority' : 'Độ ưu tiên'}
                       </th>
                       <th style={{ width: '12%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                        Người phụ trách
+                        {lang === 'en' ? 'Assignee' : 'Người phụ trách'}
                       </th>
                       <th style={{ width: '10%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                        Hạn hoàn thành
+                        {lang === 'en' ? 'Due Date' : 'Hạn hoàn thành'}
                       </th>
                       <th style={{ width: '10%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                        Trạng thái
+                        {lang === 'en' ? 'Status' : 'Trạng thái'}
                       </th>
                       <th style={{ width: '11%', padding: '10px 8px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                        Tiến độ
+                        {lang === 'en' ? 'Progress' : 'Tiến độ'}
                       </th>
                       <th style={{ width: '11%', padding: '10px 8px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                        Thao tác
+                        {lang === 'en' ? 'Actions' : 'Thao tác'}
                       </th>
                     </tr>
                   </thead>
@@ -1132,7 +1134,7 @@ export function TasksPage() {
         onClose={() => {
           if (!submitting) setIsCreateModalOpen(false);
         }}
-        title={editingTask ? 'Chỉnh sửa tasks' : 'Giao việc mới (VietGAP)'}
+        title={editingTask ? (lang === 'en' ? 'Edit Task' : 'Chỉnh sửa tasks') : (lang === 'en' ? 'Assign New Task (VietGAP)' : 'Giao việc mới (VietGAP)')}
       >
         <form onSubmit={handleSaveTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {taskModalError && (
@@ -1273,7 +1275,7 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-start">Thời gian bắt đầu</label>
+              <label htmlFor="task-start">{lang === 'en' ? 'Start Time' : 'Thời gian bắt đầu'}</label>
               <input
                 id="task-start"
                 type="datetime-local"
@@ -1369,7 +1371,7 @@ export function TasksPage() {
             </button>
             <button type="submit" className="primary-button" disabled={submitting}>
               <Icon name={submitting ? 'loader' : 'save'} />
-              {submitting ? 'Đang lưu...' : editingTask ? 'Lưu thay đổi' : 'Giao việc ngay'}
+              {submitting ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : editingTask ? (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi') : (lang === 'en' ? 'Assign Task Now' : 'Giao việc ngay')}
             </button>
           </div>
         </form>
@@ -1431,7 +1433,7 @@ export function TasksPage() {
               {selectedTaskDetail.blockName ? ` / ${selectedTaskDetail.blockName}` : ''}
             </dd>
 
-            <dt>Nhân sự phụ trách:</dt>
+            <dt>{lang === 'en' ? 'Assigned Staff' : 'Nhân sự phụ trách'}:</dt>
             <dd>
               {selectedTaskDetail.assignees && selectedTaskDetail.assignees.length > 0 ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -1487,7 +1489,7 @@ export function TasksPage() {
         </Modal>
       )}
 
-      {/* Modal 3: Xác nhận xóa tasks */}
+      {/* Modal 3: {lang === 'en' ? 'Delete Task' : 'Xác nhận xóa'} tasks */}
       {deletingTask && (
         <Modal
           open

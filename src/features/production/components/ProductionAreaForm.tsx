@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { hasProductionAreaFormErrors, validateProductionAreaForm } from '../validation';
 import type { ProductionAreaFormErrors, ProductionAreaFormValues } from '../types';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 const EMPTY_VALUES: ProductionAreaFormValues = {
   areaName: '',
@@ -33,6 +34,7 @@ export function ProductionAreaForm({
   cancelHref,
   onSubmit,
 }: ProductionAreaFormProps) {
+  const { lang } = useLanguage();
   const [values, setValues] = useState<ProductionAreaFormValues>(initialValues ?? EMPTY_VALUES);
   const [errors, setErrors] = useState<ProductionAreaFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
@@ -62,7 +64,7 @@ export function ProductionAreaForm({
   return (
     <>
       <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link to="/production-zones">Khu sản xuất</Link>
+        <Link to="/production-zones">{lang === 'en' ? 'Production Zones' : 'Khu sản xuất'}</Link>
         <span>›</span>
         <span>{breadcrumbLabel}</span>
       </nav>
@@ -78,19 +80,19 @@ export function ProductionAreaForm({
 
         <div className="zone-form-grid">
           <label className="form-field">
-            <span>Tên khu sản xuất *</span>
+            <span>{lang === 'en' ? 'Production Area Name *' : 'Tên khu sản xuất *'}</span>
             <input
               type="text"
               value={values.areaName}
               onChange={(event) => updateField('areaName', event.target.value)}
               onBlur={() => handleBlur('areaName')}
-              placeholder="VD: Khu sản xuất rau an toàn"
+              placeholder={lang === 'en' ? 'e.g. Safe Vegetable Production Area' : 'VD: Khu sản xuất rau an toàn'}
             />
             {errors.areaName ? <small className="field-error">{errors.areaName}</small> : null}
           </label>
 
           <label className="form-field">
-            <span>Diện tích (ha) *</span>
+            <span>{lang === 'en' ? 'Area (ha) *' : 'Diện tích (ha) *'}</span>
             <input
               type="text"
               inputMode="decimal"
@@ -104,23 +106,23 @@ export function ProductionAreaForm({
         </div>
 
         <label className="form-field">
-          <span>Vị trí / Mô tả</span>
+          <span>{lang === 'en' ? 'Location / Description' : 'Vị trí / Mô tả'}</span>
           <textarea
             rows={3}
             value={values.locationDescription}
             onChange={(event) => updateField('locationDescription', event.target.value)}
             onBlur={() => handleBlur('locationDescription')}
-            placeholder="Vị trí, ranh giới hoặc đặc điểm của khu sản xuất (không bắt buộc)"
+            placeholder={lang === 'en' ? 'Location, boundaries, or area characteristics (optional)' : 'Vị trí, ranh giới hoặc đặc điểm của khu sản xuất (không bắt buộc)'}
           />
           {errors.locationDescription ? <small className="field-error">{errors.locationDescription}</small> : null}
         </label>
 
         <div className="form-actions">
           <Link to={cancelHref} className="ghost-button">
-            Huỷ
+            {lang === 'en' ? 'Cancel' : 'Huỷ'}
           </Link>
           <button type="submit" className="primary-button" disabled={submitting}>
-            {submitting ? 'Đang lưu...' : submitLabel}
+            {submitting ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : submitLabel}
           </button>
         </div>
       </form>

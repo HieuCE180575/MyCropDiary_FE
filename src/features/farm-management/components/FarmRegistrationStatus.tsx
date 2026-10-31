@@ -5,6 +5,7 @@ import { FARM_REGISTRATION_STATUS_LABEL, FARM_REGISTRATION_STATUS_TONE } from '.
 import { parseBoundaryCoordinates } from '../goongMapService';
 import type { FarmRegistration } from '../types';
 import { FarmGoongMap } from './FarmGoongMap';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface FarmRegistrationStatusProps {
   registration: FarmRegistration;
@@ -14,8 +15,8 @@ interface FarmRegistrationStatusProps {
   onStartNew: () => void;
 }
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
+function formatDateTime(iso: string, lang: 'en' | 'vi'): string {
+  return new Date(iso).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export function FarmRegistrationStatus({
@@ -25,6 +26,7 @@ export function FarmRegistrationStatus({
   onCancel,
   onStartNew,
 }: FarmRegistrationStatusProps) {
+  const { lang } = useLanguage();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canCancel = registration.status === 'pending';
@@ -35,7 +37,7 @@ export function FarmRegistrationStatus({
     <div className="panel farm-registration-status">
       <div className="panel-title">
         <div>
-          <span className="eyebrow">Trạng thái đăng ký</span>
+          <span className="eyebrow">{lang === 'en' ? 'REGISTRATION STATUS' : 'Trạng thái đăng ký'}</span>
           <h2>{registration.proposedFarmName}</h2>
         </div>
         <StatusBadge
@@ -46,42 +48,51 @@ export function FarmRegistrationStatus({
 
       <dl className="detail-list">
         <div>
-          <dt>Địa chỉ</dt>
+          <dt>{lang === 'en' ? 'Address' : 'Địa chỉ'}</dt>
           <dd>{registration.address}</dd>
         </div>
         {([
-          ['province', 'Tỉnh / thành phố'], ['district', 'Quận / huyện'], ['ward', 'Phường / xã'],
+          ['province', lang === 'en' ? 'Province / City' : 'Tỉnh / thành phố'],
+          ['district', lang === 'en' ? 'District' : 'Quận / huyện'],
+          ['ward', lang === 'en' ? 'Ward / Commune' : 'Phường / xã'],
         ] as const).map(([field, label]) => registration[field] ? (
           <div key={field}><dt>{label}</dt><dd>{registration[field]}</dd></div>
         ) : null)}
         {registration.latitude != null && registration.longitude != null ? (
           <div>
-            <dt>Tọa độ</dt>
+            <dt>{lang === 'en' ? 'Coordinates' : 'Tọa độ'}</dt>
             <dd>{registration.latitude.toFixed(6)}, {registration.longitude.toFixed(6)}</dd>
           </div>
         ) : null}
         {registration.documentUrl && /^https?:\/\//i.test(registration.documentUrl) && (
-          <div><dt>Tài liệu minh chứng</dt><dd><a href={registration.documentUrl} target="_blank" rel="noreferrer">Mở tài liệu minh chứng</a></dd></div>
+          <div>
+            <dt>{lang === 'en' ? 'Supporting Document' : 'Tài liệu minh chứng'}</dt>
+            <dd>
+              <a href={registration.documentUrl} target="_blank" rel="noreferrer">
+                {lang === 'en' ? 'Open supporting document' : 'Mở tài liệu minh chứng'}
+              </a>
+            </dd>
+          </div>
         )}
         {registration.description ? (
           <div>
-            <dt>Mô tả</dt>
+            <dt>{lang === 'en' ? 'Description' : 'Mô tả'}</dt>
             <dd>{registration.description}</dd>
           </div>
         ) : null}
         <div>
-          <dt>Ngày gửi</dt>
-          <dd>{formatDateTime(registration.submittedAt)}</dd>
+          <dt>{lang === 'en' ? 'Submitted At' : 'Ngày gửi'}</dt>
+          <dd>{formatDateTime(registration.submittedAt, lang)}</dd>
         </div>
         {registration.reviewedAt ? (
           <div>
-            <dt>Ngày xử lý</dt>
-            <dd>{formatDateTime(registration.reviewedAt)}</dd>
+            <dt>{lang === 'en' ? 'Processed At' : 'Ngày xử lý'}</dt>
+            <dd>{formatDateTime(registration.reviewedAt, lang)}</dd>
           </div>
         ) : null}
         {registration.reviewComment ? (
           <div>
-            <dt>Ghi chú</dt>
+            <dt>{lang === 'en' ? 'Notes' : 'Ghi chú'}</dt>
             <dd>{registration.reviewComment}</dd>
           </div>
         ) : null}
@@ -107,7 +118,9 @@ export function FarmRegistrationStatus({
 
       {registration.status === 'pending' ? (
         <p className="status-note">
-          Đăng ký của bạn đang được quản trị viên xem xét. Bạn có thể hủy đăng ký này bất cứ lúc nào trước khi được duyệt.
+          {lang === 'en'
+            ? 'Your farm registration is currently under administrative review. You can cancel this request at any time prior to approval.'
+            : 'Đăng ký của bạn đang được quản trị viên xem xét. Bạn có thể hủy đăng ký này bất cứ lúc nào trước khi được duyệt.'}
         </p>
       ) : null}
 
@@ -119,22 +132,26 @@ export function FarmRegistrationStatus({
             onClick={() => setConfirmOpen(true)}
             disabled={cancelling}
           >
-            Hủy đăng ký
+            {lang === 'en' ? 'Cancel Registration' : 'Hủy đăng ký'}
           </button>
         ) : null}
         {canStartNew ? (
           <button type="button" className="primary-button" onClick={onStartNew}>
-            Gửi đăng ký mới
+            {lang === 'en' ? 'Start New Registration' : 'Gửi đăng ký mới'}
           </button>
         ) : null}
       </div>
 
       <ConfirmDialog
         open={confirmOpen}
-        title="Hủy đăng ký trang trại?"
-        description="Sau khi hủy, bạn sẽ cần gửi lại đăng ký từ đầu nếu muốn trở thành chủ trang trại."
-        confirmLabel="Hủy đăng ký"
-        cancelLabel="Đóng"
+        title={lang === 'en' ? 'Cancel Farm Registration?' : 'Hủy đăng ký trang trại?'}
+        description={
+          lang === 'en'
+            ? 'After cancellation, you will need to submit a new application if you wish to register a farm.'
+            : 'Sau khi hủy, bạn sẽ cần gửi lại đăng ký từ đầu nếu muốn trở thành chủ trang trại.'
+        }
+        confirmLabel={lang === 'en' ? 'Cancel Registration' : 'Hủy đăng ký'}
+        cancelLabel={lang === 'en' ? 'Close' : 'Đóng'}
         tone="danger"
         loading={cancelling}
         onConfirm={() => {

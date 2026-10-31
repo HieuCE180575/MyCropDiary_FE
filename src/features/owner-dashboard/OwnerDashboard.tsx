@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import type { FarmSummary } from '../farm-management/api';
 import { useApiData } from '../../shared/hooks/useApiData';
@@ -9,6 +10,7 @@ import { CropAreaChart, DemoTag, EnvironmentPanel, RecentActivityPanel, SeasonPr
 import '../../styles/owner-dashboard.css';
 
 export function OwnerDashboard({ farm }: { farm: FarmSummary }) {
+  const { lang } = useLanguage();
   const load = useCallback((signal: AbortSignal) => loadOwnerDashboard(farm.id, signal), [farm.id]);
   const { data, loading, error, retry } = useApiData(load);
   const demo = useMemo(() => makeDashboardDemo(), [farm.id]);
@@ -27,25 +29,25 @@ export function OwnerDashboard({ farm }: { farm: FarmSummary }) {
   const recentSample = !data?.recent.length;
   const address = data?.farm?.address?.trim() || [farm.district, farm.province].filter(Boolean).join(', ');
   const metadata = [
-    { icon: 'map-pin', label: 'Địa điểm', value: address || 'Cờ Đỏ, Cần Thơ', demo: !address },
-    { icon: 'leaf', label: 'Quy mô', value: formatArea(totalArea), demo: sampleArea },
-    { icon: 'sprout', label: 'Cây trồng chính', value: [...new Set(seasons.map(season => season.cropCategoryName).filter(Boolean))].slice(0, 2).join(', ') || 'Chưa cập nhật', demo: sampleSeasons },
-    { icon: 'calendar', label: 'Số mùa vụ đang hoạt động', value: activeSeasons + ' mùa vụ', demo: sampleSeasons },
+    { icon: 'map-pin', label: lang === 'en' ? 'Location' : 'Địa điểm', value: address || (lang === 'en' ? 'Co Do, Can Tho' : 'Cờ Đỏ, Cần Thơ'), demo: !address },
+    { icon: 'leaf', label: lang === 'en' ? 'Scale' : 'Quy mô', value: formatArea(totalArea), demo: sampleArea },
+    { icon: 'sprout', label: lang === 'en' ? 'Main Crop' : 'Cây trồng chính', value: [...new Set(seasons.map(season => season.cropCategoryName).filter(Boolean))].slice(0, 2).join(', ') || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật'), demo: sampleSeasons },
+    { icon: 'calendar', label: lang === 'en' ? 'Active Crop Seasons' : 'Số mùa vụ đang hoạt động', value: activeSeasons + (lang === 'en' ? ' seasons' : ' mùa vụ'), demo: sampleSeasons },
   ];
   const stats = [
-    { icon: 'gauge', label: 'Tổng diện tích canh tác', value: formatArea(totalArea), to: '/production-areas', sample: sampleArea, tone: 'green' },
-    { icon: 'sprout', label: 'Mùa vụ đang hoạt động', value: String(activeSeasons), to: '/crop-seasons', sample: sampleSeasons, tone: 'green' },
-    { icon: 'users', label: 'Người lao động', value: `${sampleStaff ? demo.staffCount : data.staffCount} người`, to: '/workers', sample: sampleStaff, tone: 'blue' },
-    { icon: 'plots', label: 'Khu sản xuất & lô đất', value: `${sampleZones ? demo.zonesCount : new Set((data?.zones ?? []).map(zone => zone.zoneId)).size} khu`, to: '/production-areas', sample: sampleZones, tone: 'mint' },
+    { icon: 'gauge', label: lang === 'en' ? 'Total Cultivated Area' : 'Tổng diện tích canh tác', value: formatArea(totalArea), to: '/production-areas', sample: sampleArea, tone: 'green' },
+    { icon: 'sprout', label: lang === 'en' ? 'Active Crop Seasons' : 'Mùa vụ đang hoạt động', value: String(activeSeasons), to: '/crop-seasons', sample: sampleSeasons, tone: 'green' },
+    { icon: 'users', label: lang === 'en' ? 'Farm Workers' : 'Người lao động', value: `${sampleStaff ? demo.staffCount : data.staffCount} ${lang === 'en' ? 'people' : 'người'}`, to: '/workers', sample: sampleStaff, tone: 'blue' },
+    { icon: 'plots', label: lang === 'en' ? 'Production Zones & Blocks' : 'Khu sản xuất & lô đất', value: `${sampleZones ? demo.zonesCount : new Set((data?.zones ?? []).map(zone => zone.zoneId)).size} ${lang === 'en' ? 'zones' : 'khu'}`, to: '/production-areas', sample: sampleZones, tone: 'mint' },
   ];
   return <section className="owner-dashboard" aria-label="Tổng quan chủ trang trại">
     <header className="owner-hero">
-      <Link to="/farm?edit=1" className="owner-edit-link"><Icon name="edit" size={16} />Chỉnh sửa thông tin</Link>
-      <span className="owner-role-badge">CHỦ TRANG TRẠI</span>
+      <Link to="/farm?edit=1" className="owner-edit-link"><Icon name="edit" size={16} />{lang === 'en' ? 'Edit Farm Information' : 'Chỉnh sửa thông tin'}</Link>
+      <span className="owner-role-badge">{lang === 'en' ? 'FARM OWNER' : 'CHỦ TRANG TRẠI'}</span>
       <h1>{farm.farmName}<Icon name="leaf" size={30} /></h1>
-      <p className="owner-hero-description">Quản lý nông nghiệp bền vững, hướng tới nông sản an toàn</p>
+      <p className="owner-hero-description">{lang === 'en' ? 'Sustainable farm management, aiming for clean and safe agricultural produce' : 'Quản lý nông nghiệp bền vững, hướng tới nông sản an toàn'}</p>
       <div className="owner-hero-meta">{metadata.map(item => <div className="owner-meta-item" key={item.label}>
-        <Icon name={item.icon} size={28} /><div><span>{item.label}</span>{loading ? <span className="owner-skeleton owner-meta-skeleton" /> : <strong>{item.value}{item.demo && <span className="owner-inline-demo">Mẫu</span>}</strong>}</div>
+        <Icon name={item.icon} size={28} /><div><span>{item.label}</span>{loading ? <span className="owner-skeleton owner-meta-skeleton" /> : <strong>{item.value}{item.demo && <span className="owner-inline-demo">{lang === 'en' ? 'Sample' : 'Mẫu'}</span>}</strong>}</div>
       </div>)}</div>
     </header>
     {(error || data?.issues.length) ? <div className="owner-data-notice" role="status"><Icon name="warning" size={15} /><span>Chưa tải được một số dữ liệu{data?.issues.length ? ': ' + data.issues.join(', ') : ''}. Các khối minh họa có nhãn “Dữ liệu mẫu”.</span><button type="button" onClick={retry}>Thử lại</button></div> : null}

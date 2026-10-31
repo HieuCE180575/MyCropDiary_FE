@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import type { Zone, ZoneFormValues } from '../types';
 import { createZone, updateZone } from '../zoneBlockService';
 
@@ -23,6 +24,7 @@ export function ZoneModal({
   onClose,
   onSuccess,
 }: ZoneModalProps) {
+  const { lang } = useLanguage();
   const [values, setValues] = useState<ZoneFormValues>({
     zoneName: '',
     areaValue: '',
@@ -124,9 +126,9 @@ export function ZoneModal({
         <div className="modal-header">
           <div>
             <span className="eyebrow">
-              {mode === 'create' ? 'Khu vực sản xuất mới' : `Cập nhật khu vực #${initialZone?.zoneId}`}
+              {mode === 'create' ? (lang === 'en' ? 'New Production Zone' : 'Khu vực sản xuất mới') : (lang === 'en' ? `Update Zone #${initialZone?.zoneId}` : `Cập nhật khu vực #${initialZone?.zoneId}`)}
             </span>
-            <h2>{mode === 'create' ? 'Tạo khu vực sản xuất mới' : 'Cập nhật khu vực sản xuất'}</h2>
+            <h2>{mode === 'create' ? (lang === 'en' ? 'Create New Production Zone' : 'Tạo khu vực sản xuất mới') : (lang === 'en' ? 'Update Production Zone' : 'Cập nhật khu vực sản xuất')}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
             ✕
@@ -139,9 +141,9 @@ export function ZoneModal({
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
               <span className="structured-field-label" style={{ color: '#065f46' }}>
-                Trang trại trực thuộc
+                {lang === 'en' ? 'Affiliated Farm' : 'Trang trại trực thuộc'}
               </span>
-              <span className="structured-field-badge">Cố định</span>
+              <span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span>
             </div>
             <div style={{ fontWeight: 700, color: '#047857', fontSize: '15px' }}>
               🌱 {farmName || `Farm #${farmId}`}
@@ -151,16 +153,16 @@ export function ZoneModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="zone-name-input" className="structured-field-label">
-                Zone Name quản lý <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Zone Name' : 'Tên phân khu (Zone)'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">{values.zoneName.length}/100 ký tự · Bắt buộc</span>
+              <span className="structured-field-badge">{values.zoneName.length}/100 {lang === 'en' ? 'chars · Required' : 'ký tự · Bắt buộc'}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
                 id="zone-name-input"
                 type="text"
                 maxLength={100}
-                placeholder="VD: Khu A - Khu trồng rau ăn lá nhà màng"
+                placeholder={lang === 'en' ? 'e.g. Zone A - Greenhouse Leafy Vegetables' : 'VD: Khu A - Khu trồng rau ăn lá nhà màng'}
                 value={values.zoneName}
                 onChange={(e) => setValues({ ...values, zoneName: e.target.value })}
                 required
@@ -172,7 +174,7 @@ export function ZoneModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="zone-area-input" className="structured-field-label">
-                  Zone quy hoạch <span style={{ color: '#dc2626' }}>*</span>
+                  {lang === 'en' ? 'Planned Zone Area' : 'Diện tích phân khu'} <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <span className="structured-field-badge">&gt; 0</span>
               </div>
@@ -192,10 +194,8 @@ export function ZoneModal({
 
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
-                <label htmlFor="zone-unit-select" className="structured-field-label">
-                  Zone Unit
-                </label>
-                <span className="structured-field-badge">Đơn vị</span>
+                <label htmlFor="zone-unit-select" className="structured-field-label">{lang === 'en' ? 'Area Unit' : 'Đơn vị diện tích'}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Unit' : 'Đơn vị'}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <select
@@ -213,7 +213,7 @@ export function ZoneModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="zone-desc-input" className="structured-field-label">
-                Description đặc điểm Zone &amp; hạ tầng
+                {lang === 'en' ? 'Zone Features & Infrastructure' : 'Mô tả đặc điểm phân khu & hạ tầng'}
               </label>
               <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
             </div>
@@ -222,7 +222,7 @@ export function ZoneModal({
                 id="zone-desc-input"
                 rows={3}
                 maxLength={500}
-                placeholder="Description vị trí tiếp giáp, điều kiện nhà màng/nhà lưới, nguồn nước và nhóm cây trồng..."
+                placeholder={lang === 'en' ? 'Describe boundaries, greenhouse/net house conditions, water sources, and crop types...' : 'Mô tả vị trí tiếp giáp, điều kiện nhà màng/nhà lưới, nguồn nước và nhóm cây trồng...'}
                 value={values.description}
                 onChange={(e) => setValues({ ...values, description: e.target.value })}
               />
@@ -232,9 +232,9 @@ export function ZoneModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="zone-image-input" className="structured-field-label">
-                Đường dẫn ảnh sơ đồ / thực địa
+                {lang === 'en' ? 'Map / Field Image URL' : 'Đường dẫn ảnh sơ đồ / thực địa'}
               </label>
-              <span className="structured-field-badge">Tùy chọn</span>
+              <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
@@ -252,7 +252,7 @@ export function ZoneModal({
               Cancel
             </button>
             <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? 'Saving...' : mode === 'create' ? 'Tạo Zone' : 'Lưu thay đổi'}
+              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : mode === 'create' ? (lang === 'en' ? 'Create Zone' : 'Tạo Zone') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
             </button>
           </div>
         </form>

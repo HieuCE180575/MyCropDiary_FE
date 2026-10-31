@@ -24,6 +24,7 @@ import {
 import { fetchBlocks } from '../production/zoneBlockService';
 import type { Block } from '../production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface SelectedBlockConfig {
   blockId: number;
@@ -33,6 +34,7 @@ interface SelectedBlockConfig {
 }
 
 export function CropSeasonsPage() {
+  const { lang } = useLanguage();
   const navigate = useNavigate();
   const { cropSeasonId: paramSeasonId } = useParams<{ cropSeasonId?: string }>();
   const detailSeasonId = paramSeasonId ? parseInt(paramSeasonId, 10) : null;
@@ -605,8 +607,8 @@ export function CropSeasonsPage() {
         >
           <div className="modal-header">
             <div>
-              <span className="eyebrow">Hồ sơ mùa vụ &amp; Phân bổ lô đất (N-N)</span>
-              <h2>{modalMode === 'create' ? 'Create Season canh tác mới' : 'Update Season & lô đất áp dụng'}</h2>
+              <span className="eyebrow">{lang === 'en' ? 'Season Profile & Block Allocation (N-N)' : 'Hồ sơ mùa vụ & Phân bổ lô đất (N-N)'}</span>
+              <h2>{modalMode === 'create' ? (lang === 'en' ? 'Create New Crop Season' : 'Create Season canh tác mới') : (lang === 'en' ? 'Update Season & Blocks' : 'Update Season & lô đất áp dụng')}</h2>
             </div>
             <button type="button" className="modal-close" onClick={() => setModalMode(null)} aria-label="Đóng">
               ✕
@@ -623,9 +625,9 @@ export function CropSeasonsPage() {
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="modal-cs-cat" className="structured-field-label">
-                    Danh mục cây trồng <span style={{ color: '#dc2626' }}>*</span>
+                    {lang === 'en' ? 'Crop Category' : 'Danh mục cây trồng'} <span style={{ color: '#dc2626' }}>*</span>
                   </label>
-                  <span className="structured-field-badge">Tiêu chuẩn VietGAP</span>
+                  <span className="structured-field-badge">{lang === 'en' ? 'VietGAP Standard' : 'Tiêu chuẩn VietGAP'}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <CropCategoryCombobox
@@ -649,7 +651,7 @@ export function CropSeasonsPage() {
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="modal-cs-start" className="structured-field-label">
-                    Start Date mùa vụ <span style={{ color: '#dc2626' }}>*</span>
+                    {lang === 'en' ? 'Season Start Date' : 'Start Date mùa vụ'} <span style={{ color: '#dc2626' }}>*</span>
                   </label>
                   <span className="structured-field-badge">Bắt buộc</span>
                 </div>
@@ -667,7 +669,7 @@ export function CropSeasonsPage() {
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="modal-cs-end" className="structured-field-label">
-                    End Date dự kiến
+                    {lang === 'en' ? 'Expected End Date' : 'End Date dự kiến'}
                   </label>
                   <span className="structured-field-badge">Tùy chọn</span>
                 </div>
@@ -704,15 +706,15 @@ export function CropSeasonsPage() {
               >
                 <div>
                   <span className="structured-field-label" style={{ fontSize: '14.5px', color: '#0f172a' }}>
-                    🌱 Chọn lô đất áp dụng cho mùa vụ này (Có thể chọn 1 hoặc nhiều lô)
+                    {lang === 'en' ? '🌱 Select target blocks for this season (Single or multiple blocks)' : '🌱 Chọn lô đất áp dụng cho mùa vụ này (Có thể chọn 1 hoặc nhiều lô)'}
                   </span>
                   <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#64748b' }}>
-                    Các lô được chọn sẽ được phép ghi Nhật ký canh tác, Giao việc và Thu hoạch truy xuất QR VietGAP trong vụ này.
+                    {lang === 'en' ? 'Selected blocks will be available for farming activities, task assignment, and QR-traceable harvests in this season.' : 'Các lô được chọn sẽ được phép ghi Nhật ký canh tác, Giao việc và Thu hoạch truy xuất QR VietGAP trong vụ này.'}
                   </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span className="status-badge active" style={{ fontSize: '12px' }}>
-                    Đã chọn {selectedCount}/{allFarmBlocks.length} lô
+                    {lang === 'en' ? `Selected ${selectedCount}/${allFarmBlocks.length} block(s)` : `Đã chọn ${selectedCount}/${allFarmBlocks.length} lô`}
                   </span>
                   {allFarmBlocks.length > 0 && (
                     <>
@@ -722,7 +724,7 @@ export function CropSeasonsPage() {
                         style={{ minHeight: '28px', padding: '4px 10px', fontSize: '12px' }}
                         onClick={handleSelectAllBlocks}
                       >
-                        Chọn tất cả
+                        {lang === 'en' ? 'Select All' : 'Chọn tất cả'}
                       </button>
                       {selectedCount > 0 && (
                         <button
@@ -731,7 +733,7 @@ export function CropSeasonsPage() {
                           style={{ minHeight: '28px', padding: '4px 10px', fontSize: '12px' }}
                           onClick={handleClearAllBlocks}
                         >
-                          Bỏ chọn
+                          {lang === 'en' ? 'Clear All' : 'Bỏ chọn'}
                         </button>
                       )}
                     </>
@@ -898,7 +900,7 @@ export function CropSeasonsPage() {
                                   marginBottom: '4px',
                                 }}
                               >
-                                Ngày xuống giống tại {block.blockName}
+                                {lang === 'en' ? 'Planted Date' : 'Ngày xuống giống'} tại {block.blockName}
                               </label>
                               <input
                                 type="date"
@@ -928,7 +930,7 @@ export function CropSeasonsPage() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="modal-cs-notes" className="structured-field-label">
-                  Ghi chú mùa vụ
+                  {lang === 'en' ? 'Season Notes' : 'Ghi chú mùa vụ'}
                 </label>
                 <span className="structured-field-badge">{formValues.notes.length}/1000 ký tự</span>
               </div>
@@ -937,7 +939,7 @@ export function CropSeasonsPage() {
                   id="modal-cs-notes"
                   rows={2}
                   maxLength={1000}
-                  placeholder="Mô tả mục tiêu sản lượng, giống cây hoặc ghi chú kỹ thuật chăm sóc..."
+                  placeholder={lang === 'en' ? 'Describe yield targets, crop varieties, or technical care guidelines...' : 'Mô tả mục tiêu sản lượng, giống cây hoặc ghi chú kỹ thuật chăm sóc...'}
                   value={formValues.notes}
                   onChange={(e) => setFormValues({ ...formValues, notes: e.target.value })}
                 />
@@ -951,9 +953,7 @@ export function CropSeasonsPage() {
               <button type="submit" className="primary-button" disabled={saving}>
                 {saving
                   ? 'Saving...'
-                  : modalMode === 'create'
-                    ? `Create Season${selectedCount > 0 ? ` & Gán ${selectedCount} lô đất` : ''}`
-                    : 'Lưu thay đổi'}
+                  : modalMode === 'create' ? (lang === 'en' ? `Create Season${selectedCount > 0 ? ` & Assign ${selectedCount} block(s)` : ''}` : `Create Season${selectedCount > 0 ? ` & Gán ${selectedCount} lô đất` : ''}`) : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
               </button>
             </div>
           </form>
@@ -1007,7 +1007,7 @@ export function CropSeasonsPage() {
 
         {/* Full Hierarchy Breadcrumb: Zone List → Zone Details → Block Details → Crop Season Details */}
         <nav className="production-breadcrumb" aria-label="Breadcrumb">
-          <Link to="/zones">Khu vực sản xuất</Link>
+          <Link to="/zones">{lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất'}</Link>
           {primaryBlock?.zoneId && (
             <>
               <span className="sep">→</span>
@@ -1031,19 +1031,19 @@ export function CropSeasonsPage() {
         <div className="page-heading" style={{ marginBottom: '20px' }}>
           <div>
             <p className="eyebrow">
-              Chi tiết mùa vụ · CS-{String(selectedSeason.cropSeasonId).padStart(3, '0')} · {selectedSeason.farmName || farmName}
+              {lang === 'en' ? 'Season Details' : 'Chi tiết mùa vụ'} · CS-{String(selectedSeason.cropSeasonId).padStart(3, '0')} · {selectedSeason.farmName || farmName}
             </p>
             <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '4px 0 6px', letterSpacing: '-0.02em' }}>
               {selectedSeason.seasonName}
             </h1>
             <p className="muted" style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>
-              {selectedSeason.notes || 'Hồ sơ chi tiết mùa vụ canh tác và các lô sản xuất trực thuộc.'}
+              {selectedSeason.notes || (lang === 'en' ? 'Detailed crop season profile and affiliated production blocks.' : 'Hồ sơ chi tiết mùa vụ canh tác và các lô sản xuất trực thuộc.')}
             </p>
           </div>
 
           <div className="dashboard-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
             <Link to="/crop-seasons" className="action-button" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <Icon name="arrow-left" size={15} /> Danh sách mùa vụ
+              <Icon name="arrow-left" size={15} /> {lang === 'en' ? 'Back to Seasons' : 'Danh sách mùa vụ'}
             </Link>
             <button
               type="button"
@@ -1051,7 +1051,7 @@ export function CropSeasonsPage() {
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               onClick={() => void openEditModal(selectedSeason)}
             >
-              <Icon name="edit" size={15} /> Chỉnh sửa &amp; Chọn lô đất
+              <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit & Allocate Blocks' : 'Chỉnh sửa & Chọn lô đất'}
             </button>
             {selectedSeason.seasonStatus !== 'completed' && (
               <button
@@ -1060,7 +1060,7 @@ export function CropSeasonsPage() {
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#059669' }}
                 onClick={() => handleStatusChange(selectedSeason.cropSeasonId, 'completed')}
               >
-                <Icon name="check" size={15} /> Đánh dấu hoàn thành
+                <Icon name="check" size={15} /> {lang === 'en' ? 'Mark as Completed' : 'Đánh dấu hoàn thành'}
               </button>
             )}
             {isOwner && (
@@ -1070,7 +1070,7 @@ export function CropSeasonsPage() {
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 onClick={() => setSeasonToDelete(selectedSeason)}
               >
-                <Icon name="trash" size={15} /> Xóa mùa vụ
+                <Icon name="trash" size={15} /> {lang === 'en' ? 'Delete Season' : 'Xóa mùa vụ'}
               </button>
             )}
           </div>
@@ -1134,7 +1134,7 @@ export function CropSeasonsPage() {
               </div>
               <span className={`status-dot-badge ${selectedSeason.seasonStatus === 'active' ? 'active' : 'completed'}`}>
                 <span className="dot" />
-                {selectedSeason.seasonStatus === 'active' ? 'Đang canh tác' : selectedSeason.seasonStatus === 'completed' ? 'Đã hoàn thành' : selectedSeason.seasonStatus}
+                {selectedSeason.seasonStatus === 'active' ? (lang === 'en' ? 'Active' : 'Đang canh tác') : selectedSeason.seasonStatus === 'completed' ? (lang === 'en' ? 'Completed' : 'Đã hoàn thành') : (lang === 'en' && selectedSeason.seasonStatus === 'planned' ? 'Planned' : selectedSeason.seasonStatus)}
               </span>
             </div>
 
@@ -1226,11 +1226,11 @@ export function CropSeasonsPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Tên lô đất</th>
-                      <th>Khu vực</th>
-                      <th>Diện tích gieo trồng</th>
-                      <th>Ngày xuống giống → Dự kiến thu hoạch</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
+                      <th>{lang === 'en' ? 'Block Name' : 'Tên lô đất'}</th>
+                      <th>{lang === 'en' ? 'Zone' : 'Khu vực'}</th>
+                      <th>{lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'}</th>
+                      <th>{lang === 'en' ? 'Planting Date → Expected Harvest' : 'Ngày xuống giống → Dự kiến thu hoạch'}</th>
+                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1316,8 +1316,8 @@ export function CropSeasonsPage() {
             <div className="modal-card" style={{ width: 'min(580px, 100%)', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div>
-                  <span className="eyebrow">Phân công lô đất canh tác</span>
-                  <h2>Gán lô đất vào: {selectedSeason.seasonName}</h2>
+                  <span className="eyebrow">{lang === 'en' ? 'Block Allocation' : 'Phân công lô đất canh tác'}</span>
+                  <h2>{lang === 'en' ? 'Allocate Block to: ' : 'Gán lô đất vào: '}{selectedSeason.seasonName}</h2>
                 </div>
                 <button type="button" className="modal-close" onClick={() => setIsAssignBlockOpen(false)} aria-label="Đóng">
                   ✕
@@ -1333,7 +1333,7 @@ export function CropSeasonsPage() {
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
                     <label htmlFor="assign-block-select" className="structured-field-label">
-                      Lô sản xuất mục tiêu <span style={{ color: '#dc2626' }}>*</span>
+                      {lang === 'en' ? 'Target Production Block' : 'Lô sản xuất mục tiêu'} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
                     <span className="structured-field-badge">Trang trại {farmName}</span>
                   </div>
@@ -1364,7 +1364,7 @@ export function CropSeasonsPage() {
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
                     <label htmlFor="assign-block-area" className="structured-field-label">
-                      Diện tích gieo trồng ({assignBlockForm.areaUnit || 'm²'}) <span style={{ color: '#dc2626' }}>*</span>
+                      {lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'} ({assignBlockForm.areaUnit || 'm²'}) <span style={{ color: '#dc2626' }}>*</span>
                     </label>
                     <span className="structured-field-badge">Số dương</span>
                   </div>
@@ -1422,9 +1422,7 @@ export function CropSeasonsPage() {
                   <button type="button" className="ghost-button" onClick={() => setIsAssignBlockOpen(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="primary-button">
-                    Gán lô đất
-                  </button>
+                  <button type="submit" className="primary-button">{lang === 'en' ? 'Allocate Block' : 'Gán lô đất'}</button>
                 </div>
               </form>
             </div>
@@ -1497,7 +1495,7 @@ export function CropSeasonsPage() {
 
       {/* Breadcrumb matching exact mockup */}
       <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
-        TRANG TRẠI {farmName || farmId} <span style={{ margin: '0 6px', color: '#cbd5e1' }}>/</span> MÙA VỤ
+        {lang === 'en' ? 'FARM ' : 'TRANG TRẠI '}{farmName || farmId} <span style={{ margin: '0 6px', color: '#cbd5e1' }}>/</span> {lang === 'en' ? 'CROP SEASONS' : 'MÙA VỤ'}
       </div>
 
       {/* Main Page Heading */}
@@ -1507,7 +1505,7 @@ export function CropSeasonsPage() {
             Crop Seasons
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
-            Quản lý mùa vụ và lô đất áp dụng.
+            {lang === 'en' ? 'Manage crop seasons and allocated production blocks.' : 'Quản lý mùa vụ và lô đất áp dụng.'}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1527,7 +1525,7 @@ export function CropSeasonsPage() {
               boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
             }}
           >
-            <Icon name="plus" size={17} /> Thêm mùa vụ
+            <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Season' : 'Thêm mùa vụ'}
           </button>
         </div>
       </div>
@@ -1540,7 +1538,7 @@ export function CropSeasonsPage() {
           </span>
           <input
             type="search"
-            placeholder="Tìm mùa vụ hoặc lô đất"
+            placeholder={lang === 'en' ? 'Search seasons or blocks...' : 'Tìm mùa vụ hoặc lô đất'}
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
           />
@@ -1555,7 +1553,7 @@ export function CropSeasonsPage() {
             onChange={(e) => setCategoryFilter(e.target.value)}
             aria-label="Lọc theo cây trồng"
           >
-            <option value="all">Tất cả cây trồng</option>
+            <option value="all">{lang === 'en' ? 'All Crop Categories' : 'Tất cả cây trồng'}</option>
             {categories.map((c) => (
               <option key={c.id} value={String(c.id)}>
                 {c.categoryName}
@@ -1576,11 +1574,11 @@ export function CropSeasonsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             aria-label="Lọc theo trạng thái"
           >
-            <option value="all">All Statuses</option>
-            <option value="active">Đang canh tác</option>
-            <option value="completed">Đã hoàn thành</option>
-            <option value="planned">Dự kiến</option>
-            <option value="cancelled">Đã hủy</option>
+            <option value="all">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>
+            <option value="active">{lang === 'en' ? 'Active' : 'Đang canh tác'}</option>
+            <option value="completed">{lang === 'en' ? 'Completed' : 'Đã hoàn thành'}</option>
+            <option value="planned">{lang === 'en' ? 'Planned' : 'Dự kiến'}</option>
+            <option value="cancelled">{lang === 'en' ? 'Cancelled' : 'Đã hủy'}</option>
           </select>
           <span className="select-chevron">
             <Icon name="chevron" size={16} />
@@ -1598,7 +1596,7 @@ export function CropSeasonsPage() {
             }}
             style={{ height: '44px' }}
           >
-            ✕ Đặt lại
+            {lang === 'en' ? '✕ Reset' : '✕ Đặt lại'}
           </button>
         )}
       </div>
@@ -1616,27 +1614,26 @@ export function CropSeasonsPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
           <h2 style={{ fontSize: '17px', fontWeight: 750, color: '#0f172a', margin: 0 }}>
-            Danh sách mùa vụ
-          </h2>
+            {lang === 'en' ? 'Crop Seasons List' : 'Danh sách mùa vụ'}</h2>
           <span style={{ fontSize: '13px', fontWeight: 500, color: '#64748b' }}>
-            {filteredSeasons.length} mùa vụ
+            {filteredSeasons.length} {lang === 'en' ? 'seasons' : 'mùa vụ'}
           </span>
         </div>
 
         {loading ? (
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-            <p className="muted">Đang tải danh sách mùa vụ...</p>
+            <p className="muted">{lang === 'en' ? 'Loading crop seasons...' : 'Đang tải danh sách mùa vụ...'}</p>
           </div>
         ) : filteredSeasons.length === 0 ? (
           <div className="panel empty-state" style={{ border: 'none', boxShadow: 'none' }}>
             <div className="empty-icon">📅</div>
-            <h2>Danh sách mùa vụ chưa được kết nối hoặc chưa có dữ liệu</h2>
+            <h2>{lang === 'en' ? 'No crop seasons found or connected yet' : 'Danh sách mùa vụ chưa được kết nối hoặc chưa có dữ liệu'}</h2>
             <p>
-              Nhấn &quot;Thêm mùa vụ&quot; để khởi tạo mùa vụ mới và gán lô đất cho vụ.
+              {lang === 'en' ? 'Click "Add Season" to initialize a new crop season and allocate blocks.' : 'Nhấn "Thêm mùa vụ" để khởi tạo mùa vụ mới và gán lô đất cho vụ.'}
             </p>
             <div className="button-row" style={{ justifyContent: 'center' }}>
               <Link to="/harvests" className="action-button" style={{ textDecoration: 'none' }}>
-                Mở Thu hoạch &amp; truy xuất
+                {lang === 'en' ? 'Open Harvest & Traceability' : 'Mở Thu hoạch & truy xuất'}
               </Link>
               {isOwner && (
                 <button type="button" className="primary-button" onClick={openCreateModal}>
@@ -1651,22 +1648,22 @@ export function CropSeasonsPage() {
               <thead>
                 <tr style={{ background: '#f8fafc' }}>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                    MÃ &amp; TÊN MÙA VỤ ↕
+                    {lang === 'en' ? 'CODE & SEASON NAME ↕' : 'MÃ & TÊN MÙA VỤ ↕'}
                   </th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                    CÂY TRỒNG
+                    {lang === 'en' ? 'CROP CATEGORY' : 'CÂY TRỒNG'}
                   </th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                    LÔ ĐẤT
+                    {lang === 'en' ? 'BLOCKS' : 'LÔ ĐẤT'}
                   </th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                    THỜI GIAN ↕
+                    {lang === 'en' ? 'TIMELINE ↕' : 'THỜI GIAN ↕'}
                   </th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                    TRẠNG THÁI ↕
+                    {lang === 'en' ? 'STATUS ↕' : 'TRẠNG THÁI ↕'}
                   </th>
                   <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-                    THAO TÁC
+                    {lang === 'en' ? 'ACTIONS' : 'THAO TÁC'}
                   </th>
                 </tr>
               </thead>
@@ -1745,12 +1742,12 @@ export function CropSeasonsPage() {
                         <span className={`status-dot-badge ${isActive ? 'active' : isCompleted ? 'completed' : isCancelled ? 'cancelled' : 'in_progress'}`}>
                           <span className="dot" />
                           {isActive
-                            ? 'Đang canh tác'
+                            ? (lang === 'en' ? 'Active' : 'Đang canh tác')
                             : isCompleted
-                              ? 'Đã hoàn thành'
+                              ? (lang === 'en' ? 'Completed' : 'Đã hoàn thành')
                               : isCancelled
-                                ? 'Đã hủy'
-                                : 'Dự kiến'}
+                                ? (lang === 'en' ? 'Cancelled' : 'Đã hủy')
+                                : (lang === 'en' ? 'Planned' : 'Dự kiến')}
                         </span>
                       </td>
 

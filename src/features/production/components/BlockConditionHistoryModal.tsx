@@ -3,6 +3,7 @@ import { Modal } from '../../../shared/components/Modal';
 import { Icon } from '../../../shared/components/Icon';
 import { fetchBlockConditions } from '../zoneBlockService';
 import type { Block, BlockConditionObservation } from '../types';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface BlockConditionHistoryModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface BlockConditionHistoryModalProps {
 }
 
 export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecord }: BlockConditionHistoryModalProps) {
+  const { lang } = useLanguage();
   const [conditions, setConditions] = useState<BlockConditionObservation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,10 +54,10 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
   };
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={`Lịch sử theo dõi: ${block.blockName}`}>
+    <Modal open={isOpen} onClose={onClose} title={lang === 'en' ? `Monitoring History: ${block.blockName}` : `Lịch sử theo dõi: ${block.blockName}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
-          Tổng số bản ghi theo dõi: <strong>{conditions.length}</strong>
+          {lang === 'en' ? 'Total monitoring records: ' : 'Tổng số bản ghi theo dõi: '}<strong>{conditions.length}</strong>
         </p>
         <button
           type="button"
@@ -65,14 +67,14 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
             onOpenRecord();
           }}
         >
-          <Icon name="plus" /> Ghi nhận mới
+          <Icon name="plus" /> {lang === 'en' ? 'New Record' : 'Ghi nhận mới'}
         </button>
       </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
           <Icon name="loader" className="animate-spin" size={24} />
-          <p style={{ marginTop: '8px' }}>Đang tải lịch sử tình trạng...</p>
+          <p style={{ marginTop: '8px' }}>{lang === 'en' ? 'Loading condition history...' : 'Đang tải lịch sử tình trạng...'}</p>
         </div>
       ) : error ? (
         <div className="alert alert--error" role="alert">
@@ -82,9 +84,9 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
       ) : conditions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '12px' }}>
           <span style={{ fontSize: '32px' }}>📋</span>
-          <h4 style={{ margin: '8px 0 4px 0', color: '#1e293b' }}>Chưa có ghi nhận tình trạng nào</h4>
+          <h4 style={{ margin: '8px 0 4px 0', color: '#1e293b' }}>{lang === 'en' ? 'No condition records yet' : 'Chưa có ghi nhận tình trạng nào'}</h4>
           <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#64748b' }}>
-            Hãy ghi nhận các quan sát về sức khỏe cây trồng, sâu bệnh hoặc chất lượng đất.
+            {lang === 'en' ? 'Record observations about crop health, pests, or soil quality.' : 'Hãy ghi nhận các quan sát về sức khỏe cây trồng, sâu bệnh hoặc chất lượng đất.'}
           </p>
           <button
             type="button"
@@ -94,7 +96,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
               onOpenRecord();
             }}
           >
-            <Icon name="plus" /> Ghi nhận tình trạng đầu tiên
+            <Icon name="plus" /> {lang === 'en' ? 'Record First Condition' : 'Ghi nhận tình trạng đầu tiên'}
           </button>
         </div>
       ) : (

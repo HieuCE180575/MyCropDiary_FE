@@ -9,6 +9,7 @@ import { KnowledgeDetailModal } from '../features/knowledge/components/Knowledge
 import { KnowledgeDynamicBanner } from '../features/knowledge/components/KnowledgeDynamicBanner';
 import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
 import { KNOWLEDGE_PAGE_SIZE } from '../features/knowledge/constants';
+import { useLanguage } from '../shared/i18n/LanguageContext';
 import type { KnowledgeArticle, KnowledgeCategory, KnowledgeSort, PagedResult } from '../features/knowledge/types';
 
 const EMPTY_RESULT: PagedResult<KnowledgeArticle> = {
@@ -20,6 +21,7 @@ const EMPTY_RESULT: PagedResult<KnowledgeArticle> = {
 };
 
 export function KnowledgePage() {
+  const { lang } = useLanguage();
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 350);
   const [category, setCategory] = useState<KnowledgeCategory | 'all'>('all');
@@ -42,8 +44,8 @@ export function KnowledgePage() {
     if (result.totalItems === 0) return null;
     const start = (result.page - 1) * result.pageSize + 1;
     const end = Math.min(result.page * result.pageSize, result.totalItems);
-    return `Hiển thị ${start}–${end} trên ${result.totalItems} bài viết`;
-  }, [result]);
+    return lang === 'en' ? `Showing ${start}–${end} of ${result.totalItems} articles` : `Hiển thị ${start}–${end} trên ${result.totalItems} bài viết`;
+  }, [result, lang]);
 
   function handleCategoryChange(next: KnowledgeCategory | 'all') {
     setCategory(next);
@@ -81,11 +83,9 @@ export function KnowledgePage() {
           {error ? (
             <div className="panel empty-state" role="alert">
               <div className="empty-icon">⚠️</div>
-              <h2>Đã có lỗi xảy ra</h2>
+              <h2>{lang === 'en' ? 'An error occurred' : 'Đã có lỗi xảy ra'}</h2>
               <p>{error}</p>
-              <button type="button" className="primary-button" onClick={retry}>
-                Thử lại
-              </button>
+              <button type="button" className="primary-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button>
             </div>
           ) : (
             <>

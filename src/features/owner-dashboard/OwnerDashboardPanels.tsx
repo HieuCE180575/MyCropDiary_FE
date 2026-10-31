@@ -1,23 +1,37 @@
 import { useState, type ReactNode } from 'react';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../shared/components/Icon';
 import { formatArea, formatDate, relativeTime, timeProgress, type CropArea, type DashboardSeason, type RecentRecord, type makeDashboardDemo } from './dashboardModel';
 
-export function DemoTag() { return <span className="owner-demo-tag" title="Dữ liệu minh họa, không được lưu vào hệ thống">Dữ liệu mẫu</span>; }
+export function DemoTag() {
+  const { lang } = useLanguage();
+  return <span className="owner-demo-tag" title={lang === 'en' ? 'Illustrative sample data, not persisted' : 'Dữ liệu minh họa, không được lưu vào hệ thống'}>{lang === 'en' ? 'Sample Data' : 'Dữ liệu mẫu'}</span>;
+}
 
-export function DashboardPanel({ title, to, demo, children, className = '', linkLabel = 'Xem tất cả' }: {
+export function DashboardPanel({ title, to, demo, children, className = '', linkLabel }: {
   title: string; to?: string; demo?: boolean; children: ReactNode; className?: string; linkLabel?: string;
 }) {
+  const { lang } = useLanguage();
+  const resolvedLinkLabel = linkLabel || (lang === 'en' ? 'View all' : 'Xem tất cả');
   return <section className={'owner-panel ' + className}>
     <div className="owner-panel-heading"><div><h2>{title}</h2>{demo && <DemoTag />}</div>
-      {to && <Link to={to}>{linkLabel} <Icon name="arrow" size={14} /></Link>}
+      {to && <Link to={to}>{resolvedLinkLabel} <Icon name="arrow" size={14} /></Link>}
     </div>{children}
   </section>;
 }
 
 export function SeasonProgressPanel({ seasons, demo }: { seasons: DashboardSeason[]; demo: boolean }) {
-  const statuses: Record<string, string> = { active: 'Đang canh tác', planned: 'Chuẩn bị', completed: 'Hoàn thành', paused: 'Tạm dừng', cancelled: 'Đã hủy', archived: 'Đã lưu trữ' };
-  return <DashboardPanel title="Tiến độ mùa vụ hiện tại" to="/crop-seasons" demo={demo} className="owner-season-panel">
+  const { lang } = useLanguage();
+  const statuses: Record<string, string> = {
+    active: lang === 'en' ? 'Active' : 'Đang canh tác',
+    planned: lang === 'en' ? 'Planned' : 'Chuẩn bị',
+    completed: lang === 'en' ? 'Completed' : 'Hoàn thành',
+    paused: lang === 'en' ? 'Paused' : 'Tạm dừng',
+    cancelled: lang === 'en' ? 'Cancelled' : 'Đã hủy',
+    archived: lang === 'en' ? 'Archived' : 'Đã lưu trữ',
+  };
+  return <DashboardPanel title={lang === 'en' ? 'Current Crop Season Progress' : 'Tiến độ mùa vụ hiện tại'} to="/crop-seasons" demo={demo} className="owner-season-panel">
     <div className="owner-season-list">{seasons.slice(0, 2).map(season => {
       const progress = timeProgress(season.startDate, season.endDate);
       const status = season.seasonStatus.toLowerCase();
@@ -33,11 +47,12 @@ export function SeasonProgressPanel({ seasons, demo }: { seasons: DashboardSeaso
         </div>
       </Link>;
     })}</div>
-    <p className="owner-panel-footnote">Tiến độ theo thời gian, tính từ ngày bắt đầu đến ngày kết thúc dự kiến.</p>
+    <p className="owner-panel-footnote">{lang === 'en' ? 'Progress over time, calculated from start date to estimated end date.' : 'Tiến độ theo thời gian, tính từ ngày bắt đầu đến ngày kết thúc dự kiến.'}</p>
   </DashboardPanel>;
 }
 
 export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolean }) {
+  const { lang } = useLanguage();
   const [hovered, setHovered] = useState<number | null>(null);
   const [mode, setMode] = useState('area');
   const categories = crops.length > 4 ? [...crops.slice(0, 3), { name: 'Khác', areaM2: crops.slice(3).reduce((sum, crop) => sum + crop.areaM2, 0) }] : crops;
@@ -48,8 +63,8 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
   let offset = 0;
   const selected = hovered === null ? null : categories[hovered];
   return <section className="owner-panel owner-crop-panel">
-    <div className="owner-panel-heading"><div><h2>Biểu đồ diện tích theo loại cây trồng</h2>{demo && <DemoTag />}</div>
-      <select aria-label="Cách hiển thị diện tích cây trồng" value={mode} onChange={event => setMode(event.target.value)}><option value="area">Theo diện tích</option><option value="percent">Theo tỷ lệ</option></select>
+    <div className="owner-panel-heading"><div><h2>{lang === 'en' ? 'Crop Area Distribution Chart' : 'Biểu đồ diện tích theo loại cây trồng'}</h2>{demo && <DemoTag />}</div>
+      <select aria-label="Cách hiển thị diện tích cây trồng" value={mode} onChange={event => setMode(event.target.value)}><option value="area">{lang === 'en' ? 'By Area' : 'Theo diện tích'}</option><option value="percent">{lang === 'en' ? 'By Percentage' : 'Theo tỷ lệ'}</option></select>
     </div>
     <div className="owner-chart-layout">
       <div className="owner-donut">
@@ -62,7 +77,7 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
               <title>{crop.name}: {showArea(crop.areaM2)} ({total ? Math.round(crop.areaM2 / total * 100) : 0}%)</title>
             </circle>;
           })}
-        </svg><div className="owner-donut-label" aria-live="polite"><strong>{showArea(selected?.areaM2 ?? total)}</strong><span>{selected?.name ?? 'Tổng diện tích'}</span></div>
+        </svg><div className="owner-donut-label" aria-live="polite"><strong>{showArea(selected?.areaM2 ?? total)}</strong><span>{selected?.name ?? (lang === 'en' ? 'Total Area' : 'Tổng diện tích')}</span></div>
       </div>
       <div className="owner-chart-legend">{categories.map((crop, index) => {
         const percentage = total ? Math.round(crop.areaM2 / total * 100) : 0;
@@ -76,7 +91,8 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
 
 type Demo = ReturnType<typeof makeDashboardDemo>;
 export function UpcomingTasksPanel({ tasks }: { tasks: Demo['tasks'] }) {
-  return <DashboardPanel title="Công việc sắp tới" to="/tasks" demo>
+  const { lang } = useLanguage();
+  return <DashboardPanel title={lang === 'en' ? 'Upcoming Tasks' : 'Công việc sắp tới'} to="/tasks" demo>
     <div className="owner-task-list">{tasks.map(task => {
       const date = new Date(task.date + 'T00:00:00');
       return <Link to="/tasks" key={task.name} className="owner-task-row"><span className="owner-task-date"><strong>{date.getDate().toString().padStart(2, '0')}</strong><span>Th{date.getMonth() + 1}</span></span><span className={'owner-small-icon icon-' + task.icon}><Icon name={task.icon} /></span><span className="owner-task-info"><strong>{task.name}</strong><span>{task.detail}</span></span></Link>;
@@ -85,13 +101,14 @@ export function UpcomingTasksPanel({ tasks }: { tasks: Demo['tasks'] }) {
 }
 
 export function EnvironmentPanel() {
+  const { lang } = useLanguage();
   const measurements = [
-    { name: 'Nhiệt độ', value: '28,5', unit: '°C', change: '+1,2°C', icon: 'thermometer', tone: 'red' },
-    { name: 'Độ ẩm', value: '75', unit: '%', change: '+5%', icon: 'drop', tone: 'blue' },
-    { name: 'Ánh sáng', value: '12.400', unit: 'lux', change: '+8%', icon: 'sun', tone: 'amber' },
-    { name: 'Độ pH đất', value: '6,5', unit: '', change: '— 0', icon: 'flask', tone: 'brown' },
+    { name: lang === 'en' ? 'Temperature' : 'Nhiệt độ', value: '28,5', unit: '°C', change: '+1,2°C', icon: 'thermometer', tone: 'red' },
+    { name: lang === 'en' ? 'Humidity' : 'Độ ẩm', value: '75', unit: '%', change: '+5%', icon: 'drop', tone: 'blue' },
+    { name: lang === 'en' ? 'Light' : 'Ánh sáng', value: '12.400', unit: 'lux', change: '+8%', icon: 'sun', tone: 'amber' },
+    { name: lang === 'en' ? 'Soil pH' : 'Độ pH đất', value: '6,5', unit: '', change: '— 0', icon: 'flask', tone: 'brown' },
   ];
-  return <DashboardPanel title="Điều kiện & môi trường" demo className="owner-environment-panel" to="/environment" linkLabel="Xem chi tiết">
+  return <DashboardPanel title={lang === 'en' ? 'Environment & Field Conditions' : 'Điều kiện & môi trường'} demo className="owner-environment-panel" to="/environment" linkLabel="Xem chi tiết">
     <div className="owner-environment-grid">{measurements.map(measurement => <div className={'owner-measurement tone-' + measurement.tone} key={measurement.name}>
       <Icon name={measurement.icon} size={25} /><div><span>{measurement.name}</span><strong>{measurement.value}<small>{measurement.unit}</small></strong><span className="owner-change">{measurement.change.startsWith('+') && <Icon name="arrow-up" size={11} />}{measurement.change}</span></div>
     </div>)}</div>
@@ -99,7 +116,8 @@ export function EnvironmentPanel() {
 }
 
 export function RecentActivityPanel({ records, demo }: { records: RecentRecord[]; demo: boolean }) {
-  return <DashboardPanel title="Nhật ký hoạt động gần đây" to="/activities" demo>
+  const { lang } = useLanguage();
+  return <DashboardPanel title={lang === 'en' ? 'Recent Activity Log' : 'Nhật ký hoạt động gần đây'} to="/activities" demo>
     <div className="owner-recent-list">{records.map(record => <Link to={record.to} key={record.id} className="owner-recent-row">
       <span className={'owner-small-icon icon-' + record.icon}><Icon name={record.icon} /></span><span className="owner-recent-body"><strong>{record.title}</strong><span>{record.detail}</span></span><time dateTime={record.at}>{relativeTime(record.at)}</time>
     </Link>)}</div>

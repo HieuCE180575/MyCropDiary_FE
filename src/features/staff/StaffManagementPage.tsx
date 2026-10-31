@@ -21,6 +21,7 @@ import {
 } from '../production/zoneBlockService';
 import type { Zone, StaffZoneAssignment } from '../production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface FarmStaffDataCache {
   staffList: FarmStaffRecord[];
@@ -32,6 +33,7 @@ interface FarmStaffDataCache {
 const farmStaffMemoryCache = new Map<number, FarmStaffDataCache>();
 
 export function StaffManagementPage() {
+  const { lang } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
   const initialCache = farmId ? farmStaffMemoryCache.get(farmId) : null;
@@ -419,10 +421,10 @@ export function StaffManagementPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px', width: '100%', boxSizing: 'border-box' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-            Người lao động &amp; Phân công
+            {lang === 'en' ? 'Farm Staff & Area Assignments' : 'Người lao động & Phân công'}
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
-            {staffList.length} staff · {assignments.length} phân công vùng canh tác VietGAP tại {selectedFarm?.farmName || 'Trang trại'}
+            {lang === 'en' ? `${staffList.length} staff · ${assignments.length} VietGAP cultivation area assignments at ${selectedFarm?.farmName || 'Farm'}` : `${staffList.length} nhân viên · ${assignments.length} phân công vùng canh tác VietGAP tại ${selectedFarm?.farmName || 'Trang trại'}`}
           </p>
         </div>
 
@@ -445,7 +447,7 @@ export function StaffManagementPage() {
                   boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
                 }}
               >
-                <Icon name="plus" size={17} /> Thêm nhân viên
+                <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Staff' : 'Thêm nhân viên'}
               </button>
             ) : (
               <button
@@ -464,7 +466,7 @@ export function StaffManagementPage() {
                   boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
                 }}
               >
-                <Icon name="plus" size={17} /> Phân công vùng mới
+                <Icon name="plus" size={17} /> {lang === 'en' ? 'Assign New Area' : 'Phân công vùng mới'}
               </button>
             ))}
         </div>
@@ -550,26 +552,26 @@ export function StaffManagementPage() {
                           <input type="checkbox" aria-label="Chọn tất cả staff" style={{ cursor: 'pointer' }} />
                         </th>
                         <th style={{ width: isOwner ? '23%' : '26%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
-                          Thành viên
+                          {lang === 'en' ? 'Staff Member' : 'Thành viên'}
                         </th>
                         <th style={{ width: isOwner ? '20%' : '23%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
-                          Liên hệ
+                          {lang === 'en' ? 'Contact' : 'Liên hệ'}
                         </th>
                         <th style={{ width: isOwner ? '12%' : '14%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
-                          Vai trò
+                          {lang === 'en' ? 'Role' : 'Vai trò'}
                         </th>
                         <th style={{ width: isOwner ? '11%' : '13%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                          Vùng tham gia
+                          {lang === 'en' ? 'Assigned Areas' : 'Vùng tham gia'}
                         </th>
                         <th style={{ width: isOwner ? '11%' : '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                          Ngày tham gia
+                          {lang === 'en' ? 'Joined Date' : 'Ngày tham gia'}
                         </th>
                         <th style={{ width: isOwner ? '11%' : '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                          Trạng thái
+                          {lang === 'en' ? 'Status' : 'Trạng thái'}
                         </th>
                         {isOwner && (
                           <th style={{ width: '12%', padding: '12px 10px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
-                            Thao tác
+                            {lang === 'en' ? 'Actions' : 'Thao tác'}
                           </th>
                         )}
                       </tr>
@@ -597,7 +599,7 @@ export function StaffManagementPage() {
                                 Chưa có staff phù hợp
                               </h3>
                               <p style={{ color: '#64748b', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
-                                Hãy thử tìm kiếm với từ khóa khác hoặc bấm &quot;Thêm nhân viên&quot; bằng email tài khoản đã kích hoạt.
+                                {lang === 'en' ? 'Try searching with different keywords or click "Add Staff" with an activated account email.' : 'Hãy thử tìm kiếm với từ khóa khác hoặc bấm "Thêm nhân viên" bằng email tài khoản đã kích hoạt.'}
                               </p>
                               {isOwner && (
                                 <button
@@ -616,7 +618,7 @@ export function StaffManagementPage() {
                                     boxShadow: '0 3px 10px rgba(5, 150, 105, 0.2)',
                                   }}
                                 >
-                                  <Icon name="plus" size={16} /> Thêm nhân viên
+                                  <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Staff' : 'Thêm nhân viên'}
                                 </button>
                               )}
                             </div>
@@ -891,19 +893,19 @@ export function StaffManagementPage() {
                           <input type="checkbox" aria-label="Chọn tất cả phân công" style={{ cursor: 'pointer' }} />
                         </th>
                         <th style={{ width: isOwner ? '24%' : '27%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
-                          Phân khu sản xuất
+                          {lang === 'en' ? 'Production Zone' : 'Phân khu sản xuất'}
                         </th>
                         <th style={{ width: isOwner ? '23%' : '26%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
-                          Nhân sự phụ trách
+                          {lang === 'en' ? 'Assigned Staff' : 'Nhân sự phụ trách'}
                         </th>
                         <th style={{ width: isOwner ? '15%' : '17%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
-                          Vai trò / Chức vụ
+                          {lang === 'en' ? 'Role / Title' : 'Vai trò / Chức vụ'}
                         </th>
                         <th style={{ width: isOwner ? '13%' : '15%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
-                          Ngày bắt đầu
+                          {lang === 'en' ? 'Start Date' : 'Ngày bắt đầu'}
                         </th>
                         <th style={{ width: isOwner ? '13%' : '15%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
-                          Người giao việc
+                          {lang === 'en' ? 'Assigned By' : 'Người giao việc'}
                         </th>
                         {isOwner && (
                           <th style={{ width: '12%', padding: '12px 10px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
@@ -1094,7 +1096,7 @@ export function StaffManagementPage() {
       <Modal
         open={isAddStaffOpen}
         onClose={() => setIsAddStaffOpen(false)}
-        title="Thêm nhân viên vào trang trại"
+        title={lang === 'en' ? 'Add Staff to Farm' : 'Thêm nhân viên vào trang trại'}
         headerIcon={<Icon name="users" size={20} />}
       >
         <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b', lineHeight: 1.5 }}>
@@ -1168,7 +1170,7 @@ export function StaffManagementPage() {
               Hủy
             </button>
             <button type="submit" className="primary-button" disabled={savingStaff}>
-              {savingStaff ? 'Đang thêm...' : 'Thêm nhân viên'}
+              {savingStaff ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Add Staff' : 'Thêm nhân viên')}
             </button>
           </div>
         </form>

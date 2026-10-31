@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/components/Modal';
 import { useApiData } from '../../../shared/hooks/useApiData';
 import { fetchBlockById } from '../zoneBlockService';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClose: () => void }) {
+  const { lang } = useLanguage();
   const load = useCallback((signal: AbortSignal) => fetchBlockById(blockId, signal), [blockId]);
   const { data: block, loading, error, retry } = useApiData(load);
   const fields = block ? [
@@ -21,11 +23,11 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
   ] : [];
 
   return (
-    <Modal open onClose={onClose} title="Chi tiết lô đất (Block Summary)">
-      {loading ? <p role="status">Đang tải chi tiết lô đất...</p> : error ? (
+    <Modal open onClose={onClose} title={lang === 'en' ? 'Block Details' : 'Chi tiết lô đất (Block Summary)'}>
+      {loading ? <p role="status">{lang === 'en' ? 'Loading block details...' : 'Đang tải chi tiết lô đất...'}</p> : error ? (
         <>
           <p role="alert">{error}</p>
-          <button type="button" className="btn btn-secondary" onClick={retry}>Thử lại</button>
+          <button type="button" className="btn btn-secondary" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button>
         </>
       ) : block && (
         <div className="block-detail-modal">
@@ -46,7 +48,7 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
                   {label}
                 </dt>
                 <dd className="block-detail-value" style={{ margin: 0, fontWeight: 600, color: '#1e293b', fontSize: '0.93rem' }}>
-                  {value ?? 'Chưa cập nhật'}
+                  {value ?? (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </dd>
               </div>
             ))}

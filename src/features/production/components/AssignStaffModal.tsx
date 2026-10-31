@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { StaffZoneAssignment, Zone } from '../types';
 import { assignStaffToZone, fetchZoneAssignments, unassignStaffFromZone } from '../zoneBlockService';
 import { getFarmStaffList } from '../../staff/staffService';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface AssignStaffModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ export function AssignStaffModal({
   onClose,
   onSuccess,
 }: AssignStaffModalProps) {
+  const { lang } = useLanguage();
   const [selectedZoneId, setSelectedZoneId] = useState<number>(zoneId);
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [currentAssignments, setCurrentAssignments] = useState<StaffZoneAssignment[]>([]);
@@ -138,8 +140,8 @@ export function AssignStaffModal({
       <div className="modal-card" style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
-            <span className="eyebrow">Phân công quản lý</span>
-            <h2>Assign Staff: {resolvedZoneName}</h2>
+            <span className="eyebrow">{lang === 'en' ? 'Staff Assignment' : 'Phân công quản lý'}</span>
+            <h2>{lang === 'en' ? 'Assign Staff: ' : 'Phân công nhân sự: '}{resolvedZoneName}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng">
             ✕
@@ -152,10 +154,10 @@ export function AssignStaffModal({
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
               <label htmlFor="assign-zone-select" className="structured-field-label" style={{ color: '#065f46' }}>
-                Khu vực phân công <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Assigned Zone' : 'Khu vực phân công'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">
-                {availableZones.length > 1 ? 'Chọn khu vực' : 'Khu vực cố định'}
+                {availableZones.length > 1 ? (lang === 'en' ? 'Select Zone' : 'Chọn khu vực') : (lang === 'en' ? 'Fixed Zone' : 'Khu vực cố định')}
               </span>
             </div>
             {availableZones.length > 1 ? (
@@ -180,13 +182,13 @@ export function AssignStaffModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <span className="structured-field-label">
-                Nhân sự đang phụ trách khu vực
+                {lang === 'en' ? 'Assigned Staff in Zone' : 'Nhân sự đang phụ trách khu vực'}
               </span>
-              <span className="structured-field-badge">{currentAssignments.length} nhân sự</span>
+              <span className="structured-field-badge">{currentAssignments.length} {lang === 'en' ? 'staff member(s)' : 'nhân sự'}</span>
             </div>
             {currentAssignments.length === 0 ? (
               <div style={{ color: '#64748b', fontSize: '13.5px' }}>
-                Chưa có nhân sự nào được phân công phụ trách khu vực này.
+                {lang === 'en' ? 'No staff currently assigned to this zone.' : 'Chưa có nhân sự nào được phân công phụ trách khu vực này.'}
               </div>
             ) : (
               <div className="file-list" style={{ marginTop: 0 }}>
@@ -206,7 +208,7 @@ export function AssignStaffModal({
                       style={{ minHeight: '34px', padding: '4px 12px', fontSize: '12.5px' }}
                       onClick={() => handleUnassign(asgn.assignmentId)}
                     >
-                      Thu hồi
+                      {lang === 'en' ? 'Unassign' : 'Thu hồi'}
                     </button>
                   </div>
                 ))}
@@ -217,9 +219,9 @@ export function AssignStaffModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="assign-staff-select" className="structured-field-label">
-                Select Staff Member phụ trách <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Select Staff Member' : 'Chọn nhân sự phụ trách'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">Nhân sự trang trại</span>
+              <span className="structured-field-badge">{lang === 'en' ? 'Farm Staff' : 'Nhân sự trang trại'}</span>
             </div>
             {loadingStaff ? (
               <div style={{ color: '#64748b', fontSize: '13.5px' }}>⏳ Đang tải danh sách nhân sự trang trại...</div>
@@ -248,7 +250,7 @@ export function AssignStaffModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="assign-date-input" className="structured-field-label">
-                  Ngày bắt đầu phụ trách
+                  {lang === 'en' ? 'Assignment Start Date' : 'Ngày bắt đầu phụ trách'}
                 </label>
                 <span className="structured-field-badge">Ngày</span>
               </div>
@@ -266,7 +268,7 @@ export function AssignStaffModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="assign-notes-input" className="structured-field-label">
-                  Ghi chú nhiệm vụ
+                  {lang === 'en' ? 'Assignment Notes' : 'Ghi chú nhiệm vụ'}
                 </label>
                 <span className="structured-field-badge">{notes.length}/200 ký tự</span>
               </div>
@@ -275,7 +277,7 @@ export function AssignStaffModal({
                   id="assign-notes-input"
                   type="text"
                   maxLength={200}
-                  placeholder="VD: Phụ trách chăm sóc và ghi nhận điều kiện các lô đất..."
+                  placeholder={lang === 'en' ? 'e.g. In charge of field crop care and block condition recording...' : 'VD: Phụ trách chăm sóc và ghi nhận điều kiện các lô đất...'}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                 />
@@ -292,7 +294,7 @@ export function AssignStaffModal({
               className="primary-button"
               disabled={loading || loadingStaff || staffOptions.length === 0}
             >
-              {loading ? 'Saving...' : 'Lưu phân công'}
+              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Assignment' : 'Lưu phân công')}
             </button>
           </div>
         </form>

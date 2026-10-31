@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface ChatMessage {
   id: string;
@@ -25,6 +26,7 @@ interface AIAssistantPageProps {
 }
 
 export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
+  const { lang } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const [activeTab, setActiveTab] = useState<'ai' | 'ai-history' | 'ai-feedback' | 'ai-drafts'>(initialTab);
 
@@ -154,7 +156,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             marginBottom: '-2px',
           }}
         >
-          🤖 Trò chuyện cùng AI
+          {lang === 'en' ? '🤖 AI Assistant Chat' : '🤖 Trò chuyện cùng AI'}
         </button>
         <button
           type="button"
@@ -171,7 +173,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             marginBottom: '-2px',
           }}
         >
-          📝 Bản nháp canh tác AI ({drafts.filter((d) => d.status === 'PENDING').length})
+          {lang === 'en' ? '📝 AI Farming Drafts' : '📝 Bản nháp canh tác AI'} ({drafts.filter((d) => d.status === 'PENDING').length})
         </button>
         <button
           type="button"
@@ -188,7 +190,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             marginBottom: '-2px',
           }}
         >
-          📜 Lịch sử hội thoại
+          {lang === 'en' ? '📜 Chat History' : '📜 Lịch sử hội thoại'}
         </button>
         <button
           type="button"
@@ -205,7 +207,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             marginBottom: '-2px',
           }}
         >
-          💬 Đóng góp ý kiến
+          {lang === 'en' ? '💬 User Feedback' : '💬 Đóng góp ý kiến'}
         </button>
       </div>
 
@@ -335,7 +337,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                   <span className="profile-tag-pill">{d.activityType}</span>
                   <span style={{ fontSize: '12.5px', color: '#64748b' }}>📅 Đề xuất thực hiện: {d.recommendedDate}</span>
                   <span className={`status-badge ${d.status === 'APPROVED' ? 'status-badge--success' : ''}`}>
-                    {d.status === 'PENDING' ? 'Chờ duyệt' : d.status === 'APPROVED' ? 'Đã duyệt' : 'Đã hủy'}
+                    {d.status === 'PENDING' ? (lang === 'en' ? 'Pending Review' : 'Chờ duyệt') : d.status === 'APPROVED' ? (lang === 'en' ? 'Approved' : 'Đã duyệt') : (lang === 'en' ? 'Cancelled' : 'Đã hủy')}
                   </span>
                 </div>
                 <h3 style={{ margin: '0 0 6px', fontSize: '16.5px', color: '#0f172a' }}>{d.title}</h3>

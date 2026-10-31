@@ -24,8 +24,10 @@ import type {
   BlockConditionObservation,
 } from '../../features/production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 export function ZoneListPage() {
+  const { lang } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -329,12 +331,14 @@ export function ZoneListPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-            {activeTab === 'zones' ? 'Khu vực sản xuất' : 'Lô sản xuất'}
+            {activeTab === 'zones' ? (lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất') : (lang === 'en' ? 'Production Blocks' : 'Lô sản xuất')}
           </h1>
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
             {statsReady
-              ? `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${totalZoneAreaM2.toLocaleString('vi-VN')} m²`
-              : 'Đang tải dữ liệu khu vực và Block...'}
+              ? (lang === 'en'
+                  ? `${zones.length} zones · ${blocks.length} blocks · Total Area: ${totalZoneAreaM2.toLocaleString('en-US')} m²`
+                  : `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${totalZoneAreaM2.toLocaleString('vi-VN')} m²`)
+              : (lang === 'en' ? 'Loading zones and blocks...' : 'Đang tải dữ liệu khu vực và Block...')}
           </p>
         </div>
 
@@ -356,7 +360,7 @@ export function ZoneListPage() {
                 boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
               }}
             >
-              <Icon name="plus" size={17} /> Thêm khu vực
+              <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Zone' : 'Thêm khu vực'}
             </button>
           )}
 
@@ -377,7 +381,7 @@ export function ZoneListPage() {
                 boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
               }}
             >
-              <Icon name="plus" size={17} /> Thêm Block
+              <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Block' : 'Thêm Block'}
             </button>
           )}
         </div>
@@ -413,14 +417,14 @@ export function ZoneListPage() {
               className={`zone-integrated-tab-btn ${activeTab === 'zones' ? 'active' : ''}`}
               onClick={() => setActiveTab('zones')}
             >
-              <Icon name="book" size={17} /> Khu vực <span className="tab-count">({visibleZones.length})</span>
+              <Icon name="book" size={17} /> {lang === 'en' ? 'Zones' : 'Khu vực'} <span className="tab-count">({visibleZones.length})</span>
             </button>
             <button
               type="button"
               className={`zone-integrated-tab-btn ${activeTab === 'blocks' ? 'active' : ''}`}
               onClick={() => setActiveTab('blocks')}
             >
-              <Icon name="leaf" size={17} /> Block <span className="tab-count">({visibleBlocks.length})</span>
+              <Icon name="leaf" size={17} /> {lang === 'en' ? 'Blocks' : 'Block'} <span className="tab-count">({visibleBlocks.length})</span>
             </button>
           </div>
 
@@ -438,7 +442,7 @@ export function ZoneListPage() {
                   <input
                     id="search-zones-input"
                     type="search"
-                    placeholder="Tìm theo tên hoặc mã khu vực"
+                    placeholder={lang === 'en' ? 'Search by zone name or code...' : 'Tìm theo tên hoặc mã khu vực'}
                     value={zoneKeyword}
                     onChange={(e) => setZoneKeyword(e.target.value)}
                   />
@@ -452,7 +456,7 @@ export function ZoneListPage() {
                       onChange={(e) => setAssignedStaffFilter(e.target.value)}
                       aria-label="Lọc theo nhân sự phụ trách"
                     >
-                      <option value="all">Tất cả nhân sự</option>
+                      <option value="all">{lang === 'en' ? 'All Staff Members' : 'Tất cả nhân sự'}</option>
                       {staffFilterOptions.map((st) => (
                         <option key={st.id} value={st.id}>
                           {st.name}
@@ -479,15 +483,15 @@ export function ZoneListPage() {
               {filteredZones.length === 0 ? (
                 <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
                   <div className="empty-icon">🗺️</div>
-                  <h2>Chưa tìm thấy phân khu nào</h2>
+                  <h2>{lang === 'en' ? 'No production zones found' : 'Chưa tìm thấy phân khu nào'}</h2>
                   <p>
                     {isOwner
-                      ? 'Hãy nhấn "Thêm khu vực" để thiết lập khu vực quản lý đầu tiên cho trang trại.'
-                      : 'Bạn hiện chưa được phân công phụ trách khu vực nào trong trang trại này.'}
+                      ? (lang === 'en' ? 'Click "Add Zone" to set up the first production zone for your farm.' : 'Hãy nhấn "Thêm khu vực" để thiết lập khu vực quản lý đầu tiên cho trang trại.')
+                      : (lang === 'en' ? 'You have not been assigned to any zones in this farm.' : 'Bạn hiện chưa được phân công phụ trách khu vực nào trong trang trại này.')}
                   </p>
                   {isOwner && (
                     <button type="button" className="primary-button" onClick={handleCreateZoneClick}>
-                      <Icon name="plus" size={16} /> Thêm khu vực
+                      <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Zone' : 'Thêm khu vực'}
                     </button>
                   )}
                 </div>
@@ -501,19 +505,19 @@ export function ZoneListPage() {
                             <input type="checkbox" aria-label="Chọn tất cả" style={{ cursor: 'pointer' }} />
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Zone Name
+                            {lang === 'en' ? 'Zone Name' : 'Tên khu vực'}
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Zone Code
+                            {lang === 'en' ? 'Zone Code' : 'Mã khu vực'}
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Area
+                            {lang === 'en' ? 'Area' : 'Diện tích'}
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Block
+                            {lang === 'en' ? 'Blocks' : 'Lô đất'}
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Phụ trách
+                            {lang === 'en' ? 'In Charge' : 'Phụ trách'}
                           </th>
                           <th style={{ width: '120px', padding: '14px 16px', textAlign: 'right' }}>
                             &nbsp;
@@ -682,7 +686,7 @@ export function ZoneListPage() {
                   <input
                     id="search-blocks-input"
                     type="search"
-                    placeholder="Tìm theo tên hoặc mã Block"
+                    placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã Block'}
                     value={blockKeyword}
                     onChange={(e) => setBlockKeyword(e.target.value)}
                   />
@@ -697,7 +701,7 @@ export function ZoneListPage() {
                     }
                     aria-label="Lọc theo khu vực trực thuộc"
                   >
-                    <option value="all">Tất cả khu vực</option>
+                    <option value="all">{lang === 'en' ? 'All Zones' : 'Tất cả khu vực'}</option>
                     {visibleZones.map((z) => (
                       <option key={z.zoneId} value={z.zoneId}>
                         {z.zoneName}
@@ -726,12 +730,12 @@ export function ZoneListPage() {
                   <h2>Chưa tìm thấy lô sản xuất nào</h2>
                   <p>
                     {isOwner
-                      ? 'Nhấn "Thêm Block" để thêm lô sản xuất mới bên trong khu vực.'
-                      : 'Không có Block nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.'}
+                      ? (lang === 'en' ? 'Click "Add Block" to add a new production block inside this zone.' : 'Nhấn "Thêm Block" để thêm lô sản xuất mới bên trong khu vực.')
+                      : (lang === 'en' ? 'No blocks match the filter criteria within your assigned zones.' : 'Không có Block nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.')}
                   </p>
                   {isOwner && visibleZones.length > 0 && (
                     <button type="button" className="primary-button" onClick={() => handleCreateBlockClick()}>
-                      <Icon name="plus" size={16} /> Thêm Block
+                      <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Block' : 'Thêm Block'}
                     </button>
                   )}
                 </div>
@@ -745,19 +749,19 @@ export function ZoneListPage() {
                             <input type="checkbox" aria-label="Chọn tất cả lô" style={{ cursor: 'pointer' }} />
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Block Name
+                            {lang === 'en' ? 'Block Name' : 'Tên lô đất'}
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Block Code đất
+                            {lang === 'en' ? 'Block Code' : 'Mã lô đất'}
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Parent Zone
+                            {lang === 'en' ? 'Parent Zone' : 'Khu vực trực thuộc'}
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
                             Area
                           </th>
                           <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Soil Type / Điều kiện
+                            {lang === 'en' ? 'Soil Type / Condition' : 'Loại đất / Điều kiện'}
                           </th>
                           <th style={{ width: '130px', padding: '14px 16px', textAlign: 'right' }}>
                             &nbsp;

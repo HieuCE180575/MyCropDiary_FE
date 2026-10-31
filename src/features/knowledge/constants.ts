@@ -16,3 +16,20 @@ export const KNOWLEDGE_CATEGORY_LABEL: Record<KnowledgeCategory, string> = KNOWL
   (map, option) => ({ ...map, [option.value]: option.label }),
   {} as Record<KnowledgeCategory, string>,
 );
+
+export const KNOWLEDGE_CATEGORY_EN_LABEL: Record<KnowledgeCategory, string> = {
+  regulation: 'General Regulations',
+  'soil-water': 'Soil & Water',
+  'seed-cultivation': 'Seeds & Cultivation',
+  'fertilizer-pesticide': 'Fertilizers & Pesticides',
+  'harvest-post-harvest': 'Harvest & Post-Harvest',
+  'record-traceability': 'Recordkeeping & Traceability',
+  'training-certification': 'Training & Certification',
+};
+
+export function getKnowledgeCategoryLabel(category: KnowledgeCategory, lang: 'en' | 'vi' = 'en'): string {
+  if (lang === 'en') {
+    return KNOWLEDGE_CATEGORY_EN_LABEL[category] || category;
+  }
+  return KNOWLEDGE_CATEGORY_LABEL[category] || category;
+}

@@ -5,10 +5,12 @@ import { Icon } from '../../shared/components/Icon';
 import { useAdmin } from './AdminProvider';
 import { AdminBadge } from './AdminComponents';
 import { displayValue } from './adminConfig';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 type ChartMetric = 'activity' | 'cost' | 'compliance';
 
 export function AdminDashboard() {
+  const { lang } = useLanguage();
   const { user } = useAuth();
   const { state, registrationsLoading, registrationsError, reloadRegistrations } = useAdmin();
   const navigate = useNavigate();
@@ -321,13 +323,13 @@ export function AdminDashboard() {
               </div>
               <span className="date-range-badge">
                 <Icon name="calendar" />
-                10 - 25 Tháng 10, 2026
+                {lang === 'en' ? 'Oct 10 - 25, 2026' : '10 - 25 Tháng 10, 2026'}
               </span>
               <button
                 type="button"
                 className="icon-action-btn"
-                title="Mở trang thống kê đầy đủ"
-                aria-label="Mở trang thống kê đầy đủ"
+                title={lang === 'en' ? 'Open Full Statistics' : 'Mở trang thống kê đầy đủ'}
+                aria-label={lang === 'en' ? 'Open Full Statistics' : 'Mở trang thống kê đầy đủ'}
                 onClick={() => navigate('/admin/statistics')}
               >
                 <Icon name="expand" />
@@ -540,11 +542,11 @@ export function AdminDashboard() {
               <caption className="sr-only">Hồ sơ đăng ký trang trại gần đây</caption>
               <thead>
                 <tr>
-                  <th scope="col">Tên trang trại</th>
-                  <th scope="col">Khu vực / Tỉnh</th>
-                  <th scope="col">Ngày nộp</th>
-                  <th scope="col">Trạng thái</th>
-                  <th scope="col" className="admin-action-col">Thao tác</th>
+                  <th scope="col">{lang === 'en' ? 'Farm Name' : 'Tên trang trại'}</th>
+                  <th scope="col">{lang === 'en' ? 'Province / Region' : 'Khu vực / Tỉnh'}</th>
+                  <th scope="col">{lang === 'en' ? 'Submitted Date' : 'Ngày nộp'}</th>
+                  <th scope="col">{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
+                  <th scope="col" className="admin-action-col">{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                 </tr>
               </thead>
               <tbody>

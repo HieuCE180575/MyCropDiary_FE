@@ -27,8 +27,10 @@ import type {
   RiskAssessmentRecord,
 } from '../../features/production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 export function ZoneDetailPage() {
+  const { lang } = useLanguage();
   const navigate = useNavigate();
   const { zoneId: paramZoneId, productionAreaId, plotId } = useParams<{
     zoneId?: string;
@@ -276,7 +278,7 @@ export function ZoneDetailPage() {
     <section className="farm-registration-page" style={{ maxWidth: '1240px' }}>
       {/* Breadcrumb Bar */}
       <div className="production-breadcrumb">
-        <Link to="/zones">Khu vực sản xuất</Link>
+        <Link to="/zones">{lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất'}</Link>
         <span>→</span>
         <strong>{zone.zoneName}</strong>
       </div>
@@ -289,14 +291,14 @@ export function ZoneDetailPage() {
           </span>
           <h1>{zone.zoneName}</h1>
           <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: '14.5px' }}>
-            {zone.description || 'Khu vực quản lý sản xuất nông nghiệp theo tiêu chuẩn VietGAP.'}
+            {zone.description || (lang === 'en' ? 'Agricultural production management zone under VietGAP standards.' : 'Khu vực quản lý sản xuất nông nghiệp theo tiêu chuẩn VietGAP.')}
           </p>
         </div>
 
         {/* Top Buttons per spec: Back to Zones; Owner has Edit Zone, Manage Assignments, Delete Zone when eligible */}
         <div className="dashboard-actions">
           <Link to="/zones" className="action-button">
-            ← Quay lại danh sách
+            {lang === 'en' ? '← Back to Zones' : '← Quay lại danh sách'}
           </Link>
           {isOwner && (
             <>
@@ -544,7 +546,7 @@ export function ZoneDetailPage() {
               <input
                 id="zone-blocks-search"
                 type="search"
-                placeholder="Tìm theo tên hoặc mã blocks (VD: Lô B01, BLK-001)..."
+                placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã blocks (VD: Lô B01, BLK-001)...'}
                 value={blockSearch}
                 onChange={(e) => setBlockSearch(e.target.value)}
               />
@@ -556,7 +558,7 @@ export function ZoneDetailPage() {
               onClick={() => setBlockSearch('')}
               style={{ height: '46px' }}
             >
-              Đặt lại bộ lọc
+              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
             </button>
 
             {isOwner && (
@@ -569,7 +571,7 @@ export function ZoneDetailPage() {
                   setIsBlockModalOpen(true);
                 }}
               >
-                <Icon name="plus" /> Thêm blocks
+                <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm blocks'}
               </button>
             )}
           </div>
@@ -580,7 +582,7 @@ export function ZoneDetailPage() {
               <h2>No blocks created yet</h2><span className="sr-only">Phân khu chưa có lô đất nào / Zone chưa có Block nào</span>
               <p>
                 {isOwner
-                  ? `Nhấn "Thêm blocks" để thêm lô sản xuất vào ${zone.zoneName}.`
+                  ? (lang === 'en' ? `Click "Add Block" to add a production block to ${zone.zoneName}.` : `Nhấn "Thêm blocks" để thêm lô sản xuất vào ${zone.zoneName}.`)
                   : 'Không tìm thấy blocks nào khớp với từ khóa tìm kiếm.'}
               </p>
               {isOwner && (
@@ -592,7 +594,7 @@ export function ZoneDetailPage() {
                     setIsBlockModalOpen(true);
                   }}
                 >
-                  <Icon name="plus" /> Thêm blocks
+                  <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm blocks'}
                 </button>
               )}
             </div>
@@ -612,7 +614,7 @@ export function ZoneDetailPage() {
                       setIsBlockModalOpen(true);
                     }}
                   >
-                    <Icon name="plus" /> Thêm blocks
+                    <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm blocks'}
                   </button>
                 )}
               </div>
@@ -621,11 +623,11 @@ export function ZoneDetailPage() {
                 <table className="data-table">
                   <thead>
                     <tr>
-                      <th>Block Name</th>
-                      <th>Khu vực</th>
-                      <th>Mô tả &amp; Soil Type</th>
-                      <th style={{ textAlign: 'center' }}>Area</th>
-                      <th style={{ textAlign: 'right' }}>Actions</th>
+                      <th>{lang === 'en' ? 'Block Name' : 'Tên lô đất'}</th>
+                      <th>{lang === 'en' ? 'Zone' : 'Khu vực'}</th>
+                      <th>{lang === 'en' ? 'Description & Soil Type' : 'Mô tả & Loại đất'}</th>
+                      <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Area' : 'Diện tích'}</th>
+                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -748,7 +750,7 @@ export function ZoneDetailPage() {
               </p>
             </div>
             <button type="button" className="primary-button" onClick={openAddRiskModal}>
-              <Icon name="plus" /> Thêm ghi nhận rủi ro
+              <Icon name="plus" /> {lang === 'en' ? 'Add Risk Record' : 'Thêm ghi nhận rủi ro'}
             </button>
           </div>
 
@@ -756,11 +758,11 @@ export function ZoneDetailPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Ngày đánh giá</th>
-                  <th>Loại rủi ro &amp; Mô tả</th>
-                  <th style={{ textAlign: 'center' }}>Mức độ rủi ro</th>
-                  <th>Biện pháp kiểm soát</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                  <th>{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
+                  <th>{lang === 'en' ? 'Risk Type & Description' : 'Loại rủi ro & Mô tả'}</th>
+                  <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Risk Level' : 'Mức độ rủi ro'}</th>
+                  <th>{lang === 'en' ? 'Mitigation Measures' : 'Biện pháp kiểm soát'}</th>
+                  <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -824,7 +826,7 @@ export function ZoneDetailPage() {
                 <span className="eyebrow">Đánh giá rủi ro · {zone.zoneName}</span>
                 <h2>
                   {riskModalMode === 'create'
-                    ? 'Thêm ghi nhận rủi ro'
+                    ? (lang === 'en' ? 'Add Risk Record' : 'Thêm ghi nhận rủi ro')
                     : riskModalMode === 'edit'
                     ? 'Cập nhật biện pháp kiểm soát'
                     : 'Chi tiết hồ sơ rủi ro'}

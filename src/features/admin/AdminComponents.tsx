@@ -1,11 +1,34 @@
+
+const ADMIN_STATUS_EN: Record<string, string> = {
+  'Chờ duyệt': 'Pending Review',
+  'Đã duyệt': 'Approved',
+  'Đã từ chối': 'Rejected',
+  'Đã hủy': 'Cancelled',
+  'Đang hoạt động': 'Active',
+  'Đã khóa': 'Locked',
+  'Đang sử dụng': 'Active',
+  'Ngừng sử dụng': 'Inactive',
+  'Đang áp dụng': 'Active',
+  'Ngừng áp dụng': 'Inactive',
+  'Bản nháp': 'Draft',
+  'Đã lưu trữ': 'Archived',
+  'Mới tiếp nhận': 'Open',
+  'Đang xử lý': 'In Review',
+  'Đã giải quyết': 'Resolved',
+};
+
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Icon } from '../../shared/components/Icon';
 import { adminConfigs } from './adminConfig';
 import type { Collection, Field } from './adminTypes';
 
 export function AdminBadge({ collection, status }: { collection: Collection; status: string }) {
+  const { lang } = useLanguage();
   const tone = ['ACTIVE', 'APPROVED', 'RESOLVED', 'RECORDED'].includes(status) ? 'green' : ['REJECTED', 'LOCKED'].includes(status) ? 'red' : ['PENDING', 'OPEN', 'DRAFT'].includes(status) ? 'amber' : status === 'IN_REVIEW' ? 'blue' : 'gray';
-  return <span className={`admin-badge ${tone}`}><i />{adminConfigs[collection].statuses[status] ?? 'Chưa xác định'}</span>;
+  const raw = adminConfigs[collection].statuses[status] ?? 'Chưa xác định';
+  const label = lang === 'en' ? (ADMIN_STATUS_EN[raw] || raw) : raw;
+  return <span className={`admin-badge ${tone}`}><i />{label}</span>;
 }
 
 export function AdminModal({ title, close, children, wide = false }: { title: string; close: () => void; children: ReactNode; wide?: boolean }) {

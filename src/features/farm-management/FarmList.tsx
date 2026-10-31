@@ -1,12 +1,15 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { getFarms } from './api';
 import { Pagination } from '../../shared/components/Pagination';
 import { useApiData } from '../../shared/hooks/useApiData';
 import { useCallback, useState } from 'react';
 
-const statusLabels: Record<string, string> = { ACTIVE: 'Đang hoạt động', INACTIVE: 'Ngừng hoạt động', PENDING: 'Chờ duyệt', INVITED: 'Đã mời', LOCKED: 'Đã khóa' };
+const statusLabelsVi: Record<string, string> = { ACTIVE: 'Đang hoạt động', INACTIVE: 'Ngừng hoạt động', PENDING: 'Chờ duyệt', INVITED: 'Đã mời', LOCKED: 'Đã khóa' };
+const statusLabelsEn: Record<string, string> = { ACTIVE: 'Active', INACTIVE: 'Inactive', PENDING: 'Pending Review', INVITED: 'Invited', LOCKED: 'Locked' };
 const roleLabels: Record<string, string> = { OWNER: 'Chủ trang trại', STAFF: 'Nhân viên', ADMIN: 'Quản trị viên', USER: 'Người dùng' };
 
 export function FarmList() {
+  const { lang } = useLanguage();
   const [page, setPage] = useState(0);
   const load = useCallback((signal: AbortSignal) => getFarms(signal, page), [page]);
   const { data, error, loading, retry } = useApiData(load);
@@ -16,7 +19,7 @@ export function FarmList() {
       : error ? <p role="alert" className="api-error">{error}</p>
       : !data?.items.length ? <p>Chưa có trang trại nào.</p>
       : <div className="module-grid">{data.items.map((farm) => <article className="module-card" key={farm.id}>
-        <span className="module-code">{farm.farmCode}</span><h3>{farm.farmName}</h3><p>Trạng thái: {statusLabels[farm.status] ?? 'Chưa xác định'}</p>
+        <span className="module-code">{farm.farmCode}</span><h3>{farm.farmName}</h3><p>Trạng thái: {(lang === 'en' ? statusLabelsEn[farm.status] : statusLabelsVi[farm.status]) ?? (lang === 'en' ? 'Undefined' : 'Chưa xác định')}</p>
         <p>{[farm.district, farm.province].filter(Boolean).join(', ')}</p>
         {farm.currentUserRole && <p>Vai trò: {roleLabels[farm.currentUserRole] ?? 'Thành viên'}</p>}
       </article>)}</div>}

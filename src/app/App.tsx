@@ -19,67 +19,69 @@ import { ModuleAccess } from '../features/auth/ModuleAccess';
 import { AdminPage } from '../features/admin/AdminPage';
 import { ZoneListPage, ZoneFormPage, ZoneDetailPage, BlockDetailPage } from '../pages/zone';
 import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
-
+import { LanguageProvider } from '../shared/i18n/LanguageContext';
 
 export function App() {
   return (
-    <Routes>
-      {/* Public pages wrapped in shared PublicLayout */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/knowledge" element={<KnowledgePage />} />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/features" element={<FeaturesPage />} />
-      </Route>
-
-      {/* Protected pages */}
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          <Route
-            path="/dashboard"
-            element={<DashboardPage />}
-          />
-
-          <Route path="/farm-registration" element={<FarmRegistrationPage />} />
-          <Route path="/farm" element={<FarmInfoPage />} />
-          <Route path="/zones" element={<ZoneListPage />} />
-          <Route path="/zones/new" element={<ZoneFormPage mode="create" />} />
-          <Route path="/zones/:zoneId" element={<ZoneDetailPage />} />
-          <Route path="/zones/:zoneId/edit" element={<ZoneFormPage mode="edit" />} />
-          <Route path="/zones/:zoneId/blocks/:blockId" element={<BlockDetailPage />} />
-
-          <Route path="/blocks" element={<ZoneListPage />} />
-          <Route path="/blocks/:blockId" element={<BlockDetailPage />} />
-          <Route path="/crop-seasons/:cropSeasonId" element={<CropSeasonsPage />} />
-
-          <Route path="/production-areas" element={<ZoneListPage />} />
-          <Route path="/production-areas/new" element={<ZoneFormPage mode="create" />} />
-          <Route path="/production-areas/:productionAreaId" element={<ZoneDetailPage />} />
-          <Route path="/production-areas/:productionAreaId/edit" element={<ZoneFormPage mode="edit" />} />
-          <Route path="/production-areas/:zoneId/blocks/:blockId" element={<BlockDetailPage />} />
-          {moduleDefinitions.map((module) => (
-            <Route
-              key={module.key}
-              path={module.path}
-              element={
-                <ModuleAccess module={module}>
-                  {module.access === 'admin' ? (
-                    <AdminPage moduleKey={module.key} />
-                  ) : (
-                    <ModulePage module={module} />
-                  )}
-                </ModuleAccess>
-              }
-            />
-          ))}
+    <LanguageProvider>
+      <Routes>
+        {/* Public pages wrapped in shared PublicLayout */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/knowledge" element={<KnowledgePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
         </Route>
-      </Route>
 
-      {/* 404 */}
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+        {/* Protected pages */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route
+              path="/dashboard"
+              element={<DashboardPage />}
+            />
+
+            <Route path="/farm-registration" element={<FarmRegistrationPage />} />
+            <Route path="/farm" element={<FarmInfoPage />} />
+            <Route path="/zones" element={<ZoneListPage />} />
+            <Route path="/zones/new" element={<ZoneFormPage mode="create" />} />
+            <Route path="/zones/:zoneId" element={<ZoneDetailPage />} />
+            <Route path="/zones/:zoneId/edit" element={<ZoneFormPage mode="edit" />} />
+            <Route path="/zones/:zoneId/blocks/:blockId" element={<BlockDetailPage />} />
+
+            <Route path="/blocks" element={<ZoneListPage />} />
+            <Route path="/blocks/:blockId" element={<BlockDetailPage />} />
+            <Route path="/crop-seasons/:cropSeasonId" element={<CropSeasonsPage />} />
+
+            <Route path="/production-areas" element={<ZoneListPage />} />
+            <Route path="/production-areas/new" element={<ZoneFormPage mode="create" />} />
+            <Route path="/production-areas/:productionAreaId" element={<ZoneDetailPage />} />
+
+            {/* Standard modules rendered through unified container */}
+            {moduleDefinitions.map((module) => (
+              <Route
+                key={module.key}
+                path={module.path}
+                element={
+                  <ModuleAccess module={module}>
+                    {module.group === 'admin' ? (
+                      <AdminPage moduleKey={module.key} />
+                    ) : (
+                      <ModulePage module={module} />
+                    )}
+                  </ModuleAccess>
+                }
+              />
+            ))}
+          </Route>
+        </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </LanguageProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Icon } from '../../shared/components/Icon';
 
 export const MATERIAL_UNITS = [
@@ -27,7 +28,32 @@ export const MATERIAL_UNITS = [
   'm³',
 ];
 
-export function getMaterialUnitOptions(currentUnit: string) {
+export function getMaterialUnitOptions(currentUnit: string, lang: 'en' | 'vi' = 'en') {
+  const enMap: Record<string, string> = {
+    'bao (50kg)': 'Bag (50kg - Fertilizer standard)',
+    'bao (25kg)': 'Bag (25kg)',
+    'bao': 'Bag (Farm standard)',
+    'tấn': 'Ton (1,000 kg)',
+    'tạ': 'Quintal (100 kg)',
+    'kg': 'Kilogram (kg)',
+    'g': 'Gram (g)',
+    'chai (1L)': '1L Bottle (Pesticide / Nutrition)',
+    'chai (500ml)': '500ml Bottle',
+    'chai': 'Bottle (Pesticide / Nutrition)',
+    'can (5L)': '5L Jug (Biological preparation)',
+    'can (10L)': '10L Jug',
+    'can': 'Jug (Large preparation / nutrition)',
+    'thùng': 'Box / Carton',
+    'gói': 'Packet (Seed / Microorganism)',
+    'lon': 'Can',
+    'L': 'Liter (L)',
+    'mL': 'Milliliter (mL)',
+    'khay': 'Seedling tray',
+    'cây': 'Plant / Sapling',
+    'hạt': 'Seed',
+    'viên': 'Pellet',
+    'm³': 'Cubic meter (m³)',
+  };
   const labelMap: Record<string, string> = {
     'bao (50kg)': 'Bao (50kg - Chuẩn phân bón)',
     'bao (25kg)': 'Bao (25kg)',
@@ -54,12 +80,13 @@ export function getMaterialUnitOptions(currentUnit: string) {
     'm³': 'Mét khối (m³)',
   };
 
+  const activeMap = lang === 'en' ? enMap : labelMap;
   const options = MATERIAL_UNITS.map(unit => ({
     value: unit === 'L' && currentUnit === 'lít' ? currentUnit : unit,
-    label: labelMap[unit] || unit,
+    label: activeMap[unit] || unit,
   }));
   if (currentUnit && !options.some(option => option.value === currentUnit)) {
-    options.unshift({ value: currentUnit, label: labelMap[currentUnit] || currentUnit });
+    options.unshift({ value: currentUnit, label: activeMap[currentUnit] || currentUnit });
   }
   return options;
 }
@@ -155,6 +182,7 @@ export function DosageInput({
   materialType?: string;
   materialUnit?: string;
 }) {
+  const { lang } = useLanguage();
   const isPesticideOrLiquid =
     materialType.toLowerCase().includes('bvtv') ||
     materialType.toLowerCase().includes('lỏng') ||
@@ -173,10 +201,10 @@ export function DosageInput({
   return <div className="mu-compound-input mu-dose-input">
     <span className="mu-input-icon"><Icon name="flask" /></span>
     <input id="usage-dosage" aria-label="Liều lượng" inputMode={parsed.unit === 'custom' ? 'text' : 'decimal'} maxLength={parsed.unit === 'custom' ? 100 : 99 - parsed.unit.length}
-      placeholder={parsed.unit === 'custom' ? 'Nhập liều lượng' : 'Ví dụ: 50'} value={parsed.amount} onChange={event => update(event.target.value, parsed.unit)} />
+      placeholder={parsed.unit === 'custom' ? (lang === 'en' ? 'Enter dosage' : 'Nhập liều lượng') : (lang === 'en' ? 'e.g. 50' : 'Ví dụ: 50')} value={parsed.amount} onChange={event => update(event.target.value, parsed.unit)} />
     <select aria-label="Đơn vị liều lượng" value={parsed.unit} onChange={event => update(parsed.amount, event.target.value)}>
       {DOSAGE_UNITS.map(unit => <option key={unit} value={unit}>{unit}</option>)}
-      <option value="custom">Nhập tự do</option>
+      <option value="custom">{lang === 'en' ? 'Custom input' : 'Nhập tự do'}</option>
     </select>
   </div>;
 }

@@ -1,3 +1,4 @@
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import type { StaffAreaAssignment } from '../types';
 
@@ -13,6 +14,7 @@ interface StaffAssignmentsTableProps {
 }
 
 export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }: StaffAssignmentsTableProps) {
+  const { lang } = useLanguage();
   if (loading) {
     return <p className="status-note">Đang tải danh sách phân công...</p>;
   }

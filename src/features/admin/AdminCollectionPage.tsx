@@ -1,3 +1,4 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Pagination } from '../../shared/components/Pagination';
 import { useCallback, useState } from 'react';
 import { useApiData } from '../../shared/hooks/useApiData';
@@ -10,10 +11,41 @@ import type { AdminCommand, AdminRecord, Collection } from './adminTypes';
 import { FarmGoongMap } from '../farm-management/components/FarmGoongMap';
 import { parseBoundaryCoordinates } from '../farm-management/goongMapService';
 
+
+const ADMIN_COL_EN: Record<string, string> = {
+  'Trang trại': 'Farm Name',
+  'Người đăng ký': 'Applicant',
+  'Tỉnh / thành phố': 'Province / City',
+  'Ngày gửi': 'Submitted Date',
+  'Họ và tên': 'Full Name',
+  'Email': 'Email',
+  'Vai trò': 'Role',
+  'Ngày đăng ký': 'Registered Date',
+  'Tên danh mục': 'Category Name',
+  'Mã danh mục': 'Category Code',
+  'Nhóm cây trồng': 'Crop Group',
+  'Cập nhật gần nhất': 'Last Updated',
+  'Tên quy tắc': 'Rule Name',
+  'Trường kiểm tra': 'Inspection Field',
+  'Hoạt động': 'Activity',
+  'Mức yêu cầu': 'Requirement Level',
+  'Tiêu đề': 'Title',
+  'Chuyên mục': 'Category',
+  'Người biên soạn': 'Author',
+  'Nội dung phản hồi': 'Feedback Content',
+  'Người gửi': 'Sender',
+  'Đánh giá': 'Rating',
+  'Người thao tác': 'Operator',
+  'Hành động': 'Action',
+  'Đối tượng': 'Target Object',
+  'Thời gian': 'Timestamp',
+};
+
 type DialogState = { mode: 'detail' | 'edit' | 'create'; id?: string } | { mode: 'action'; id: string; status: string };
 const initialFilters = { query: '', status: '', from: '', to: '', extra: '' };
 
 export function AdminCollectionPage({ collection }: { collection: Collection }) {
+  const { lang } = useLanguage();
   const { state, registrationsLoading, registrationsError, reloadRegistrations, usersLoading, usersError, reloadUsers } = useAdmin();
   const config = adminConfigs[collection];
   const [filters, setFilters] = useState(initialFilters);
@@ -42,15 +74,15 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
     <section className="admin-panel" aria-label={`Danh sách ${config.singular}`}>
       <div className="admin-list-heading"><h2>Danh sách {config.singular}<span>{records.length}</span></h2>{collection === 'registrations' ? <button className="action-button" onClick={reloadRegistrations}>Tải lại</button> : collection === 'users' ? <button className="action-button" onClick={reloadUsers}>Tải lại</button> : <span className="admin-subtle">Dữ liệu minh họa</span>}</div>
       <div className="admin-filters">
-        <label className="admin-search"><Icon name="search" /><input aria-label={`Tìm kiếm ${config.singular}`} placeholder="Tìm theo tên, mã hoặc nội dung…" value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
-        <label><span>Trạng thái</span><select value={filters.status} onChange={(event) => filter('status', event.target.value)}><option value="">Tất cả trạng thái</option>{Object.entries(config.statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        {extra && <label><span>{extra.label}</span><select value={filters.extra} onChange={(event) => filter('extra', event.target.value)}><option value="">Tất cả</option>{Object.entries(extra.options).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
+        <label className="admin-search"><Icon name="search" /><input aria-label={`Tìm kiếm ${config.singular}`} placeholder={lang === 'en' ? 'Search by name, code, or content...' : 'Tìm theo tên, mã hoặc nội dung…'} value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
+        <label><span>Trạng thái</span><select value={filters.status} onChange={(event) => filter('status', event.target.value)}><option value="">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>{Object.entries(config.statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+        {extra && <label><span>{extra.label}</span><select value={filters.extra} onChange={(event) => filter('extra', event.target.value)}><option value="">{lang === 'en' ? 'All' : 'Tất cả'}</option>{Object.entries(extra.options).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}
         <label><span>Từ ngày</span><input type="date" value={filters.from} onChange={(event) => filter('from', event.target.value)} /></label>
         <label><span>Đến ngày</span><input type="date" value={filters.to} onChange={(event) => filter('to', event.target.value)} /></label>
-        <button className="admin-reset" onClick={reset}><Icon name="refresh" />Xóa bộ lọc</button>
+        <button className="admin-reset" onClick={reset}><Icon name="refresh" />{lang === 'en' ? 'Reset Filters' : 'Xóa bộ lọc'}</button>
       </div>
       {invalidDate && <p className="admin-form-error" role="alert">Ngày bắt đầu không được sau ngày kết thúc.</p>}
-      {rows.length ? <div className="admin-table-scroll"><table className="admin-table"><caption className="sr-only">Danh sách {config.singular}</caption><thead><tr>{config.columns.map(column => <th scope="col" key={column.key}>{column.label}</th>)}<th scope="col">Trạng thái</th><th scope="col" className="admin-action-col">Thao tác</th></tr></thead><tbody>{rows.map(record => <tr key={record.id}>{config.columns.map((column, index) => <td key={column.key}>{index === 0 ? <button className="admin-record-link" onClick={() => setDialog({ mode: 'detail', id: record.id })}><strong>{displayValue(column.key, record[column.key])}</strong><small>{record.id}</small></button> : <span>{displayValue(column.key, record[column.key])}</span>}</td>)}<td><AdminBadge collection={collection} status={record.status} /></td><td><div className="admin-row-actions"><button className="detail-button" onClick={() => setDialog({ mode: 'detail', id: record.id })} aria-label={`Xem chi tiết ${record.name}`}><Icon name="eye" /></button>{config.createLabel && <button className="edit-button" onClick={() => setDialog({ mode: 'edit', id: record.id })} aria-label={`Sửa ${record.name}`}><Icon name="edit" /></button>}</div></td></tr>)}</tbody></table></div> : <AdminEmpty />}
+      {rows.length ? <div className="admin-table-scroll"><table className="admin-table"><caption className="sr-only">Danh sách {config.singular}</caption><thead><tr>{config.columns.map(column => <th scope="col" key={column.key}>{lang === 'en' ? (ADMIN_COL_EN[column.label] || column.label) : column.label}</th>)}<th scope="col">{lang === 'en' ? 'Status' : 'Trạng thái'}</th><th scope="col" className="admin-action-col">{lang === 'en' ? 'Actions' : 'Thao tác'}</th></tr></thead><tbody>{rows.map(record => <tr key={record.id}>{config.columns.map((column, index) => <td key={column.key}>{index === 0 ? <button className="admin-record-link" onClick={() => setDialog({ mode: 'detail', id: record.id })}><strong>{displayValue(column.key, record[column.key])}</strong><small>{record.id}</small></button> : <span>{displayValue(column.key, record[column.key])}</span>}</td>)}<td><AdminBadge collection={collection} status={record.status} /></td><td><div className="admin-row-actions"><button className="detail-button" onClick={() => setDialog({ mode: 'detail', id: record.id })} aria-label={`Xem chi tiết ${record.name}`}><Icon name="eye" /></button>{config.createLabel && <button className="edit-button" onClick={() => setDialog({ mode: 'edit', id: record.id })} aria-label={`Sửa ${record.name}`}><Icon name="edit" /></button>}</div></td></tr>)}</tbody></table></div> : <AdminEmpty />}
       <div className="admin-pagination"><span>{records.length ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, records.length)} trên ${records.length} kết quả` : '0 kết quả'}</span><label>Số dòng<select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={5}>5</option><option value={10}>10</option><option value={20}>20</option></select></label><Pagination page={currentPage} totalPages={pages} onChange={setPage} /></div>
     </section>
     {collection === 'rules' && <p className="admin-footnote"><Icon name="check" />Thay đổi quy tắc chỉ áp dụng cho lần kiểm tra tiếp theo; kết quả đã lưu được giữ nguyên.</p>}

@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../features/auth';
 import { Icon } from './Icon';
+import { useLanguage } from '../i18n/LanguageContext';
+import { LanguageSwitch } from './LanguageSwitch';
 
 export function PublicHeader() {
   const { isAuthenticated, user, signOut } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const displayName = user?.fullName?.trim() || user?.email || 'My Account';
@@ -33,28 +36,31 @@ export function PublicHeader() {
             className={`nav-link ${isActive('/') ? 'is-active' : ''}`}
             aria-current={isActive('/') ? 'page' : undefined}
           >
-            Home
+            {t('nav.home', 'Home')}
           </Link>
           <Link
             to="/knowledge"
             className={`nav-link ${isActive('/knowledge') ? 'is-active' : ''}`}
           >
-            VietGAP Knowledge
+            {t('nav.knowledge', 'VietGAP Knowledge')}
           </Link>
           <Link to="/features" className={`nav-link ${isActive('/features') ? 'is-active' : ''}`} aria-current={isActive('/features') ? 'page' : undefined}>
-            Features
+            {t('nav.features', 'Features')}
           </Link>
           <Link to="/about" className={`nav-link ${isActive('/about') ? 'is-active' : ''}`} aria-current={isActive('/about') ? 'page' : undefined}>
-            About Us
+            {t('nav.about', 'About Us')}
           </Link>
         </nav>
 
         <div className="public-header-actions">
+          {/* Header Language Translate Button */}
+          <LanguageSwitch variant="header" />
+
           {isAuthenticated ? (
             <div className="public-auth-logged-in">
               <Link to={portalPath} className="btn-portal-entry">
                 <Icon name="home" />
-                <span>Dashboard</span>
+                <span>{t('nav.dashboard', 'Dashboard')}</span>
               </Link>
               <Link
                 className="account-profile"
@@ -67,7 +73,7 @@ export function PublicHeader() {
                 </span>
                 <div className="account-profile-info">
                   <strong title={displayName}>{displayName}</strong>
-                  <small className="account-sub-label">Profile</small>
+                  <small className="account-sub-label">{t('nav.profile', 'Profile')}</small>
                 </div>
               </Link>
               <button
@@ -77,7 +83,7 @@ export function PublicHeader() {
                 title="Sign out of system"
               >
                 <Icon name="logout" />
-                <span>Sign Out</span>
+                <span>{t('nav.signOut', 'Sign Out')}</span>
               </button>
             </div>
           ) : (
@@ -87,14 +93,14 @@ export function PublicHeader() {
                 className={`btn-auth-secondary ${isActive('/login') ? 'is-active' : ''}`}
               >
                 <Icon name="login" />
-                <span>Sign In</span>
+                <span>{t('nav.signIn', 'Sign In')}</span>
               </Link>
               <Link
                 to="/register"
                 className={`btn-auth-primary ${isActive('/register') ? 'is-active' : ''}`}
               >
                 <Icon name="user-plus" />
-                <span>Register</span>
+                <span>{t('nav.register', 'Register')}</span>
               </Link>
             </div>
           )}
@@ -114,20 +120,23 @@ export function PublicHeader() {
       {mobileMenuOpen && (
         <div className="public-mobile-drawer" role="dialog" aria-modal="true">
           <div className="mobile-drawer-inner">
+            <div style={{ marginBottom: '12px' }}>
+              <LanguageSwitch variant="header" />
+            </div>
             <Link
               to="/"
               className={`mobile-nav-link ${isActive('/') ? 'is-active' : ''}`}
               aria-current={isActive('/') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Home
+              {t('nav.home', 'Home')}
             </Link>
             <Link
               to="/knowledge"
               className={`mobile-nav-link ${isActive('/knowledge') ? 'is-active' : ''}`}
               onClick={() => setMobileMenuOpen(false)}
             >
-              VietGAP Knowledge
+              {t('nav.knowledge', 'VietGAP Knowledge')}
             </Link>
             <Link
               to="/features"
@@ -135,7 +144,7 @@ export function PublicHeader() {
               aria-current={isActive('/features') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
-              Features
+              {t('nav.features', 'Features')}
             </Link>
             <Link
               to="/about"
@@ -143,7 +152,7 @@ export function PublicHeader() {
               aria-current={isActive('/about') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
-              About Us
+              {t('nav.about', 'About Us')}
             </Link>
 
             <div className="mobile-drawer-auth">
@@ -161,7 +170,7 @@ export function PublicHeader() {
                     </span>
                     <div className="account-profile-info">
                       <strong>{displayName}</strong>
-                      <small className="account-sub-label">Profile</small>
+                      <small className="account-sub-label">{t('nav.profile', 'Profile')}</small>
                     </div>
                   </Link>
                   <Link
@@ -170,7 +179,7 @@ export function PublicHeader() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Icon name="home" />
-                    <span>Dashboard</span>
+                    <span>{t('nav.dashboard', 'Dashboard')}</span>
                   </Link>
                   <button
                     type="button"
@@ -181,18 +190,18 @@ export function PublicHeader() {
                     }}
                   >
                     <Icon name="logout" />
-                    <span>Sign Out</span>
+                    <span>{t('nav.signOut', 'Sign Out')}</span>
                   </button>
                 </div>
               ) : (
-                <div className="mobile-auth-stack">
+                <div className="mobile-auth-guest">
                   <Link
                     to="/login"
                     className="btn-auth-secondary full-width"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Icon name="login" />
-                    <span>Sign In</span>
+                    <span>{t('nav.signIn', 'Sign In')}</span>
                   </Link>
                   <Link
                     to="/register"
@@ -200,7 +209,7 @@ export function PublicHeader() {
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Icon name="user-plus" />
-                    <span>Register</span>
+                    <span>{t('nav.register', 'Register')}</span>
                   </Link>
                 </div>
               )}

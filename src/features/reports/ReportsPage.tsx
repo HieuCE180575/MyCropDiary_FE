@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface ReportsPageProps {
   initialTab?: 'reports' | 'expenses' | 'purchases' | 'suppliers';
 }
 
 export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
+  const { lang } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const [activeTab, setActiveTab] = useState<'reports' | 'expenses' | 'purchases' | 'suppliers'>(initialTab);
 
@@ -177,10 +179,10 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                <th style={{ padding: '14px 20px' }}>Hạng mục chi phí</th>
-                <th style={{ padding: '14px 20px' }}>Nội dung chi tiết</th>
-                <th style={{ padding: '14px 20px' }}>Ngày chi</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>Số tiền (VNĐ)</th>
+                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Expense Category' : 'Hạng mục chi phí'}</th>
+                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Detailed Description' : 'Nội dung chi tiết'}</th>
+                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Expense Date' : 'Ngày chi'}</th>
+                <th style={{ padding: '14px 20px', textAlign: 'right' }}>{lang === 'en' ? 'Amount (VND)' : 'Số tiền (VNĐ)'}</th>
               </tr>
             </thead>
             <tbody>
@@ -216,11 +218,11 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                <th style={{ padding: '14px 20px' }}>Mã hóa đơn</th>
-                <th style={{ padding: '14px 20px' }}>Nhà cung cấp</th>
-                <th style={{ padding: '14px 20px' }}>Ngày mua hàng</th>
-                <th style={{ padding: '14px 20px' }}>Trạng thái</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>Tổng thanh toán</th>
+                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Invoice Code' : 'Mã hóa đơn'}</th>
+                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}</th>
+                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Purchase Date' : 'Ngày mua hàng'}</th>
+                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
+                <th style={{ padding: '14px 20px', textAlign: 'right' }}>{lang === 'en' ? 'Total Payment' : 'Tổng thanh toán'}</th>
               </tr>
             </thead>
             <tbody>

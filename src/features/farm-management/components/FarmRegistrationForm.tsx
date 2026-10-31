@@ -21,6 +21,7 @@ import {
   type WardOption,
 } from '../goongMapService';
 import { FarmGoongMap } from './FarmGoongMap';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 const INITIAL_VALUES: FarmRegistrationFormValues = {
   proposedFarmName: '',
@@ -44,6 +45,7 @@ interface FarmRegistrationFormProps {
 type FieldName = keyof FarmRegistrationFormValues;
 
 export function FarmRegistrationForm({ submitting, submitError, onSubmit }: FarmRegistrationFormProps) {
+  const { lang } = useLanguage();
   const [values, setValues] = useState<FarmRegistrationFormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<FarmRegistrationFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
@@ -322,9 +324,9 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
     <form ref={formRef} className="panel farm-registration-form" onSubmit={handleSubmit} noValidate>
       <div className="panel-title">
         <div>
-          <h2>Thông tin đăng ký trang trại</h2>
+          <h2>{lang === 'en' ? 'Farm Registration Information' : 'Thông tin đăng ký trang trại'}</h2>
           <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: '#64748b' }}>
-            Chọn Tỉnh/Thành phố, Quận/Huyện, Phường/Xã và vẽ vùng tọa độ trang trại trên bản đồ.
+            {lang === 'en' ? 'Select Province / City, District, Ward / Commune and trace farm boundaries on the map.' : 'Chọn Tỉnh/Thành phố, Quận/Huyện, Phường/Xã và vẽ vùng tọa độ trang trại trên bản đồ.'}
           </p>
         </div>
       </div>
@@ -332,28 +334,28 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
       {submitError ? <p className="form-error-banner">{submitError}</p> : null}
 
       <label className="form-field">
-        <span>Tên trang trại dự kiến *</span>
+        <span>{lang === 'en' ? 'Proposed Farm Name *' : 'Tên trang trại dự kiến *'}</span>
         <input
           type="text"
           maxLength={160}
           value={values.proposedFarmName}
           onChange={(event) => updateField('proposedFarmName', event.target.value)}
           onBlur={() => handleBlur('proposedFarmName')}
-          placeholder="VD: Trang trại Xanh Cần Thơ"
+          placeholder={lang === 'en' ? "e.g. Can Tho Green Farm" : "VD: Trang trại Xanh Cần Thơ"}
         />
         {errors.proposedFarmName ? <small className="field-error">{errors.proposedFarmName}</small> : null}
       </label>
 
       {/* Địa chỉ chi tiết */}
       <label className="form-field">
-        <span>Địa chỉ chi tiết *</span>
+        <span>{lang === 'en' ? 'Detailed Address *' : 'Địa chỉ chi tiết *'}</span>
         <input
           type="text"
           value={values.address}
           maxLength={300}
           onChange={(event) => updateField('address', event.target.value)}
           onBlur={() => handleBlur('address')}
-          placeholder="Số nhà, tên đường, thôn/ấp..."
+          placeholder={lang === 'en' ? "House number, street name, hamlet..." : "Số nhà, tên đường, thôn/ấp..."}
         />
         {errors.address ? <small className="field-error">{errors.address}</small> : null}
       </label>
@@ -363,7 +365,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         {/* 1. Tỉnh / Thành phố */}
         <div className="form-field" style={{ position: 'relative' }}>
           <label style={{ display: 'grid', gap: '6px' }}>
-            <span>Tỉnh / thành phố</span>
+            <span>{lang === 'en' ? 'Province / City' : 'Tỉnh / thành phố'}</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
@@ -389,7 +391,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                   }));
                 }}
                 onBlur={() => handleBlur('province')}
-                placeholder="-- Chọn Tỉnh / Thành phố --"
+                placeholder={lang === 'en' ? "-- Select Province / City --" : "-- Chọn Tỉnh / Thành phố --"}
                 autoComplete="off"
                 style={{ width: '100%', paddingRight: '30px', cursor: 'pointer', background: '#ffffff' }}
               />
@@ -472,7 +474,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         {/* 2. Quận / Huyện (chỉ hiển thị các Quận/Huyện thuộc Tỉnh/TP đã chọn) */}
         <div className="form-field" style={{ position: 'relative' }}>
           <label style={{ display: 'grid', gap: '6px' }}>
-            <span>Quận / huyện</span>
+            <span>{lang === 'en' ? 'District' : 'Quận / huyện'}</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
@@ -497,7 +499,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                   }));
                 }}
                 onBlur={() => handleBlur('district')}
-                placeholder={values.province ? '-- Chọn Quận / Huyện --' : 'Chọn Tỉnh / Thành phố trước'}
+                placeholder={values.province ? (lang === 'en' ? '-- Select District --' : '-- Chọn Quận / Huyện --') : (lang === 'en' ? 'Select Province / City first' : 'Chọn Tỉnh / Thành phố trước')}
                 autoComplete="off"
                 style={{
                   width: '100%',
@@ -597,7 +599,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         {/* 3. Phường / Xã (chỉ hiển thị các Phường/Xã thuộc Quận/Huyện đã chọn) */}
         <div className="form-field" style={{ position: 'relative' }}>
           <label style={{ display: 'grid', gap: '6px' }}>
-            <span>Phường / xã</span>
+            <span>{lang === 'en' ? 'Ward / Commune' : 'Phường / xã'}</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
               <input
                 type="text"
@@ -617,7 +619,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                   updateField('ward', event.target.value);
                 }}
                 onBlur={() => handleBlur('ward')}
-                placeholder={values.district ? '-- Chọn Phường / Xã --' : 'Chọn Quận / Huyện trước'}
+                placeholder={values.district ? (lang === 'en' ? '-- Select Ward / Commune --' : '-- Chọn Phường / Xã --') : (lang === 'en' ? 'Select District first' : 'Chọn Quận / Huyện trước')}
                 autoComplete="off"
                 style={{
                   width: '100%',
@@ -717,7 +719,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
 
       {/* Bản đồ ghim tọa độ và vẽ ranh giới trang trại */}
       <div className="form-field">
-        <span>Bản đồ vị trí & Vẽ sơ đồ ranh giới trang trại</span>
+        <span>{lang === 'en' ? 'Location Map & Farm Boundary Layout' : 'Bản đồ vị trí & Vẽ sơ đồ ranh giới trang trại'}</span>
         <FarmGoongMap
           farmName={values.proposedFarmName || 'Trang trại đăng ký mới'}
           address={values.address}
@@ -735,20 +737,20 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
       </div>
 
       <label className="form-field">
-        <span>Mô tả trang trại</span>
+        <span>{lang === 'en' ? 'Farm Description' : 'Mô tả trang trại'}</span>
         <textarea
           rows={4}
           maxLength={1000}
           value={values.description}
           onChange={(event) => updateField('description', event.target.value)}
           onBlur={() => handleBlur('description')}
-          placeholder="Quy mô, loại cây trồng dự kiến, hiện trạng đất đai..."
+          placeholder={lang === 'en' ? "Scale, target crops, soil and land condition..." : "Quy mô, loại cây trồng dự kiến, hiện trạng đất đai..."}
         />
         {errors.description ? <small className="field-error">{errors.description}</small> : null}
       </label>
 
       <label className="form-field">
-        <span>Đường dẫn tài liệu minh chứng</span>
+        <span>{lang === 'en' ? 'Supporting Document URL' : 'Đường dẫn tài liệu minh chứng'}</span>
         <input
           type="url"
           value={values.documentUrl ?? ''}
@@ -761,13 +763,13 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
           <small className="field-error">{errors.documentUrl}</small>
         ) : (
           <small className="field-hint">
-            Link giấy chứng nhận hoặc tài liệu trang trại. Hãy bảo đảm quản trị viên có quyền xem.
+            {lang === 'en' ? 'Link to farm certificates or legal documents. Ensure admin has view permissions.' : 'Link giấy chứng nhận hoặc tài liệu trang trại. Hãy bảo đảm quản trị viên có quyền xem.'}
           </small>
         )}
       </label>
 
       <button type="submit" className="primary-button" disabled={submitting}>
-        {submitting ? 'Đang gửi đăng ký...' : 'Gửi đăng ký'}
+        {submitting ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...') : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
       </button>
     </form>
   );

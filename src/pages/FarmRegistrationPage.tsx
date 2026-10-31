@@ -10,9 +10,11 @@ import type { FarmRegistration, FarmRegistrationFormValues } from '../features/f
 import { useFarmWorkspace } from '../features/farm-management/FarmWorkspace';
 import { useAuth } from '../features/auth';
 import { useRealtimeSync } from '../shared/realtime/realtimeSync';
+import { useLanguage } from '../shared/i18n/LanguageContext';
 
 export function FarmRegistrationPage() {
   const { user } = useAuth();
+  const { lang } = useLanguage();
   const { retry: reloadFarms } = useFarmWorkspace();
   const [registration, setRegistration] = useState<FarmRegistration | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -38,12 +40,18 @@ export function FarmRegistrationPage() {
       }
     } catch (error) {
       if (!signal?.aborted && !silent) {
-        setLoadError(error instanceof Error ? error.message : 'Không tải được đăng ký.');
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : lang === 'en'
+              ? 'Failed to load registration details.'
+              : 'Không tải được đăng ký.'
+        );
       }
     } finally {
       if (!signal?.aborted && !silent) setLoading(false);
     }
-  }, [user?.userId]);
+  }, [user?.userId, lang]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -65,7 +73,13 @@ export function FarmRegistrationPage() {
       setRegistration(created);
       setShowForm(false);
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Gửi đăng ký thất bại. Vui lòng thử lại.');
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : lang === 'en'
+            ? 'Failed to submit registration. Please try again.'
+            : 'Gửi đăng ký thất bại. Vui lòng thử lại.'
+      );
     } finally {
       setSubmitting(false);
     }
@@ -79,7 +93,13 @@ export function FarmRegistrationPage() {
       const updated = await cancelFarmRegistration(registration.farmRegistrationId);
       setRegistration(updated);
     } catch (error) {
-      setCancelError(error instanceof Error ? error.message : 'Hủy đăng ký thất bại. Vui lòng thử lại.');
+      setCancelError(
+        error instanceof Error
+          ? error.message
+          : lang === 'en'
+            ? 'Failed to cancel registration. Please try again.'
+            : 'Hủy đăng ký thất bại. Vui lòng thử lại.'
+      );
     } finally {
       setCancelling(false);
     }
@@ -91,18 +111,32 @@ export function FarmRegistrationPage() {
     <section className="farm-registration-page">
       <div className="page-heading">
         <div>
-          <h1>Đăng ký trang trại</h1>
+          <h1>{lang === 'en' ? 'Farm Registration' : 'Đăng ký trang trại'}</h1>
         </div>
-        <button className="action-button" disabled={loading || submitting || cancelling} onClick={() => { void loadRegistration(); reloadFarms(); }}>Cập nhật trạng thái</button>
+        <button
+          className="action-button"
+          disabled={loading || submitting || cancelling}
+          onClick={() => {
+            void loadRegistration();
+            reloadFarms();
+          }}
+        >
+          {lang === 'en' ? 'Refresh Status' : 'Cập nhật trạng thái'}
+        </button>
       </div>
 
       {loading ? (
         <div className="panel empty-state">
           <div className="empty-icon">⏳</div>
-          <h2>Đang tải thông tin đăng ký...</h2>
+          <h2>{lang === 'en' ? 'Loading registration details...' : 'Đang tải thông tin đăng ký...'}</h2>
         </div>
       ) : loadError ? (
-        <div className="panel"><p role="alert">{loadError}</p><button className="primary-button" onClick={() => void loadRegistration()}>Thử lại</button></div>
+        <div className="panel">
+          <p role="alert">{loadError}</p>
+          <button className="primary-button" onClick={() => void loadRegistration()}>
+            {lang === 'en' ? 'Retry' : 'Thử lại'}
+          </button>
+        </div>
       ) : shouldShowForm ? (
         <FarmRegistrationForm submitting={submitting} submitError={submitError} onSubmit={handleSubmit} />
       ) : (

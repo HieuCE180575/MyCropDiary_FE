@@ -9,6 +9,8 @@ import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 import { FarmWorkspaceProvider, useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 import { AdminProvider, AdminNotice } from '../../features/admin/AdminProvider';
 import { PublicFooter } from '../../shared/components/PublicFooter';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { LanguageSwitch } from '../../shared/components/LanguageSwitch';
 
 export function AppLayout() {
   const { user } = useAuth();
@@ -79,6 +81,7 @@ function getInitialTheme(): 'light' | 'dark' {
 
 function WorkspaceLayout() {
   const { signOut, user } = useAuth();
+  const { lang, t } = useLanguage();
   const { farms, selectedFarm, selectFarm } = useFarmWorkspace();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -304,6 +307,9 @@ function WorkspaceLayout() {
           </div>
 
           <div className="topbar-actions">
+            {/* Header Language Switcher */}
+            <LanguageSwitch variant="header" />
+
             {/* Dark / Light Mode Switch */}
             <button
               type="button"
@@ -368,7 +374,7 @@ function WorkspaceLayout() {
                     </strong>
                     {invitations.length > 0 && (
                       <span className="crop-cat-pill" style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a', fontWeight: 700, fontSize: '11px' }}>
-                        {invitations.length} lời mời
+                        {invitations.length} {lang === 'en' ? 'invitations' : 'lời mời'}
                       </span>
                     )}
                   </div>
@@ -399,10 +405,10 @@ function WorkspaceLayout() {
                                 {inv.farmName}
                               </strong>
                               <span style={{ fontSize: '12px', color: '#475569', display: 'block', marginTop: '2px' }}>
-                                Lời mời tham gia: <strong>{inv.farmRole?.toLowerCase() === 'owner' ? 'Đồng sở hữu (Co-Owner)' : 'Nhân viên kỹ thuật (Staff)'}</strong>
+                                {lang === 'en' ? 'Invitation to join:' : 'Lời mời tham gia:'} <strong>{inv.farmRole?.toLowerCase() === 'owner' ? 'Đồng sở hữu (Co-Owner)' : 'Nhân viên kỹ thuật (Staff)'}</strong>
                               </span>
                               <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block' }}>
-                                Người mời: {inv.ownerName}
+                                {lang === 'en' ? 'Invited by:' : 'Người mời:'} {inv.ownerName}
                               </span>
                             </div>
                           </div>
@@ -414,7 +420,7 @@ function WorkspaceLayout() {
                               onClick={() => handleRespondInvitation(inv, 'approve')}
                               style={{ flex: 1, padding: '5px 10px', fontSize: '12px', justifyContent: 'center' }}
                             >
-                              ✓ Chấp nhận
+                              ✓ {lang === 'en' ? 'Accept' : 'Chấp nhận'}
                             </button>
                             <button
                               type="button"
@@ -423,7 +429,7 @@ function WorkspaceLayout() {
                               onClick={() => handleRespondInvitation(inv, 'reject')}
                               style={{ padding: '5px 10px', fontSize: '12px', color: '#dc2626' }}
                             >
-                              ✕ Từ chối
+                              ✕ {lang === 'en' ? 'Decline' : 'Từ chối'}
                             </button>
                           </div>
                         </div>
@@ -440,7 +446,7 @@ function WorkspaceLayout() {
                 type="button"
                 className="account-profile"
                 onClick={() => setAccountMenuOpen((prev) => !prev)}
-                title="Tài khoản & Thiết lập"
+                title={lang === 'en' ? 'Account & Settings' : 'Tài khoản & Thiết lập'}
                 aria-label="User Profile Menu"
                 aria-expanded={accountMenuOpen}
               >
@@ -504,16 +510,18 @@ function WorkspaceLayout() {
                       }}
                     >
                       {isAdmin
-                        ? 'Hệ thống Quản trị viên (Admin)'
+                        ? t('role.admin', 'System Administrator')
                         : currentFarmRole === 'OWNER'
-                          ? 'Chủ trang trại (Farm Owner)'
+                          ? t('role.owner', 'Farm Owner')
                           : currentFarmRole === 'STAFF'
-                            ? 'Nhân viên trang trại (Staff)'
-                            : 'Cá nhân (Personal)'}
+                            ? t('role.staff', 'Farm Staff')
+                            : t('role.personal', 'Personal')}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <LanguageSwitch variant="menu-item" />
+                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
                     <button
                       type="button"
                       className="dropdown-item"
@@ -540,7 +548,7 @@ function WorkspaceLayout() {
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <Icon name="user" size={17} style={{ color: '#059669' }} />
-                      <span>Hồ sơ cá nhân (Profile)</span>
+                      <span>{t('nav.profile', 'Profile')}</span>
                     </button>
 
                     <button
@@ -569,7 +577,7 @@ function WorkspaceLayout() {
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <Icon name="lock" size={17} style={{ color: '#64748b' }} />
-                      <span>Đổi mật khẩu</span>
+                      <span>{t('nav.changePassword', 'Change Password')}</span>
                     </button>
 
                     <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
@@ -600,7 +608,7 @@ function WorkspaceLayout() {
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       <Icon name="log-out" size={17} style={{ color: '#dc2626' }} />
-                      <span>Đăng xuất</span>
+                      <span>{t('nav.signOut', 'Sign Out')}</span>
                     </button>
                   </div>
                 </div>

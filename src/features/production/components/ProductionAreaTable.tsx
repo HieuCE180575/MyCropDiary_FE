@@ -1,3 +1,4 @@
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { PRODUCTION_AREA_STATUS_LABEL, PRODUCTION_AREA_STATUS_TONE } from '../constants';
@@ -30,6 +31,7 @@ function formatArea(hectares: number): string {
 }
 
 export function ProductionAreaTable({
+
   areas,
   loading,
   sortField,
@@ -38,13 +40,14 @@ export function ProductionAreaTable({
   onArchive,
   onRestore,
 }: ProductionAreaTableProps) {
+  const { lang } = useLanguage();
   return (
     <div className="zone-table-wrap">
       <table className="data-table">
         <thead>
           <tr>
             {COLUMNS.map((col) => (
-              <th key={col.label}>
+              <th key={lang === 'en' ? ({ 'Tên khu sản xuất': 'Production Area Name', 'Diện tích': 'Area', 'Vị trí': 'Location', 'Trạng thái': 'Status', 'Ngày tạo': 'Created Date' }[col.label] || col.label) : col.label}>
                 {col.field ? (
                   <button
                     type="button"
@@ -61,7 +64,7 @@ export function ProductionAreaTable({
                 )}
               </th>
             ))}
-            <th>Hành động</th>
+            <th>{lang === 'en' ? 'Actions' : 'Hành động'}</th>
           </tr>
         </thead>
         <tbody>

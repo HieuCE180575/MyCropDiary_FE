@@ -1,3 +1,4 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useEffect, useState, useMemo } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
@@ -44,6 +45,7 @@ import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 type BlockDetailTab = 'overview' | 'seasons' | 'conditions' | 'risks' | 'soil' | 'water';
 
 export function BlockDetailPage() {
+  const { lang } = useLanguage();
   const navigate = useNavigate();
   const { zoneId: paramZoneId, blockId: paramBlockId } = useParams<{ zoneId?: string; blockId?: string }>();
   const blockId = parseInt((paramBlockId || '1').replace(/^blk-/, ''), 10) || 1;
@@ -474,7 +476,7 @@ export function BlockDetailPage() {
     <section className="farm-registration-page" style={{ maxWidth: '1240px' }}>
       {/* Breadcrumb Flow: Zone List → Zone Details → Block Details */}
       <div className="production-breadcrumb">
-        <Link to="/zones">Khu vực sản xuất</Link>
+        <Link to="/zones">{lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất'}</Link>
         <span>→</span>
         <Link to={`/zones/${block.zoneId}`}>{resolvedZoneName}</Link>
         <span>→</span>
@@ -491,14 +493,14 @@ export function BlockDetailPage() {
             {block.blockName} · {resolvedZoneName} · {farmName}
           </h1>
           <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: '14.5px' }}>
-            {block.description || 'Block sản xuất trực thuộc Zone quản lý theo tiêu chuẩn VietGAP.'}
+            {block.description || (lang === 'en' ? 'Production block under VietGAP standard management.' : 'Block sản xuất trực thuộc Zone quản lý theo tiêu chuẩn VietGAP.')}
           </p>
         </div>
 
         {/* Top Buttons per spec: Back, Edit Block, Record Conditions; Owner has Delete Block when eligible */}
         <div className="dashboard-actions">
           <Link to={`/zones/${block.zoneId}`} className="action-button">
-            ← Quay lại
+            {lang === 'en' ? '← Back' : '← Quay lại'}
           </Link>
           <button type="button" className="action-button" onClick={() => setIsEditBlockOpen(true)}>
             Chỉnh sửa Block
@@ -777,7 +779,7 @@ export function BlockDetailPage() {
               <input
                 id="block-season-search"
                 type="search"
-                placeholder="Tìm theo tên mùa vụ hoặc cây trồng..."
+                placeholder={lang === 'en' ? 'Search by season name or crop...' : 'Tìm theo tên mùa vụ hoặc cây trồng...'}
                 value={seasonSearch}
                 onChange={(e) => setSeasonSearch(e.target.value)}
               />
@@ -814,8 +816,8 @@ export function BlockDetailPage() {
               >
                 <option value="all">-- Tất cả trạng thái --</option>
                 <option value="planned">Dự kiến</option>
-                <option value="active">Đang canh tác</option>
-                <option value="completed">Đã hoàn thành</option>
+                <option value="active">{lang === 'en' ? 'Active' : 'Đang canh tác'}</option>
+                <option value="completed">{lang === 'en' ? 'Completed' : 'Đã hoàn thành'}</option>
                 <option value="cancelled">Đã hủy</option>
               </select>
             </label>
@@ -830,11 +832,11 @@ export function BlockDetailPage() {
                 setSeasonStatusFilter('all');
               }}
             >
-              Đặt lại bộ lọc
+              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
             </button>
 
             <button type="button" className="primary-button" style={{ height: '46px' }} onClick={openCreateSeasonModal}>
-              <Icon name="plus" /> Thêm mùa vụ
+              <Icon name="plus" /> {lang === 'en' ? 'Add Season' : 'Thêm mùa vụ'}
             </button>
           </div>
 
@@ -843,10 +845,10 @@ export function BlockDetailPage() {
               <div className="empty-icon">🌾</div>
               <h2>Chưa có mùa vụ nào trên {block.blockName}</h2>
               <p>
-                Nhấn &quot;Thêm mùa vụ&quot; để khởi tạo mùa vụ canh tác mới gắn trực tiếp với {block.blockName}.
+                {lang === 'en' ? `Click "Add Season" to initialize a new crop season for ${block.blockName}.` : `Nhấn "Thêm mùa vụ" để khởi tạo mùa vụ canh tác mới gắn trực tiếp với ${block.blockName}.`}
               </p>
               <button type="button" className="primary-button" onClick={openCreateSeasonModal}>
-                <Icon name="plus" /> Thêm mùa vụ
+                <Icon name="plus" /> {lang === 'en' ? 'Add Season' : 'Thêm mùa vụ'}
               </button>
             </div>
           ) : (
@@ -857,7 +859,7 @@ export function BlockDetailPage() {
                   <h2 style={{ margin: '4px 0 0' }}>Mùa vụ canh tác ({filteredSeasons.length})</h2>
                 </div>
                 <button type="button" className="primary-button" onClick={openCreateSeasonModal}>
-                  <Icon name="plus" /> Thêm mùa vụ
+                  <Icon name="plus" /> {lang === 'en' ? 'Add Season' : 'Thêm mùa vụ'}
                 </button>
               </div>
 
@@ -865,12 +867,12 @@ export function BlockDetailPage() {
                 <table className="data-table" style={{ minWidth: '880px' }}>
                   <thead>
                     <tr>
-                      <th>Tên mùa vụ</th>
-                      <th>Danh mục cây trồng</th>
-                      <th style={{ textAlign: 'center' }}>Diện tích gieo trồng</th>
-                      <th>Thời gian (Bắt đầu → Kết thúc)</th>
-                      <th style={{ textAlign: 'center' }}>Trạng thái</th>
-                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                      <th>{lang === 'en' ? 'Season Name' : 'Tên mùa vụ'}</th>
+                      <th>{lang === 'en' ? 'Crop Category' : 'Danh mục cây trồng'}</th>
+                      <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'}</th>
+                      <th>{lang === 'en' ? 'Timeline (Start → End)' : 'Thời gian (Bắt đầu → Kết thúc)'}</th>
+                      <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
+                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -893,7 +895,7 @@ export function BlockDetailPage() {
                           {s.startDate} → {s.endDate || 'Đang diễn ra'}
                         </td>
                         <td style={{ textAlign: 'center' }}>
-                          <span className="knowledge-tag">{s.seasonStatus}</span>
+                          <span className="knowledge-tag">{s.seasonStatus?.toLowerCase() === 'active' ? (lang === 'en' ? 'Active' : 'Đang canh tác') : s.seasonStatus?.toLowerCase() === 'completed' ? (lang === 'en' ? 'Completed' : 'Đã hoàn thành') : s.seasonStatus?.toLowerCase() === 'planned' ? (lang === 'en' ? 'Planned' : 'Dự kiến') : s.seasonStatus}</span>
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
@@ -962,7 +964,7 @@ export function BlockDetailPage() {
                 setCondToDate('');
               }}
             >
-              Đặt lại bộ lọc
+              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
             </button>
             <button
               type="button"
@@ -999,11 +1001,11 @@ export function BlockDetailPage() {
                 <table className="data-table" style={{ minWidth: '880px' }}>
                   <thead>
                     <tr>
-                      <th>Thời gian ghi nhận</th>
-                      <th>Phân loại điều kiện</th>
-                      <th>Mô tả &amp; Ghi chú</th>
-                      <th>Người ghi nhận</th>
-                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                      <th>{lang === 'en' ? 'Recorded At' : 'Thời gian ghi nhận'}</th>
+                      <th>{lang === 'en' ? 'Condition Type' : 'Phân loại điều kiện'}</th>
+                      <th>{lang === 'en' ? 'Description & Notes' : 'Mô tả & Ghi chú'}</th>
+                      <th>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}</th>
+                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1082,7 +1084,7 @@ export function BlockDetailPage() {
                 setRiskLevelFilter('all');
               }}
             >
-              Đặt lại bộ lọc
+              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
             </button>
             <button
               type="button"
@@ -1103,7 +1105,7 @@ export function BlockDetailPage() {
                 setRiskModalMode('create');
               }}
             >
-              <Icon name="plus" /> Thêm đánh giá rủi ro
+              <Icon name="plus" /> {lang === 'en' ? 'Add Risk Assessment' : 'Thêm đánh giá rủi ro'}
             </button>
           </div>
 
@@ -1119,11 +1121,11 @@ export function BlockDetailPage() {
               <table className="data-table" style={{ minWidth: '880px' }}>
                 <thead>
                   <tr>
-                    <th>Ngày đánh giá</th>
-                    <th>Rủi ro &amp; Phát hiện trước</th>
-                    <th style={{ textAlign: 'center' }}>Mức độ</th>
-                    <th>Biện pháp kiểm soát</th>
-                    <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    <th>{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
+                    <th>{lang === 'en' ? 'Risk & Prior Findings' : 'Rủi ro & Phát hiện trước'}</th>
+                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Risk Level' : 'Mức độ'}</th>
+                    <th>{lang === 'en' ? 'Mitigation Measures' : 'Biện pháp kiểm soát'}</th>
+                    <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1227,7 +1229,7 @@ export function BlockDetailPage() {
                 setSoilToDate('');
               }}
             >
-              Đặt lại bộ lọc
+              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
             </button>
             <button
               type="button"
@@ -1250,7 +1252,7 @@ export function BlockDetailPage() {
                 setSoilModalMode('create');
               }}
             >
-              <Icon name="plus" /> Thêm đánh giá đất
+              <Icon name="plus" /> {lang === 'en' ? 'Add Soil Assessment' : 'Thêm đánh giá đất'}
             </button>
           </div>
 
@@ -1266,12 +1268,12 @@ export function BlockDetailPage() {
               <table className="data-table" style={{ minWidth: '880px' }}>
                 <thead>
                   <tr>
-                    <th>Ngày đánh giá</th>
-                    <th>Mã mẫu &amp; Phòng kiểm nghiệm</th>
-                    <th style={{ textAlign: 'center' }}>Độ pH / Chất hữu cơ (%)</th>
-                    <th>Kim loại nặng &amp; Vi sinh</th>
-                    <th style={{ textAlign: 'center' }}>Kết luận</th>
-                    <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    <th>{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
+                    <th>{lang === 'en' ? 'Sample Code & Lab' : 'Mã mẫu & Phòng kiểm nghiệm'}</th>
+                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'pH / Organic Matter (%)' : 'Độ pH / Chất hữu cơ (%)'}</th>
+                    <th>{lang === 'en' ? 'Heavy Metals & Microbes' : 'Kim loại nặng & Vi sinh'}</th>
+                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Conclusion' : 'Kết luận'}</th>
+                    <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1380,7 +1382,7 @@ export function BlockDetailPage() {
                 setWaterToDate('');
               }}
             >
-              Đặt lại bộ lọc
+              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
             </button>
             <button
               type="button"
@@ -1405,7 +1407,7 @@ export function BlockDetailPage() {
                 setWaterModalMode('create');
               }}
             >
-              <Icon name="plus" /> Thêm đánh giá nước
+              <Icon name="plus" /> {lang === 'en' ? 'Add Water Assessment' : 'Thêm đánh giá nước'}
             </button>
           </div>
 
@@ -1421,12 +1423,12 @@ export function BlockDetailPage() {
               <table className="data-table" style={{ minWidth: '880px' }}>
                 <thead>
                   <tr>
-                    <th>Ngày đánh giá</th>
-                    <th>Nguồn nước &amp; Mã mẫu</th>
-                    <th style={{ textAlign: 'center' }}>pH / Độ dẫn điện EC</th>
-                    <th style={{ textAlign: 'center' }}>Coliform &amp; Kim loại nặng</th>
-                    <th style={{ textAlign: 'center' }}>Kết luận</th>
-                    <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    <th>{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
+                    <th>{lang === 'en' ? 'Water Source & Sample Code' : 'Nguồn nước & Mã mẫu'}</th>
+                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'pH / Conductivity (EC)' : 'pH / Độ dẫn điện EC'}</th>
+                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Coliform & Heavy Metals' : 'Coliform & Kim loại nặng'}</th>
+                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Conclusion' : 'Kết luận'}</th>
+                    <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1599,7 +1601,7 @@ export function BlockDetailPage() {
                 <span className="eyebrow">Mùa vụ trên Block</span>
                 <h2>
                   {seasonModalMode === 'create'
-                    ? `Thêm mùa vụ trên ${block.blockName}`
+                    ? (lang === 'en' ? `Add Season to ${block.blockName}` : `Thêm mùa vụ trên ${block.blockName}`)
                     : `Cập nhật mùa vụ: ${editingSeason?.seasonName}`}
                 </h2>
               </div>
@@ -1763,7 +1765,7 @@ export function BlockDetailPage() {
                 <span className="eyebrow">Đánh giá rủi ro · {block.blockName}</span>
                 <h2>
                   {riskModalMode === 'create'
-                    ? 'Thêm ghi nhận rủi ro'
+                    ? (lang === 'en' ? 'Add Risk Record' : 'Thêm ghi nhận rủi ro')
                     : riskModalMode === 'edit'
                     ? 'Cập nhật biện pháp kiểm soát'
                     : 'Chi tiết hồ sơ rủi ro'}
@@ -1902,7 +1904,7 @@ export function BlockDetailPage() {
                 <span className="eyebrow">Đánh giá mẫu đất · {block.blockName}</span>
                 <h2>
                   {soilModalMode === 'create'
-                    ? 'Thêm đánh giá đất'
+                    ? (lang === 'en' ? 'Add Soil Assessment' : 'Thêm đánh giá đất')
                     : soilModalMode === 'edit'
                     ? 'Cập nhật đánh giá đất'
                     : 'Chi tiết đánh giá đất'}
@@ -2056,7 +2058,7 @@ export function BlockDetailPage() {
                 <span className="eyebrow">Đánh giá nguồn nước · {block.blockName}</span>
                 <h2>
                   {waterModalMode === 'create'
-                    ? 'Thêm đánh giá nước'
+                    ? (lang === 'en' ? 'Add Water Assessment' : 'Thêm đánh giá nước')
                     : waterModalMode === 'edit'
                     ? 'Cập nhật đánh giá nước'
                     : 'Chi tiết đánh giá nước'}

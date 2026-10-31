@@ -5,6 +5,7 @@ import { Icon } from '../../shared/components/Icon';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { FarmingActivityPicker } from './FarmingActivityPicker';
 import { MaterialUsageFormSection } from './MaterialUsageFormSection';
 import {
@@ -74,6 +75,7 @@ export function MaterialUsagePage() {
 }
 
 function MaterialUsageContent() {
+  const { lang } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
 
@@ -386,13 +388,13 @@ function MaterialUsageContent() {
   return (
     <section className="material-usage-page">
       <header className="mu-heading">
-        <div><h1>Quản lý &amp; Lịch sử sử dụng vật tư nông nghiệp</h1>
-          <p>Giám sát lượng phân bón, thuốc BVTV sinh học và thời gian cách ly an toàn (PHI) theo tiêu chuẩn VietGAP</p></div>
+        <div><h1>{lang === 'en' ? 'Agricultural Input & Material Usage History' : 'Quản lý & Lịch sử sử dụng vật tư nông nghiệp'}</h1>
+          <p>{lang === 'en' ? 'Monitor fertilizers, bio-pesticides and pre-harvest safety intervals (PHI) in compliance with VietGAP standards' : 'Giám sát lượng phân bón, thuốc BVTV sinh học và thời gian cách ly an toàn (PHI) theo tiêu chuẩn VietGAP'}</p></div>
         <div className="mu-heading-actions">
           <button type="button" className="action-button" onClick={() => { void loadUsages(); void loadMaterials(); }} disabled={!farmId || loading || busy} aria-busy={loading}>
             <Icon name={loading ? 'loader' : 'refresh'} className={loading ? 'mu-spin' : undefined} />{loading ? 'Đang tải...' : 'Tải lại'}</button>
           <button type="button" className="primary-button" disabled={!farmId || busy} onClick={openCreate}>
-            <Icon name={saving ? 'loader' : 'plus'} className={saving ? 'mu-spin' : undefined} />{saving ? 'Đang lưu...' : 'Ghi nhận sử dụng vật tư'}</button>
+            <Icon name={saving ? 'loader' : 'plus'} className={saving ? 'mu-spin' : undefined} />{saving ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Record Material Usage' : 'Ghi nhận sử dụng vật tư')}</button>
         </div>
       </header>
       {notification && <div role={notification.type === 'error' && !isCreateModalOpen ? 'alert' : 'status'} className={'mu-notice mu-notice-' + notification.type}>
@@ -443,11 +445,11 @@ function MaterialUsageContent() {
 
       <Modal open={isCreateModalOpen} onClose={() => { if (!saving) setIsCreateModalOpen(false); }}
         className="mu-entry-dialog" headerIcon={<span className="mu-entry-title-icon"><Icon name="sprout" size={23} /></span>}
-        title={editingUsage ? 'Chỉnh sửa sử dụng vật tư' : 'Ghi nhận sử dụng vật tư'}>
+        title={editingUsage ? (lang === 'en' ? 'Edit Material Usage' : 'Chỉnh sửa sử dụng vật tư') : (lang === 'en' ? 'Record Material Usage' : 'Ghi nhận sử dụng vật tư')}>
         <form onSubmit={handleSaveUsage} className="mu-entry-form">
           {notification?.type === 'error' && <p role="alert" className="form-error-banner mu-entry-error">{notification.text}</p>}
           <fieldset disabled={saving} className="mu-form-fieldset">
-            <MaterialUsageFormSection number={1} title="Thông tin chung" description="Mùa vụ, hoạt động và vật tư sử dụng">
+            <MaterialUsageFormSection number={1} title={lang === 'en' ? 'General Information' : 'Thông tin chung'} description={lang === 'en' ? 'Crop season, farming activity and material' : 'Mùa vụ, hoạt động và vật tư sử dụng'}>
               <div className="mu-entry-grid">
                 {editingUsage ? <>
                   <div className="mu-field"><label htmlFor="usage-season-readonly">Mùa vụ liên kết</label><input id="usage-season-readonly" readOnly value={editingUsage.cropSeasonId ? 'Mùa vụ #' + editingUsage.cropSeasonId : 'Theo hoạt động liên kết'} /></div>
@@ -474,7 +476,7 @@ function MaterialUsageContent() {
               </> : <div className="mu-field"><label htmlFor="usage-material-name">Tên vật tư / phân bón / thuốc BVTV <span className="mu-required">*</span></label><input id="usage-material-name" required maxLength={160} placeholder="Ví dụ: Phân trùn quế Vermicompost" value={customMaterialName} onChange={event => setCustomMaterialName(event.target.value)} /></div>}
             </MaterialUsageFormSection>
 
-            <MaterialUsageFormSection number={2} title="Thông tin vật tư" description="Phân loại và đơn vị quản lý">
+            <MaterialUsageFormSection number={2} title={lang === 'en' ? 'Material Information' : 'Thông tin vật tư'} description={lang === 'en' ? 'Classification and management unit' : 'Phân loại và đơn vị quản lý'}>
               <div className="mu-material-info-grid">
                 <div className="mu-field"><label htmlFor="usage-material-group">Nhóm vật tư <span className="mu-required">*</span></label>
                   <div className="mu-icon-field"><Icon name="leaf" /><select id="usage-material-group" value={materialGroupName(customMaterialType)} disabled={useExistingMaterial} onChange={event => {
@@ -503,53 +505,53 @@ function MaterialUsageContent() {
                 </div>
                 <div className="mu-field"><label htmlFor="usage-unit">Đơn vị quản lý <span className="mu-required">*</span></label>
                   <div className="mu-icon-field"><Icon name="weight" /><select id="usage-unit" aria-label="Đơn vị" disabled={useExistingMaterial} value={unit} onChange={event => setUnit(event.target.value)}>
-                    {getMaterialUnitOptions(unit).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                    {getMaterialUnitOptions(unit, lang).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select></div><p className="mu-entry-help">Đơn vị quản lý kho và tính số lượng</p>
                 </div>
               </div>
               {useExistingMaterial && <p className="mu-entry-help">Phân loại và đơn vị được lấy theo vật tư đã chọn trong kho.</p>}
             </MaterialUsageFormSection>
 
-            <MaterialUsageFormSection number={3} title="Thông tin sử dụng" description="Số lượng, liều lượng và phương pháp áp dụng">
+            <MaterialUsageFormSection number={3} title={lang === 'en' ? 'Usage Information' : 'Thông tin sử dụng'} description={lang === 'en' ? 'Quantity, dosage and application method' : 'Số lượng, liều lượng và phương pháp áp dụng'}>
               <div className="mu-entry-grid">
-                <div className="mu-field"><label htmlFor="usage-quantity">Số lượng sử dụng <span className="mu-required">*</span></label>
+                <div className="mu-field"><label htmlFor="usage-quantity">{lang === 'en' ? 'Usage Quantity' : 'Số lượng sử dụng'} <span className="mu-required">*</span></label>
                   <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="weight" /></span><input id="usage-quantity" type="number" aria-label="Số lượng" step="any" min="0.0001" required value={quantity} onChange={event => setQuantity(event.target.value ? Number(event.target.value) : '')} />
-                    <select aria-label="Đơn vị sử dụng" value={unit} onChange={event => setUnit(event.target.value)}>{getMaterialUnitOptions(unit).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-                  </div><p className="mu-entry-help">Số lượng vật tư thực tế đã sử dụng</p>
+                    <select aria-label="Đơn vị sử dụng" value={unit} onChange={event => setUnit(event.target.value)}>{getMaterialUnitOptions(unit, lang).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+                  </div><p className="mu-entry-help">{lang === 'en' ? 'Actual quantity of material used' : 'Số lượng vật tư thực tế đã sử dụng'}</p>
                 </div>
-                <div className="mu-field"><label htmlFor="usage-dosage">Liều lượng / nồng độ <Icon name="help" size={15} aria-label="Nhập theo khuyến cáo trên nhãn sản phẩm" /></label>
-                  <DosageInput value={dosage} onChange={setDosage} materialType={customMaterialType} materialUnit={unit} /><p className="mu-entry-help">Nhập theo khuyến cáo trên nhãn sản phẩm (nếu có)</p>
+                <div className="mu-field"><label htmlFor="usage-dosage">{lang === 'en' ? 'Dosage / Concentration' : 'Liều lượng / nồng độ'} <Icon name="help" size={15} aria-label={lang === 'en' ? 'Enter per product label recommendations' : 'Nhập theo khuyến cáo trên nhãn sản phẩm'} /></label>
+                  <DosageInput value={dosage} onChange={setDosage} materialType={customMaterialType} materialUnit={unit} /><p className="mu-entry-help">{lang === 'en' ? 'Enter according to recommendations on product packaging (if any)' : 'Nhập theo khuyến cáo trên nhãn sản phẩm (nếu có)'}</p>
                 </div>
               </div>
               <div className="mu-usage-bottom-grid">
-                <div className="mu-field"><label htmlFor="usage-method">Phương pháp sử dụng</label><MethodInput value={method} onChange={setMethod} /><p className="mu-entry-help">Chọn phương pháp sử dụng vật tư</p></div>
-                <div className="mu-field"><label htmlFor="usage-applied-area">Diện tích áp dụng</label>
-                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="plots" /></span><input id="usage-applied-area" aria-label="Diện tích áp dụng" type="number" step="any" min="0.01" placeholder="Ví dụ: 500" aria-describedby="usage-area-help" value={appliedArea} onChange={event => setAppliedArea(event.target.value === '' ? '' : Number(event.target.value))} /><select aria-label="Đơn vị diện tích" value={appliedAreaUnit} onChange={event => setAppliedAreaUnit(event.target.value)}>{AREA_UNITS.map(areaUnit => <option key={areaUnit} value={areaUnit}>{areaUnit}</option>)}</select></div>
-                  <p id="usage-area-help" className="mu-entry-help">Diện tích lô hoặc khu vực canh tác được áp dụng</p>
+                <div className="mu-field"><label htmlFor="usage-method">{lang === 'en' ? 'Application Method' : 'Phương pháp sử dụng'}</label><MethodInput value={method} onChange={setMethod} /><p className="mu-entry-help">{lang === 'en' ? 'Select application method for input material' : 'Chọn phương pháp sử dụng vật tư'}</p></div>
+                <div className="mu-field"><label htmlFor="usage-applied-area">{lang === 'en' ? 'Applied Area' : 'Diện tích áp dụng'}</label>
+                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="plots" /></span><input id="usage-applied-area" aria-label="Diện tích áp dụng" type="number" step="any" min="0.01" placeholder={lang === 'en' ? 'e.g. 500' : 'Ví dụ: 500'} aria-describedby="usage-area-help" value={appliedArea} onChange={event => setAppliedArea(event.target.value === '' ? '' : Number(event.target.value))} /><select aria-label="Đơn vị diện tích" value={appliedAreaUnit} onChange={event => setAppliedAreaUnit(event.target.value)}>{AREA_UNITS.map(areaUnit => <option key={areaUnit} value={areaUnit}>{areaUnit}</option>)}</select></div>
+                  <p id="usage-area-help" className="mu-entry-help">{lang === 'en' ? 'Block or cultivation area treated' : 'Diện tích lô hoặc khu vực canh tác được áp dụng'}</p>
                 </div>
-                <div className="mu-field"><label htmlFor="usage-plant-count">Số cây áp dụng</label>
-                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="sprout" /></span><input id="usage-plant-count" aria-label="Số cây áp dụng" type="number" step="1" min="1" placeholder="Ví dụ: 120" aria-describedby="usage-plant-help" value={appliedPlantCount} onChange={event => setAppliedPlantCount(event.target.value === '' ? '' : Number(event.target.value))} /><select disabled aria-label="Đơn vị số cây"><option>cây</option></select></div>
-                  <p id="usage-plant-help" className="mu-entry-help">Số lượng cây trồng thực tế được xử lý</p>
+                <div className="mu-field"><label htmlFor="usage-plant-count">{lang === 'en' ? 'Target Plant Count' : 'Số cây áp dụng'}</label>
+                  <div className="mu-compound-input"><span className="mu-input-icon"><Icon name="sprout" /></span><input id="usage-plant-count" aria-label="Số cây áp dụng" type="number" step="1" min="1" placeholder={lang === 'en' ? 'e.g. 120' : 'Ví dụ: 120'} aria-describedby="usage-plant-help" value={appliedPlantCount} onChange={event => setAppliedPlantCount(event.target.value === '' ? '' : Number(event.target.value))} /><select disabled aria-label="Đơn vị số cây"><option>{lang === 'en' ? 'plants' : 'cây'}</option></select></div>
+                  <p id="usage-plant-help" className="mu-entry-help">{lang === 'en' ? 'Actual number of crop plants treated' : 'Số lượng cây trồng thực tế được xử lý'}</p>
                 </div>
               </div>
             </MaterialUsageFormSection>
 
-            <MaterialUsageFormSection number={4} title="Thông tin khác" description="Thời điểm ghi nhận và thời gian cách ly an toàn">
+            <MaterialUsageFormSection number={4} title={lang === 'en' ? 'Additional Information' : 'Thông tin khác'} description={lang === 'en' ? 'Record timestamp and pre-harvest safety interval' : 'Thời điểm ghi nhận và thời gian cách ly an toàn'}>
               <div className="mu-entry-grid">
-                <div className="mu-field"><label htmlFor="usage-time">Thời điểm sử dụng <span className="mu-required">*</span></label><input id="usage-time" aria-label="Thời điểm sử dụng" type="datetime-local" step="any" required value={usedAtTime} onChange={event => setUsedAtTime(event.target.value)} /></div>
-                <div className="mu-field"><label htmlFor="usage-phi">Thời gian cách ly (PHI)</label><div className="mu-input-with-unit"><input id="usage-phi" type="number" aria-label="Số ngày cách ly" min="0" max="2147483647" step="1" placeholder="Ví dụ: 7" value={safetyDays} onChange={event => setSafetyDays(event.target.value === '' ? '' : Number(event.target.value))} /><span>ngày</span></div>
+                <div className="mu-field"><label htmlFor="usage-time">{lang === 'en' ? 'Time of Application' : 'Thời điểm sử dụng'} <span className="mu-required">*</span></label><input id="usage-time" aria-label="Thời điểm sử dụng" type="datetime-local" step="any" required value={usedAtTime} onChange={event => setUsedAtTime(event.target.value)} /></div>
+                <div className="mu-field"><label htmlFor="usage-phi">{lang === 'en' ? 'Pre-Harvest Interval (PHI)' : 'Thời gian cách ly (PHI)'}</label><div className="mu-input-with-unit"><input id="usage-phi" type="number" aria-label="Số ngày cách ly" min="0" max="2147483647" step="1" placeholder="Ví dụ: 7" value={safetyDays} onChange={event => setSafetyDays(event.target.value === '' ? '' : Number(event.target.value))} /><span>{lang === 'en' ? 'days' : 'ngày'}</span></div>
                   <p className="mu-entry-help">{editingUsage ? 'Để trống để giữ số ngày đã lưu; nhập 0 nếu không cần cách ly.' : 'Nhập số ngày nguyên; nhập 0 nếu không cần cách ly.'}</p>
                 </div>
               </div>
             </MaterialUsageFormSection>
 
-            <MaterialUsageFormSection number={5} title="Ghi chú" description="Thông tin bổ sung về lần sử dụng vật tư">
-              <div className="mu-field"><label htmlFor="usage-notes">Ghi chú chứng nhận / Nguồn gốc vật tư</label><textarea id="usage-notes" aria-label="Ghi chú" maxLength={1000} rows={3} placeholder="Nhập ghi chú về lần sử dụng, nguồn gốc hoặc chứng nhận vật tư..." value={notes} onChange={event => setNotes(event.target.value)} /><span className="mu-entry-character-count">{notes.length}/1000 ký tự</span></div>
+            <MaterialUsageFormSection number={5} title={lang === 'en' ? 'Notes' : 'Ghi chú'} description={lang === 'en' ? 'Additional notes on input material application' : 'Thông tin bổ sung về lần sử dụng vật tư'}>
+              <div className="mu-field"><label htmlFor="usage-notes">{lang === 'en' ? 'Certification Notes / Material Origin' : 'Ghi chú chứng nhận / Nguồn gốc vật tư'}</label><textarea id="usage-notes" aria-label="Ghi chú" maxLength={1000} rows={3} placeholder="Nhập ghi chú về lần sử dụng, nguồn gốc hoặc chứng nhận vật tư..." value={notes} onChange={event => setNotes(event.target.value)} /><span className="mu-entry-character-count">{notes.length}/1000 ký tự</span></div>
             </MaterialUsageFormSection>
           </fieldset>
           <div className="mu-entry-footer"><span><span className="mu-required">*</span> Thông tin bắt buộc</span><div>
-            <button type="button" className="action-button" disabled={saving} onClick={() => setIsCreateModalOpen(false)}>Hủy</button>
-            <button type="submit" className="primary-button" disabled={saving}><Icon name={saving ? 'loader' : 'save'} className={saving ? 'mu-spin' : undefined} />{saving ? 'Đang lưu...' : editingUsage ? 'Lưu thay đổi' : 'Lưu ghi nhận'}</button>
+            <button type="button" className="action-button" disabled={saving} onClick={() => setIsCreateModalOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</button>
+            <button type="submit" className="primary-button" disabled={saving}><Icon name={saving ? 'loader' : 'save'} className={saving ? 'mu-spin' : undefined} />{saving ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : editingUsage ? (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi') : (lang === 'en' ? 'Save Record' : 'Lưu ghi nhận')}</button>
           </div></div>
         </form>
       </Modal>

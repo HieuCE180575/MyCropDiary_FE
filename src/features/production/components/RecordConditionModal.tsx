@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Block, BlockConditionObservation, RecordConditionFormValues } from '../types';
 import { recordBlockCondition } from '../zoneBlockService';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface RecordConditionModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export function RecordConditionModal({
   onClose,
   onSuccess,
 }: RecordConditionModalProps) {
+  const { lang } = useLanguage();
   const [values, setValues] = useState<RecordConditionFormValues>({
     conditionType: CONDITION_TYPES[0],
     description: '',
@@ -87,8 +89,8 @@ export function RecordConditionModal({
       <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
-            <span className="eyebrow">Hồ sơ sản xuất</span>
-            <h2>Ghi nhận điều kiện: {block.blockName}</h2>
+            <span className="eyebrow">{lang === 'en' ? 'Production Records' : 'Hồ sơ sản xuất'}</span>
+            <h2>{lang === 'en' ? 'Record Condition: ' : 'Ghi nhận điều kiện: '}{block.blockName}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng">
             ✕
@@ -101,9 +103,9 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
               <span className="structured-field-label" style={{ color: '#065f46' }}>
-                Lô sản xuất mục tiêu
+                {lang === 'en' ? 'Target Block' : 'Lô sản xuất mục tiêu'}
               </span>
-              <span className="structured-field-badge">Tự động chọn</span>
+              <span className="structured-field-badge">{lang === 'en' ? 'Auto-selected' : 'Tự động chọn'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, color: '#047857' }}>
               <span>
@@ -118,7 +120,7 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="cond-date-input" className="structured-field-label">
-                Thời gian ghi nhận <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Observation Date & Time' : 'Thời gian ghi nhận'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">Bắt buộc</span>
             </div>
@@ -136,9 +138,9 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="cond-type-select" className="structured-field-label">
-                Phân loại tình trạng điều kiện <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Condition Type' : 'Phân loại tình trạng điều kiện'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">Tiêu chuẩn VietGAP</span>
+              <span className="structured-field-badge">{lang === 'en' ? 'VietGAP Standard' : 'Tiêu chuẩn VietGAP'}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <select
@@ -158,7 +160,7 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="cond-desc-input" className="structured-field-label">
-                Thông tin điều kiện và ghi chú <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Condition Details & Notes' : 'Thông tin điều kiện và ghi chú'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">{values.description.length}/1000 ký tự</span>
             </div>
@@ -167,7 +169,7 @@ export function RecordConditionModal({
                 id="cond-desc-input"
                 rows={4}
                 maxLength={1000}
-                placeholder="Mô tả chi tiết tình trạng mặt luống, độ ẩm đất, dấu hiệu sâu bệnh hoặc điều kiện môi trường thực tế tại lô đất..."
+                placeholder={lang === 'en' ? 'Describe in detail bed conditions, soil moisture, pest signs, or actual environmental factors...' : 'Mô tả chi tiết tình trạng mặt luống, độ ẩm đất, dấu hiệu sâu bệnh hoặc điều kiện môi trường thực tế tại lô đất...'}
                 value={values.description}
                 onChange={(e) => setValues({ ...values, description: e.target.value })}
                 required
@@ -178,9 +180,9 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="cond-img-input" className="structured-field-label">
-                Đường dẫn hình ảnh minh chứng
+                {lang === 'en' ? 'Evidence Image URL' : 'Đường dẫn hình ảnh minh chứng'}
               </label>
-              <span className="structured-field-badge">Tùy chọn</span>
+              <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
@@ -198,7 +200,7 @@ export function RecordConditionModal({
               Hủy
             </button>
             <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? 'Đang lưu...' : 'Lưu ghi nhận'}
+              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Record' : 'Lưu ghi nhận')}
             </button>
           </div>
         </form>
