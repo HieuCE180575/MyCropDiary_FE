@@ -6,14 +6,14 @@ import { formatArea, formatDate, relativeTime, timeProgress, type CropArea, type
 
 export function DemoTag() {
   const { lang } = useLanguage();
-  return <span className="owner-demo-tag" title={lang === 'en' ? 'Illustrative sample data, not persisted' : 'Dữ liệu minh họa, không được lưu vào hệ thống'}>{lang === 'en' ? 'Sample Data' : 'Dữ liệu mẫu'}</span>;
+  return <span className="owner-demo-tag" title={lang === 'en' ? 'Illustrative sample data, not persisted' : 'Dữ liệu minh họa, không được lưu vào hệ thống'}>Sample Data</span>;
 }
 
 export function DashboardPanel({ title, to, demo, children, className = '', linkLabel }: {
   title: string; to?: string; demo?: boolean; children: ReactNode; className?: string; linkLabel?: string;
 }) {
   const { lang } = useLanguage();
-  const resolvedLinkLabel = linkLabel || (lang === 'en' ? 'View all' : 'Xem tất cả');
+  const resolvedLinkLabel = linkLabel || 'View all';
   return <section className={'owner-panel ' + className}>
     <div className="owner-panel-heading"><div><h2>{title}</h2>{demo && <DemoTag />}</div>
       {to && <Link to={to}>{resolvedLinkLabel} <Icon name="arrow" size={14} /></Link>}
@@ -24,14 +24,14 @@ export function DashboardPanel({ title, to, demo, children, className = '', link
 export function SeasonProgressPanel({ seasons, demo }: { seasons: DashboardSeason[]; demo: boolean }) {
   const { lang } = useLanguage();
   const statuses: Record<string, string> = {
-    active: lang === 'en' ? 'Active' : 'Đang canh tác',
-    planned: lang === 'en' ? 'Planned' : 'Chuẩn bị',
-    completed: lang === 'en' ? 'Completed' : 'Hoàn thành',
-    paused: lang === 'en' ? 'Paused' : 'Tạm dừng',
-    cancelled: lang === 'en' ? 'Cancelled' : 'Đã hủy',
-    archived: lang === 'en' ? 'Archived' : 'Đã lưu trữ',
+    active: 'Active',
+    planned: 'Planned',
+    completed: 'Completed',
+    paused: 'Paused',
+    cancelled: 'Cancelled',
+    archived: 'Archived',
   };
-  return <DashboardPanel title={lang === 'en' ? 'Current Crop Season Progress' : 'Tiến độ mùa vụ hiện tại'} to="/crop-seasons" demo={demo} className="owner-season-panel">
+  return <DashboardPanel title='Current Crop Season Progress' to="/crop-seasons" demo={demo} className="owner-season-panel">
     <div className="owner-season-list">{seasons.slice(0, 2).map(season => {
       const progress = timeProgress(season.startDate, season.endDate);
       const status = season.seasonStatus.toLowerCase();
@@ -63,8 +63,8 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
   let offset = 0;
   const selected = hovered === null ? null : categories[hovered];
   return <section className="owner-panel owner-crop-panel">
-    <div className="owner-panel-heading"><div><h2>{lang === 'en' ? 'Crop Area Distribution Chart' : 'Biểu đồ diện tích theo loại cây trồng'}</h2>{demo && <DemoTag />}</div>
-      <select aria-label="Cách hiển thị diện tích cây trồng" value={mode} onChange={event => setMode(event.target.value)}><option value="area">{lang === 'en' ? 'By Area' : 'Theo diện tích'}</option><option value="percent">{lang === 'en' ? 'By Percentage' : 'Theo tỷ lệ'}</option></select>
+    <div className="owner-panel-heading"><div><h2>Area by Crop Type</h2>{demo && <DemoTag />}</div>
+      <select aria-label="Cách hiển thị diện tích cây trồng" value={mode} onChange={event => setMode(event.target.value)}><option value="area">By Area</option><option value="percent">By Percentage</option></select>
     </div>
     <div className="owner-chart-layout">
       <div className="owner-donut">
@@ -108,7 +108,7 @@ export function EnvironmentPanel() {
     { name: lang === 'en' ? 'Light' : 'Ánh sáng', value: '12.400', unit: 'lux', change: '+8%', icon: 'sun', tone: 'amber' },
     { name: lang === 'en' ? 'Soil pH' : 'Độ pH đất', value: '6,5', unit: '', change: '— 0', icon: 'flask', tone: 'brown' },
   ];
-  return <DashboardPanel title={lang === 'en' ? 'Environment & Field Conditions' : 'Điều kiện & môi trường'} demo className="owner-environment-panel" to="/environment" linkLabel="Xem chi tiết">
+  return <DashboardPanel title={lang === 'en' ? 'Environment & Field Conditions' : 'Điều kiện & môi trường'} demo className="owner-environment-panel" to="/environment" linkLabel="View Details">
     <div className="owner-environment-grid">{measurements.map(measurement => <div className={'owner-measurement tone-' + measurement.tone} key={measurement.name}>
       <Icon name={measurement.icon} size={25} /><div><span>{measurement.name}</span><strong>{measurement.value}<small>{measurement.unit}</small></strong><span className="owner-change">{measurement.change.startsWith('+') && <Icon name="arrow-up" size={11} />}{measurement.change}</span></div>
     </div>)}</div>
