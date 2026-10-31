@@ -12,6 +12,7 @@ import { FarmingActivitiesPage } from '../features/operations/FarmingActivitiesP
 import { MaterialUsagePage } from '../features/operations/MaterialUsagePage';
 import { HarvestPage } from '../features/operations/HarvestPage';
 import { InputPurchasesPage } from '../features/operations/InputPurchasesPage';
+import { SuppliersPage } from '../features/operations/SuppliersPage';
 import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 import { TasksPage } from '../features/operations/TasksPage';
 import { VietGAPCompliancePage } from '../features/compliance/VietGAPCompliancePage';
@@ -39,7 +40,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'reports') return <ReportsPage initialTab="reports" />;
   if (module.key === 'expenses') return <ReportsPage initialTab="expenses" />;
   if (module.key === 'purchases') return <InputPurchasesPage />;
-  if (module.key === 'suppliers') return <ReportsPage initialTab="suppliers" />;
+  if (module.key === 'suppliers') return <SuppliersPage />;
   if (module.key === 'ai') return <AIAssistantPage initialTab="ai" />;
   if (module.key === 'ai-history') return <AIAssistantPage initialTab="ai-history" />;
   if (module.key === 'ai-feedback') return <AIAssistantPage initialTab="ai-feedback" />;

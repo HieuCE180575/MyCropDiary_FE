@@ -3,6 +3,7 @@ import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { InputPurchasesPage } from '../operations/InputPurchasesPage';
+import { SuppliersPage } from '../operations/SuppliersPage';
 
 interface ReportsPageProps {
   initialTab?: 'reports' | 'expenses' | 'purchases' | 'suppliers';
@@ -216,32 +217,7 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
 
       {activeTab === 'purchases' && <InputPurchasesPage />}
 
-      {activeTab === 'suppliers' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-          {suppliers.map((s) => (
-            <div key={s.id} className="panel" style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <span className="profile-tag-pill" style={{ background: '#ecfdf5', color: '#059669' }}>
-                  Đã kiểm định VietGAP
-                </span>
-                <span style={{ fontSize: '12px', color: '#94a3b8' }}>#{s.id}</span>
-              </div>
-              <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: '#0f172a' }}>{s.supplierName}</h3>
-              <p style={{ margin: '0 0 12px', fontSize: '13px', color: '#059669', fontWeight: 600 }}>
-                Hàng hóa cung ứng: {s.itemsSupplied}
-              </p>
-              <dl style={{ margin: 0, fontSize: '13px', display: 'grid', gridTemplateColumns: '90px 1fr', gap: '4px 8px' }}>
-                <dt style={{ color: '#64748b' }}>Đại diện:</dt>
-                <dd style={{ margin: 0, color: '#334155' }}>{s.contactPerson}</dd>
-                <dt style={{ color: '#64748b' }}>Điện thoại:</dt>
-                <dd style={{ margin: 0, color: '#334155' }}>{s.phone}</dd>
-                <dt style={{ color: '#64748b' }}>Địa chỉ:</dt>
-                <dd style={{ margin: 0, color: '#334155' }}>{s.address}</dd>
-              </dl>
-            </div>
-          ))}
-        </div>
-      )}
+      {activeTab === 'suppliers' && <SuppliersPage />}
     </section>
   );
 }
