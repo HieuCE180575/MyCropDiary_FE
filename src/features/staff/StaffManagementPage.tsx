@@ -70,6 +70,11 @@ export function StaffManagementPage() {
   const [editStatus, setEditStatus] = useState<'ACTIVE' | 'INACTIVE'>('ACTIVE');
   const [savingEdit, setSavingEdit] = useState(false);
 
+
+  // Delete Eligible Worker Modal
+  const [deleteWorkerTarget, setDeleteWorkerTarget] = useState<FarmStaffRecord | null>(null);
+  const [deletingWorker, setDeletingWorker] = useState(false);
+
   // Add Assignment Modal
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [assignStaffId, setAssignStaffId] = useState<number | ''>('');
@@ -792,7 +797,7 @@ export function StaffManagementPage() {
                                     className="table-icon-btn danger"
                                     title="Xóa staff khỏi trang trại"
                                     aria-label={`Xóa ${displayName}`}
-                                    onClick={() => handleDeleteStaff(staff.farmMemberId, displayName)}
+                                    onClick={() => setDeleteWorkerTarget(staff)}
                                   >
                                     <Icon name="trash" size={15} />
                                     <span className="sr-only">Xóa</span>

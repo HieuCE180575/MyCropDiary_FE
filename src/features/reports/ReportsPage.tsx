@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { InputPurchasesPage } from '../operations/InputPurchasesPage';
 
 interface ReportsPageProps {
   initialTab?: 'reports' | 'expenses' | 'purchases' | 'suppliers';
@@ -213,36 +214,7 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
         </div>
       )}
 
-      {activeTab === 'purchases' && (
-        <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Invoice Code' : 'Mã hóa đơn'}</th>
-                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}</th>
-                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Purchase Date' : 'Ngày mua hàng'}</th>
-                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>{lang === 'en' ? 'Total Payment' : 'Tổng thanh toán'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {purchases.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '14px 20px', fontWeight: 600, color: '#0284c7' }}>{p.invoiceCode}</td>
-                  <td style={{ padding: '14px 20px', color: '#0f172a' }}>{p.supplierName}</td>
-                  <td style={{ padding: '14px 20px', color: '#64748b' }}>{new Date(p.purchaseDate).toLocaleDateString('vi-VN')}</td>
-                  <td style={{ padding: '14px 20px' }}>
-                    <span className="status-badge status-badge--success">Đã thanh toán</span>
-                  </td>
-                  <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>
-                    {p.totalAmount.toLocaleString('vi-VN')} đ
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {activeTab === 'purchases' && <InputPurchasesPage />}
 
       {activeTab === 'suppliers' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>

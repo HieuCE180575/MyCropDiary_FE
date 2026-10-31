@@ -11,6 +11,7 @@ import { ZoneListPage } from './zone';
 import { FarmingActivitiesPage } from '../features/operations/FarmingActivitiesPage';
 import { MaterialUsagePage } from '../features/operations/MaterialUsagePage';
 import { HarvestPage } from '../features/operations/HarvestPage';
+import { InputPurchasesPage } from '../features/operations/InputPurchasesPage';
 import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 import { TasksPage } from '../features/operations/TasksPage';
 import { VietGAPCompliancePage } from '../features/compliance/VietGAPCompliancePage';
@@ -37,7 +38,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'training') return <VietGAPCompliancePage initialTab="training" />;
   if (module.key === 'reports') return <ReportsPage initialTab="reports" />;
   if (module.key === 'expenses') return <ReportsPage initialTab="expenses" />;
-  if (module.key === 'purchases') return <ReportsPage initialTab="purchases" />;
+  if (module.key === 'purchases') return <InputPurchasesPage />;
   if (module.key === 'suppliers') return <ReportsPage initialTab="suppliers" />;
   if (module.key === 'ai') return <AIAssistantPage initialTab="ai" />;
   if (module.key === 'ai-history') return <AIAssistantPage initialTab="ai-history" />;
