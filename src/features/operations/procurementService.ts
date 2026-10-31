@@ -199,3 +199,4 @@ export async function linkWarehouseReceipt(purchaseId: number, payload: LinkWare
   notifyDataChanged('/procurement/purchases', 'PATCH');
   return data;
 }
+
