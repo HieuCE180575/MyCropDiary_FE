@@ -116,7 +116,7 @@ export function ZoneListPage() {
       if (isSilent) setError(null);
     } catch (err) {
       if (!isSilent) {
-        setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu phân khu & Block.');
+        setError(err instanceof Error ? err.message : 'Can not loading Zone & Block.');
       }
     } finally {
       if (!isSilent) setLoading(false);
@@ -336,8 +336,8 @@ export function ZoneListPage() {
           <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
             {statsReady
               ? (lang === 'en'
-                  ? `${zones.length} zones · ${blocks.length} blocks · Total Area: ${totalZoneAreaM2.toLocaleString('en-US')} m²`
-                  : `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${totalZoneAreaM2.toLocaleString('vi-VN')} m²`)
+                ? `${zones.length} zones · ${blocks.length} blocks · Total Area: ${totalZoneAreaM2.toLocaleString('en-US')} m²`
+                : `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${totalZoneAreaM2.toLocaleString('vi-VN')} m²`)
               : (lang === 'en' ? 'Loading zones and blocks...' : 'Đang tải dữ liệu khu vực và Block...')}
           </p>
         </div>

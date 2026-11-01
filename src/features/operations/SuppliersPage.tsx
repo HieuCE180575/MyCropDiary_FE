@@ -803,3 +803,4 @@ export function SuppliersPage() {
     </div>
   );
 }
+
