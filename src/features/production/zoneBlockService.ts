@@ -541,6 +541,7 @@ export interface UpdateRiskControlPayload {
   riskLevel?: string;
   description?: string;
   imageUrl?: string;
+  riskType?: string;
 }
 
 export async function recordZoneRiskApi(zoneId: number, payload: CreateZoneRiskPayload): Promise<ZoneRiskBackendResp> {
@@ -629,6 +630,24 @@ export async function fetchFarmSoilAssessmentHistoryApi(farmId: number): Promise
 
 export async function fetchSoilAssessmentDetailsApi(assessmentId: number): Promise<SoilAssessmentBackendResp> {
   return await request<SoilAssessmentBackendResp>(`/soil-assessments/${assessmentId}`);
+}
+
+export interface UpdateSoilAssessmentPayload {
+  soilPh?: number;
+  moisturePercent?: number;
+  nutrientData?: string;
+  notes?: string;
+  imageUrl?: string;
+  assessedAt?: string;
+}
+
+export async function updateSoilAssessmentApi(assessmentId: number, payload: UpdateSoilAssessmentPayload): Promise<SoilAssessmentBackendResp> {
+  const data = await request<SoilAssessmentBackendResp>(`/soil-assessments/${assessmentId}`, {
+    method: 'PUT',
+    data: payload,
+  });
+  notifyDataChanged('/production/soil', 'PUT');
+  return data;
 }
 
 export async function deleteSoilAssessmentApi(assessmentId: number): Promise<void> {

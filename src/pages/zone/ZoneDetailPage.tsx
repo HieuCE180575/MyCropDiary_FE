@@ -18,6 +18,11 @@ import {
   deleteBlock,
   fetchZoneRiskRecords,
   saveRiskRecord,
+  fetchZoneRiskHistoryApi,
+  fetchZoneRiskDetailsApi,
+  recordZoneRiskApi,
+  updateRiskControlMeasuresApi,
+  deleteZoneRiskApi,
 } from '../../features/production/zoneBlockService';
 import type {
   Zone,
@@ -79,6 +84,7 @@ export function ZoneDetailPage() {
   // Zone Risk Record modal
   const [riskModalMode, setRiskModalMode] = useState<'create' | 'edit' | 'view' | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<RiskAssessmentRecord | null>(null);
+  const [riskToDelete, setRiskToDelete] = useState<RiskAssessmentRecord | null>(null);
   const [riskForm, setRiskForm] = useState({
     assessedAt: new Date().toISOString().split('T')[0],
     riskType: 'Trôi dạt hóa chất lân cận',
@@ -120,7 +126,29 @@ export function ZoneDetailPage() {
       setZone(zData);
       setBlocks(bData);
       setAssignments(aData);
-      setRiskRecords(fetchZoneRiskRecords(zoneId));
+      try {
+        const beRisks = await fetchZoneRiskHistoryApi(zoneId);
+        if (beRisks && beRisks.length > 0) {
+          setRiskRecords(beRisks.map((r) => ({
+            riskId: r.riskId,
+            targetType: 'ZONE',
+            zoneId: r.zoneId,
+            zoneName: r.zoneName || zData.zoneName,
+            assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+            riskType: r.riskType,
+            riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+            priorFindings: '',
+            description: r.description || '',
+            controlMeasures: r.mitigationPlan || '',
+            assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
+            status: 'CONTROLLED',
+          })));
+        } else {
+          setRiskRecords(fetchZoneRiskRecords(zoneId));
+        }
+      } catch {
+        setRiskRecords(fetchZoneRiskRecords(zoneId));
+      }
       if (silent) setError(null);
     } catch (err) {
       if (!silent) {
@@ -205,8 +233,27 @@ export function ZoneDetailPage() {
     setRiskModalMode('create');
   };
 
-  const openEditRiskModal = (record: RiskAssessmentRecord, mode: 'edit' | 'view') => {
+  const openEditRiskModal = async (record: RiskAssessmentRecord, mode: 'edit' | 'view') => {
     setSelectedRisk(record);
+    if (mode === 'view') {
+      try {
+        const details = await fetchZoneRiskDetailsApi(record.riskId);
+        setRiskForm({
+          assessedAt: details.assessedAt ? details.assessedAt.split('T')[0] : record.assessedAt,
+          riskType: details.riskType || record.riskType,
+          riskLevel: (details.riskLevel ? details.riskLevel.toUpperCase() : record.riskLevel) as 'LOW' | 'MEDIUM' | 'HIGH',
+          priorFindings: record.priorFindings || '',
+          description: details.description || record.description,
+          controlMeasures: details.mitigationPlan || record.controlMeasures,
+          assessedByName: details.assessedByName || record.assessedByName,
+          status: record.status,
+        });
+        setRiskModalMode('view');
+        return;
+      } catch {
+        // fallback
+      }
+    }
     setRiskForm({
       assessedAt: record.assessedAt,
       riskType: record.riskType,
@@ -220,30 +267,96 @@ export function ZoneDetailPage() {
     setRiskModalMode(mode);
   };
 
-  const handleSaveRiskRecord = (e: React.FormEvent) => {
+  const handleSaveRiskRecord = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!zone) return;
-    const saved = saveRiskRecord({
-      riskId: selectedRisk?.riskId,
-      targetType: 'ZONE',
-      zoneId: zone.zoneId,
-      zoneName: zone.zoneName,
-      assessedAt: riskForm.assessedAt,
-      riskType: riskForm.riskType,
-      riskLevel: riskForm.riskLevel,
-      priorFindings: riskForm.priorFindings,
-      description: riskForm.description,
-      controlMeasures: riskForm.controlMeasures,
-      assessedByName: riskForm.assessedByName,
-      status: riskForm.status,
-    });
-    setRiskRecords(fetchZoneRiskRecords(zone.zoneId));
+    try {
+      if (selectedRisk && riskModalMode === 'edit') {
+        await updateRiskControlMeasuresApi(selectedRisk.riskId, {
+          mitigationPlan: riskForm.controlMeasures,
+          riskLevel: riskForm.riskLevel.toLowerCase(),
+          description: riskForm.description,
+          riskType: riskForm.riskType,
+        });
+        showToast(`Đã cập nhật biện pháp kiểm soát cho "${riskForm.riskType}"!`);
+      } else {
+        await recordZoneRiskApi(zone.zoneId, {
+          riskType: riskForm.riskType,
+          riskLevel: riskForm.riskLevel.toLowerCase(),
+          description: riskForm.description,
+          mitigationPlan: riskForm.controlMeasures,
+          assessedAt: riskForm.assessedAt ? new Date(riskForm.assessedAt).toISOString() : new Date().toISOString(),
+        });
+        showToast(`Đã ghi nhận rủi ro vùng sản xuất "${riskForm.riskType}" thành công!`);
+      }
+      const beRisks = await fetchZoneRiskHistoryApi(zone.zoneId);
+      if (beRisks && beRisks.length > 0) {
+        setRiskRecords(beRisks.map((r) => ({
+          riskId: r.riskId,
+          targetType: 'ZONE',
+          zoneId: r.zoneId,
+          zoneName: r.zoneName || zone.zoneName,
+          assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+          riskType: r.riskType,
+          riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+          priorFindings: '',
+          description: r.description || '',
+          controlMeasures: r.mitigationPlan || '',
+          assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
+          status: 'CONTROLLED',
+        })));
+      }
+    } catch {
+      const saved = saveRiskRecord({
+        riskId: selectedRisk?.riskId,
+        targetType: 'ZONE',
+        zoneId: zone.zoneId,
+        zoneName: zone.zoneName,
+        assessedAt: riskForm.assessedAt,
+        riskType: riskForm.riskType,
+        riskLevel: riskForm.riskLevel,
+        priorFindings: riskForm.priorFindings,
+        description: riskForm.description,
+        controlMeasures: riskForm.controlMeasures,
+        assessedByName: riskForm.assessedByName,
+        status: riskForm.status,
+      });
+      setRiskRecords(fetchZoneRiskRecords(zone.zoneId));
+      showToast(
+        selectedRisk
+          ? `Đã cập nhật biện pháp kiểm soát cho "${saved.riskType}"!`
+          : `Đã thêm hồ sơ rủi ro Zone "${saved.riskType}"!`
+      );
+    }
     setRiskModalMode(null);
-    showToast(
-      selectedRisk
-        ? `Đã cập nhật biện pháp kiểm soát cho "${saved.riskType}"!`
-        : `Đã thêm hồ sơ rủi ro Zone "${saved.riskType}"!`
-    );
+  };
+
+  const handleConfirmDeleteRisk = async () => {
+    if (!riskToDelete || !zone) return;
+    try {
+      await deleteZoneRiskApi(riskToDelete.riskId);
+      showToast(`Đã xóa rủi ro "${riskToDelete.riskType}" thành công!`);
+      const beRisks = await fetchZoneRiskHistoryApi(zone.zoneId);
+      setRiskRecords(beRisks.map((r) => ({
+        riskId: r.riskId,
+        targetType: 'ZONE',
+        zoneId: r.zoneId,
+        zoneName: r.zoneName || zone.zoneName,
+        assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        riskType: r.riskType,
+        riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+        priorFindings: '',
+        description: r.description || '',
+        controlMeasures: r.mitigationPlan || '',
+        assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
+        status: 'CONTROLLED',
+      })));
+    } catch {
+      setRiskRecords((prev) => prev.filter((r) => r.riskId !== riskToDelete.riskId));
+      showToast(`Đã xóa hồ sơ rủi ro!`);
+    } finally {
+      setRiskToDelete(null);
+    }
   };
 
   if (loading) {
@@ -801,6 +914,16 @@ export function ZoneDetailPage() {
                           <Icon name="edit" size={16} />
                           <span className="sr-only">Cập nhật biện pháp</span>
                         </button>
+                        <button
+                          type="button"
+                          className="table-icon-btn danger"
+                          title="Xóa rủi ro"
+                          aria-label={`Xóa ${r.riskType}`}
+                          onClick={() => setRiskToDelete(r)}
+                        >
+                          <Icon name="trash" size={16} />
+                          <span className="sr-only">Xóa</span>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1011,6 +1134,16 @@ export function ZoneDetailPage() {
         onSuccess={(obs: BlockConditionObservation) => {
           showToast(`Đã lưu hồ sơ điều kiện (${obs.conditionType})!`);
         }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(riskToDelete)}
+        title="Xác nhận xóa hồ sơ rủi ro"
+        description={`Bạn có chắc chắn muốn xóa hồ sơ rủi ro "${riskToDelete?.riskType}"? Hành động này sẽ xóa dữ liệu trên hệ thống.`}
+        confirmLabel="Xóa rủi ro"
+        tone="danger"
+        onClose={() => setRiskToDelete(null)}
+        onConfirm={handleConfirmDeleteRisk}
       />
 
       <ConfirmDialog

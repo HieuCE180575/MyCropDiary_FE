@@ -18,6 +18,11 @@ import {
   saveRiskRecord,
   fetchBlockSoilAssessments,
   saveSoilAssessment,
+  createSoilAssessmentApi,
+  fetchSoilAssessmentHistoryApi,
+  fetchSoilAssessmentDetailsApi,
+  updateSoilAssessmentApi,
+  deleteSoilAssessmentApi,
   fetchBlockWaterAssessments,
   saveWaterAssessment,
 } from '../../features/production/zoneBlockService';
@@ -131,6 +136,7 @@ export function BlockDetailPage() {
   // Soil Assessment Modal
   const [soilModalMode, setSoilModalMode] = useState<'create' | 'edit' | 'view' | null>(null);
   const [selectedSoil, setSelectedSoil] = useState<SoilAssessmentRecord | null>(null);
+  const [soilToDelete, setSoilToDelete] = useState<SoilAssessmentRecord | null>(null);
   const [soilForm, setSoilForm] = useState({
     assessedAt: new Date().toISOString().split('T')[0],
     sampleCode: '',
@@ -200,7 +206,7 @@ export function BlockDetailPage() {
       if (seasonsRes.status === 'fulfilled') setBlockSeasons(seasonsRes.value);
 
       setRiskRecords(fetchBlockRiskRecords(resolvedZoneId, blockId));
-      setSoilRecords(fetchBlockSoilAssessments(resolvedZoneId, blockId, bData.blockName));
+      void reloadSoilHistory(blockId, resolvedZoneId, bData.blockName);
       setWaterRecords(fetchBlockWaterAssessments(resolvedZoneId, blockId, bData.blockName));
       if (silent) setError(null);
     } catch (err) {
@@ -380,29 +386,154 @@ export function BlockDetailPage() {
     showToast(`Đã lưu hồ sơ rủi ro Block "${saved.riskType}"!`);
   };
 
-  const handleSaveSoil = (e: React.FormEvent) => {
+  const reloadSoilHistory = async (bId: number, zId: number, bName: string) => {
+    try {
+      const beSoils = await fetchSoilAssessmentHistoryApi(bId);
+      if (beSoils && beSoils.length > 0) {
+        const records: SoilAssessmentRecord[] = beSoils.map((s) => {
+          let parsed: any = {};
+          try {
+            if (s.nutrientData) parsed = JSON.parse(s.nutrientData);
+          } catch {
+            // not json
+          }
+          return {
+            assessmentId: s.assessmentId,
+            blockId: s.blockId,
+            blockName: s.blockName || bName,
+            zoneId: s.zoneId,
+            zoneName: s.zoneName,
+            assessedAt: s.assessedAt ? s.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+            sampleCode: parsed.sampleCode || `SOIL-TN-${String(s.assessmentId).padStart(4, '0')}`,
+            phLevel: Number(s.soilPh ?? 6.5),
+            organicMatterPct: Number(parsed.organicMatterPct ?? 3.5),
+            heavyMetalResult: (parsed.heavyMetalResult ?? 'SAFE') as 'SAFE' | 'WARNING' | 'EXCEEDED',
+            microbialStatus: parsed.microbialStatus || 'Đạt chuẩn QCVN 03-MT:2015/BTNMT',
+            laboratoryName: parsed.laboratoryName || 'Trung tâm Phân tích Nông nghiệp',
+            conclusion: (parsed.conclusion ?? (Number(s.soilPh) >= 5.5 && Number(s.soilPh) <= 7.5 ? 'DAT_CHUAN' : 'CAN_CAI_TAO')) as 'DAT_CHUAN' | 'CAN_CAI_TAO',
+            notes: s.notes || '',
+            recordedByName: s.conductedByName || 'Kỹ sư Nông học',
+          };
+        });
+        setSoilRecords(records);
+        return;
+      }
+    } catch {
+      // fallback
+    }
+    setSoilRecords(fetchBlockSoilAssessments(zId, bId, bName));
+  };
+
+  const handleViewSoilDetails = async (s: SoilAssessmentRecord) => {
+    try {
+      const detail = await fetchSoilAssessmentDetailsApi(s.assessmentId);
+      let parsed: any = {};
+      try {
+        if (detail.nutrientData) parsed = JSON.parse(detail.nutrientData);
+      } catch {
+        // not json
+      }
+      setSelectedSoil(s);
+      setSoilForm({
+        assessedAt: detail.assessedAt ? detail.assessedAt.split('T')[0] : s.assessedAt,
+        sampleCode: parsed.sampleCode || s.sampleCode,
+        phLevel: String(detail.soilPh ?? s.phLevel),
+        organicMatterPct: String(parsed.organicMatterPct ?? s.organicMatterPct),
+        heavyMetalResult: parsed.heavyMetalResult ?? s.heavyMetalResult,
+        microbialStatus: parsed.microbialStatus ?? s.microbialStatus,
+        laboratoryName: parsed.laboratoryName ?? s.laboratoryName,
+        conclusion: parsed.conclusion ?? s.conclusion,
+        notes: detail.notes ?? s.notes ?? '',
+        recordedByName: detail.conductedByName ?? s.recordedByName,
+      });
+    } catch {
+      setSelectedSoil(s);
+      setSoilForm({
+        assessedAt: s.assessedAt,
+        sampleCode: s.sampleCode,
+        phLevel: String(s.phLevel),
+        organicMatterPct: String(s.organicMatterPct),
+        heavyMetalResult: s.heavyMetalResult,
+        microbialStatus: s.microbialStatus,
+        laboratoryName: s.laboratoryName,
+        conclusion: s.conclusion,
+        notes: s.notes || '',
+        recordedByName: s.recordedByName,
+      });
+    }
+    setSoilModalMode('view');
+  };
+
+  const handleSaveSoil = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!block) return;
-    const saved = saveSoilAssessment({
-      assessmentId: selectedSoil?.assessmentId,
-      blockId: block.blockId,
-      blockName: block.blockName,
-      zoneId: block.zoneId,
-      zoneName: zone?.zoneName || block.zoneName,
-      assessedAt: soilForm.assessedAt,
-      sampleCode: soilForm.sampleCode || `SOIL-${block.blockId}-${Date.now().toString().slice(-4)}`,
-      phLevel: parseFloat(soilForm.phLevel) || 6.5,
+    const nutrientObj = {
+      sampleCode: soilForm.sampleCode,
       organicMatterPct: parseFloat(soilForm.organicMatterPct) || 3.5,
       heavyMetalResult: soilForm.heavyMetalResult,
       microbialStatus: soilForm.microbialStatus,
       laboratoryName: soilForm.laboratoryName,
       conclusion: soilForm.conclusion,
-      notes: soilForm.notes,
-      recordedByName: soilForm.recordedByName,
-    });
-    setSoilRecords(fetchBlockSoilAssessments(block.zoneId, block.blockId, block.blockName));
+    };
+    const nutrientData = JSON.stringify(nutrientObj);
+
+    try {
+      if (selectedSoil && soilModalMode === 'edit') {
+        await updateSoilAssessmentApi(selectedSoil.assessmentId, {
+          soilPh: parseFloat(soilForm.phLevel) || 6.5,
+          moisturePercent: 60.0,
+          nutrientData,
+          notes: soilForm.notes,
+          assessedAt: soilForm.assessedAt ? new Date(soilForm.assessedAt).toISOString() : new Date().toISOString(),
+        });
+        showToast(`Đã cập nhật đánh giá thổ nhưỡng "${soilForm.sampleCode}"!`);
+      } else {
+        await createSoilAssessmentApi(block.blockId, {
+          soilPh: parseFloat(soilForm.phLevel) || 6.5,
+          moisturePercent: 60.0,
+          nutrientData,
+          notes: soilForm.notes,
+          assessedAt: soilForm.assessedAt ? new Date(soilForm.assessedAt).toISOString() : new Date().toISOString(),
+        });
+        showToast(`Đã thêm mới đánh giá thổ nhưỡng "${soilForm.sampleCode}"!`);
+      }
+      await reloadSoilHistory(block.blockId, block.zoneId, block.blockName);
+    } catch {
+      const saved = saveSoilAssessment({
+        assessmentId: selectedSoil?.assessmentId,
+        blockId: block.blockId,
+        blockName: block.blockName,
+        zoneId: block.zoneId,
+        zoneName: zone?.zoneName || block.zoneName,
+        assessedAt: soilForm.assessedAt,
+        sampleCode: soilForm.sampleCode || `SOIL-${block.blockId}-${Date.now().toString().slice(-4)}`,
+        phLevel: parseFloat(soilForm.phLevel) || 6.5,
+        organicMatterPct: parseFloat(soilForm.organicMatterPct) || 3.5,
+        heavyMetalResult: soilForm.heavyMetalResult,
+        microbialStatus: soilForm.microbialStatus,
+        laboratoryName: soilForm.laboratoryName,
+        conclusion: soilForm.conclusion,
+        notes: soilForm.notes,
+        recordedByName: soilForm.recordedByName,
+      });
+      setSoilRecords(fetchBlockSoilAssessments(block.zoneId, block.blockId, block.blockName));
+      showToast(`Đã lưu hồ sơ đánh giá đất "${saved.sampleCode}"!`);
+    }
     setSoilModalMode(null);
-    showToast(`Đã lưu hồ sơ đánh giá đất "${saved.sampleCode}"!`);
+  };
+
+  const handleConfirmDeleteSoil = async () => {
+    if (!soilToDelete || !block) return;
+    try {
+      await deleteSoilAssessmentApi(soilToDelete.assessmentId);
+      showToast(`Đã xóa phiếu đánh giá thổ nhưỡng "${soilToDelete.sampleCode}"!`);
+      await reloadSoilHistory(block.blockId, block.zoneId, block.blockName);
+    } catch {
+      setSoilRecords((prev) => prev.filter((s) => s.assessmentId !== soilToDelete.assessmentId));
+      showToast(`Đã xóa phiếu đánh giá thổ nhưỡng!`);
+    } finally {
+      setSoilToDelete(null);
+    }
   };
 
   const handleSaveWater = (e: React.FormEvent) => {
@@ -1303,22 +1434,7 @@ export function BlockDetailPage() {
                             className="table-icon-btn primary"
                             title="Xem chi tiết"
                             aria-label={`Chi tiết mẫu đất ${s.sampleCode}`}
-                            onClick={() => {
-                              setSelectedSoil(s);
-                              setSoilForm({
-                                assessedAt: s.assessedAt,
-                                sampleCode: s.sampleCode,
-                                phLevel: String(s.phLevel),
-                                organicMatterPct: String(s.organicMatterPct),
-                                heavyMetalResult: s.heavyMetalResult,
-                                microbialStatus: s.microbialStatus,
-                                laboratoryName: s.laboratoryName,
-                                conclusion: s.conclusion,
-                                notes: s.notes || '',
-                                recordedByName: s.recordedByName,
-                              });
-                              setSoilModalMode('view');
-                            }}
+                            onClick={() => handleViewSoilDetails(s)}
                           >
                             <Icon name="eye" size={16} />
                             <span className="sr-only">Xem chi tiết</span>
@@ -1347,6 +1463,16 @@ export function BlockDetailPage() {
                           >
                             <Icon name="edit" size={16} />
                             <span className="sr-only">Chỉnh sửa</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="table-icon-btn danger"
+                            title="Xóa đánh giá đất"
+                            aria-label={`Xóa mẫu đất ${s.sampleCode}`}
+                            onClick={() => setSoilToDelete(s)}
+                          >
+                            <Icon name="trash" size={16} />
+                            <span className="sr-only">Xóa</span>
                           </button>
                         </div>
                       </td>
@@ -2187,6 +2313,16 @@ export function BlockDetailPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(soilToDelete)}
+        title="Xác nhận xóa phiếu đánh giá thổ nhưỡng"
+        description={`Bạn có chắc chắn muốn xóa phiếu đánh giá mẫu đất "${soilToDelete?.sampleCode}"? Hành động này sẽ xóa dữ liệu trên hệ thống.`}
+        confirmLabel="Xóa đánh giá"
+        tone="danger"
+        onClose={() => setSoilToDelete(null)}
+        onConfirm={handleConfirmDeleteSoil}
+      />
 
       <ConfirmDialog
         open={isDeleteBlockOpen}

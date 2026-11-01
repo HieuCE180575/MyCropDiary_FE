@@ -1,6 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
+import {
+  fetchFarmRiskHistoryApi,
+  fetchFarmSoilAssessmentHistoryApi,
+  ZoneRiskBackendResp,
+  SoilAssessmentBackendResp,
+} from '../production/zoneBlockService';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface ChecklistItem {
@@ -20,6 +27,27 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const { selectedFarm } = useFarmWorkspace();
   const { lang } = useLanguage();
   const [activeTab, setActiveTab] = useState<'checklists' | 'assessments' | 'environment' | 'training'>(initialTab);
+  const [farmRisks, setFarmRisks] = useState<ZoneRiskBackendResp[]>([]);
+  const [farmSoils, setFarmSoils] = useState<SoilAssessmentBackendResp[]>([]);
+  const [envSubTab, setEnvSubTab] = useState<'risks' | 'soils'>('risks');
+  const [selectedEnvRisk, setSelectedEnvRisk] = useState<ZoneRiskBackendResp | null>(null);
+  const [selectedEnvSoil, setSelectedEnvSoil] = useState<SoilAssessmentBackendResp | null>(null);
+  const [loadingEnv, setLoadingEnv] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'environment' && selectedFarm?.id) {
+      setLoadingEnv(true);
+      Promise.all([
+        fetchFarmRiskHistoryApi(selectedFarm.id).catch(() => []),
+        fetchFarmSoilAssessmentHistoryApi(selectedFarm.id).catch(() => []),
+      ]).then(([risks, soils]) => {
+        setFarmRisks(risks || []);
+        setFarmSoils(soils || []);
+      }).finally(() => {
+        setLoadingEnv(false);
+      });
+    }
+  }, [activeTab, selectedFarm?.id]);
 
   const [checklist, setChecklist] = useState<ChecklistItem[]>([
     {
@@ -301,38 +329,314 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         </div>
       )}
 
-      {/* Tab: Environment */}
+      {/* Tab: Environment (Zone Risks & Soil Assessments) */}
       {activeTab === 'environment' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-          <div className="panel" style={{ padding: '24px' }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '18px', color: '#0f172a' }}>🧪 Xét nghiệm mẫu đất canh tác</h3>
-            <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '13.5px' }}>Phiếu kết quả kiểm định chất lượng đất theo chuẩn VietGAP số Đ-2026</p>
-            <dl style={{ margin: 0, fontSize: '13.5px', display: 'grid', gridTemplateColumns: '140px 1fr', gap: '8px 12px' }}>
-              <dt style={{ color: '#64748b' }}>Độ chua pH:</dt>
-              <dd style={{ margin: 0, fontWeight: 700, color: '#059669' }}>6.2 (Đạt chuẩn 5.5 - 6.5)</dd>
-              <dt style={{ color: '#64748b' }}>Chì (Pb):</dt>
-              <dd style={{ margin: 0, color: '#059669' }}>0.02 mg/kg (Ngưỡng cho phép &lt; 70)</dd>
-              <dt style={{ color: '#64748b' }}>Cadimi (Cd):</dt>
-              <dd style={{ margin: 0, color: '#059669' }}>Không phát hiện (KPH)</dd>
-              <dt style={{ color: '#64748b' }}>Độ mặn EC:</dt>
-              <dd style={{ margin: 0, color: '#059669' }}>0.4 dS/m (Thích hợp cho rau màu)</dd>
-            </dl>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Summary KPIs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+            <div className="panel" style={{ padding: '18px' }}>
+              <span style={{ fontSize: '12.5px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                RỦI RO VÙNG SẢN XUẤT
+              </span>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>
+                {farmRisks.length}
+              </div>
+              <small style={{ color: '#64748b' }}>Tổng số rủi ro đã ghi nhận trên toàn nông trại</small>
+            </div>
+            <div className="panel" style={{ padding: '18px' }}>
+              <span style={{ fontSize: '12.5px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                RỦI RO MỨC ĐỘ CAO
+              </span>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#dc2626', margin: '4px 0' }}>
+                {farmRisks.filter((r) => (r.riskLevel || '').toUpperCase() === 'HIGH' || (r.riskLevel || '').toUpperCase() === 'CRITICAL').length}
+              </div>
+              <small style={{ color: '#64748b' }}>Cần ưu tiên áp dụng biện pháp phòng ngừa</small>
+            </div>
+            <div className="panel" style={{ padding: '18px' }}>
+              <span style={{ fontSize: '12.5px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                ĐÁNH GIÁ THỔ NHƯỠNG LÔ ĐẤT
+              </span>
+              <div style={{ fontSize: '26px', fontWeight: 800, color: '#059669', margin: '4px 0' }}>
+                {farmSoils.length}
+              </div>
+              <small style={{ color: '#64748b' }}>Phiếu kiểm nghiệm mẫu đất lưu trữ</small>
+            </div>
           </div>
 
-          <div className="panel" style={{ padding: '24px' }}>
-            <h3 style={{ margin: '0 0 12px', fontSize: '18px', color: '#0f172a' }}>💧 Xét nghiệm mẫu nước tưới tiêu</h3>
-            <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '13.5px' }}>Kiểm định theo Quy chuẩn kỹ thuật QCVN 39:2011/BTNMT</p>
-            <dl style={{ margin: 0, fontSize: '13.5px', display: 'grid', gridTemplateColumns: '140px 1fr', gap: '8px 12px' }}>
-              <dt style={{ color: '#64748b' }}>Coliform tổng số:</dt>
-              <dd style={{ margin: 0, color: '#059669', fontWeight: 700 }}>25 MPN/100ml (&lt; 200 quy định)</dd>
-              <dt style={{ color: '#64748b' }}>E. Coli:</dt>
-              <dd style={{ margin: 0, color: '#059669' }}>Âm tính</dd>
-              <dt style={{ color: '#64748b' }}>Asen (Thạch tín):</dt>
-              <dd style={{ margin: 0, color: '#059669' }}>KPH</dd>
-              <dt style={{ color: '#64748b' }}>Đánh giá an toàn:</dt>
-              <dd style={{ margin: 0 }}><span className="status-badge status-badge--success">Nước sạch an toàn</span></dd>
-            </dl>
+          {/* Sub Navigation */}
+          <div className="panel" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEnvSubTab('risks')}
+                  className={envSubTab === 'risks' ? 'primary-button' : 'ghost-button'}
+                  style={{ height: '38px', fontSize: '13.5px' }}
+                >
+                  🛡️ Rủi ro vùng sản xuất ({farmRisks.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEnvSubTab('soils')}
+                  className={envSubTab === 'soils' ? 'primary-button' : 'ghost-button'}
+                  style={{ height: '38px', fontSize: '13.5px' }}
+                >
+                  🧪 Đánh giá thổ nhưỡng lô đất ({farmSoils.length})
+                </button>
+              </div>
+
+              {loadingEnv && <small style={{ color: '#059669' }}>Đang tải dữ liệu từ máy chủ...</small>}
+            </div>
+
+            {/* SubTab 1: Zone Risks */}
+            {envSubTab === 'risks' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Hồ sơ rủi ro phân khu sản xuất (UC-21)</h3>
+                    <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
+                      Theo dõi nguồn lây nhiễm, trôi dạt hóa chất và biện pháp kiểm soát theo chuẩn VietGAP
+                    </p>
+                  </div>
+                </div>
+
+                <div className="zone-table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Ngày đánh giá</th>
+                        <th>Phân khu (Zone)</th>
+                        <th>Loại rủi ro & Mô tả</th>
+                        <th style={{ textAlign: 'center' }}>Mức độ</th>
+                        <th>Biện pháp kiểm soát</th>
+                        <th>Người đánh giá</th>
+                        <th style={{ textAlign: 'right' }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {farmRisks.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                            Chưa có hồ sơ rủi ro vùng sản xuất nào được ghi nhận cho nông trại này.
+                          </td>
+                        </tr>
+                      ) : (
+                        farmRisks.map((r) => (
+                          <tr key={r.riskId}>
+                            <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                              {r.assessedAt ? r.assessedAt.split('T')[0] : '—'}
+                            </td>
+                            <td>
+                              <Link to={`/zones/${r.zoneId}`} style={{ fontWeight: 600, color: '#059669' }}>
+                                {r.zoneName || `Zone #${r.zoneId}`}
+                              </Link>
+                            </td>
+                            <td style={{ maxWidth: '240px' }}>
+                              <strong style={{ color: '#0f172a', display: 'block', marginBottom: '3px' }}>
+                                {r.riskType}
+                              </strong>
+                              <span style={{ fontSize: '13px', color: '#475569' }}>{r.description || '—'}</span>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <span className="knowledge-tag" style={{ textTransform: 'uppercase' }}>
+                                {r.riskLevel}
+                              </span>
+                            </td>
+                            <td style={{ maxWidth: '280px', fontSize: '13px', color: '#1e293b' }}>
+                              {r.mitigationPlan || '—'}
+                            </td>
+                            <td style={{ fontSize: '13px', color: '#64748b' }}>
+                              {r.assessedByName || '—'}
+                            </td>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <button
+                                type="button"
+                                className="table-icon-btn primary"
+                                title="Xem chi tiết rủi ro"
+                                onClick={() => setSelectedEnvRisk(r)}
+                              >
+                                <Icon name="eye" size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* SubTab 2: Soil Assessments */}
+            {envSubTab === 'soils' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Hồ sơ đánh giá thổ nhưỡng lô đất (UC-20)</h3>
+                    <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
+                      Giám sát định kỳ chỉ số pH, độ ẩm, kim loại nặng và dư lượng vi sinh vật
+                    </p>
+                  </div>
+                </div>
+
+                <div className="zone-table-wrap">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>Ngày đánh giá</th>
+                        <th>Lô đất (Block)</th>
+                        <th>Phân khu (Zone)</th>
+                        <th style={{ textAlign: 'center' }}>Độ pH</th>
+                        <th style={{ textAlign: 'center' }}>Độ ẩm</th>
+                        <th>Phân tích & Ghi chú</th>
+                        <th>Người thực hiện</th>
+                        <th style={{ textAlign: 'right' }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {farmSoils.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                            Chưa có phiếu đánh giá thổ nhưỡng nào được ghi nhận cho các lô đất.
+                          </td>
+                        </tr>
+                      ) : (
+                        farmSoils.map((s) => (
+                          <tr key={s.assessmentId}>
+                            <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                              {s.assessedAt ? s.assessedAt.split('T')[0] : '—'}
+                            </td>
+                            <td>
+                              <Link to={`/zones/${s.zoneId}/blocks/${s.blockId}`} style={{ fontWeight: 600, color: '#059669' }}>
+                                {s.blockName || `Block #${s.blockId}`}
+                              </Link>
+                            </td>
+                            <td style={{ color: '#475569' }}>{s.zoneName || `Zone #${s.zoneId}`}</td>
+                            <td style={{ textAlign: 'center', fontWeight: 700, color: Number(s.soilPh) >= 5.5 && Number(s.soilPh) <= 7.5 ? '#059669' : '#d97706' }}>
+                              {s.soilPh != null ? `pH ${s.soilPh}` : '—'}
+                            </td>
+                            <td style={{ textAlign: 'center', fontWeight: 600 }}>
+                              {s.moisturePercent != null ? `${s.moisturePercent}%` : '—'}
+                            </td>
+                            <td style={{ maxWidth: '280px', fontSize: '13px', color: '#334155' }}>
+                              {s.notes || s.nutrientData || '—'}
+                            </td>
+                            <td style={{ fontSize: '13px', color: '#64748b' }}>
+                              {s.conductedByName || '—'}
+                            </td>
+                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                              <button
+                                type="button"
+                                className="table-icon-btn primary"
+                                title="Xem chi tiết phiếu thổ nhưỡng"
+                                onClick={() => setSelectedEnvSoil(s)}
+                              >
+                                <Icon name="eye" size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Details Modal: Selected Zone Risk */}
+          {selectedEnvRisk && (
+            <div className="modal-overlay" role="dialog" aria-modal="true">
+              <div className="modal-card" style={{ width: 'min(600px, 100%)', maxHeight: '90vh' }}>
+                <div className="modal-header">
+                  <div>
+                    <span className="eyebrow">Chi tiết rủi ro vùng sản xuất</span>
+                    <h2>{selectedEnvRisk.riskType}</h2>
+                  </div>
+                  <button type="button" className="modal-close" onClick={() => setSelectedEnvRisk(null)}>✕</button>
+                </div>
+                <div className="modal-body">
+                  <div className="structured-field-card" style={{ background: '#f8fafc', marginBottom: '12px' }}>
+                    <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '150px 1fr', gap: '8px 12px', fontSize: '13.5px' }}>
+                      <dt style={{ color: '#64748b' }}>Phân khu:</dt>
+                      <dd style={{ margin: 0, fontWeight: 700 }}>{selectedEnvRisk.zoneName || `Zone #${selectedEnvRisk.zoneId}`}</dd>
+                      <dt style={{ color: '#64748b' }}>Ngày đánh giá:</dt>
+                      <dd style={{ margin: 0 }}>{selectedEnvRisk.assessedAt ? selectedEnvRisk.assessedAt.split('T')[0] : '—'}</dd>
+                      <dt style={{ color: '#64748b' }}>Mức độ rủi ro:</dt>
+                      <dd style={{ margin: 0 }}><span className="knowledge-tag" style={{ textTransform: 'uppercase' }}>{selectedEnvRisk.riskLevel}</span></dd>
+                      <dt style={{ color: '#64748b' }}>Người đánh giá:</dt>
+                      <dd style={{ margin: 0 }}>{selectedEnvRisk.assessedByName || '—'}</dd>
+                    </dl>
+                  </div>
+                  <div className="structured-field-card" style={{ marginBottom: '12px' }}>
+                    <span className="structured-field-label">Mô tả rủi ro</span>
+                    <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#1e293b' }}>{selectedEnvRisk.description || 'Không có mô tả chi tiết'}</p>
+                  </div>
+                  <div className="structured-field-card" style={{ marginBottom: '16px', background: '#ecfdf5', borderColor: '#a7f3d0' }}>
+                    <span className="structured-field-label" style={{ color: '#065f46' }}>Biện pháp kiểm soát & Giảm thiểu rủi ro</span>
+                    <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#047857', fontWeight: 600 }}>{selectedEnvRisk.mitigationPlan || 'Chưa thiết lập biện pháp kiểm soát'}</p>
+                  </div>
+                  <div className="confirm-dialog-actions">
+                    <Link to={`/zones/${selectedEnvRisk.zoneId}`} className="action-button">
+                      Chuyển tới Zone để cập nhật
+                    </Link>
+                    <button type="button" className="ghost-button" onClick={() => setSelectedEnvRisk(null)}>Đóng</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Details Modal: Selected Soil Assessment */}
+          {selectedEnvSoil && (
+            <div className="modal-overlay" role="dialog" aria-modal="true">
+              <div className="modal-card" style={{ width: 'min(600px, 100%)', maxHeight: '90vh' }}>
+                <div className="modal-header">
+                  <div>
+                    <span className="eyebrow">Chi tiết đánh giá thổ nhưỡng lô đất</span>
+                    <h2>{selectedEnvSoil.blockName || `Block #${selectedEnvSoil.blockId}`}</h2>
+                  </div>
+                  <button type="button" className="modal-close" onClick={() => setSelectedEnvSoil(null)}>✕</button>
+                </div>
+                <div className="modal-body">
+                  <div className="structured-field-card" style={{ background: '#f8fafc', marginBottom: '12px' }}>
+                    <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '150px 1fr', gap: '8px 12px', fontSize: '13.5px' }}>
+                      <dt style={{ color: '#64748b' }}>Lô đất:</dt>
+                      <dd style={{ margin: 0, fontWeight: 700 }}>{selectedEnvSoil.blockName} ({selectedEnvSoil.zoneName})</dd>
+                      <dt style={{ color: '#64748b' }}>Ngày lấy mẫu:</dt>
+                      <dd style={{ margin: 0 }}>{selectedEnvSoil.assessedAt ? selectedEnvSoil.assessedAt.split('T')[0] : '—'}</dd>
+                      <dt style={{ color: '#64748b' }}>Độ pH đất:</dt>
+                      <dd style={{ margin: 0, fontWeight: 700, color: '#059669' }}>{selectedEnvSoil.soilPh ?? '—'}</dd>
+                      <dt style={{ color: '#64748b' }}>Độ ẩm đất:</dt>
+                      <dd style={{ margin: 0, fontWeight: 700 }}>{selectedEnvSoil.moisturePercent != null ? `${selectedEnvSoil.moisturePercent}%` : '—'}</dd>
+                      <dt style={{ color: '#64748b' }}>Người lấy mẫu / kiểm nghiệm:</dt>
+                      <dd style={{ margin: 0 }}>{selectedEnvSoil.conductedByName || '—'}</dd>
+                    </dl>
+                  </div>
+                  {selectedEnvSoil.nutrientData && (
+                    <div className="structured-field-card" style={{ marginBottom: '12px' }}>
+                      <span className="structured-field-label">Dữ liệu phân tích dinh dưỡng & Chỉ tiêu</span>
+                      <pre style={{ margin: '6px 0 0', background: '#f1f5f9', padding: '10px', borderRadius: '6px', fontSize: '12px', overflowX: 'auto', whiteSpace: 'pre-wrap' }}>
+                        {selectedEnvSoil.nutrientData}
+                      </pre>
+                    </div>
+                  )}
+                  {selectedEnvSoil.notes && (
+                    <div className="structured-field-card" style={{ marginBottom: '16px' }}>
+                      <span className="structured-field-label">Ghi chú & Kết luận chuyên môn</span>
+                      <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#1e293b' }}>{selectedEnvSoil.notes}</p>
+                    </div>
+                  )}
+                  <div className="confirm-dialog-actions">
+                    <Link to={`/zones/${selectedEnvSoil.zoneId}/blocks/${selectedEnvSoil.blockId}`} className="action-button">
+                      Chuyển tới Block để quản lý
+                    </Link>
+                    <button type="button" className="ghost-button" onClick={() => setSelectedEnvSoil(null)}>Đóng</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
