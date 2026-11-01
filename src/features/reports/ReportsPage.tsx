@@ -4,6 +4,7 @@ import { Icon } from '../../shared/components/Icon';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { InputPurchasesPage } from '../operations/InputPurchasesPage';
 import { SuppliersPage } from '../operations/SuppliersPage';
+import { ExpensesPage } from '../operations/ExpensesPage';
 
 interface ReportsPageProps {
   initialTab?: 'reports' | 'expenses' | 'purchases' | 'suppliers';
@@ -176,44 +177,7 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
         </div>
       )}
 
-      {activeTab === 'expenses' && (
-        <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-            <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Expense Category' : 'Hạng mục chi phí'}</th>
-                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Detailed Description' : 'Nội dung chi tiết'}</th>
-                <th style={{ padding: '14px 20px' }}>{lang === 'en' ? 'Expense Date' : 'Ngày chi'}</th>
-                <th style={{ padding: '14px 20px', textAlign: 'right' }}>{lang === 'en' ? 'Amount (VND)' : 'Số tiền (VNĐ)'}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {expenses.map((e) => (
-                <tr key={e.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '14px 20px' }}>
-                    <span className="profile-tag-pill">{e.category}</span>
-                  </td>
-                  <td style={{ padding: '14px 20px', color: '#0f172a', fontWeight: 500 }}>{e.description}</td>
-                  <td style={{ padding: '14px 20px', color: '#64748b' }}>{new Date(e.date).toLocaleDateString('vi-VN')}</td>
-                  <td style={{ padding: '14px 20px', textAlign: 'right', fontWeight: 700, color: '#b45309' }}>
-                    {e.amount.toLocaleString('vi-VN')} đ
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: '#f8fafc', fontWeight: 700 }}>
-                <td colSpan={3} style={{ padding: '14px 20px', textAlign: 'right', color: '#0f172a' }}>
-                  Tổng cộng:
-                </td>
-                <td style={{ padding: '14px 20px', textAlign: 'right', color: '#059669', fontSize: '16px' }}>
-                  {totalExpense.toLocaleString('vi-VN')} đ
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      )}
+      {activeTab === 'expenses' && <ExpensesPage />}
 
       {activeTab === 'purchases' && <InputPurchasesPage />}
 

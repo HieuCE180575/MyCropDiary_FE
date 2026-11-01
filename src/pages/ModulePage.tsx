@@ -13,6 +13,7 @@ import { MaterialUsagePage } from '../features/operations/MaterialUsagePage';
 import { HarvestPage } from '../features/operations/HarvestPage';
 import { InputPurchasesPage } from '../features/operations/InputPurchasesPage';
 import { SuppliersPage } from '../features/operations/SuppliersPage';
+import { ExpensesPage } from '../features/operations/ExpensesPage';
 import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 import { TasksPage } from '../features/operations/TasksPage';
 import { VietGAPCompliancePage } from '../features/compliance/VietGAPCompliancePage';
@@ -38,7 +39,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'environment') return <VietGAPCompliancePage initialTab="environment" />;
   if (module.key === 'training') return <VietGAPCompliancePage initialTab="training" />;
   if (module.key === 'reports') return <ReportsPage initialTab="reports" />;
-  if (module.key === 'expenses') return <ReportsPage initialTab="expenses" />;
+  if (module.key === 'expenses') return <ExpensesPage />;
   if (module.key === 'purchases') return <InputPurchasesPage />;
   if (module.key === 'suppliers') return <SuppliersPage />;
   if (module.key === 'ai') return <AIAssistantPage initialTab="ai" />;
