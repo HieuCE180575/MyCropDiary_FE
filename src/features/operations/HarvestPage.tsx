@@ -82,6 +82,27 @@ function HarvestContent() {
     };
   }, []);
 
+  useEffect(() => {
+    if (selectedFarm?.id) {
+      setLoadingSeasons(true);
+      fetchCropSeasonsByFarm(selectedFarm.id)
+        .then((items) => {
+          setAvailableSeasons(items);
+          if (items && items.length > 0 && cropSeasonId === null) {
+            const activeSeason = items.find((s) => s.seasonStatus === 'in_progress' || s.seasonStatus === 'active') || items[0];
+            setSeasonInput(String(activeSeason.cropSeasonId));
+            void loadHarvests(activeSeason.cropSeasonId);
+          }
+        })
+        .catch(() => {
+          setAvailableSeasons([]);
+        })
+        .finally(() => {
+          setLoadingSeasons(false);
+        });
+    }
+  }, [selectedFarm?.id]);
+
   const handleLoadSeasonList = async () => {
     if (!selectedFarm || loadingSeasons) return;
     setLoadingSeasons(true);
@@ -682,7 +703,7 @@ function HarvestContent() {
             </button>
           </div>
 
-          {records.length > 1 && (
+          {records.length > 0 && (
             <div className="production-filter-panel" style={{ marginBottom: '20px', background: '#f8fafc' }}>
               <div className="filter-group" style={{ flex: '1.5 1 260px' }}>
                 <label htmlFor="harvest-sub-search" className="filter-label">

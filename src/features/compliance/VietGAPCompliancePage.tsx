@@ -10,6 +10,13 @@ import {
   SoilAssessmentBackendResp,
   WaterAssessmentBackendResp,
 } from '../production/zoneBlockService';
+import {
+  TrainingRecordResp,
+  fetchTrainingHistoryApi,
+  fetchTrainingDetailsApi,
+  createTrainingRecordApi,
+  deleteTrainingRecordApi,
+} from './trainingService';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 interface ChecklistItem {
@@ -37,6 +44,95 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const [selectedEnvRisk, setSelectedEnvRisk] = useState<ZoneRiskBackendResp | null>(null);
   const [selectedEnvSoil, setSelectedEnvSoil] = useState<SoilAssessmentBackendResp | null>(null);
   const [loadingEnv, setLoadingEnv] = useState(false);
+
+  // Training state
+  const [trainingRecords, setTrainingRecords] = useState<TrainingRecordResp[]>([]);
+  const [trainingTotal, setTrainingTotal] = useState(0);
+  const [trainingLoading, setTrainingLoading] = useState(false);
+  const [trainingError, setTrainingError] = useState<string | null>(null);
+  const [trainingKeyword, setTrainingKeyword] = useState('');
+  const [trainingFromDate, setTrainingFromDate] = useState('');
+  const [trainingToDate, setTrainingToDate] = useState('');
+  const [selectedTrainingDetail, setSelectedTrainingDetail] = useState<TrainingRecordResp | null>(null);
+  const [isCreateTrainingOpen, setIsCreateTrainingOpen] = useState(false);
+  const [createTrainingForm, setCreateTrainingForm] = useState({
+    trainingTitle: '',
+    description: '',
+    trainingDate: new Date().toISOString().split('T')[0],
+    imageUrl: '',
+  });
+  const [submittingTraining, setSubmittingTraining] = useState(false);
+
+  const loadTrainings = async () => {
+    if (!selectedFarm?.id) return;
+    setTrainingLoading(true);
+    setTrainingError(null);
+    try {
+      const resp = await fetchTrainingHistoryApi(selectedFarm.id, {
+        keyword: trainingKeyword.trim() || undefined,
+        fromDate: trainingFromDate || undefined,
+        toDate: trainingToDate || undefined,
+        size: 50,
+      });
+      setTrainingRecords(resp.items || []);
+      setTrainingTotal(resp.totalElements || 0);
+    } catch (err) {
+      setTrainingError(err instanceof Error ? err.message : 'Không tải được danh sách hồ sơ đào tạo.');
+    } finally {
+      setTrainingLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'training' && selectedFarm?.id) {
+      void loadTrainings();
+    }
+  }, [activeTab, selectedFarm?.id]);
+
+  const handleViewTrainingDetail = async (id: number) => {
+    try {
+      const detail = await fetchTrainingDetailsApi(id);
+      setSelectedTrainingDetail(detail);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Không tải được chi tiết đào tạo.');
+    }
+  };
+
+  const handleDeleteTraining = async (id: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa hồ sơ đào tạo này?')) return;
+    try {
+      await deleteTrainingRecordApi(id);
+      void loadTrainings();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Không thể xóa hồ sơ đào tạo.');
+    }
+  };
+
+  const handleCreateTraining = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFarm?.id || !createTrainingForm.trainingTitle.trim() || !createTrainingForm.trainingDate) return;
+    setSubmittingTraining(true);
+    try {
+      await createTrainingRecordApi(selectedFarm.id, {
+        trainingTitle: createTrainingForm.trainingTitle.trim(),
+        description: createTrainingForm.description.trim() || undefined,
+        trainingDate: createTrainingForm.trainingDate,
+        imageUrl: createTrainingForm.imageUrl.trim() || undefined,
+      });
+      setIsCreateTrainingOpen(false);
+      setCreateTrainingForm({
+        trainingTitle: '',
+        description: '',
+        trainingDate: new Date().toISOString().split('T')[0],
+        imageUrl: '',
+      });
+      void loadTrainings();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Không thể tạo hồ sơ đào tạo.');
+    } finally {
+      setSubmittingTraining(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'environment' && selectedFarm?.id) {
@@ -475,7 +571,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
               </div>
             )}
 
-{/* SubTab 3: Water Assessments (UC-20.1) */}
+{/* SubTab 3: Water Assessments */}
             {envSubTab === 'waters' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -731,32 +827,357 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
       {/* Tab: Training */}
       {activeTab === 'training' && (
         <div className="panel" style={{ padding: '24px' }}>
-          <h2 style={{ margin: '0 0 6px', fontSize: '18px', color: '#0f172a' }}>Hồ sơ tập huấn & Đào tạo VietGAP</h2>
-          <p style={{ margin: '0 0 20px', color: '#64748b', fontSize: '13.5px' }}>
-            Ghi nhận các khóa đào tạo nội bộ và chứng chỉ tập huấn an toàn thực phẩm cho công nhân
-          </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ padding: '16px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#0f172a' }}>Tập huấn quy trình bón phân và thời gian cách ly PHI 2026</strong>
-                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>
-                  Giảng viên: Chi cục Trồng trọt & BVTV · Số lượng tham gia: 12 nhân sự
-                </p>
-              </div>
-              <span className="status-badge status-badge--success">Đã cấp chứng nhận</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+            <div>
+              <h2 style={{ margin: '0 0 6px', fontSize: '18px', color: '#0f172a' }}>Hồ sơ tập huấn & Đào tạo VietGAP</h2>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '13.5px' }}>
+                Lịch sử các khóa đào tạo nội bộ, tập huấn an toàn lao động và chứng chỉ kỹ thuật canh tác ({trainingTotal} khóa học)
+              </p>
             </div>
+            <button
+              type="button"
+              className="action-button solid"
+              onClick={() => setIsCreateTrainingOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <span>+</span> Thêm khóa đào tạo
+            </button>
+          </div>
 
-            <div style={{ padding: '16px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#0f172a' }}>Quy tắc vệ sinh nhà đóng gói và phòng tránh nhiễm chéo nông sản</strong>
-                <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>
-                  Nội bộ trang trại hướng dẫn · Số lượng tham gia: 8 công nhân đóng gói
-                </p>
-              </div>
-              <span className="status-badge status-badge--success">Hoàn thành</span>
+          {/* Filter & Search Bar */}
+          <div className="production-filter-panel" style={{ marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '10px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
+            <div style={{ flex: '1.5 1 240px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                Tìm kiếm khóa học
+              </label>
+              <input
+                type="text"
+                placeholder="Tìm theo tiêu đề, người tổ chức, nội dung..."
+                value={trainingKeyword}
+                onChange={(e) => setTrainingKeyword(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 140px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={trainingFromDate}
+                onChange={(e) => setTrainingFromDate(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+            <div style={{ flex: '1 1 140px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={trainingToDate}
+                onChange={(e) => setTrainingToDate(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className="action-button solid"
+                onClick={() => void loadTrainings()}
+                style={{ height: '38px', padding: '0 16px' }}
+              >
+                Lọc
+              </button>
+              {(trainingKeyword || trainingFromDate || trainingToDate) && (
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => {
+                    setTrainingKeyword('');
+                    setTrainingFromDate('');
+                    setTrainingToDate('');
+                    setTimeout(() => void loadTrainings(), 0);
+                  }}
+                  style={{ height: '38px', padding: '0 12px' }}
+                >
+                  ✕ Đặt lại
+                </button>
+              )}
             </div>
           </div>
+
+          {trainingLoading ? (
+            <div style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
+              <p>⏳ Đang tải dữ liệu hồ sơ đào tạo...</p>
+            </div>
+          ) : trainingError ? (
+            <div style={{ textAlign: 'center', padding: '24px', color: '#dc2626' }}>
+              <p>⚠️ {trainingError}</p>
+              <button type="button" className="action-button" onClick={() => void loadTrainings()}>
+                Thử lại
+              </button>
+            </div>
+          ) : trainingRecords.length === 0 ? (
+            <div className="empty-state" style={{ padding: '36px', textAlign: 'center' }}>
+              <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
+              <h3 style={{ margin: '0 0 6px', color: '#1e293b' }}>Chưa có hồ sơ đào tạo nào</h3>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '13.5px' }}>
+                Bấm "+ Thêm khóa đào tạo" để ghi nhận các buổi tập huấn VietGAP cho công nhân trang trại.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {trainingRecords.map((item) => (
+                <div
+                  key={item.trainingRecordId}
+                  style={{
+                    padding: '18px 20px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                  }}
+                >
+                  <div style={{ flex: '1 1 300px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <strong style={{ fontSize: '15.5px', color: '#0f172a' }}>{item.trainingTitle}</strong>
+                      <span className="status-badge status-badge--success" style={{ fontSize: '11px', padding: '2px 8px' }}>
+                        Hoàn thành
+                      </span>
+                    </div>
+                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>
+                      📅 Ngày đào tạo: <strong>{item.trainingDate}</strong> · Người tổ chức: {item.organizerName || 'Trang trại'} · Tham gia: <strong style={{ color: '#059669' }}>{item.attendeeCount} nhân sự</strong>
+                    </p>
+                    {item.description && (
+                      <p style={{ margin: '6px 0 0', color: '#475569', fontSize: '13px', lineHeight: 1.5 }}>
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="action-button"
+                      onClick={() => void handleViewTrainingDetail(item.trainingRecordId)}
+                      style={{ fontSize: '13px' }}
+                    >
+                      👁️ Chi tiết & Điểm danh
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => void handleDeleteTraining(item.trainingRecordId)}
+                      style={{ fontSize: '13px', color: '#dc2626' }}
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Details Modal */}
+          {selectedTrainingDetail && (
+            <div className="modal-backdrop" style={{ zIndex: 1100 }}>
+              <div className="modal-card" style={{ maxWidth: '640px', width: '92%' }}>
+                <div className="modal-header">
+                  <div>
+                    <span className="eyebrow" style={{ color: '#059669' }}>Chi tiết khóa đào tạo VietGAP</span>
+                    <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>
+                      {selectedTrainingDetail.trainingTitle}
+                    </h3>
+                  </div>
+                  <button type="button" className="modal-close" onClick={() => setSelectedTrainingDetail(null)}>
+                    ✕
+                  </button>
+                </div>
+                <div className="modal-body" style={{ padding: '20px 24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
+                    <div>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>Ngày đào tạo</span>
+                      <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a' }}>{selectedTrainingDetail.trainingDate}</p>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>Người tổ chức</span>
+                      <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a' }}>{selectedTrainingDetail.organizerName || 'Trang trại'}</p>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>Số lượng tham gia</span>
+                      <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#059669' }}>{selectedTrainingDetail.attendeeCount} công nhân</p>
+                    </div>
+                  </div>
+
+                  {selectedTrainingDetail.description && (
+                    <div style={{ marginBottom: '18px' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>Nội dung chi tiết:</span>
+                      <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.6 }}>
+                        {selectedTrainingDetail.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedTrainingDetail.imageUrl && (
+                    <div style={{ marginBottom: '18px' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>Hình ảnh minh chứng / Chứng chỉ:</span>
+                      <div style={{ marginTop: '6px' }}>
+                        <img
+                          src={selectedTrainingDetail.imageUrl}
+                          alt="Minh chứng đào tạo"
+                          style={{ maxWidth: '100%', maxHeight: '240px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                          onError={(e) => { (e.currentTarget as HTMLElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#0f172a', display: 'block', marginBottom: '8px' }}>
+                      Danh sách công nhân tham gia & Điểm danh
+                    </span>
+                    {selectedTrainingDetail.attendees && selectedTrainingDetail.attendees.length > 0 ? (
+                      <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                          <thead>
+                            <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                              <th style={{ padding: '8px 12px' }}>Mã CN</th>
+                              <th style={{ padding: '8px 12px' }}>Họ và tên</th>
+                              <th style={{ padding: '8px 12px' }}>Chức vụ</th>
+                              <th style={{ padding: '8px 12px' }}>Trạng thái</th>
+                              <th style={{ padding: '8px 12px' }}>Ghi chú</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {selectedTrainingDetail.attendees.map((att, idx) => (
+                              <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                <td style={{ padding: '8px 12px', fontWeight: 600 }}>{att.workerCode || '—'}</td>
+                                <td style={{ padding: '8px 12px' }}>{att.fullName || 'Công nhân #' + (att.farmWorkerId || idx + 1)}</td>
+                                <td style={{ padding: '8px 12px', color: '#64748b' }}>{att.jobTitle || '—'}</td>
+                                <td style={{ padding: '8px 12px' }}>
+                                  <span style={{
+                                    padding: '2px 8px',
+                                    borderRadius: '12px',
+                                    fontSize: '11.5px',
+                                    fontWeight: 600,
+                                    background: att.attendanceStatus === 'attended' || att.attendanceStatus === 'completed' ? '#dcfce7' : '#fef3c7',
+                                    color: att.attendanceStatus === 'attended' || att.attendanceStatus === 'completed' ? '#15803d' : '#b45309',
+                                  }}>
+                                    {att.attendanceStatus === 'attended' || att.attendanceStatus === 'completed' ? 'Có mặt' : att.attendanceStatus === 'absent' ? 'Vắng' : 'Có phép'}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '8px 12px', color: '#64748b' }}>{att.notes || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p style={{ margin: 0, color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>
+                        Chưa ghi nhận danh sách điểm danh công nhân cụ thể cho buổi đào tạo này.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0' }}>
+                  <button type="button" className="ghost-button" onClick={() => setSelectedTrainingDetail(null)}>
+                    Đóng
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Create Modal */}
+          {isCreateTrainingOpen && (
+            <div className="modal-backdrop" style={{ zIndex: 1100 }}>
+              <div className="modal-card" style={{ maxWidth: '520px', width: '92%' }}>
+                <div className="modal-header">
+                  <div>
+                    <span className="eyebrow" style={{ color: '#059669' }}>Thêm hồ sơ đào tạo</span>
+                    <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>Ghi nhận khóa tập huấn VietGAP</h3>
+                  </div>
+                  <button type="button" className="modal-close" onClick={() => setIsCreateTrainingOpen(false)}>
+                    ✕
+                  </button>
+                </div>
+                <form onSubmit={handleCreateTraining}>
+                  <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Tiêu đề khóa đào tạo / tập huấn *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="VD: Tập huấn quy trình VietGAP về an toàn hóa chất và PHI 2026"
+                        value={createTrainingForm.trainingTitle}
+                        onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, trainingTitle: e.target.value }))}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Ngày tổ chức đào tạo *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={createTrainingForm.trainingDate}
+                        onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, trainingDate: e.target.value }))}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Nội dung & Mục tiêu tập huấn
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Mô tả tóm tắt nội dung khóa học, đơn vị giảng dạy, số lượng công nhân tham gia..."
+                        value={createTrainingForm.description}
+                        onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, description: e.target.value }))}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', resize: 'vertical' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        Link ảnh minh chứng / Chứng chỉ (Tùy chọn)
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://example.com/certificate.jpg"
+                        value={createTrainingForm.imageUrl}
+                        onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                      />
+                    </div>
+                  </div>
+                  <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => setIsCreateTrainingOpen(false)}
+                      disabled={submittingTraining}
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      className="action-button solid"
+                      disabled={submittingTraining}
+                    >
+                      {submittingTraining ? 'Đang lưu...' : 'Lưu hồ sơ đào tạo'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>
