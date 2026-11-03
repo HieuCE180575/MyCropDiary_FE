@@ -5,6 +5,12 @@ import { Icon } from '../../shared/components/Icon';
 import { moduleDefinitions } from '../routes/moduleDefinitions';
 import { canAccessModule, farmRole } from '../../features/auth/accessPolicy';
 import { fetchMyFarmInvitations, respondFarmInvitation, type FarmInvitation } from '../../features/staff/staffService';
+import {
+  fetchMyNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  type NotificationItem,
+} from '../../features/notifications/notificationService';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 import { FarmWorkspaceProvider, useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 import { AdminProvider, AdminNotice } from '../../features/admin/AdminProvider';
