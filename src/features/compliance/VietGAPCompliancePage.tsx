@@ -5,8 +5,10 @@ import { Icon } from '../../shared/components/Icon';
 import {
   fetchFarmRiskHistoryApi,
   fetchFarmSoilAssessmentHistoryApi,
+  fetchFarmWaterAssessmentHistoryApi,
   ZoneRiskBackendResp,
   SoilAssessmentBackendResp,
+  WaterAssessmentBackendResp,
 } from '../production/zoneBlockService';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 
@@ -29,7 +31,9 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const [activeTab, setActiveTab] = useState<'checklists' | 'assessments' | 'environment' | 'training'>(initialTab);
   const [farmRisks, setFarmRisks] = useState<ZoneRiskBackendResp[]>([]);
   const [farmSoils, setFarmSoils] = useState<SoilAssessmentBackendResp[]>([]);
-  const [envSubTab, setEnvSubTab] = useState<'risks' | 'soils'>('risks');
+  const [farmWaters, setFarmWaters] = useState<WaterAssessmentBackendResp[]>([]);
+  const [envSubTab, setEnvSubTab] = useState<'risks' | 'soils' | 'waters'>('risks');
+  const [selectedEnvWater, setSelectedEnvWater] = useState<WaterAssessmentBackendResp | null>(null);
   const [selectedEnvRisk, setSelectedEnvRisk] = useState<ZoneRiskBackendResp | null>(null);
   const [selectedEnvSoil, setSelectedEnvSoil] = useState<SoilAssessmentBackendResp | null>(null);
   const [loadingEnv, setLoadingEnv] = useState(false);
@@ -40,7 +44,11 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
       Promise.all([
         fetchFarmRiskHistoryApi(selectedFarm.id).catch(() => []),
         fetchFarmSoilAssessmentHistoryApi(selectedFarm.id).catch(() => []),
-      ]).then(([risks, soils]) => {
+        fetchFarmWaterAssessmentHistoryApi(selectedFarm.id).catch(() => []),
+      ]).then(([risks, soils, waters]) => {
+        setFarmRisks(risks || []);
+        setFarmSoils(soils || []);
+        setFarmWaters(waters || []);
         setFarmRisks(risks || []);
         setFarmSoils(soils || []);
       }).finally(() => {
@@ -393,7 +401,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Hồ sơ rủi ro phân khu sản xuất (UC-21)</h3>
+                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Hồ sơ rủi ro phân khu sản xuất</h3>
                     <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
                       Theo dõi nguồn lây nhiễm, trôi dạt hóa chất và biện pháp kiểm soát theo chuẩn VietGAP
                     </p>
@@ -467,12 +475,92 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
               </div>
             )}
 
+{/* SubTab 3: Water Assessments (UC-20.1) */}
+            {envSubTab === 'waters' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Hồ sơ giám sát nguồn nước tưới tiêu</h3>
+                    <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
+                      Theo dõi độ pH, nhiệt độ, chỉ tiêu lý hóa và vi sinh theo QCVN 39:2011/BTNMT và VietGAP
+                    </p>
+                  </div>
+                </div>
+
+                {farmWaters.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '8px' }}>
+                    <p style={{ margin: 0, fontSize: '14px' }}>Chưa có phiếu đánh giá chất lượng nguồn nước nào được ghi nhận.</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive" style={{ overflowX: 'auto' }}>
+                    <table className="data-table" style={{ width: '100%', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                          <th style={{ padding: '10px 12px' }}>ID / Nguồn nước</th>
+                          <th style={{ padding: '10px 12px' }}>Lô áp dụng</th>
+                          <th style={{ padding: '10px 12px' }}>Ngày lấy mẫu</th>
+                          <th style={{ padding: '10px 12px' }}>Độ pH</th>
+                          <th style={{ padding: '10px 12px' }}>Nhiệt độ (°C)</th>
+                          <th style={{ padding: '10px 12px' }}>Kết luận chất lượng</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'right' }}>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {farmWaters.map((w) => (
+                          <tr key={w.assessmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 12px' }}>
+                              <strong style={{ color: '#0f172a', display: 'block' }}>{w.waterSourceName || 'Nguồn nước chính'}</strong>
+                              <small style={{ color: '#64748b' }}>{w.waterSourceType || 'Nước mặt / Giếng'}</small>
+                            </td>
+                            <td style={{ padding: '10px 12px' }}>
+                              {w.blockName ? w.blockName + ' (' + (w.zoneName || '') + ')' : 'Toàn trang trại'}
+                            </td>
+                            <td style={{ padding: '10px 12px' }}>
+                              {w.assessedAt ? w.assessedAt.split('T')[0] : '-'}
+                            </td>
+                            <td style={{ padding: '10px 12px', fontWeight: 700, color: '#0284c7' }}>
+                              {w.waterPh ?? '-'}
+                            </td>
+                            <td style={{ padding: '10px 12px', fontWeight: 600 }}>
+                              {w.temperatureC != null ? w.temperatureC + '°C' : '-'}
+                            </td>
+                            <td style={{ padding: '10px 12px' }}>
+                              <span style={{
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                background: (w.qualityStatus || '').toUpperCase() === 'DAT_CHUAN' ? '#dcfce7' : '#fee2e2',
+                                color: (w.qualityStatus || '').toUpperCase() === 'DAT_CHUAN' ? '#166534' : '#991b1b',
+                              }}>
+                                {(w.qualityStatus || '').toUpperCase() === 'DAT_CHUAN' ? '✓ Đạt chuẩn' : (w.qualityStatus || 'Chưa kiểm định')}
+                              </span>
+                            </td>
+                            <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                              <button
+                                type="button"
+                                className="action-button"
+                                style={{ padding: '4px 10px', fontSize: '12px' }}
+                                onClick={() => setSelectedEnvWater(w)}
+                              >
+                                Xem chi tiết
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* SubTab 2: Soil Assessments */}
             {envSubTab === 'soils' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Hồ sơ đánh giá thổ nhưỡng lô đất (UC-20)</h3>
+                    <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>Hồ sơ đánh giá thổ nhưỡng lô đất</h3>
                     <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
                       Giám sát định kỳ chỉ số pH, độ ẩm, kim loại nặng và dư lượng vi sinh vật
                     </p>

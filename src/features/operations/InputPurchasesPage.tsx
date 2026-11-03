@@ -263,8 +263,8 @@ export function InputPurchasesPage() {
           </h1>
           <p className="page-subtitle" style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
             {lang === 'en'
-              ? 'View input purchase list, inspect detailed line items, and link to warehouse receipts (UC-36).'
-              : 'Theo dõi danh sách mua sắm phân bón, thuốc BVTV, vật tư và liên kết phiếu nhập kho VietGAP (UC-36).'}
+              ? 'View input purchase list, inspect detailed line items, and link to warehouse receipts.'
+              : 'Theo dõi danh sách mua sắm phân bón, thuốc BVTV, vật tư và liên kết phiếu nhập kho VietGAP.'}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>

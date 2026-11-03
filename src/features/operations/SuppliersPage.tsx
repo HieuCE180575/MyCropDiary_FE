@@ -251,8 +251,8 @@ export function SuppliersPage() {
           </h1>
           <p className="page-subtitle" style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
             {lang === 'en'
-              ? 'View supplier list, inspect details, add or update certified VietGAP agricultural input vendors (UC-35).'
-              : 'Quản lý danh bạ đối tác cung ứng phân bón, thuốc BVTV, hạt giống và vật tư canh tác chuẩn VietGAP (UC-35).'}
+              ? 'View supplier list, inspect details, add or update certified VietGAP agricultural input vendors.'
+              : 'Quản lý danh bạ đối tác cung ứng phân bón, thuốc BVTV, hạt giống và vật tư canh tác chuẩn VietGAP.'}
           </p>
         </div>
         <div>

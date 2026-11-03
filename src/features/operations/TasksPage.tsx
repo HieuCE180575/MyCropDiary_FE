@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, useMemo, type FormEvent } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { useAuth } from '../auth';
 import {
   fetchFarmTasks,
   createFarmTask,
@@ -29,6 +30,8 @@ export function TasksPage() {
   const { lang } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
+  const { user } = useAuth();
+  const [onlyMyTasks, setOnlyMyTasks] = useState(false);
 
   const [tasks, setTasks] = useState<FarmTaskResp[]>([]);
   const [loading, setLoading] = useState(false);
@@ -321,6 +324,21 @@ export function TasksPage() {
         return <span className="task-priority-badge task-priority-normal">{lang === 'en' ? 'Normal' : 'Bình thường'}</span>;
     }
   };
+
+  const displayTasks = useMemo(() => {
+    if (!onlyMyTasks || !user) return tasks;
+    const myName = (user.fullName || '').toLowerCase().trim();
+    const myPhone = user.phone || '';
+    return tasks.filter((t) => {
+      const isAssigned = t.assignees?.some(
+        (a) =>
+          (a.fullName && a.fullName.toLowerCase().trim().includes(myName)) ||
+          (a.phoneNumber && a.phoneNumber === myPhone)
+      );
+      const isCreator = t.createdByUserId === user.userId;
+      return isAssigned || isCreator;
+    });
+  }, [tasks, onlyMyTasks, user]);
 
   const getStatusLabel = (s: string) => {
     const norm = (s || '').toLowerCase();

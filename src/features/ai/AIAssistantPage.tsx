@@ -232,7 +232,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     <section className="ai-assistant-page">
       <div className="page-heading">
         <div>
-          <h1>Trợ lý AI Nông nghiệp VietGAP (UC-12 & UC-13)</h1>
+          <h1>Trợ lý AI Nông nghiệp VietGAP</h1>
           <p className="page-subtitle">
             Hỗ trợ chẩn đoán dịch hại, tư vấn canh tác chuẩn quốc gia, lưu trữ lịch sử hội thoại và phản hồi chuyên gia
           </p>
@@ -281,7 +281,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             marginBottom: '-2px',
           }}
         >
-          {lang === 'en' ? '🤖 AI Assistant Chat' : '🤖 Trò chuyện cùng AI (UC-12.1)'}
+          {lang === 'en' ? '🤖 AI Assistant Chat' : '🤖 Trò chuyện cùng AI'}
         </button>
         <button
           type="button"
@@ -298,7 +298,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             marginBottom: '-2px',
           }}
         >
-          {lang === 'en' ? '📜 Chat History' : '📜 Lịch sử & Tìm kiếm hội thoại (UC-12.2 & 12.3)'} ({conversations.length})
+          {lang === 'en' ? '📜 Chat History' : '📜 Lịch sử & Tìm kiếm hội thoại'} ({conversations.length})
         </button>
         <button
           type="button"
@@ -315,7 +315,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             marginBottom: '-2px',
           }}
         >
-          {lang === 'en' ? '💬 User Feedback & Reports' : '💬 Phản hồi & Lịch sử báo cáo (UC-13.3 & 13.4)'}
+          {lang === 'en' ? '💬 User Feedback & Reports' : '💬 Phản hồi & Lịch sử báo cáo'}
         </button>
         <button
           type="button"
@@ -337,7 +337,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       </div>
 
       {/* =========================================================
-          TAB 1: AI CHAT (UC-12.1)
+          TAB 1: AI CHAT
          ========================================================= */}
       {activeTab === 'ai' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 280px', gap: '20px' }}>
@@ -404,7 +404,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                           }}
                           title="Báo cáo câu trả lời này nếu chưa chính xác"
                         >
-                          🚩 Báo cáo (UC-13.4)
+                          🚩 Báo cáo câu trả lời
                         </button>
                       )}
                     </div>
@@ -483,13 +483,13 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       )}
 
       {/* =========================================================
-          TAB 2: CHAT HISTORY & SEARCH (UC-12.2 & UC-12.3)
+          TAB 2: CHAT HISTORY & SEARCH
          ========================================================= */}
       {activeTab === 'ai-history' && (
         <div className="panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Lịch sử các phiên tư vấn AI (UC-12.2)</h2>
+              <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Lịch sử các phiên tư vấn AI</h2>
               <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13.5px' }}>
                 Xem lại các phiên hỏi đáp trước đây hoặc tìm kiếm chủ đề bạn quan tâm
               </p>
@@ -499,7 +499,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             <div style={{ display: 'flex', gap: '8px', width: 'min(380px, 100%)' }}>
               <input
                 type="text"
-                placeholder="Tìm kiếm cuộc trò chuyện (UC-12.3)..."
+                placeholder="Tìm kiếm cuộc trò chuyện..."
                 value={searchHistoryQuery}
                 onChange={(e) => {
                   setSearchHistoryQuery(e.target.value);
@@ -579,14 +579,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       )}
 
       {/* =========================================================
-          TAB 3: USER FEEDBACK & REPORTS (UC-13.3 & UC-13.4)
+          TAB 3: USER FEEDBACK & REPORTS
          ========================================================= */}
       {activeTab === 'ai-feedback' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: '24px' }}>
           {/* UC-13.3: View Feedback History */}
           <div className="panel" style={{ padding: '24px' }}>
             <h2 style={{ margin: '0 0 6px', fontSize: '18px', color: '#0f172a' }}>
-              Lịch sử các phản hồi &amp; Báo cáo của bạn (UC-13.3)
+              Lịch sử các phản hồi &amp; Báo cáo của bạn
             </h2>
             <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: '13.5px' }}>
               Theo dõi tình trạng xử lý các câu trả lời bạn đã đóng góp hoặc báo cáo với chuyên gia
@@ -720,14 +720,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       )}
 
       {/* =========================================================
-          REPORT MODAL (UC-13.4: Report AI Response)
+          REPORT MODAL: Report AI Response
          ========================================================= */}
       {reportingMessage && (
         <div className="modal-overlay" role="dialog" aria-modal="true">
           <div className="modal-card" style={{ width: 'min(540px, 100%)' }}>
             <div className="modal-header">
               <div>
-                <span className="eyebrow" style={{ color: '#dc2626' }}>UC-13.4 · Báo cáo câu trả lời</span>
+                <span className="eyebrow" style={{ color: '#dc2626' }}>Báo cáo câu trả lời</span>
                 <h2>Phản hồi chất lượng tư vấn AI</h2>
               </div>
               <button type="button" className="modal-close" onClick={() => setReportingMessage(null)}>✕</button>

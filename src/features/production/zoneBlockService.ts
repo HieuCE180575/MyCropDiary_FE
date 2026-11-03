@@ -656,3 +656,88 @@ export async function deleteSoilAssessmentApi(assessmentId: number): Promise<voi
   });
   notifyDataChanged('/production/soil', 'DELETE');
 }
+
+// ==========================================
+// UC-20.1: Water Assessment APIs (Backend-linked)
+// ==========================================
+
+export interface WaterAssessmentBackendResp {
+  assessmentId: number;
+  waterSourceId?: number | null;
+  waterSourceName?: string | null;
+  waterSourceType?: string | null;
+  blockId?: number | null;
+  blockName?: string | null;
+  zoneId?: number | null;
+  zoneName?: string | null;
+  farmId?: number | null;
+  conductedByMemberId?: number | null;
+  conductedByName?: string | null;
+  waterPh?: number | null;
+  temperatureC?: number | null;
+  qualityStatus?: string | null;
+  notes?: string | null;
+  imageUrl?: string | null;
+  assessedAt?: string | null;
+}
+
+export interface CreateWaterAssessmentPayload {
+  waterSourceId?: number;
+  waterSourceName?: string;
+  waterSourceType?: string;
+  waterPh?: number;
+  temperatureC?: number;
+  qualityStatus?: string;
+  notes?: string;
+  imageUrl?: string;
+  assessedAt?: string;
+}
+
+export interface UpdateWaterAssessmentPayload {
+  waterSourceId?: number;
+  waterSourceName?: string;
+  waterSourceType?: string;
+  waterPh?: number;
+  temperatureC?: number;
+  qualityStatus?: string;
+  notes?: string;
+  imageUrl?: string;
+  assessedAt?: string;
+}
+
+export async function createWaterAssessmentApi(blockId: number, payload: CreateWaterAssessmentPayload): Promise<WaterAssessmentBackendResp> {
+  const data = await request<WaterAssessmentBackendResp>(`/blocks/${blockId}/water-assessments`, {
+    method: 'POST',
+    data: payload,
+  });
+  notifyDataChanged('/production/water', 'POST');
+  return data;
+}
+
+export async function fetchWaterAssessmentHistoryApi(blockId: number): Promise<WaterAssessmentBackendResp[]> {
+  return await request<WaterAssessmentBackendResp[]>(`/blocks/${blockId}/water-assessments`);
+}
+
+export async function fetchFarmWaterAssessmentHistoryApi(farmId: number): Promise<WaterAssessmentBackendResp[]> {
+  return await request<WaterAssessmentBackendResp[]>(`/farms/${farmId}/water-assessments`);
+}
+
+export async function fetchWaterAssessmentDetailsApi(assessmentId: number): Promise<WaterAssessmentBackendResp> {
+  return await request<WaterAssessmentBackendResp>(`/water-assessments/${assessmentId}`);
+}
+
+export async function updateWaterAssessmentApi(assessmentId: number, payload: UpdateWaterAssessmentPayload): Promise<WaterAssessmentBackendResp> {
+  const data = await request<WaterAssessmentBackendResp>(`/water-assessments/${assessmentId}`, {
+    method: 'PUT',
+    data: payload,
+  });
+  notifyDataChanged('/production/water', 'PUT');
+  return data;
+}
+
+export async function deleteWaterAssessmentApi(assessmentId: number): Promise<void> {
+  await request<void>(`/water-assessments/${assessmentId}`, {
+    method: 'DELETE',
+  });
+  notifyDataChanged('/production/water', 'DELETE');
+}
