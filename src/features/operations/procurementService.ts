@@ -104,7 +104,7 @@ async function request<T>(path: string, options: Parameters<typeof apiRequest>[1
 }
 
 // ==========================================
-// UC-35: Supplier APIs
+// Supplier APIs
 // ==========================================
 
 export async function fetchSuppliers(farmId: number, keyword?: string): Promise<SupplierItem[]> {
@@ -142,7 +142,7 @@ export async function deleteSupplier(supplierId: number): Promise<void> {
 }
 
 // ==========================================
-// UC-36: Input Purchases & Warehouse Linking APIs
+// Input Purchases & Warehouse Linking APIs
 // ==========================================
 
 export async function fetchInputPurchases(farmId: number): Promise<InputPurchaseItem[]> {

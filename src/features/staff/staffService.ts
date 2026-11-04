@@ -75,7 +75,7 @@ function mapDtoToStaffMember(dto: BackendFarmMemberResp): StaffMember {
 }
 
 /**
- * UC-14 & UC-33: Lấy danh sách thành viên / nhân sự trang trại từ Backend `/api/v1/farms/{farmId}/members/staff`
+ * : Lấy danh sách thành viên / nhân sự trang trại từ Backend `/api/v1/farms/{farmId}/members/staff`
  */
 export async function getFarmStaffList(
   farmId: number,
@@ -98,7 +98,7 @@ export async function getFarmStaffList(
 }
 
 /**
- * UC-33: Thêm nhân viên vào trang trại qua `/api/v1/farms/{farmId}/members/staff`
+ * : Thêm nhân viên vào trang trại qua `/api/v1/farms/{farmId}/members/staff`
  */
 export async function addFarmStaffMember(
   farmId: number,
@@ -119,7 +119,7 @@ export async function addFarmStaffMember(
 }
 
 /**
- * UC-33: Cập nhật vai trò hoặc kích hoạt lại thành viên qua `PUT /api/v1/farms/{farmId}/members/{memberId}`
+ * : Cập nhật vai trò hoặc kích hoạt lại thành viên qua `PUT /api/v1/farms/{farmId}/members/{memberId}`
  */
 export async function updateFarmStaffMember(
   farmId: number,
@@ -137,7 +137,7 @@ export async function updateFarmStaffMember(
 }
 
 /**
- * UC-33: Vô hiệu hóa thành viên trang trại qua `PATCH /api/v1/farms/{farmId}/members/{memberId}/deactivate`
+ * : Vô hiệu hóa thành viên trang trại qua `PATCH /api/v1/farms/{farmId}/members/{memberId}/deactivate`
  */
 export async function deactivateFarmStaffMember(farmId: number, memberId: number): Promise<void> {
   const res = await apiRequest<ApiResponse<void>>(`/farms/${farmId}/members/${memberId}/deactivate`, {
@@ -149,7 +149,7 @@ export async function deactivateFarmStaffMember(farmId: number, memberId: number
 }
 
 /**
- * UC-33: Xóa thành viên khỏi trang trại qua `DELETE /api/v1/farms/{farmId}/members/{memberId}`
+ * : Xóa thành viên khỏi trang trại qua `DELETE /api/v1/farms/{farmId}/members/{memberId}`
  */
 export async function deleteFarmStaffMember(farmId: number, memberId: number): Promise<void> {
   const res = await apiRequest<ApiResponse<void>>(`/farms/${farmId}/members/${memberId}`, {

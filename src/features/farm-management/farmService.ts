@@ -1,6 +1,6 @@
 import type { Farm } from './types';
 
-// Khi backend UC-13 sẵn sàng, thay hàm dưới đây bằng lời gọi qua
+// Khi backend  sẵn sàng, thay hàm dưới đây bằng lời gọi qua
 // `apiRequest<ApiResponse<Farm>>` tới GET /farms/me — backend xác định trang trại
 // của người dùng hiện tại dựa trên bản ghi FarmMember có FarmRole = 'owner'.
 

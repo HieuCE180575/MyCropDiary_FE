@@ -80,7 +80,7 @@ async function request<T>(path: string, options: Parameters<typeof apiRequest>[1
 }
 
 /**
- * UC-10: View Expense List, Search Expenses, Filter Expenses
+ * : View Expense List, Search Expenses, Filter Expenses
  */
 export async function fetchExpenses(farmId: number, params: ExpenseFilterParams = {}): Promise<ExpenseItem[]> {
   const searchParams = new URLSearchParams();
@@ -95,14 +95,14 @@ export async function fetchExpenses(farmId: number, params: ExpenseFilterParams 
 }
 
 /**
- * UC-10: View Expense Details
+ * : View Expense Details
  */
 export async function fetchExpenseDetails(expenseId: number): Promise<ExpenseItem> {
   return await request<ExpenseItem>(`/expenses/${expenseId}`);
 }
 
 /**
- * UC-10: Record Expense
+ * : Record Expense
  */
 export async function recordExpense(farmId: number, payload: CreateExpenseReqPayload): Promise<ExpenseItem> {
   const data = await request<ExpenseItem>(`/farms/${farmId}/expenses`, {
@@ -116,7 +116,7 @@ export async function recordExpense(farmId: number, payload: CreateExpenseReqPay
 export type CreateExpenseReqPayload = CreateExpensePayload;
 
 /**
- * UC-10: Update Expense
+ * : Update Expense
  */
 export async function updateExpense(expenseId: number, payload: UpdateExpensePayload): Promise<ExpenseItem> {
   const data = await request<ExpenseItem>(`/expenses/${expenseId}`, {
@@ -128,7 +128,7 @@ export async function updateExpense(expenseId: number, payload: UpdateExpensePay
 }
 
 /**
- * UC-10: Delete Eligible Expense
+ * : Delete Eligible Expense
  */
 export async function deleteExpense(expenseId: number): Promise<void> {
   await request<void>(`/expenses/${expenseId}`, {
@@ -138,7 +138,7 @@ export async function deleteExpense(expenseId: number): Promise<void> {
 }
 
 /**
- * UC-10: View Expense and Production Cost Summary
+ * : View Expense and Production Cost Summary
  */
 export async function fetchExpenseSummary(
   farmId: number,

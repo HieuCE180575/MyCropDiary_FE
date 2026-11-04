@@ -158,7 +158,7 @@ export function ExpensesPage() {
     });
   };
 
-  // View Details (UC-10.2)
+  // View Details 
   const handleOpenDetails = async (expenseId: number) => {
     setLoadingDetail(true);
     try {
@@ -172,7 +172,7 @@ export function ExpensesPage() {
     }
   };
 
-  // Record Expense (UC-10.5)
+  // Record Expense 
   const handleOpenRecord = () => {
     setRecordForm({
       expenseCategory: 'Materials & Fertilizers',
@@ -218,7 +218,7 @@ export function ExpensesPage() {
     }
   };
 
-  // Update Expense (UC-10.6)
+  // Update Expense 
   const handleOpenUpdate = (item: ExpenseItem) => {
     setEditingExpense(item);
     setUpdateForm({
@@ -260,7 +260,7 @@ export function ExpensesPage() {
     }
   };
 
-  // Delete Eligible Expense (UC-10.7)
+  // Delete Eligible Expense 
   const handleOpenDelete = (item: ExpenseItem) => {
     setDeletingExpense(item);
   };
@@ -412,7 +412,7 @@ export function ExpensesPage() {
         </div>
       </div>
 
-      {/* Top Summary Cards (UC-10.8) */}
+      {/* Top Summary Cards  */}
       <div
         style={{
           display: 'grid',
@@ -526,7 +526,7 @@ export function ExpensesPage() {
         </div>
       </div>
 
-      {/* Expandable Breakdown Panel (UC-10.8) */}
+      {/* Expandable Breakdown Panel  */}
       {showSummaryDetails && summary && (
         <div
           style={{
@@ -610,7 +610,7 @@ export function ExpensesPage() {
         </div>
       )}
 
-      {/* Filter & Search Bar (UC-10.3 & UC-10.4) */}
+      {/* Filter & Search Bar  */}
       <div
         style={{
           backgroundColor: '#ffffff',
@@ -622,7 +622,7 @@ export function ExpensesPage() {
         }}
       >
         <form onSubmit={handleSearch} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-          {/* Keyword Search (UC-10.3) */}
+          {/* Keyword Search  */}
           <div style={{ flex: '1 1 240px', position: 'relative' }}>
             <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
               <Icon name="search" size={16} />
@@ -643,7 +643,7 @@ export function ExpensesPage() {
             />
           </div>
 
-          {/* Filter: Category (UC-10.4) */}
+          {/* Filter: Category  */}
           <div style={{ minWidth: '180px' }}>
             <select
               value={selectedCategory}
@@ -665,7 +665,7 @@ export function ExpensesPage() {
             </select>
           </div>
 
-          {/* Filter: Season (UC-10.4) */}
+          {/* Filter: Season  */}
           <div style={{ minWidth: '180px' }}>
             <select
               value={selectedSeasonId ?? ''}
@@ -765,7 +765,7 @@ export function ExpensesPage() {
         </form>
       </div>
 
-      {/* Main Expense Table (UC-10.1) */}
+      {/* Main Expense Table  */}
       <div
         style={{
           backgroundColor: '#ffffff',
@@ -898,7 +898,7 @@ export function ExpensesPage() {
                       {/* Actions */}
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', gap: '6px' }}>
-                          {/* View Details Button (UC-10.2) */}
+                          {/* View Details Button  */}
                           <button
                             type="button"
                             onClick={() => handleOpenDetails(item.expenseId)}
@@ -915,7 +915,7 @@ export function ExpensesPage() {
                             <Icon name="eye" size={15} />
                           </button>
 
-                          {/* Update Button (UC-10.6) */}
+                          {/* Update Button  */}
                           <button
                             type="button"
                             onClick={() => handleOpenUpdate(item)}
@@ -932,7 +932,7 @@ export function ExpensesPage() {
                             <Icon name="edit" size={15} />
                           </button>
 
-                          {/* Delete Button (UC-10.7) */}
+                          {/* Delete Button  */}
                           <button
                             type="button"
                             onClick={() => handleOpenDelete(item)}
@@ -960,7 +960,7 @@ export function ExpensesPage() {
       </div>
 
       {/* ========================================================= */}
-      {/* MODAL 1: VIEW EXPENSE DETAILS (UC-10.2)                   */}
+      {/* MODAL 1: VIEW EXPENSE DETAILS                    */}
       {/* ========================================================= */}
       <Modal
         open={Boolean(selectedExpense)}
@@ -1095,7 +1095,7 @@ export function ExpensesPage() {
       </Modal>
 
       {/* ========================================================= */}
-      {/* MODAL 2: RECORD EXPENSE (UC-10.5)                         */}
+      {/* MODAL 2: RECORD EXPENSE                          */}
       {/* ========================================================= */}
       <Modal
         open={isRecordOpen}
@@ -1273,7 +1273,7 @@ export function ExpensesPage() {
       </Modal>
 
       {/* ========================================================= */}
-      {/* MODAL 3: UPDATE EXPENSE (UC-10.6)                         */}
+      {/* MODAL 3: UPDATE EXPENSE                          */}
       {/* ========================================================= */}
       <Modal
         open={Boolean(editingExpense)}
@@ -1448,7 +1448,7 @@ export function ExpensesPage() {
       </Modal>
 
       {/* ========================================================= */}
-      {/* MODAL 4: DELETE ELIGIBLE EXPENSE (UC-10.7)                */}
+      {/* MODAL 4: DELETE ELIGIBLE EXPENSE                 */}
       {/* ========================================================= */}
       <Modal
         open={Boolean(deletingExpense)}

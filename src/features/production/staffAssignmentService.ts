@@ -1,7 +1,7 @@
 import { fetchStaff } from '../staff/staffService';
 import type { AssignStaffFormValues, StaffAreaAssignment } from './types';
 
-// Khi backend UC-16/33-34 sẵn sàng, thay các hàm dưới đây bằng lời gọi qua
+// Khi backend /33-34 sẵn sàng, thay các hàm dưới đây bằng lời gọi qua
 // `apiRequest<ApiResponse<...>>` tới các endpoint tương ứng, ví dụ:
 //   GET    /production-areas/:id/assignments
 //   POST   /production-areas/:id/assignments      (FarmMemberId, StartsAt, Notes)

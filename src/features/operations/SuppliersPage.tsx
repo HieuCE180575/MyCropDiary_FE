@@ -86,7 +86,7 @@ export function SuppliersPage() {
     void loadSuppliers();
   };
 
-  // View Details (UC-35.2)
+  // View Details 
   const handleOpenDetails = async (supplierId: number) => {
     setLoadingDetail(true);
     try {
@@ -100,7 +100,7 @@ export function SuppliersPage() {
     }
   };
 
-  // Create (UC-35.3)
+  // Create 
   const handleOpenCreate = () => {
     setCreateForm({
       supplierName: '',
@@ -146,7 +146,7 @@ export function SuppliersPage() {
     }
   };
 
-  // Update (UC-35.4)
+  // Update 
   const handleOpenEdit = (supplier: SupplierItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setEditingSupplier(supplier);
@@ -198,7 +198,7 @@ export function SuppliersPage() {
     }
   };
 
-  // Delete Eligible Supplier (UC-35.5)
+  // Delete Eligible Supplier 
   const handleOpenDelete = (supplier: SupplierItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setDeletingSupplier(supplier);
@@ -348,7 +348,7 @@ export function SuppliersPage() {
         </form>
       </div>
 
-      {/* View Supplier List (UC-35.1) */}
+      {/* View Supplier List  */}
       <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
@@ -449,7 +449,7 @@ export function SuppliersPage() {
         )}
       </div>
 
-      {/* View Supplier Details Modal (UC-35.2) */}
+      {/* View Supplier Details Modal  */}
       {selectedSupplier && (
         <Modal
           open={true}
@@ -549,7 +549,7 @@ export function SuppliersPage() {
         </Modal>
       )}
 
-      {/* Create Supplier Modal (UC-35.3) */}
+      {/* Create Supplier Modal  */}
       {isCreateOpen && (
         <Modal open={true} onClose={() => setIsCreateOpen(false)} title="Thêm mới nhà cung cấp vật tư (Create Supplier)">
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
@@ -646,7 +646,7 @@ export function SuppliersPage() {
         </Modal>
       )}
 
-      {/* Update Supplier Modal (UC-35.4) */}
+      {/* Update Supplier Modal  */}
       {editingSupplier && (
         <Modal open={true} onClose={() => setEditingSupplier(null)} title={`Cập nhật nhà cung cấp #${editingSupplier.supplierId}`}>
           <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
@@ -737,7 +737,7 @@ export function SuppliersPage() {
         </Modal>
       )}
 
-      {/* Delete Eligible Supplier Modal (UC-35.5) */}
+      {/* Delete Eligible Supplier Modal  */}
       {deletingSupplier && (() => {
         const hasPurchases = (deletingSupplier.totalPurchasesCount || 0) > 0;
         const isEligible = !hasPurchases;

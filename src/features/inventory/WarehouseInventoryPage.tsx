@@ -13,7 +13,7 @@ export function WarehouseInventoryPage() {
   const { selectedFarm } = useFarmWorkspace();
   const [activeSubTab, setActiveSubTab] = useState<'warehouses' | 'inventory'>('warehouses');
 
-  // Warehouses state (UC-32.1, UC-32.3)
+  // Warehouses state (, )
   const [warehouses, setWarehouses] = useState<WarehouseResp[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseResp | null>(null);
@@ -21,7 +21,7 @@ export function WarehouseInventoryPage() {
   const [createWarehouseForm, setCreateWarehouseForm] = useState({ warehouseName: '', address: '', imageUrl: '' });
   const [creatingWarehouse, setCreatingWarehouse] = useState(false);
 
-  // Inventory state (UC-33.1, UC-33.2)
+  // Inventory state (, )
   const [inventories, setInventories] = useState<InventoryItemResp[]>([]);
   const [loadingInventories, setLoadingInventories] = useState(false);
   const [selectedInventory, setSelectedInventory] = useState<InventoryItemResp | null>(null);

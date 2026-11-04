@@ -542,7 +542,7 @@ export function InputPurchasesPage() {
         )}
       </div>
 
-      {/* View Input Purchase Details Modal (UC-36 Details) */}
+      {/* View Input Purchase Details Modal ( Details) */}
       {selectedPurchase && (
         <Modal open={true}
           onClose={() => setSelectedPurchase(null)}
@@ -704,7 +704,7 @@ export function InputPurchasesPage() {
         </Modal>
       )}
 
-      {/* Link Warehouse Receipt Modal (UC-36.4) */}
+      {/* Link Warehouse Receipt Modal  */}
       {linkingPurchase && (
         <Modal open={true}
           onClose={() => setLinkingPurchase(null)}
@@ -742,7 +742,7 @@ export function InputPurchasesPage() {
         </Modal>
       )}
 
-      {/* Create Purchase Modal (UC-36.1) */}
+      {/* Create Purchase Modal  */}
       {isCreateOpen && (
         <Modal open={true}
           onClose={() => setIsCreateOpen(false)}
