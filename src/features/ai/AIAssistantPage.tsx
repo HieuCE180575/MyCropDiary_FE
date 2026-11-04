@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { apiRequest } from '../../shared/api/httpClient';
 import {
   fetchMyAIConversations,
   fetchAIConversationDetail,
@@ -215,7 +216,26 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     setTimeout(() => setFeedbackSent(false), 3000);
   };
 
-  const handleApproveDraft = (draftId: string) => {
+  const handleApproveDraft = async (draftId: string) => {
+    const draft = drafts.find((d) => d.id === draftId);
+    if (!draft) return;
+
+    try {
+      if (selectedFarm?.id) {
+        await apiRequest('/farming-activities', {
+          method: 'POST',
+          data: {
+            farmId: selectedFarm.id,
+            activityType: draft.activityType,
+            description: `${draft.title} - ${draft.reason} (Vật tư gợi ý: ${draft.suggestedMaterial})`,
+            activityDate: draft.recommendedDate,
+          },
+        });
+      }
+    } catch {
+      // Allow seamless offline / local approval fallback
+    }
+
     setDrafts((prev) =>
       prev.map((d) => (d.id === draftId ? { ...d, status: 'APPROVED' } : d))
     );
@@ -495,7 +515,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
               </p>
             </div>
 
-            {/* UC-12.3: Search My Conversations */}
+            {/* Search My Conversations */}
             <div style={{ display: 'flex', gap: '8px', width: 'min(380px, 100%)' }}>
               <input
                 type="text"
@@ -583,7 +603,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
          ========================================================= */}
       {activeTab === 'ai-feedback' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: '24px' }}>
-          {/* UC-13.3: View Feedback History */}
+          {/* View Feedback History */}
           <div className="panel" style={{ padding: '24px' }}>
             <h2 style={{ margin: '0 0 6px', fontSize: '18px', color: '#0f172a' }}>
               Lịch sử các phản hồi &amp; Báo cáo của bạn
