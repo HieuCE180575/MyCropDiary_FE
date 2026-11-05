@@ -1602,16 +1602,7 @@ export function CropSeasonsPage() {
       </div>
 
       {/* Card Content & Table */}
-      <div
-        style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
-          overflow: 'hidden',
-          padding: '20px 24px',
-        }}
-      >
+      <div className="zone-clean-card" style={{ padding: '20px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
           <h2 style={{ fontSize: '17px', fontWeight: 750, color: '#0f172a', margin: 0 }}>
             {lang === 'en' ? 'Crop Seasons List' : 'Danh sách mùa vụ'}</h2>
@@ -1755,7 +1746,7 @@ export function CropSeasonsPage() {
                         <div className="table-action-btns">
                           <button
                             type="button"
-                            className="table-icon-btn"
+                            className="table-icon-btn primary"
                             title="Xem chi tiết mùa vụ"
                             aria-label={`Xem chi tiết ${s.seasonName}`}
                             onClick={() => navigate(`/crop-seasons/${s.cropSeasonId}`)}
@@ -1795,6 +1786,14 @@ export function CropSeasonsPage() {
             </table>
           </div>
         )}
+        <div className="zone-table-footer" style={{ margin: '16px -24px -24px' }}>
+          <span>Hiển thị 1–{filteredSeasons.length} trong {seasons.length} mùa vụ</span>
+          <div className="zone-pagination-wrap">
+            <button type="button" className="zone-page-btn" disabled>&lt;</button>
+            <button type="button" className="zone-page-btn active">1</button>
+            <button type="button" className="zone-page-btn" disabled>&gt;</button>
+          </div>
+        </div>
       </div>
 
       {renderCreateEditModal()}

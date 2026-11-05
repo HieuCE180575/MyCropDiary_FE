@@ -11,6 +11,8 @@ import {
   askAIQuick,
   reportAIMessage,
   fetchMyAIFeedbackHistory,
+  deleteAIConversation,
+  updateAIFeedback,
   type AIMessageItem,
   type AIConversationItem,
   type AIFeedbackItem,
@@ -52,6 +54,10 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
   const [reportRating, setReportRating] = useState<number>(3);
   const [reportReason, setReportReason] = useState<string>('');
   const [submittingReport, setSubmittingReport] = useState<boolean>(false);
+  const [editingFeedback, setEditingFeedback] = useState<AIFeedbackItem | null>(null);
+  const [editRating, setEditRating] = useState<number>(5);
+  const [editReason, setEditReason] = useState<string>('');
+  const [submittingEdit, setSubmittingEdit] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Drafts state (UC automation)
@@ -204,6 +210,44 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       showToast(err instanceof Error ? err.message : 'Gửi báo cáo thất bại', 'error');
     } finally {
       setSubmittingReport(false);
+    }
+  };
+
+  const handleDeleteConversation = async (convId: number) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa cuộc hội thoại này?')) return;
+    try {
+      await deleteAIConversation(convId);
+      showToast('Đã xóa cuộc hội thoại thành công.');
+      if (activeConversationId === convId) {
+        setActiveConversationId(null);
+        setMessages([]);
+      }
+      await loadConversations();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Xóa hội thoại thất bại', 'error');
+    }
+  };
+
+  const handleStartEditFeedback = (fb: AIFeedbackItem) => {
+    setEditingFeedback(fb);
+    setEditRating(fb.rating || 5);
+    setEditReason(fb.feedbackText || '');
+  };
+
+  const handleSubmitEditFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFeedback || !editReason.trim()) return;
+
+    setSubmittingEdit(true);
+    try {
+      await updateAIFeedback(editingFeedback.feedbackId, editRating, editReason.trim());
+      showToast('Cập nhật phản hồi thành công.');
+      setEditingFeedback(null);
+      void loadFeedbackHistory();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Cập nhật phản hồi thất bại', 'error');
+    } finally {
+      setSubmittingEdit(false);
     }
   };
 
@@ -407,6 +451,11 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                       <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                         {m.createdAt ? new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong'}
                       </span>
+                      {m.senderType === 'assistant' && m.modelName && (
+                        <span style={{ fontSize: '11px', color: '#059669', background: '#ecfdf5', padding: '1px 7px', borderRadius: '4px', fontWeight: 600 }}>
+                          🤖 {m.modelName}
+                        </span>
+                      )}
                       {m.senderType === 'assistant' && (
                         <button
                           type="button"
@@ -580,17 +629,27 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                     </small>
                   </div>
 
-                  <button
-                    type="button"
-                    className="primary-button"
-                    style={{ fontSize: '13px', padding: '6px 14px' }}
-                    onClick={async () => {
-                      await selectConversation(c.conversationId);
-                      setActiveTab('ai');
-                    }}
-                  >
-                    Xem lại &amp; Tiếp tục
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      style={{ fontSize: '13px', padding: '6px 14px' }}
+                      onClick={async () => {
+                        await selectConversation(c.conversationId);
+                        setActiveTab('ai');
+                      }}
+                    >
+                      Xem lại &amp; Tiếp tục
+                    </button>
+                    <button
+                      type="button"
+                      className="outline-button"
+                      style={{ fontSize: '13px', padding: '6px 12px', color: '#dc2626', borderColor: '#fca5a5' }}
+                      onClick={() => void handleDeleteConversation(c.conversationId)}
+                    >
+                      Xóa
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -633,9 +692,19 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                       <span style={{ color: '#d97706', fontWeight: 700 }}>
                         {'⭐'.repeat(fb.rating || 1)} ({fb.rating}/5 sao)
                       </span>
-                      <small style={{ color: '#94a3b8' }}>
-                        {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
-                      </small>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <small style={{ color: '#94a3b8' }}>
+                          {new Date(fb.createdAt).toLocaleDateString('vi-VN')}
+                        </small>
+                        <button
+                          type="button"
+                          className="outline-button"
+                          style={{ fontSize: '11.5px', padding: '3px 8px' }}
+                          onClick={() => handleStartEditFeedback(fb)}
+                        >
+                          Chỉnh sửa
+                        </button>
+                      </div>
                     </div>
 
                     {fb.aiResponseSnippet && (
@@ -806,6 +875,79 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                 </button>
                 <button type="submit" className="primary-button" disabled={submittingReport}>
                   {submittingReport ? 'Đang gửi...' : 'Gửi báo cáo'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Feedback Modal */}
+      {editingFeedback && (
+        <div className="modal-backdrop">
+          <div className="modal-card" style={{ maxWidth: '520px' }}>
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow" style={{ color: '#059669' }}>Cập nhật ý kiến</span>
+                <h2>Chỉnh sửa phản hồi câu trả lời</h2>
+              </div>
+              <button type="button" className="modal-close" onClick={() => setEditingFeedback(null)}>✕</button>
+            </div>
+
+            <form className="modal-body" onSubmit={handleSubmitEditFeedback}>
+              {editingFeedback.aiResponseSnippet && (
+                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#475569', maxHeight: '120px', overflowY: 'auto' }}>
+                  <strong>Câu trả lời AI:</strong>
+                  <p style={{ margin: '4px 0 0', fontStyle: 'italic' }}>&quot;{editingFeedback.aiResponseSnippet}&quot;</p>
+                </div>
+              )}
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
+                  Đánh giá số sao:
+                </label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setEditRating(star)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '6px',
+                        border: `1px solid ${editRating === star ? '#f59e0b' : '#cbd5e1'}`,
+                        background: editRating === star ? '#fef3c7' : '#ffffff',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 650,
+                        color: editRating === star ? '#b45309' : '#475569',
+                      }}
+                    >
+                      {star} ⭐
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
+                  Nội dung phản hồi / góp ý:
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editReason}
+                  onChange={(e) => setEditReason(e.target.value)}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                />
+              </div>
+
+              <div className="confirm-dialog-actions" style={{ marginTop: '10px' }}>
+                <button type="button" className="ghost-button" onClick={() => setEditingFeedback(null)}>
+                  Hủy
+                </button>
+                <button type="submit" className="primary-button" disabled={submittingEdit}>
+                  {submittingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
                 </button>
               </div>
             </form>

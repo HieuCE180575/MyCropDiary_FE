@@ -1961,7 +1961,13 @@ p {
 
 /* ---------- Forms & Detail Lists ---------- */
 
-.page-content:has(> .farm-registration-page) {
+.page-content:has(> .farm-registration-page),
+.page-content:has(> .farming-activities-page),
+.page-content:has(> .tasks-page),
+.page-content:has(> .staff-management-page),
+.page-content:has(> .expenses-page),
+.page-content:has(> .input-purchases-container),
+.page-content:has(> .suppliers-page-container) {
   width: 100%;
 }
 

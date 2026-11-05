@@ -242,233 +242,264 @@ export function SuppliersPage() {
   }, [suppliers, keyword]);
 
   return (
-    <div className="suppliers-page-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Page Heading */}
-      <div className="page-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
-        <div>
-          <h1 style={{ margin: '0 0 6px', fontSize: '24px', color: '#0f172a' }}>
-            {lang === 'en' ? 'Agricultural Suppliers Management' : 'Quản lý Nhà cung cấp vật tư nông nghiệp'}
-          </h1>
-          <p className="page-subtitle" style={{ margin: 0, color: '#64748b', fontSize: '14px' }}>
-            {lang === 'en'
-              ? 'View supplier list, inspect details, add or update certified VietGAP agricultural input vendors.'
-              : 'Quản lý danh bạ đối tác cung ứng phân bón, thuốc BVTV, hạt giống và vật tư canh tác chuẩn VietGAP.'}
-          </p>
-        </div>
-        <div>
-          <button
-            type="button"
-            className="action-button solid"
-            onClick={handleOpenCreate}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Icon name="plus" size={16} />
-            <span>{lang === 'en' ? 'Add New Supplier' : 'Thêm nhà cung cấp mới'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Notification Banner */}
+    <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+      {/* Status / Action Notification Banner */}
       {notification && (
         <div
-          role="alert"
-          style={{
-            padding: '12px 18px',
-            borderRadius: '10px',
-            background: notification.type === 'success' ? '#ecfdf5' : '#fef2f2',
-            border: `1px solid ${notification.type === 'success' ? '#10b981' : '#ef4444'}`,
-            color: notification.type === 'success' ? '#065f46' : '#991b1b',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '14px',
-          }}
+          className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
+          style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
-          <span>{notification.text}</span>
+          <span>
+            <strong>{notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: '}</strong>
+            {notification.text}
+          </span>
           <button
             type="button"
             onClick={() => setNotification(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontWeight: 700 }}
+            style={{ border: 0, background: 'transparent', cursor: 'pointer', fontWeight: 700, color: 'inherit' }}
           >
             ✕
           </button>
         </div>
       )}
 
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '16px' }}>
-        <div className="panel" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>TỔNG NHÀ CUNG CẤP</span>
-          <h2 style={{ margin: '8px 0 0', fontSize: '28px', color: '#0f172a', fontWeight: 800 }}>{suppliers.length}</h2>
-          <small style={{ color: '#059669' }}>Đơn vị cung ứng</small>
+      {/* Main Page Heading matching Mockup */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            {lang === 'en' ? 'Suppliers' : 'Nhà cung cấp'}
+          </h1>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+            {lang === 'en'
+              ? `${suppliers.length} input and service suppliers at ${selectedFarm?.farmName || 'Farm'}`
+              : `${suppliers.length} nhà cung ứng vật tư & dịch vụ tại ${selectedFarm?.farmName || 'trang trại'}`}
+          </p>
         </div>
-        <div className="panel" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>CÓ NGƯỜI ĐẠI DIỆN</span>
-          <h2 style={{ margin: '8px 0 0', fontSize: '28px', color: '#0284c7', fontWeight: 800 }}>
-            {suppliers.filter((s) => Boolean(s.contactName)).length}
-          </h2>
-          <small style={{ color: '#0284c7' }}>Đầu mối liên hệ trực tiếp</small>
-        </div>
-        <div className="panel" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>CÓ SỐ ĐIỆN THOẠI</span>
-          <h2 style={{ margin: '8px 0 0', fontSize: '28px', color: '#8b5cf6', fontWeight: 800 }}>
-            {suppliers.filter((s) => Boolean(s.phone)).length}
-          </h2>
-          <small style={{ color: '#8b5cf6' }}>Hỗ trợ liên lạc nhanh</small>
-        </div>
-        <div className="panel" style={{ padding: '20px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>ĐÃ CÓ ĐƠN MUA HÀNG</span>
-          <h2 style={{ margin: '8px 0 0', fontSize: '28px', color: '#10b981', fontWeight: 800 }}>
-            {suppliers.filter((s) => (s.totalPurchasesCount || 0) > 0).length}
-          </h2>
-          <small style={{ color: '#10b981' }}>Đã có lịch sử giao dịch</small>
+
+        <div>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={handleOpenCreate}
+            style={{
+              padding: '10px 18px',
+              fontSize: '14px',
+              fontWeight: 700,
+              borderRadius: '10px',
+              background: '#059669',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+            }}
+          >
+            <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Supplier' : 'Thêm nhà cung cấp'}
+          </button>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="panel" style={{ padding: '16px 20px' }}>
-        <form onSubmit={handleSearch} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-          <div style={{ flex: '1 1 300px' }}>
+      {/* Main Unified Clean Card Container matching Mockup */}
+      <div className="zone-clean-card">
+        {/* Filter Bar */}
+        <form onSubmit={handleSearch} className="zone-clean-filter-bar">
+          <div className="zone-clean-search" style={{ flex: '1 1 300px' }}>
+            <span className="search-icon">
+              <Icon name="search" size={17} />
+            </span>
             <input
-              type="text"
-              placeholder="Tìm kiếm theo tên nhà cung cấp, người đại diện, số điện thoại, địa chỉ..."
+              type="search"
+              placeholder={lang === 'en' ? 'Search by supplier name, contact, phone, address...' : 'Tìm kiếm theo tên nhà cung cấp, người đại diện, số điện thoại, địa chỉ...'}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
-              style={{ width: '100%', padding: '9px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
             />
           </div>
-          <button type="submit" className="action-button solid" style={{ padding: '9px 18px', fontSize: '13.5px' }}>
-            <Icon name="search" size={14} /> Tìm kiếm
+
+          <button
+            type="submit"
+            className="action-button solid"
+            style={{ height: '42px', padding: '0 18px', borderRadius: '10px' }}
+          >
+            {lang === 'en' ? 'Search' : 'Tìm kiếm'}
           </button>
+
           {keyword && (
-            <button type="button" className="action-button" onClick={handleResetSearch} style={{ padding: '9px 14px', fontSize: '13.5px' }}>
-              Xóa bộ lọc
+            <button
+              type="button"
+              className="zone-clean-reload-btn"
+              title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+              onClick={handleResetSearch}
+            >
+              <Icon name="refresh" size={16} />
             </button>
           )}
         </form>
-      </div>
 
-      {/* View Supplier List  */}
-      <div className="panel" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
-            Danh bạ nhà cung cấp nông nghiệp ({filteredSuppliers.length})
-          </h3>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>Nhấp vào dòng để xem chi tiết đầy đủ</span>
-        </div>
-
-        {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>Đang tải danh sách nhà cung cấp...</div>
-        ) : filteredSuppliers.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
-            Không tìm thấy nhà cung cấp nào phù hợp. Nhấp "Thêm nhà cung cấp mới" để bắt đầu.
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                  <th style={{ padding: '12px 18px' }}>Mã / Tên nhà cung cấp</th>
-                  <th style={{ padding: '12px 18px' }}>Người đại diện</th>
-                  <th style={{ padding: '12px 18px' }}>Điện thoại</th>
-                  <th style={{ padding: '12px 18px' }}>Email</th>
-                  <th style={{ padding: '12px 18px' }}>Địa chỉ</th>
-                  <th style={{ padding: '12px 18px', textAlign: 'center' }}>Đơn mua</th>
-                  <th style={{ padding: '12px 18px', textAlign: 'center' }}>Thao tác</th>
+        {/* Table Wrap */}
+        <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+          <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr style={{ background: '#f8fafc' }}>
+                <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                  <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'SUPPLIER NAME' : 'TÊN NHÀ CUNG CẤP'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'CONTACT PERSON' : 'NGƯỜI ĐẠI DIỆN'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'EMAIL' : 'EMAIL'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'ADDRESS' : 'ĐỊA CHỈ'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                  {lang === 'en' ? 'PURCHASE HISTORY' : 'LỊCH SỬ MUA'}
+                </th>
+                <th style={{ width: '140px', padding: '14px 16px', textAlign: 'right' }}>
+                  &nbsp;
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                    {lang === 'en' ? 'Loading suppliers directory...' : 'Đang tải danh bạ nhà cung cấp...'}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredSuppliers.map((supplier) => (
-                  <tr
-                    key={supplier.supplierId}
-                    onClick={() => handleOpenDetails(supplier.supplierId)}
-                    style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s ease' }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '12px 18px' }}>
-                      <div style={{ fontWeight: 650, color: '#0f172a', fontSize: '14px' }}>{supplier.supplierName}</div>
-                      <small style={{ color: '#059669', fontSize: '12px' }}>#SUP-{supplier.supplierId} • VietGAP</small>
+              ) : filteredSuppliers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                    {lang === 'en' ? 'No suppliers matching keywords.' : 'Không tìm thấy nhà cung cấp nào phù hợp với từ khóa.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredSuppliers.map((supplier) => (
+                  <tr key={supplier.supplierId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                      <input type="checkbox" aria-label={`Select #${supplier.supplierId}`} style={{ cursor: 'pointer' }} />
                     </td>
-                    <td style={{ padding: '12px 18px', color: '#334155', fontWeight: 500 }}>
+                    <td style={{ padding: '14px 16px' }}>
+                      <span
+                        onClick={() => handleOpenDetails(supplier.supplierId)}
+                        style={{
+                          fontWeight: 750,
+                          fontSize: '15px',
+                          color: '#0f172a',
+                          cursor: 'pointer',
+                          display: 'block',
+                          transition: 'color 0.15s ease',
+                        }}
+                        onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
+                        onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                      >
+                        {supplier.supplierName}
+                      </span>
+                      <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                        #SUP-{supplier.supplierId} • VietGAP
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', fontWeight: 500 }}>
                       {supplier.contactName || '—'}
                     </td>
-                    <td style={{ padding: '12px 18px', color: '#0284c7', fontWeight: 600 }}>
+                    <td style={{ padding: '14px 16px', color: '#0284c7', fontSize: '13.5px', fontWeight: 600 }}>
                       {supplier.phone ? (
-                        <a href={`tel:${supplier.phone}`} onClick={(e) => e.stopPropagation()} style={{ color: 'inherit', textDecoration: 'none' }}>
+                        <a href={`tel:${supplier.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                           {supplier.phone}
                         </a>
                       ) : (
                         '—'
                       )}
                     </td>
-                    <td style={{ padding: '12px 18px', color: '#64748b' }}>
+                    <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px' }}>
                       {supplier.email || '—'}
                     </td>
-                    <td style={{ padding: '12px 18px', color: '#475569', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <td style={{ padding: '14px 16px', color: '#475569', fontSize: '13.5px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {supplier.address || '—'}
                     </td>
-                    <td style={{ padding: '12px 18px', textAlign: 'center' }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <span className="profile-tag-pill" style={{ background: '#f1f5f9', color: '#334155' }}>
-                        {supplier.totalPurchasesCount || 0} đơn
+                        {supplier.totalPurchasesCount || 0} {lang === 'en' ? 'orders' : 'đơn'}
                       </span>
                     </td>
-                    <td style={{ padding: '12px 18px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                      <div style={{ display: 'inline-flex', gap: '6px' }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                      <div className="table-action-btns zone-card-actions">
                         <button
                           type="button"
-                          className="table-icon-btn"
-                          title="Xem chi tiết nhà cung cấp"
+                          className="table-icon-btn primary"
+                          title={lang === 'en' ? 'View Details' : 'Xem chi tiết nhà cung cấp'}
+                          aria-label={`View ${supplier.supplierName}`}
                           onClick={() => handleOpenDetails(supplier.supplierId)}
                         >
-                          <Icon name="search" size={14} />
+                          <Icon name="eye" size={15} />
                         </button>
                         <button
                           type="button"
                           className="table-icon-btn edit"
-                          title="Chỉnh sửa thông tin"
+                          title={lang === 'en' ? 'Edit Supplier' : 'Chỉnh sửa thông tin'}
+                          aria-label={`Edit ${supplier.supplierName}`}
                           onClick={(e) => handleOpenEdit(supplier, e)}
                         >
-                          <Icon name="edit" size={14} />
+                          <Icon name="edit" size={15} />
                         </button>
                         <button
                           type="button"
                           className="table-icon-btn danger"
-                          title="Xóa nhà cung cấp (nếu đủ điều kiện)"
+                          title={lang === 'en' ? 'Delete Supplier (if eligible)' : 'Xóa nhà cung cấp (nếu đủ điều kiện)'}
+                          aria-label={`Delete ${supplier.supplierName}`}
                           onClick={(e) => handleOpenDelete(supplier, e)}
                         >
-                          <Icon name="trash" size={14} />
+                          <Icon name="trash" size={15} />
                         </button>
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="zone-table-footer">
+          <span>
+            {lang === 'en'
+              ? `Showing 1–${filteredSuppliers.length} of ${suppliers.length} suppliers`
+              : `Hiển thị 1–${filteredSuppliers.length} trong ${suppliers.length} nhà cung cấp`}
+          </span>
+          <div className="zone-pagination-wrap">
+            <button type="button" className="zone-page-btn" disabled>&lt;</button>
+            <button type="button" className="zone-page-btn active">1</button>
+            <button type="button" className="zone-page-btn" disabled>&gt;</button>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* View Supplier Details Modal  */}
+      {/* View Supplier Details Modal */}
       {selectedSupplier && (
         <Modal
           open={true}
           onClose={() => setSelectedSupplier(null)}
-          title={`Hồ sơ nhà cung cấp: ${selectedSupplier.supplierName}`}
+          title={lang === 'en' ? `Supplier Profile: ${selectedSupplier.supplierName}` : `Hồ sơ nhà cung cấp: ${selectedSupplier.supplierName}`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: '450px', maxWidth: '600px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
               <div>
                 <span className="profile-tag-pill" style={{ background: '#ecfdf5', color: '#059669', marginBottom: '4px' }}>
-                  ✓ Đã kiểm định VietGAP
+                  {lang === 'en' ? '✓ VietGAP Verified' : '✓ Đã kiểm định VietGAP'}
                 </span>
                 <h3 style={{ margin: '6px 0 2px', fontSize: '18px', color: '#0f172a' }}>{selectedSupplier.supplierName}</h3>
-                <small style={{ color: '#64748b' }}>Mã hệ thống: #SUP-{selectedSupplier.supplierId}</small>
+                <small style={{ color: '#64748b' }}>{lang === 'en' ? 'System Code:' : 'Mã hệ thống:'} #SUP-{selectedSupplier.supplierId}</small>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12.5px', color: '#64748b' }}>Lịch sử thu mua:</span>
+                <span style={{ fontSize: '12.5px', color: '#64748b' }}>{lang === 'en' ? 'Purchase History:' : 'Lịch sử thu mua:'}</span>
                 <div style={{ fontSize: '20px', fontWeight: 800, color: '#0284c7' }}>
-                  {selectedSupplier.totalPurchasesCount || 0} hóa đơn
+                  {selectedSupplier.totalPurchasesCount || 0} {lang === 'en' ? 'orders' : 'hóa đơn'}
                 </div>
               </div>
             </div>
@@ -476,44 +507,44 @@ export function SuppliersPage() {
             {/* Information Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>NGƯỜI ĐẠI DIỆN LIÊN HỆ</div>
+                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'CONTACT PERSON' : 'NGƯỜI ĐẠI DIỆN LIÊN HỆ'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
-                  {selectedSupplier.contactName || 'Chưa cập nhật'}
+                  {selectedSupplier.contactName || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
               <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>SỐ ĐIỆN THOẠI</div>
+                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: '#0284c7', marginTop: '4px' }}>
-                  {selectedSupplier.phone || 'Chưa cập nhật'}
+                  {selectedSupplier.phone || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
               <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>ĐỊA CHỈ EMAIL</div>
+                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'EMAIL ADDRESS' : 'ĐỊA CHỈ EMAIL'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginTop: '4px' }}>
-                  {selectedSupplier.email || 'Chưa cập nhật'}
+                  {selectedSupplier.email || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
               <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>NGÀY TẠO HỒ SƠ</div>
+                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'DATE CREATED' : 'NGÀY TẠO HỒ SƠ'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginTop: '4px' }}>
-                  {selectedSupplier.createdAt ? new Date(selectedSupplier.createdAt).toLocaleDateString('vi-VN') : '—'}
+                  {selectedSupplier.createdAt ? new Date(selectedSupplier.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') : '—'}
                 </div>
               </div>
             </div>
 
             <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>ĐỊA CHỈ TRỤ SỞ / KHO HÀNG</div>
+              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'HEADQUARTERS / WAREHOUSE ADDRESS' : 'ĐỊA CHỈ TRỤ SỞ / KHO HÀNG'}</div>
               <div style={{ fontSize: '14px', color: '#334155', marginTop: '4px' }}>
-                {selectedSupplier.address || 'Chưa cập nhật địa chỉ'}
+                {selectedSupplier.address || (lang === 'en' ? 'No address provided' : 'Chưa cập nhật địa chỉ')}
               </div>
             </div>
 
             {selectedSupplier.notes && (
               <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fefce8' }}>
-                <div style={{ fontSize: '12px', color: '#b45309', fontWeight: 700 }}>GHI CHÚ HỢP ĐỒNG / VẬT TƯ CUNG CẤP</div>
+                <div style={{ fontSize: '12px', color: '#b45309', fontWeight: 700 }}>{lang === 'en' ? 'CONTRACT NOTES / SUPPLIED MATERIALS' : 'GHI CHÚ HỢP ĐỒNG / VẬT TƯ CUNG CẤP'}</div>
                 <div style={{ fontSize: '13.5px', color: '#78350f', marginTop: '4px' }}>{selectedSupplier.notes}</div>
               </div>
             )}
@@ -528,7 +559,7 @@ export function SuppliersPage() {
                   handleOpenEdit(s);
                 }}
               >
-                <Icon name="edit" size={14} /> Chỉnh sửa
+                <Icon name="edit" size={14} /> {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
               </button>
               <button
                 type="button"
@@ -539,28 +570,28 @@ export function SuppliersPage() {
                   handleOpenDelete(s);
                 }}
               >
-                <Icon name="trash" size={14} /> Xóa nhà cung cấp
+                <Icon name="trash" size={14} /> {lang === 'en' ? 'Delete' : 'Xóa nhà cung cấp'}
               </button>
               <button type="button" className="action-button solid" onClick={() => setSelectedSupplier(null)}>
-                Đóng
+                {lang === 'en' ? 'Close' : 'Đóng'}
               </button>
             </div>
           </div>
         </Modal>
       )}
 
-      {/* Create Supplier Modal  */}
+      {/* Create Supplier Modal */}
       {isCreateOpen && (
-        <Modal open={true} onClose={() => setIsCreateOpen(false)} title="Thêm mới nhà cung cấp vật tư (Create Supplier)">
+        <Modal open={true} onClose={() => setIsCreateOpen(false)} title={lang === 'en' ? 'Add New Supplier' : 'Thêm mới nhà cung cấp vật tư'}>
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Tên công ty / Nhà cung cấp *
+                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
               </label>
               <input
                 type="text"
                 required
-                placeholder="Ví dụ: Công ty Cổ phần Nông nghiệp Xanh..."
+                placeholder={lang === 'en' ? 'e.g. Green Agriculture JSC...' : 'Ví dụ: Công ty Cổ phần Nông nghiệp Xanh...'}
                 value={createForm.supplierName}
                 onChange={(e) => setCreateForm({ ...createForm, supplierName: e.target.value })}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
@@ -570,11 +601,11 @@ export function SuppliersPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  Người đại diện liên hệ
+                  {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
                 </label>
                 <input
                   type="text"
-                  placeholder="Họ và tên..."
+                  placeholder={lang === 'en' ? 'Full name...' : 'Họ và tên...'}
                   value={createForm.contactName || ''}
                   onChange={(e) => setCreateForm({ ...createForm, contactName: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
@@ -583,7 +614,7 @@ export function SuppliersPage() {
 
               <div className="form-group">
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  Số điện thoại
+                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
                 </label>
                 <input
                   type="tel"
@@ -597,7 +628,7 @@ export function SuppliersPage() {
 
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Email
+                {lang === 'en' ? 'Email' : 'Email'}
               </label>
               <input
                 type="email"
@@ -610,11 +641,11 @@ export function SuppliersPage() {
 
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Địa chỉ trụ sở / kho hàng
+                {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
               </label>
               <input
                 type="text"
-                placeholder="Số nhà, đường, quận/huyện, tỉnh thành..."
+                placeholder={lang === 'en' ? 'Street, Ward, District, City...' : 'Số nhà, đường, quận/huyện, tỉnh thành...'}
                 value={createForm.address || ''}
                 onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
@@ -623,11 +654,11 @@ export function SuppliersPage() {
 
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Ghi chú vật tư cung ứng
+                {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
               </label>
               <textarea
                 rows={2}
-                placeholder="Chuyên cung ứng phân trùn quế, hạt giống F1..."
+                placeholder={lang === 'en' ? 'Supplies organic fertilizers, F1 seeds...' : 'Chuyên cung ứng phân trùn quế, hạt giống F1...'}
                 value={createForm.notes || ''}
                 onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
@@ -636,23 +667,23 @@ export function SuppliersPage() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
               <button type="button" className="action-button" onClick={() => setIsCreateOpen(false)} disabled={submittingCreate}>
-                Hủy bỏ
+                {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
               </button>
               <button type="submit" className="action-button solid" disabled={submittingCreate}>
-                {submittingCreate ? 'Đang tạo...' : 'Tạo nhà cung cấp'}
+                {submittingCreate ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Create Supplier' : 'Tạo nhà cung cấp')}
               </button>
             </div>
           </form>
         </Modal>
       )}
 
-      {/* Update Supplier Modal  */}
+      {/* Update Supplier Modal */}
       {editingSupplier && (
-        <Modal open={true} onClose={() => setEditingSupplier(null)} title={`Cập nhật nhà cung cấp #${editingSupplier.supplierId}`}>
+        <Modal open={true} onClose={() => setEditingSupplier(null)} title={lang === 'en' ? `Update Supplier #${editingSupplier.supplierId}` : `Cập nhật nhà cung cấp #${editingSupplier.supplierId}`}>
           <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Tên công ty / Nhà cung cấp *
+                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
               </label>
               <input
                 type="text"
@@ -666,7 +697,7 @@ export function SuppliersPage() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  Người đại diện liên hệ
+                  {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
                 </label>
                 <input
                   type="text"
@@ -678,7 +709,7 @@ export function SuppliersPage() {
 
               <div className="form-group">
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  Số điện thoại
+                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
                 </label>
                 <input
                   type="tel"
@@ -691,7 +722,7 @@ export function SuppliersPage() {
 
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Email
+                {lang === 'en' ? 'Email' : 'Email'}
               </label>
               <input
                 type="email"
@@ -703,7 +734,7 @@ export function SuppliersPage() {
 
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Địa chỉ trụ sở / kho hàng
+                {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
               </label>
               <input
                 type="text"
@@ -715,7 +746,7 @@ export function SuppliersPage() {
 
             <div className="form-group">
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                Ghi chú vật tư cung ứng
+                {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
               </label>
               <textarea
                 rows={2}
@@ -727,17 +758,17 @@ export function SuppliersPage() {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
               <button type="button" className="action-button" onClick={() => setEditingSupplier(null)} disabled={submittingUpdate}>
-                Hủy bỏ
+                {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
               </button>
               <button type="submit" className="action-button solid" disabled={submittingUpdate}>
-                {submittingUpdate ? 'Đang lưu...' : 'Lưu thay đổi'}
+                {submittingUpdate ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
               </button>
             </div>
           </form>
         </Modal>
       )}
 
-      {/* Delete Eligible Supplier Modal  */}
+      {/* Delete Eligible Supplier Modal */}
       {deletingSupplier && (() => {
         const hasPurchases = (deletingSupplier.totalPurchasesCount || 0) > 0;
         const isEligible = !hasPurchases;
@@ -746,13 +777,13 @@ export function SuppliersPage() {
           <Modal
             open={true}
             onClose={() => setDeletingSupplier(null)}
-            title="Xác nhận xóa nhà cung cấp (Delete Eligible Supplier)"
+            title={lang === 'en' ? 'Delete Supplier Confirmation' : 'Xác nhận xóa nhà cung cấp'}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '420px', maxWidth: '520px' }}>
               <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <h4 style={{ margin: '0 0 4px', fontSize: '15px', color: '#0f172a' }}>{deletingSupplier.supplierName}</h4>
                 <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
-                  Mã đơn vị: #SUP-{deletingSupplier.supplierId} • Người liên hệ: {deletingSupplier.contactName || '—'}
+                  {lang === 'en' ? 'Supplier ID:' : 'Mã đơn vị:'} #SUP-{deletingSupplier.supplierId} • {lang === 'en' ? 'Contact:' : 'Người liên hệ:'} {deletingSupplier.contactName || '—'}
                 </p>
               </div>
 
@@ -767,12 +798,16 @@ export function SuppliersPage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: isEligible ? '#065f46' : '#991b1b', marginBottom: '4px' }}>
                   <Icon name={isEligible ? 'check' : 'warning'} size={16} />
-                  <span>{isEligible ? 'Nhà cung cấp đủ điều kiện xóa (Eligible)' : 'Không đủ điều kiện xóa (Ineligible)'}</span>
+                  <span>{isEligible ? (lang === 'en' ? 'Supplier eligible for deletion' : 'Nhà cung cấp đủ điều kiện xóa (Eligible)') : (lang === 'en' ? 'Ineligible for deletion' : 'Không đủ điều kiện xóa (Ineligible)')}</span>
                 </div>
                 <p style={{ margin: 0, fontSize: '12.5px', color: isEligible ? '#047857' : '#b91c1c' }}>
                   {hasPurchases
-                    ? `Nhà cung cấp này đã có ${deletingSupplier.totalPurchasesCount} hóa đơn mua vật tư trong hệ thống. Để bảo đảm kiểm toán truy xuất nguồn gốc theo quy chuẩn VietGAP, không thể xóa nhà cung cấp đã có giao dịch mua hàng.`
-                    : 'Nhà cung cấp này chưa phát sinh hóa đơn mua hàng nào trong trang trại. Thao tác xóa sẽ được thực hiện an toàn.'}
+                    ? (lang === 'en'
+                      ? `This supplier has ${deletingSupplier.totalPurchasesCount} purchase orders recorded in the system. To ensure VietGAP traceability audit compliance, suppliers with active transaction history cannot be deleted.`
+                      : `Nhà cung cấp này đã có ${deletingSupplier.totalPurchasesCount} hóa đơn mua vật tư trong hệ thống. Để bảo đảm kiểm toán truy xuất nguồn gốc theo quy chuẩn VietGAP, không thể xóa nhà cung cấp đã có giao dịch mua hàng.`)
+                    : (lang === 'en'
+                      ? 'This supplier has no recorded purchase orders in this farm. Deletion can be performed safely.'
+                      : 'Nhà cung cấp này chưa phát sinh hóa đơn mua hàng nào trong trang trại. Thao tác xóa sẽ được thực hiện an toàn.')}
                 </p>
               </div>
 
@@ -783,7 +818,7 @@ export function SuppliersPage() {
                   onClick={() => setDeletingSupplier(null)}
                   disabled={submittingDelete}
                 >
-                  {isEligible ? 'Hủy bỏ' : 'Đóng'}
+                  {isEligible ? (lang === 'en' ? 'Cancel' : 'Hủy bỏ') : (lang === 'en' ? 'Close' : 'Đóng')}
                 </button>
                 {isEligible && (
                   <button
@@ -792,7 +827,7 @@ export function SuppliersPage() {
                     disabled={submittingDelete}
                     onClick={handleDeleteSubmit}
                   >
-                    {submittingDelete ? 'Đang xóa...' : 'Xác nhận xóa'}
+                    {submittingDelete ? (lang === 'en' ? 'Deleting...' : 'Đang xóa...') : (lang === 'en' ? 'Confirm Delete' : 'Xác nhận xóa')}
                   </button>
                 )}
               </div>
@@ -800,7 +835,7 @@ export function SuppliersPage() {
           </Modal>
         );
       })()}
-    </div>
+    </section>
   );
 }
 

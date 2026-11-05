@@ -93,3 +93,18 @@ export async function fetchMyAIFeedbackHistory(): Promise<AIFeedbackItem[]> {
   return res.data ?? [];
 }
 
+export async function deleteAIConversation(conversationId: number): Promise<void> {
+  await apiRequest<ApiResponse<null>>(`/ai/conversations/${conversationId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateAIFeedback(feedbackId: number, rating: number, reason: string): Promise<AIFeedbackItem> {
+  const res = await apiRequest<ApiResponse<AIFeedbackItem>>(`/ai/feedback/${feedbackId}`, {
+    method: 'PUT',
+    data: { rating, reason },
+  });
+  if (!res.data) throw new Error(res.message || 'Không thể cập nhật phản hồi.');
+  return res.data;
+}
+

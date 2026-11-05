@@ -12,6 +12,12 @@ import {
   fetchCandidateUsers,
   type CandidateUser,
   type FarmStaffRecord,
+  getFarmWorkersApi,
+  createFarmWorkerApi,
+  updateFarmWorkerApi,
+  deleteFarmWorkerApi,
+  type FarmWorkerResp,
+  type FarmWorkerReq,
 } from './staffService';
 import {
   fetchZonesByFarm,
@@ -38,7 +44,24 @@ export function StaffManagementPage() {
   const farmId = selectedFarm?.id;
   const initialCache = farmId ? farmStaffMemoryCache.get(farmId) : null;
 
-  const [activeTab, setActiveTab] = useState<'staff' | 'assignments'>('staff');
+  const [activeTab, setActiveTab] = useState<'staff' | 'assignments' | 'workers'>('staff');
+
+  // Worker Records state (Worker Records)
+  const [workers, setWorkers] = useState<FarmWorkerResp[]>([]);
+  const [loadingWorkers, setLoadingWorkers] = useState(false);
+  const [workerSearch, setWorkerSearch] = useState('');
+  const [workerStatusFilter, setWorkerStatusFilter] = useState('ALL');
+  const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
+  const [editingWorker, setEditingWorker] = useState<FarmWorkerResp | null>(null);
+  const [workerForm, setWorkerForm] = useState<FarmWorkerReq>({
+    farmMemberId: 0,
+    workerCode: '',
+    jobTitle: '',
+    employmentStatus: 'active',
+    hiredAt: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+  const [savingWorker, setSavingWorker] = useState(false);
   const [staffList, setStaffList] = useState<FarmStaffRecord[]>(initialCache?.staffList || []);
   const [zones, setZones] = useState<Zone[]>(initialCache?.zones || []);
   const [assignments, setAssignments] = useState<StaffZoneAssignment[]>(initialCache?.assignments || []);
@@ -133,6 +156,92 @@ export function StaffManagementPage() {
       }
     } finally {
       if (!silent) setLoading(false);
+    }
+  };
+
+  const loadWorkers = async () => {
+    if (!farmId) return;
+    setLoadingWorkers(true);
+    try {
+      const list = await getFarmWorkersApi(farmId, {
+        status: workerStatusFilter === 'ALL' ? undefined : workerStatusFilter,
+        keyword: workerSearch.trim() || undefined,
+      });
+      setWorkers(list);
+    } catch {
+      setWorkers([]);
+    } finally {
+      setLoadingWorkers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (farmId && activeTab === 'workers') {
+      void loadWorkers();
+    }
+  }, [farmId, activeTab, workerStatusFilter]);
+
+  const handleOpenAddWorker = () => {
+    setEditingWorker(null);
+    setWorkerForm({
+      farmMemberId: staffList.length > 0 ? staffList[0].farmMemberId : 0,
+      workerCode: `CN-${String(workers.length + 1).padStart(3, '0')}`,
+      jobTitle: 'Công nhân lao động',
+      employmentStatus: 'active',
+      hiredAt: new Date().toISOString().split('T')[0],
+      notes: '',
+    });
+    setIsWorkerModalOpen(true);
+  };
+
+  const handleOpenEditWorker = (w: FarmWorkerResp) => {
+    setEditingWorker(w);
+    setWorkerForm({
+      farmMemberId: w.farmMemberId,
+      workerCode: w.workerCode,
+      jobTitle: w.jobTitle || '',
+      employmentStatus: w.employmentStatus || 'active',
+      hiredAt: w.hiredAt || new Date().toISOString().split('T')[0],
+      notes: w.notes || '',
+    });
+    setIsWorkerModalOpen(true);
+  };
+
+  const handleSaveWorker = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!farmId || !workerForm.workerCode.trim()) return;
+    setSavingWorker(true);
+    try {
+      if (editingWorker) {
+        await updateFarmWorkerApi(farmId, editingWorker.workerId, workerForm);
+        setNotification({ text: 'Cập nhật hồ sơ công nhân thành công.', type: 'success' });
+      } else {
+        await createFarmWorkerApi(farmId, workerForm);
+        setNotification({ text: 'Thêm hồ sơ công nhân mới thành công.', type: 'success' });
+      }
+      setIsWorkerModalOpen(false);
+      void loadWorkers();
+    } catch (err) {
+      setNotification({
+        text: err instanceof Error ? err.message : 'Không thể lưu hồ sơ công nhân.',
+        type: 'error',
+      });
+    } finally {
+      setSavingWorker(false);
+    }
+  };
+
+  const handleDeleteWorker = async (workerId: number) => {
+    if (!farmId || !window.confirm('Bạn có chắc chắn muốn xóa hồ sơ công nhân này?')) return;
+    try {
+      await deleteFarmWorkerApi(farmId, workerId);
+      setNotification({ text: 'Đã xóa hồ sơ công nhân thành công.', type: 'success' });
+      void loadWorkers();
+    } catch (err) {
+      setNotification({
+        text: err instanceof Error ? err.message : 'Không thể xóa hồ sơ công nhân.',
+        type: 'error',
+      });
     }
   };
 
@@ -494,6 +603,13 @@ export function StaffManagementPage() {
             onClick={() => setActiveTab('assignments')}
           >
             <Icon name="blocks" size={17} /> Zone Assignments <span className="tab-count">({assignments.length})</span>
+          </button>
+          <button
+            type="button"
+            className={`zone-integrated-tab-btn ${activeTab === 'workers' ? 'active' : ''}`}
+            onClick={() => setActiveTab('workers')}
+          >
+            <Icon name="users" size={17} /> Hồ sơ công nhân <span className="tab-count">({workers.length})</span>
           </button>
         </div>
 
@@ -1095,6 +1211,135 @@ export function StaffManagementPage() {
             )}
           </>
         )}
+
+        {activeTab === 'workers' && (
+          <>
+            <div className="zone-clean-filter-bar">
+              <div className="zone-clean-search">
+                <span className="search-icon">
+                  <Icon name="search" size={17} />
+                </span>
+                <input
+                  type="search"
+                  placeholder="Tìm theo mã công nhân, họ tên, chức danh..."
+                  value={workerSearch}
+                  onChange={(e) => setWorkerSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="zone-clean-select-wrap">
+                <select
+                  value={workerStatusFilter}
+                  onChange={(e) => setWorkerStatusFilter(e.target.value)}
+                  aria-label="Lọc theo tình trạng làm việc"
+                >
+                  <option value="ALL">Tất cả tình trạng</option>
+                  <option value="active">Đang làm việc (Active)</option>
+                  <option value="inactive">Đã nghỉ việc (Inactive)</option>
+                  <option value="seasonal">Thời vụ (Seasonal)</option>
+                </select>
+              </div>
+
+              <div className="zone-clean-actions">
+                <button
+                  type="button"
+                  className="zone-btn zone-btn-primary"
+                  onClick={handleOpenAddWorker}
+                >
+                  <Icon name="plus" size={16} /> Thêm hồ sơ công nhân
+                </button>
+              </div>
+            </div>
+
+            {loadingWorkers ? (
+              <div className="zone-clean-loading">
+                <div className="zone-spinner" />
+                <p>Đang tải danh sách hồ sơ công nhân...</p>
+              </div>
+            ) : workers.length === 0 ? (
+              <div className="zone-clean-empty">
+                <Icon name="users" size={48} />
+                <h3>Chưa có hồ sơ công nhân</h3>
+                <p>Nhấn nút &quot;Thêm hồ sơ công nhân&quot; để thiết lập hồ sơ người lao động theo tiêu chuẩn VietGAP.</p>
+              </div>
+            ) : (
+              <div className="zone-clean-table-wrap">
+                <table className="zone-clean-table">
+                  <thead>
+                    <tr>
+                      <th>Mã CN</th>
+                      <th>Họ tên &amp; SĐT</th>
+                      <th>Vị trí / Chức danh</th>
+                      <th>Ngày vào làm</th>
+                      <th>Trạng thái</th>
+                      <th>Ghi chú</th>
+                      <th style={{ textAlign: 'right' }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workers
+                      .filter((w) => {
+                        if (workerStatusFilter !== 'ALL' && w.employmentStatus !== workerStatusFilter) return false;
+                        if (workerSearch.trim()) {
+                          const q = workerSearch.toLowerCase();
+                          const matchCode = w.workerCode?.toLowerCase().includes(q);
+                          const matchName = w.fullName?.toLowerCase().includes(q);
+                          const matchJob = w.jobTitle?.toLowerCase().includes(q);
+                          if (!matchCode && !matchName && !matchJob) return false;
+                        }
+                        return true;
+                      })
+                      .map((w) => (
+                        <tr key={w.workerId}>
+                          <td>
+                            <span className="profile-tag-pill" style={{ fontWeight: 700 }}>
+                              {w.workerCode}
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{w.fullName}</strong>
+                            {w.phoneNumber && (
+                              <div style={{ fontSize: '12px', color: '#64748b' }}>📞 {w.phoneNumber}</div>
+                            )}
+                          </td>
+                          <td>{w.jobTitle || 'Công nhân'}</td>
+                          <td>{w.hiredAt ? new Date(w.hiredAt).toLocaleDateString('vi-VN') : '—'}</td>
+                          <td>
+                            <span className={`status-badge ${w.employmentStatus === 'active' ? 'status-badge--success' : ''}`}>
+                              {w.employmentStatus === 'active' ? 'Đang làm việc' : w.employmentStatus === 'seasonal' ? 'Thời vụ' : 'Đã nghỉ'}
+                            </span>
+                          </td>
+                          <td style={{ maxWidth: '200px', fontSize: '12.5px', color: '#64748b' }}>
+                            {w.notes || '—'}
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <div style={{ display: 'inline-flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="action-button"
+                                onClick={() => handleOpenEditWorker(w)}
+                                style={{ fontSize: '12px', padding: '4px 8px' }}
+                              >
+                                Sửa
+                              </button>
+                              <button
+                                type="button"
+                                className="outline-button"
+                                onClick={() => void handleDeleteWorker(w.workerId)}
+                                style={{ fontSize: '12px', padding: '4px 8px', color: '#dc2626', borderColor: '#fca5a5' }}
+                              >
+                                Xóa
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Add Staff Modal */}
@@ -1388,6 +1633,115 @@ export function StaffManagementPage() {
               disabled={savingAssign || !assignStaffId || !assignZoneId}
             >
               {savingAssign ? 'Đang phân công...' : 'Xác nhận phân công'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Worker Record Modal */}
+      <Modal
+        open={isWorkerModalOpen}
+        onClose={() => setIsWorkerModalOpen(false)}
+        title={editingWorker ? 'Chỉnh sửa hồ sơ công nhân' : 'Thêm hồ sơ công nhân mới'}
+        headerIcon={<Icon name="users" size={20} />}
+      >
+        <form onSubmit={handleSaveWorker} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+              Thành viên trang trại *
+            </label>
+            <select
+              required
+              disabled={!!editingWorker}
+              value={workerForm.farmMemberId}
+              onChange={(e) => setWorkerForm((p) => ({ ...p, farmMemberId: Number(e.target.value) }))}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            >
+              <option value={0}>-- Chọn thành viên nhân sự --</option>
+              {staffList.map((s) => (
+                <option key={s.farmMemberId} value={s.farmMemberId}>
+                  {s.fullName} ({s.email}) - {s.roleLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                Mã công nhân *
+              </label>
+              <input
+                type="text"
+                required
+                value={workerForm.workerCode}
+                onChange={(e) => setWorkerForm((p) => ({ ...p, workerCode: e.target.value }))}
+                placeholder="VD: CN-001"
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                Vị trí / Chức danh
+              </label>
+              <input
+                type="text"
+                value={workerForm.jobTitle || ''}
+                onChange={(e) => setWorkerForm((p) => ({ ...p, jobTitle: e.target.value }))}
+                placeholder="VD: Công nhân thu hoạch, Phun thuốc..."
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                Tình trạng làm việc *
+              </label>
+              <select
+                required
+                value={workerForm.employmentStatus || 'active'}
+                onChange={(e) => setWorkerForm((p) => ({ ...p, employmentStatus: e.target.value }))}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              >
+                <option value="active">Đang làm việc (Active)</option>
+                <option value="seasonal">Lao động thời vụ (Seasonal)</option>
+                <option value="inactive">Đã nghỉ việc (Inactive)</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                Ngày vào làm
+              </label>
+              <input
+                type="date"
+                value={workerForm.hiredAt || ''}
+                onChange={(e) => setWorkerForm((p) => ({ ...p, hiredAt: e.target.value }))}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+              Ghi chú hồ sơ
+            </label>
+            <textarea
+              rows={2}
+              value={workerForm.notes || ''}
+              onChange={(e) => setWorkerForm((p) => ({ ...p, notes: e.target.value }))}
+              placeholder="Ghi chú kinh nghiệm, chứng chỉ VietGAP đã có..."
+              style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            />
+          </div>
+
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <button type="button" className="ghost-button" onClick={() => setIsWorkerModalOpen(false)}>
+              Hủy
+            </button>
+            <button type="submit" className="primary-button" disabled={savingWorker}>
+              {savingWorker ? 'Đang lưu...' : editingWorker ? 'Lưu thay đổi' : 'Thêm hồ sơ'}
             </button>
           </div>
         </form>

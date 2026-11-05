@@ -32,6 +32,13 @@ export interface CreateWarehouseReq {
   imageUrl?: string;
 }
 
+export interface CreateInventoryReq {
+  warehouseId: number;
+  materialId: number;
+  quantityOnHand: number;
+  reorderLevel: number;
+}
+
 export interface UpdateInventoryReq {
   quantityOnHand: number;
   reorderLevel: number;
@@ -55,6 +62,20 @@ export async function createWarehouseApi(farmId: number, req: CreateWarehouseReq
   return res.data;
 }
 
+export async function updateWarehouseApi(warehouseId: number, req: CreateWarehouseReq): Promise<WarehouseResp> {
+  const res = await apiRequest<ApiResponse<WarehouseResp>>(`/warehouses/${warehouseId}`, {
+    method: 'PUT',
+    data: req,
+  });
+  return res.data;
+}
+
+export async function deleteWarehouseApi(warehouseId: number): Promise<void> {
+  await apiRequest<ApiResponse<null>>(`/warehouses/${warehouseId}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function fetchInventoriesApi(
   farmId: number,
   params?: { warehouseId?: number; keyword?: string }
@@ -68,6 +89,14 @@ export async function fetchInventoriesApi(
   return res.data || [];
 }
 
+export async function createInventoryApi(farmId: number, req: CreateInventoryReq): Promise<InventoryItemResp> {
+  const res = await apiRequest<ApiResponse<InventoryItemResp>>(`/farms/${farmId}/inventories`, {
+    method: 'POST',
+    data: req,
+  });
+  return res.data;
+}
+
 export async function fetchInventoryDetailsApi(inventoryId: number): Promise<InventoryItemResp> {
   const res = await apiRequest<ApiResponse<InventoryItemResp>>(`/inventories/${inventoryId}`);
   return res.data;
@@ -79,5 +108,11 @@ export async function updateInventoryApi(inventoryId: number, req: UpdateInvento
     data: req,
   });
   return res.data;
+}
+
+export async function deleteInventoryApi(inventoryId: number): Promise<void> {
+  await apiRequest<ApiResponse<null>>(`/inventories/${inventoryId}`, {
+    method: 'DELETE',
+  });
 }
 

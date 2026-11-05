@@ -292,515 +292,164 @@ export function ExpensesPage() {
   };
 
   return (
-    <div className="expenses-page" style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Toast Notification */}
+    <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+      {/* Status / Action Notification Banner */}
       {notification && (
         <div
-          style={{
-            padding: '12px 16px',
-            marginBottom: '16px',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: notification.type === 'success' ? '#ecfdf5' : '#fef2f2',
-            color: notification.type === 'success' ? '#065f46' : '#991b1b',
-            border: `1px solid ${notification.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-          }}
+          className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
+          style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Icon name={notification.type === 'success' ? 'check' : 'alert-circle'} size={18} />
-            <span style={{ fontSize: '14px', fontWeight: 500 }}>{notification.text}</span>
-          </div>
+          <span>
+            <strong>{notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: '}</strong>
+            {notification.text}
+          </span>
           <button
             type="button"
             onClick={() => setNotification(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
+            style={{ border: 0, background: 'transparent', cursor: 'pointer', fontWeight: 700, color: 'inherit' }}
           >
-            <Icon name="x" size={16} />
+            ✕
           </button>
         </div>
       )}
 
-      {/* Header Banner */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '24px',
-          flexWrap: 'wrap',
-          gap: '16px',
-        }}
-      >
+      {/* Main Page Heading matching Mockup */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '10px',
-                backgroundColor: '#10b981',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.2)',
-              }}
-            >
-              <Icon name="dollar-sign" size={22} />
-            </div>
-            <div>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
-                {lang === 'en' ? 'Farm Expenses & Production Cost' : 'Chi phí sản xuất & Hạch toán nông nghiệp'}
-              </h1>
-              <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748b' }}>
-                {lang === 'en'
-                  ? `Expense tracking and financial ledger for farm: ${selectedFarm?.farmName || ''}`
-                  : `Quản lý, theo dõi và báo cáo hạch toán chi phí canh tác trang trại: ${selectedFarm?.farmName || ''}`}
-              </p>
-            </div>
-          </div>
+          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+            {lang === 'en' ? 'Farm Expenses' : 'Chi phí sản xuất'}
+          </h1>
+          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+            {lang === 'en'
+              ? `${expenses.length} expense records · Total: ${formatCurrency(summary?.totalExpenseAmount)}`
+              : `${expenses.length} khoản chi phí · Tổng: ${formatCurrency(summary?.totalExpenseAmount)} tại ${selectedFarm?.farmName || 'trang trại'}`}
+          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div>
           <button
             type="button"
-            onClick={() => setShowSummaryDetails(!showSummaryDetails)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 16px',
-              borderRadius: '8px',
-              border: '1px solid #cbd5e1',
-              backgroundColor: showSummaryDetails ? '#f1f5f9' : '#ffffff',
-              color: '#334155',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            <Icon name="pie-chart" size={18} />
-            {showSummaryDetails
-              ? (lang === 'en' ? 'Hide Cost Breakdown' : 'Thu gọn phân tích')
-              : (lang === 'en' ? 'View Cost Breakdown' : 'Xem cơ cấu chi phí')}
-          </button>
-
-          <button
-            type="button"
+            className="primary-button"
             onClick={handleOpenRecord}
             style={{
-              display: 'flex',
+              padding: '10px 18px',
+              fontSize: '14px',
+              fontWeight: 700,
+              borderRadius: '10px',
+              background: '#059669',
+              display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '10px 18px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)',
+              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
             }}
           >
-            <Icon name="plus" size={18} />
-            {lang === 'en' ? 'Record New Expense' : 'Ghi nhận chi phí mới'}
+            <Icon name="plus" size={17} /> {lang === 'en' ? 'Record Expense' : 'Ghi nhận chi phí'}
           </button>
         </div>
       </div>
 
-      {/* Top Summary Cards  */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
-        {/* Card 1: Total Cost */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '20px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              {lang === 'en' ? 'Total Expenses' : 'Tổng chi phí sản xuất'}
-            </span>
-            <div style={{ padding: '6px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669' }}>
-              <Icon name="dollar-sign" size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
-            {formatCurrency(summary?.totalExpenseAmount)}
-          </div>
-          <div style={{ fontSize: '13px', color: '#10b981', marginTop: '4px', fontWeight: 500 }}>
-            {summary?.cropSeasonName ? `Mùa vụ: ${summary.cropSeasonName}` : (lang === 'en' ? 'All recorded seasons' : 'Toàn bộ mùa vụ canh tác')}
-          </div>
-        </div>
-
-        {/* Card 2: Total Records */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '20px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              {lang === 'en' ? 'Transactions' : 'Số khoản chi ghi nhận'}
-            </span>
-            <div style={{ padding: '6px', borderRadius: '8px', backgroundColor: '#eff6ff', color: '#2563eb' }}>
-              <Icon name="file-text" size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
-            {summary?.totalExpenseCount ?? expenses.length}
-          </div>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            {lang === 'en' ? 'Verified invoice & ledger entries' : 'Khoản chi có chứng từ & hóa đơn'}
-          </div>
-        </div>
-
-        {/* Card 3: Top Category */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '20px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              {lang === 'en' ? 'Top Cost Category' : 'Khoản chi lớn nhất'}
-            </span>
-            <div style={{ padding: '6px', borderRadius: '8px', backgroundColor: '#fffbeb', color: '#d97706' }}>
-              <Icon name="trending-up" size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {summary?.byCategory?.[0]?.category || (lang === 'en' ? 'None' : 'Chưa có')}
-          </div>
-          <div style={{ fontSize: '13px', color: '#d97706', marginTop: '4px', fontWeight: 600 }}>
-            {summary?.byCategory?.[0] ? `${formatCurrency(summary.byCategory[0].totalAmount)} (${summary.byCategory[0].percentage}%)` : '0%'}
-          </div>
-        </div>
-
-        {/* Card 4: Categories Count */}
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '20px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-              {lang === 'en' ? 'Active Categories' : 'Nhóm danh mục phân loại'}
-            </span>
-            <div style={{ padding: '6px', borderRadius: '8px', backgroundColor: '#f5f3ff', color: '#7c3aed' }}>
-              <Icon name="tag" size={18} />
-            </div>
-          </div>
-          <div style={{ fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
-            {summary?.byCategory?.length || 0}
-          </div>
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>
-            {lang === 'en' ? 'Categorized under VietGAP standards' : 'Theo chuẩn phân loại hạch toán VietGAP'}
-          </div>
-        </div>
-      </div>
-
-      {/* Expandable Breakdown Panel  */}
-      {showSummaryDetails && summary && (
-        <div
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            padding: '24px',
-            border: '1px solid #e2e8f0',
-            marginBottom: '24px',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
-          }}
-        >
-          <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: 700, color: '#1e293b' }}>
-            📊 {lang === 'en' ? 'Detailed Production Cost Breakdown' : 'Phân bổ chi tiết cơ cấu chi phí sản xuất'}
-          </h3>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
-            {/* By Category */}
-            <div>
-              <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600, color: '#475569' }}>
-                {lang === 'en' ? 'By Cost Category' : 'Theo nhóm danh mục chi phí'}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {summary.byCategory.map((cat) => (
-                  <div key={cat.category} style={{ fontSize: '13px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 600, color: '#334155' }}>{cat.category}</span>
-                      <span style={{ color: '#0f172a', fontWeight: 700 }}>
-                        {formatCurrency(cat.totalAmount)} ({cat.percentage}%)
-                      </span>
-                    </div>
-                    <div style={{ width: '100%', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          width: `${Math.min(100, Number(cat.percentage))}%`,
-                          height: '100%',
-                          backgroundColor: CATEGORY_COLORS[cat.category]?.text || '#10b981',
-                          borderRadius: '4px',
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* By Season */}
-            <div>
-              <h4 style={{ margin: '0 0 12px', fontSize: '14px', fontWeight: 600, color: '#475569' }}>
-                {lang === 'en' ? 'By Cultivation Crop Season' : 'Theo từng mùa vụ canh tác'}
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {summary.bySeason.length === 0 ? (
-                  <div style={{ color: '#94a3b8', fontSize: '13px' }}>{lang === 'en' ? 'No seasonal costs recorded.' : 'Chưa có dữ liệu theo mùa vụ.'}</div>
-                ) : (
-                  summary.bySeason.map((s) => (
-                    <div
-                      key={s.seasonId}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '10px 14px',
-                        borderRadius: '8px',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #f1f5f9',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '13px' }}>{s.seasonName}</div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>{s.count} {lang === 'en' ? 'items' : 'khoản chi'}</div>
-                      </div>
-                      <div style={{ fontWeight: 700, color: '#10b981', fontSize: '14px' }}>
-                        {formatCurrency(s.totalAmount)}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filter & Search Bar  */}
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          padding: '16px 20px',
-          border: '1px solid #e2e8f0',
-          marginBottom: '20px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-        }}
-      >
-        <form onSubmit={handleSearch} style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-          {/* Keyword Search  */}
-          <div style={{ flex: '1 1 240px', position: 'relative' }}>
-            <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
-              <Icon name="search" size={16} />
+      {/* Main Unified Clean Card Container matching Mockup */}
+      <div className="zone-clean-card">
+        {/* Filter Bar */}
+        <form onSubmit={handleSearch} className="zone-clean-filter-bar">
+          <div className="zone-clean-search" style={{ flex: '1 1 220px' }}>
+            <span className="search-icon">
+              <Icon name="search" size={17} />
             </span>
             <input
-              type="text"
+              type="search"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder={lang === 'en' ? 'Search description, category...' : 'Tìm theo diễn giải, danh mục chi phí...'}
-              style={{
-                width: '100%',
-                padding: '9px 12px 9px 36px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-              }}
             />
           </div>
 
-          {/* Filter: Category  */}
-          <div style={{ minWidth: '180px' }}>
+          <div className="zone-clean-select-wrap">
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                outline: 'none',
-              }}
+              aria-label="Lọc theo danh mục chi phí"
             >
               <option value="">{lang === 'en' ? 'All Categories' : 'Tất cả danh mục'}</option>
               {DEFAULT_CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
+            <span className="select-arrow"><Icon name="chevron" size={16} /></span>
           </div>
 
-          {/* Filter: Season  */}
-          <div style={{ minWidth: '180px' }}>
+          <div className="zone-clean-select-wrap">
             <select
               value={selectedSeasonId ?? ''}
               onChange={(e) => setSelectedSeasonId(e.target.value ? Number(e.target.value) : undefined)}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                backgroundColor: '#ffffff',
-                outline: 'none',
-              }}
+              aria-label="Lọc theo mùa vụ"
             >
               <option value="">{lang === 'en' ? 'All Crop Seasons' : 'Tất cả mùa vụ'}</option>
               {seasons.map((s) => (
                 <option key={s.cropSeasonId} value={s.cropSeasonId}>{s.seasonName}</option>
               ))}
             </select>
+            <span className="select-arrow"><Icon name="chevron" size={16} /></span>
           </div>
 
-          {/* Date Range: From */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-              {lang === 'en' ? 'From:' : 'Từ:'}
-            </span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{
-                padding: '8px 10px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-              }}
-            />
-          </div>
+          <button
+            type="submit"
+            className="action-button solid"
+            style={{ height: '42px', padding: '0 16px', borderRadius: '10px' }}
+          >
+            {lang === 'en' ? 'Filter' : 'Lọc'}
+          </button>
 
-          {/* Date Range: To */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-              {lang === 'en' ? 'To:' : 'Đến:'}
-            </span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              style={{
-                padding: '8px 10px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          {(keyword || selectedCategory || selectedSeasonId !== undefined || startDate || endDate) && (
             <button
-              type="submit"
-              style={{
-                padding: '9px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: '#0f172a',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              type="button"
+              className="zone-clean-reload-btn"
+              title="Đặt lại bộ lọc"
+              onClick={handleClearFilters}
             >
-              {lang === 'en' ? 'Search' : 'Tìm kiếm'}
+              <Icon name="refresh" size={16} />
             </button>
-
-            {(keyword || selectedCategory || selectedSeasonId !== undefined || startDate || endDate) && (
-              <button
-                type="button"
-                onClick={handleClearFilters}
-                style={{
-                  padding: '9px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#64748b',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                {lang === 'en' ? 'Clear' : 'Xóa bộ lọc'}
-              </button>
-            )}
-          </div>
+          )}
         </form>
-      </div>
 
-      {/* Main Expense Table  */}
-      <div
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0',
-          overflow: 'hidden',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-        }}
-      >
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+        {/* Table Wrap */}
+        <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
+          <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b' }}>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>{lang === 'en' ? 'Expense Category' : 'Danh mục chi phí'}</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>{lang === 'en' ? 'Description' : 'Diễn giải nội dung'}</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>{lang === 'en' ? 'Season / Task' : 'Mùa vụ / Công việc'}</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600 }}>{lang === 'en' ? 'Date' : 'Ngày chi'}</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right' }}>{lang === 'en' ? 'Amount (VND)' : 'Số tiền (VND)'}</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>{lang === 'en' ? 'Receipt' : 'Hóa đơn'}</th>
-                <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'center' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+              <tr style={{ background: '#f8fafc' }}>
+                <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                  <input type="checkbox" aria-label="Chọn tất cả" style={{ cursor: 'pointer' }} />
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'EXPENSE DESCRIPTION' : 'DIỄN GIẢI KHOẢN CHI'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'CATEGORY' : 'DANH MỤC'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'SEASON / TASK' : 'MÙA VỤ / CÔNG VIỆC'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                  {lang === 'en' ? 'DATE' : 'NGÀY CHI'}
+                </th>
+                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'right' }}>
+                  {lang === 'en' ? 'AMOUNT' : 'SỐ TIỀN'}
+                </th>
+                <th style={{ width: '140px', padding: '14px 16px', textAlign: 'right' }}>
+                  &nbsp;
+                </th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                     {lang === 'en' ? 'Loading expenses data...' : 'Đang tải dữ liệu chi phí sản xuất...'}
                   </td>
                 </tr>
               ) : expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#94a3b8' }}>
-                    <div style={{ marginBottom: '8px' }}>
-                      <Icon name="inbox" size={32} />
-                    </div>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
                     {lang === 'en' ? 'No expense records found.' : 'Không tìm thấy khoản chi phí nào phù hợp.'}
                   </td>
                 </tr>
@@ -808,16 +457,32 @@ export function ExpensesPage() {
                 expenses.map((item) => {
                   const styleColors = CATEGORY_COLORS[item.expenseCategory] || CATEGORY_COLORS['Other'];
                   return (
-                    <tr
-                      key={item.expenseId}
-                      style={{
-                        borderBottom: '1px solid #f1f5f9',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      {/* Category Badge */}
+                    <tr key={item.expenseId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                        <input type="checkbox" aria-label={`Chọn chi phí #${item.expenseId}`} style={{ cursor: 'pointer' }} />
+                      </td>
+                      <td style={{ padding: '14px 16px' }}>
+                        <span
+                          onClick={() => handleOpenDetails(item.expenseId)}
+                          style={{
+                            fontWeight: 750,
+                            fontSize: '15px',
+                            color: '#0f172a',
+                            cursor: 'pointer',
+                            display: 'block',
+                            transition: 'color 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
+                          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                        >
+                          {item.description || (lang === 'en' ? 'No description' : 'Không có ghi chú')}
+                        </span>
+                        {item.recordedByName && (
+                          <span style={{ fontSize: '12.5px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+                            {lang === 'en' ? 'Recorded by:' : 'Ghi nhận bởi:'} {item.recordedByName}
+                          </span>
+                        )}
+                      </td>
                       <td style={{ padding: '14px 16px' }}>
                         <span
                           style={{
@@ -834,119 +499,48 @@ export function ExpensesPage() {
                           {item.expenseCategory}
                         </span>
                       </td>
-
-                      {/* Description */}
-                      <td style={{ padding: '14px 16px', maxWidth: '300px' }}>
-                        <div style={{ fontWeight: 600, color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.description || (lang === 'en' ? 'No description' : 'Không có ghi chú')}
-                        </div>
-                        {item.recordedByName && (
-                          <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
-                            {lang === 'en' ? 'By:' : 'Ghi nhận bởi:'} {item.recordedByName}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Season / Task */}
-                      <td style={{ padding: '14px 16px' }}>
-                        <div style={{ color: '#334155', fontWeight: 500 }}>
-                          {item.seasonName || (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}
-                        </div>
+                      <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px' }}>
+                        <div>{item.seasonName || (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}</div>
                         {item.taskTitle && (
-                          <div style={{ fontSize: '11px', color: '#2563eb', marginTop: '2px' }}>
-                            <Icon name="check-square" size={12} /> {item.taskTitle}
+                          <div style={{ fontSize: '11.5px', color: '#2563eb', marginTop: '2px' }}>
+                            ✓ {item.taskTitle}
                           </div>
                         )}
                       </td>
-
-                      {/* Date */}
-                      <td style={{ padding: '14px 16px', color: '#64748b', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#64748b', whiteSpace: 'nowrap' }}>
                         {item.expenseDate}
                       </td>
-
-                      {/* Amount */}
-                      <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '14.5px' }}>
                         {formatCurrency(item.amount)}
                       </td>
-
-                      {/* Receipt Photo */}
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                        {item.receiptImageUrl ? (
-                          <a
-                            href={item.receiptImageUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: '30px',
-                              height: '30px',
-                              borderRadius: '6px',
-                              backgroundColor: '#f1f5f9',
-                              color: '#2563eb',
-                            }}
-                            title={lang === 'en' ? 'View receipt image' : 'Xem ảnh hóa đơn'}
-                          >
-                            <Icon name="image" size={16} />
-                          </a>
-                        ) : (
-                          <span style={{ color: '#cbd5e1' }}>—</span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                        <div style={{ display: 'inline-flex', gap: '6px' }}>
-                          {/* View Details Button  */}
+                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                        <div className="table-action-btns zone-card-actions">
                           <button
                             type="button"
-                            onClick={() => handleOpenDetails(item.expenseId)}
-                            style={{
-                              padding: '6px',
-                              borderRadius: '6px',
-                              border: '1px solid #e2e8f0',
-                              backgroundColor: '#ffffff',
-                              color: '#334155',
-                              cursor: 'pointer',
-                            }}
+                            className="table-icon-btn primary"
                             title={lang === 'en' ? 'View Details' : 'Xem chi tiết'}
+                            aria-label={`Xem chi tiết chi phí #${item.expenseId}`}
+                            onClick={() => handleOpenDetails(item.expenseId)}
                           >
                             <Icon name="eye" size={15} />
                           </button>
-
-                          {/* Update Button  */}
                           <button
                             type="button"
-                            onClick={() => handleOpenUpdate(item)}
-                            style={{
-                              padding: '6px',
-                              borderRadius: '6px',
-                              border: '1px solid #e2e8f0',
-                              backgroundColor: '#ffffff',
-                              color: '#2563eb',
-                              cursor: 'pointer',
-                            }}
+                            className="table-icon-btn edit"
                             title={lang === 'en' ? 'Update Expense' : 'Sửa chi phí'}
+                            aria-label={`Sửa chi phí #${item.expenseId}`}
+                            onClick={() => handleOpenUpdate(item)}
                           >
                             <Icon name="edit" size={15} />
                           </button>
-
-                          {/* Delete Button  */}
                           <button
                             type="button"
+                            className="table-icon-btn danger"
+                            title={lang === 'en' ? 'Delete Expense' : 'Xóa chi phí'}
+                            aria-label={`Xóa chi phí #${item.expenseId}`}
                             onClick={() => handleOpenDelete(item)}
-                            style={{
-                              padding: '6px',
-                              borderRadius: '6px',
-                              border: '1px solid #fee2e2',
-                              backgroundColor: '#fff1f2',
-                              color: '#e11d48',
-                              cursor: 'pointer',
-                            }}
-                            title={lang === 'en' ? 'Delete Eligible Expense' : 'Xóa chi phí đủ điều kiện'}
                           >
-                            <Icon name="trash-2" size={15} />
+                            <Icon name="trash" size={15} />
                           </button>
                         </div>
                       </td>
@@ -956,6 +550,20 @@ export function ExpensesPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Footer */}
+        <div className="zone-table-footer">
+          <span>
+            {lang === 'en'
+              ? `Showing 1–${expenses.length} of ${expenses.length} expense items`
+              : `Hiển thị 1–${expenses.length} trong ${expenses.length} khoản chi phí`}
+          </span>
+          <div className="zone-pagination-wrap">
+            <button type="button" className="zone-page-btn" disabled>&lt;</button>
+            <button type="button" className="zone-page-btn active">1</button>
+            <button type="button" className="zone-page-btn" disabled>&gt;</button>
+          </div>
         </div>
       </div>
 
@@ -1539,6 +1147,6 @@ export function ExpensesPage() {
           </div>
         )}
       </Modal>
-    </div>
+    </section>
   );
 }

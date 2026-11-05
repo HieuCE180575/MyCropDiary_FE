@@ -296,3 +296,62 @@ export async function respondFarmInvitation(memberId: number, action: 'approve' 
   });
   if (!res.success) throw new Error(res.message || 'Không thể phản hồi lời mời tham gia trang trại.');
 }
+
+
+export interface FarmWorkerResp {
+  workerId: number;
+  farmId: number;
+  farmMemberId: number;
+  userId: number;
+  fullName: string;
+  phoneNumber?: string | null;
+  email?: string | null;
+  workerCode: string;
+  jobTitle?: string | null;
+  employmentStatus: string;
+  hiredAt?: string | null;
+  notes?: string | null;
+}
+
+export interface FarmWorkerReq {
+  farmMemberId: number;
+  workerCode: string;
+  jobTitle?: string;
+  employmentStatus?: string;
+  hiredAt?: string;
+  notes?: string;
+}
+
+export async function getFarmWorkersApi(
+  farmId: number,
+  params?: { status?: string; keyword?: string }
+): Promise<FarmWorkerResp[]> {
+  const query = new URLSearchParams();
+  if (params?.status && params.status !== 'ALL') query.set('status', params.status);
+  if (params?.keyword?.trim()) query.set('keyword', params.keyword.trim());
+  const qs = query.toString() ? `?${query.toString()}` : '';
+  const res = await apiRequest<ApiResponse<FarmWorkerResp[]>>(`/farms/${farmId}/workers${qs}`);
+  return res.data || [];
+}
+
+export async function createFarmWorkerApi(farmId: number, req: FarmWorkerReq): Promise<FarmWorkerResp> {
+  const res = await apiRequest<ApiResponse<FarmWorkerResp>>(`/farms/${farmId}/workers`, {
+    method: 'POST',
+    data: req,
+  });
+  return res.data;
+}
+
+export async function updateFarmWorkerApi(farmId: number, workerId: number, req: FarmWorkerReq): Promise<FarmWorkerResp> {
+  const res = await apiRequest<ApiResponse<FarmWorkerResp>>(`/farms/${farmId}/workers/${workerId}`, {
+    method: 'PUT',
+    data: req,
+  });
+  return res.data;
+}
+
+export async function deleteFarmWorkerApi(farmId: number, workerId: number): Promise<void> {
+  await apiRequest<ApiResponse<null>>(`/farms/${farmId}/workers/${workerId}`, {
+    method: 'DELETE',
+  });
+}

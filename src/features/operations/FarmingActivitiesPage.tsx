@@ -371,7 +371,7 @@ export function FarmingActivitiesPage() {
   };
 
   return (
-    <section className="farming-activities-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+    <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* Notification Banner */}
       {notification && (
         <div

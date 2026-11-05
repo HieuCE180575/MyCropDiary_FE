@@ -400,7 +400,8 @@ function MaterialUsageContent() {
       {notification && <div role={notification.type === 'error' && !isCreateModalOpen ? 'alert' : 'status'} className={'mu-notice mu-notice-' + notification.type}>
         <Icon name={notification.type === 'error' ? 'warning' : 'check-circle'} /><span>{notification.text}</span></div>}
       {detailLoading && <p className="mu-loading-detail" role="status"><Icon name="loader" className="mu-spin" />Đang tải chi tiết sử dụng vật tư...</p>}
-      <div className="mu-metrics" aria-label="Thống kê sử dụng vật tư" aria-busy={loading}>
+      {/* Metrics hidden to streamline management page per user request */}
+      <div className="mu-metrics" style={{ display: 'none' }} aria-label="Thống kê sử dụng vật tư" aria-busy={loading}>
         {metrics.map(metric => <article className={'panel mu-metric mu-metric-' + metric.tone} key={metric.label}>
           <div className="mu-metric-top"><span>{metric.label}</span><span className="mu-metric-icon"><Icon name={metric.icon} size={20} /></span></div>
           {loading ? <><span className="mu-skeleton mu-number-skeleton" aria-hidden="true" /><span className="mu-sr-only">Đang tải số liệu</span></> :
