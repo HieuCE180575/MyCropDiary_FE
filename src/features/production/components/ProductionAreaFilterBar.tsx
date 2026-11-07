@@ -1,3 +1,4 @@
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { PRODUCTION_AREA_STATUS_FILTER_OPTIONS } from '../constants';
 import type { ProductionAreaStatus } from '../types';
 
@@ -14,6 +15,7 @@ export function ProductionAreaFilterBar({
   status,
   onStatusChange,
 }: ProductionAreaFilterBarProps) {
+  const { lang, t: translate } = useLanguage();
   return (
     <div className="list-filter-bar">
       <div className="search-input">
@@ -22,22 +24,22 @@ export function ProductionAreaFilterBar({
           type="search"
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="Tìm theo tên khu sản xuất hoặc vị trí..."
-          aria-label="Tìm kiếm khu sản xuất"
+          placeholder={(lang === 'en' ? "Search by production area name or location..." : "Tìm theo tên khu sản xuất hoặc vị trí...")}
+          aria-label={(lang === 'en' ? "Search production areas" : "Tìm kiếm khu sản xuất")}
         />
         {searchValue ? (
-          <button type="button" className="search-clear" aria-label="Xoá tìm kiếm" onClick={() => onSearchChange('')}>
+          <button type="button" className="search-clear" aria-label={(lang === 'en' ? "Clear search" : "Xoá tìm kiếm")} onClick={() => onSearchChange('')}>
             ✕
           </button>
         ) : null}
       </div>
 
       <label className="status-select">
-        <span className="sr-only">Trạng thái</span>
+        <span className="sr-only">{(lang === 'en' ? "Status" : "Trạng thái")}</span>
         <select value={status} onChange={(event) => onStatusChange(event.target.value as ProductionAreaStatus | 'all')}>
           {PRODUCTION_AREA_STATUS_FILTER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {translate(option.label)}
             </option>
           ))}
         </select>

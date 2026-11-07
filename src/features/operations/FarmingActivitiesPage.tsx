@@ -38,7 +38,7 @@ const activitiesMemoryCache = new Map<number, FarmingActivity[]>();
 const seasonBlocksMemoryCache = new Map<number, CropSeasonBlockResp[]>();
 
 export function FarmingActivitiesPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const [seasons, setSeasons] = useState<CropSeasonResp[]>([]);
   const [seasonId, setSeasonId] = useState<number | ''>('');
@@ -171,7 +171,7 @@ export function FarmingActivitiesPage() {
         setActivities([]);
       }
     } catch {
-      if (!silent && !hasCache) setNotification({ text: 'Lỗi nạp nhật ký canh tác từ máy chủ.', type: 'error' });
+      if (!silent && !hasCache) setNotification({ text: (lang === 'en' ? "Unable to load farming diary from the server." : 'Lỗi nạp nhật ký canh tác từ máy chủ.'), type: 'error' });
     } finally {
       if (!silent) setLoading(false);
     }
@@ -181,19 +181,19 @@ export function FarmingActivitiesPage() {
     e.preventDefault();
     const trimmedActName = actName.trim();
     if (!trimmedActName) {
-      setActivityModalError('Vui lòng nhập tên hoạt động canh tác.');
+      setActivityModalError((lang === 'en' ? "Enter a farming activity name." : 'Vui lòng nhập tên hoạt động canh tác.'));
       return;
     }
     if (!seasonId) {
-      setActivityModalError('Vui lòng chọn mùa vụ canh tác mục tiêu.');
+      setActivityModalError((lang === 'en' ? "Select a crop season." : 'Vui lòng chọn mùa vụ canh tác mục tiêu.'));
       return;
     }
     if (seasonBlocks.length > 0 && !selectedBlockId) {
-      setActivityModalError('Vui lòng chọn lô đất thực hiện (đã được phân bổ vào mùa vụ này).');
+      setActivityModalError((lang === 'en' ? "Select a block assigned to this season." : 'Vui lòng chọn lô đất thực hiện (đã được phân bổ vào mùa vụ này).'));
       return;
     }
     if (startedAt && endedAt && endedAt < startedAt) {
-      setActivityModalError(`Thời gian kết thúc (${endedAt}) không thể trước thời gian bắt đầu (${startedAt}).`);
+      setActivityModalError((lang === 'en' ? `End time (${endedAt}) cannot be before the start time (${startedAt}).` : `Thời gian kết thúc (${endedAt}) không thể trước thời gian bắt đầu (${startedAt}).`));
       return;
     }
     setSaving(true);
@@ -234,7 +234,7 @@ export function FarmingActivitiesPage() {
           setActivities((prev) => prev.map((item) => (item.id === editingActivity.id ? updated : item)));
         }
         setNotification({
-          text: `Đã cập nhật nhật ký canh tác thành công!`,
+          text: (lang === 'en' ? `Farming diary updated successfully!` : `Đã cập nhật nhật ký canh tác thành công!`),
           type: 'success',
         });
       } else {
@@ -256,9 +256,9 @@ export function FarmingActivitiesPage() {
           throw new Error(res?.message || 'Không thể lưu nhật ký canh tác.');
         }
         setNotification({
-          text: chosenBlock
+          text: (lang === 'en' ? chosenBlock ? `Farming diary saved for "${chosenBlock.blockName}" successfully!` : "Farming diary saved successfully!" : chosenBlock
             ? `Đã lưu nhật ký canh tác tại "${chosenBlock.blockName}" thành công!`
-            : 'Đã lưu nhật ký canh tác thành công!',
+            : 'Đã lưu nhật ký canh tác thành công!'),
           type: 'success',
         });
       }
@@ -379,7 +379,7 @@ export function FarmingActivitiesPage() {
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginBottom: '16px' }}
         >
-          <strong>{notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo'}:</strong> {notification.text}
+          <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success" : "⚠️ Notice" : notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo')}:</strong> {translate(notification.text)}
           <button
             type="button"
             onClick={() => setNotification(null)}
@@ -455,10 +455,10 @@ export function FarmingActivitiesPage() {
             <select
               value={seasonId}
               onChange={(e) => setSeasonId(e.target.value ? Number(e.target.value) : '')}
-              aria-label="Chọn mùa vụ canh tác"
+              aria-label={(lang === 'en' ? "Select crop season" : "Chọn mùa vụ canh tác")}
             >
               {seasons.length === 0 ? (
-                <option value="">Chưa có mùa vụ canh tác</option>
+                <option value="">{(lang === 'en' ? "No crop seasons yet" : "Chưa có mùa vụ canh tác")}</option>
               ) : (
                 seasons.map((s) => (
                   <option key={s.cropSeasonId} value={s.cropSeasonId}>
@@ -496,15 +496,15 @@ export function FarmingActivitiesPage() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              aria-label="Lọc theo loại hoạt động"
+              aria-label={(lang === 'en' ? "Filter by activity type" : "Lọc theo loại hoạt động")}
             >
               <option value="ALL">{lang === 'en' ? 'All Activity Types' : 'Tất cả loại hoạt động'}</option>
-              <option value="Soil Preparation">Soil Preparation &amp; Xử lý giá thể</option>
-              <option value="Gieo cấy">Seeding &amp; Cấy cây con</option>
+              <option value="Soil Preparation">{(lang === 'en' ? "Soil Preparation & Substrate Treatment" : "Soil Preparation & Xử lý giá thể")}</option>
+              <option value="Gieo cấy">{(lang === 'en' ? "Seeding & Transplanting" : "Seeding & Cấy cây con")}</option>
               <option value="Fertilizing">Fertilizing</option>
               <option value="Irrigation">Irrigation</option>
-              <option value="Spraying">Spraying BVTV</option>
-              <option value="Làm cỏ">Làm cỏ &amp; Tỉa cành</option>
+              <option value="Spraying">{(lang === 'en' ? "Pesticide spraying" : "Spraying BVTV")}</option>
+              <option value="Làm cỏ">{(lang === 'en' ? "Weeding & Pruning" : "Làm cỏ & Tỉa cành")}</option>
               <option value="Harvest">Harvest</option>
             </select>
             <span className="select-arrow">
@@ -517,12 +517,12 @@ export function FarmingActivitiesPage() {
             <select
               value={filterBlockId}
               onChange={(e) => setFilterBlockId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-              aria-label="Lọc theo lô đất"
+              aria-label={(lang === 'en' ? "Filter by block" : "Lọc theo lô đất")}
             >
               <option value="ALL">{lang === 'en' ? `All Blocks (${seasonBlocks.length})` : `Tất cả lô đất (${seasonBlocks.length})`}</option>
               {seasonBlocks.map((sb) => (
                 <option key={sb.blockId} value={sb.blockId}>
-                  {sb.blockName} ({sb.plantedArea ?? sb.blockArea} {sb.areaUnit || 'm²'})
+                  {sb.blockName} ({sb.plantedArea ?? sb.blockArea} {translate(sb.areaUnit || 'm²')})
                 </option>
               ))}
             </select>
@@ -535,8 +535,8 @@ export function FarmingActivitiesPage() {
           <button
             type="button"
             className="zone-clean-reload-btn"
-            title="Làm mới bộ lọc"
-            aria-label="Làm mới bộ lọc"
+            title={(lang === 'en' ? "Reset filters" : "Làm mới bộ lọc")}
+            aria-label={(lang === 'en' ? "Reset filters" : "Làm mới bộ lọc")}
             onClick={() => {
               setSearchKeyword('');
               setFilterType('ALL');
@@ -561,7 +561,7 @@ export function FarmingActivitiesPage() {
             }}
           >
             <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#475569', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-              <Icon name="plots" size={14} /> Lô phân bổ vào {currentSeason?.seasonName || 'vụ'}:
+              <Icon name="plots" size={14} /> {(lang === 'en' ? " Blocks assigned to " : " Lô phân bổ vào ")} {(lang === 'en' ? currentSeason?.seasonName || "seasons" : currentSeason?.seasonName || 'vụ')}:
             </span>
             <button
               type="button"
@@ -579,7 +579,7 @@ export function FarmingActivitiesPage() {
                 transition: 'all 0.15s ease',
               }}
             >
-              Tất cả lô ({seasonBlocks.length})
+              {(lang === 'en' ? "All blocks (" : "Tất cả lô (")}{seasonBlocks.length})
             </button>
             {seasonBlocks.map((sb) => (
               <button
@@ -599,7 +599,7 @@ export function FarmingActivitiesPage() {
                   transition: 'all 0.15s ease',
                 }}
               >
-                🌱 {sb.blockName} ({sb.plantedArea ?? sb.blockArea} {sb.areaUnit || 'm²'})
+                🌱 {sb.blockName} ({sb.plantedArea ?? sb.blockArea} {translate(sb.areaUnit || 'm²')})
               </button>
             ))}
           </div>
@@ -609,7 +609,7 @@ export function FarmingActivitiesPage() {
         {loading ? (
           <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
             <div className="empty-icon">⏳</div>
-            <h2>Đang tải nhật ký canh tác...</h2>
+            <h2>{(lang === 'en' ? "Loading farming diary..." : "Đang tải nhật ký canh tác...")}</h2>
           </div>
         ) : filtered.length === 0 ? (
           <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
@@ -632,7 +632,7 @@ export function FarmingActivitiesPage() {
             </h2>
             <p style={{ color: '#64748b', fontSize: '14.5px', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
               {seasonId
-                ? 'Ghi nhận và minh bạch các hoạt động chăm sóc trên từng lô đất để đáp ứng đầy đủ tiêu chuẩn kiểm tra VietGAP.'
+                ? (lang === 'en' ? "Record farming activities transparently for each block to meet VietGAP inspection requirements." : 'Ghi nhận và minh bạch các hoạt động chăm sóc trên từng lô đất để đáp ứng đầy đủ tiêu chuẩn kiểm tra VietGAP.')
                 : (lang === 'en' ? 'Please create a crop season before logging activities.' : 'Hãy tạo mùa vụ canh tác trước khi thực hiện ghi nhật ký.')}
             </p>
             {seasonId && (
@@ -667,7 +667,7 @@ export function FarmingActivitiesPage() {
                 <thead>
                   <tr style={{ background: '#f8fafc' }}>
                     <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
-                      <input type="checkbox" aria-label="Chọn tất cả hoạt động" style={{ cursor: 'pointer' }} />
+                      <input type="checkbox" aria-label={(lang === 'en' ? "Select all activities" : "Chọn tất cả hoạt động")} style={{ cursor: 'pointer' }} />
                     </th>
                     <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
                       {lang === 'en' ? 'Activity & Content' : 'Hoạt động & Nội dung'}
@@ -702,7 +702,7 @@ export function FarmingActivitiesPage() {
                         <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                           <input
                             type="checkbox"
-                            aria-label={`Chọn hoạt động ${act.activityName}`}
+                            aria-label={(lang === 'en' ? `Select activity ${act.activityName}` : `Chọn hoạt động ${act.activityName}`)}
                             style={{ cursor: 'pointer' }}
                           />
                         </td>
@@ -760,7 +760,7 @@ export function FarmingActivitiesPage() {
                                     fontWeight: 600,
                                   }}
                                 >
-                                  ✓ Đánh giá: {act.resultNotes}
+                                  {(lang === 'en' ? "✓ Assessment: " : "✓ Đánh giá: ")} {act.resultNotes}
                                 </span>
                               )}
                             </div>
@@ -776,7 +776,7 @@ export function FarmingActivitiesPage() {
                               borderColor: meta.border,
                             }}
                           >
-                            {act.activityType}
+                            {translate(act.activityType)}
                           </span>
                         </td>
 
@@ -799,7 +799,7 @@ export function FarmingActivitiesPage() {
                               🌱 {matchedBlockName}
                             </span>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '13px' }}>Toàn vụ</span>
+                            <span style={{ color: '#94a3b8', fontSize: '13px' }}>{(lang === 'en' ? "Entire season" : "Toàn vụ")}</span>
                           )}
                         </td>
 
@@ -815,10 +815,10 @@ export function FarmingActivitiesPage() {
 
                         <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
                           <div style={{ color: '#0f172a', fontSize: '13px', fontWeight: 600 }}>
-                            {act.recorderName || 'Kỹ thuật viên'}
+                            {(lang === 'en' ? act.recorderName || "Technician" : act.recorderName || 'Kỹ thuật viên')}
                           </div>
                           <span style={{ color: '#64748b', fontSize: '12px' }}>
-                            👥 {act.workerCount || 1} nhân công
+                            👥 {act.workerCount || 1} {(lang === 'en' ? " workers" : " nhân công")}
                           </span>
                         </td>
 
@@ -827,18 +827,18 @@ export function FarmingActivitiesPage() {
                             <button
                               type="button"
                               className="table-icon-btn primary"
-                              title="Xem chi tiết nhật ký"
-                              aria-label={`Xem chi tiết ${act.activityName}`}
+                              title={(lang === 'en' ? "View diary details" : "Xem chi tiết nhật ký")}
+                              aria-label={(lang === 'en' ? `View details ${act.activityName}` : `Xem chi tiết ${act.activityName}`)}
                               onClick={() => setSelectedActivity(act)}
                             >
                               <Icon name="eye" size={15} />
-                              <span className="sr-only">Xem chi tiết</span>
+                              <span className="sr-only">{(lang === 'en' ? "View details" : "Xem chi tiết")}</span>
                             </button>
                             <button
                               type="button"
                               className="table-icon-btn edit"
-                              title="Chỉnh sửa nhật ký"
-                              aria-label={`Chỉnh sửa ${act.activityName}`}
+                              title={(lang === 'en' ? "Edit diary entry" : "Chỉnh sửa nhật ký")}
+                              aria-label={(lang === 'en' ? `Edit ${act.activityName}` : `Chỉnh sửa ${act.activityName}`)}
                               onClick={() => {
                                 setEditingActivity(act);
                                 setActName(act.activityName);
@@ -853,7 +853,7 @@ export function FarmingActivitiesPage() {
                               }}
                             >
                               <Icon name="edit" size={15} />
-                              <span className="sr-only">Chỉnh sửa</span>
+                              <span className="sr-only">{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</span>
                             </button>
                           </div>
                         </td>
@@ -867,16 +867,16 @@ export function FarmingActivitiesPage() {
             {/* Table Footer */}
             <div className="zone-table-footer">
               <div>
-                Hiển thị 1–{filtered.length} trong {filtered.length} hoạt động canh tác
+                {(lang === 'en' ? "Showing 1–" : "Hiển thị 1–")}{filtered.length} {(lang === 'en' ? " of " : " trong ")} {filtered.length} {(lang === 'en' ? " farming activities" : " hoạt động canh tác")}
               </div>
               <div className="zone-pagination-wrap">
-                <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
+                <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Previous page" : "Trang trước")}>
                   <Icon name="chevron-left" size={15} />
                 </button>
                 <button type="button" className="zone-page-btn active">
                   1
                 </button>
-                <button type="button" className="zone-page-btn" disabled aria-label="Trang sau">
+                <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Next page" : "Trang sau")}>
                   <Icon name="chevron-right" size={15} />
                 </button>
               </div>
@@ -902,7 +902,7 @@ export function FarmingActivitiesPage() {
         <form onSubmit={handleCreateActivity} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {activityModalError && (
             <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
-              {activityModalError}
+              {translate(activityModalError)}
             </p>
           )}
           {/* Lô đất thực hiện */}
@@ -915,9 +915,9 @@ export function FarmingActivitiesPage() {
             </div>
             {seasonBlocks.length === 0 ? (
               <p style={{ color: '#b45309', fontSize: '13px', margin: 0 }}>
-                ⚠️ Mùa vụ này chưa được gán lô đất nào. Bạn có thể{' '}
+                {(lang === 'en' ? "⚠️ This season has no assigned blocks. You can" : "⚠️ Mùa vụ này chưa được gán lô đất nào. Bạn có thể")}{' '}
                 <Link to={`/crop-seasons/${seasonId}`} style={{ color: '#047857', fontWeight: 700 }}>
-                  gán lô đất vào mùa vụ tại đây
+                  {(lang === 'en' ? "assign blocks to this season here" : "gán lô đất vào mùa vụ tại đây")}
                 </Link>.
               </p>
             ) : (
@@ -931,7 +931,7 @@ export function FarmingActivitiesPage() {
                   {seasonBlocks.map((sb) => (
                     <option key={sb.blockId} value={sb.blockId}>
                       {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} · {sb.plantedArea ?? sb.blockArea}{' '}
-                      {sb.areaUnit || 'm²'})
+                      {translate(sb.areaUnit || 'm²')})
                     </option>
                   ))}
                 </select>
@@ -954,13 +954,13 @@ export function FarmingActivitiesPage() {
                   value={actType}
                   onChange={(e) => setActType(e.target.value)}
                 >
-                  <option value="Soil Preparation">Soil Preparation &amp; Xử lý giá thể</option>
-                  <option value="Gieo cấy">Seeding &amp; Cấy cây con</option>
-                  <option value="Fertilizing">Bón lót &amp; Bón thúc phân bón</option>
-                  <option value="Irrigation">Tưới tiêu &amp; Châm phân</option>
-                  <option value="Spraying">Spraying BVTV sinh học</option>
-                  <option value="Làm cỏ">Làm cỏ &amp; Tỉa cành</option>
-                  <option value="Harvest">Harvest nông sản</option>
+                  <option value="Soil Preparation">{(lang === 'en' ? "Soil Preparation & Substrate Treatment" : "Soil Preparation & Xử lý giá thể")}</option>
+                  <option value="Gieo cấy">{(lang === 'en' ? "Seeding & Transplanting" : "Seeding & Cấy cây con")}</option>
+                  <option value="Fertilizing">{(lang === 'en' ? "Basal & Top-dress Fertilization" : "Bón lót & Bón thúc phân bón")}</option>
+                  <option value="Irrigation">{(lang === 'en' ? "Irrigation & Fertigation" : "Tưới tiêu & Châm phân")}</option>
+                  <option value="Spraying">{(lang === 'en' ? "Biological Pest Control Spraying" : "Spraying BVTV sinh học")}</option>
+                  <option value="Làm cỏ">{(lang === 'en' ? "Weeding & Pruning" : "Làm cỏ & Tỉa cành")}</option>
+                  <option value="Harvest">{(lang === 'en' ? "Crop Harvesting" : "Harvest nông sản")}</option>
                 </select>
               </div>
             </div>
@@ -970,7 +970,7 @@ export function FarmingActivitiesPage() {
                 <label htmlFor="act-started-at" className="structured-field-label">
                   {lang === 'en' ? 'Activity Time' : 'Thời gian thực hiện'} <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <span className="structured-field-badge">Ngày giờ</span>
+                <span className="structured-field-badge">{(lang === 'en' ? "Date and time" : "Ngày giờ")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
@@ -988,16 +988,16 @@ export function FarmingActivitiesPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="act-name-input" className="structured-field-label">
-                Tên hoạt động chi tiết <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Activity name " : "Tên hoạt động chi tiết ")} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">Tiêu đề</span>
+              <span className="structured-field-badge">{(lang === 'en' ? "Title" : "Tiêu đề")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
                 id="act-name-input"
                 type="text"
                 required
-                placeholder="VD: Fertilizing NPK đầu vụ cho Vụ Hè Thu tại Lô A01"
+                placeholder={(lang === 'en' ? "Example: Early-season NPK fertilization for the Summer–Autumn season in Block A01" : "VD: Fertilizing NPK đầu vụ cho Vụ Hè Thu tại Lô A01")}
                 value={actName}
                 onChange={(e) => setActName(e.target.value)}
               />
@@ -1008,15 +1008,15 @@ export function FarmingActivitiesPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="act-desc-input" className="structured-field-label">
-                Mô tả quy trình kỹ thuật
+                {(lang === 'en' ? "Technical procedure description" : "Mô tả quy trình kỹ thuật")}
               </label>
-              <span className="structured-field-badge">Chi tiết</span>
+              <span className="structured-field-badge">{(lang === 'en' ? "Details" : "Chi tiết")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <textarea
                 id="act-desc-input"
                 rows={3}
-                placeholder="Ghi rõ liều lượng, dụng cụ, phương pháp và ghi chú quy trình VietGAP..."
+                placeholder={(lang === 'en' ? "Specify dosage, equipment, methods, and VietGAP procedure notes..." : "Ghi rõ liều lượng, dụng cụ, phương pháp và ghi chú quy trình VietGAP...")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
@@ -1028,15 +1028,15 @@ export function FarmingActivitiesPage() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="act-weather-input" className="structured-field-label">
-                  Điều kiện thời tiết
+                  {(lang === 'en' ? "Weather conditions" : "Điều kiện thời tiết")}
                 </label>
-                <span className="structured-field-badge">Môi trường</span>
+                <span className="structured-field-badge">{(lang === 'en' ? "Environment" : "Môi trường")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
                   id="act-weather-input"
                   type="text"
-                  placeholder="Nắng nhẹ, nhiệt độ 28°C..."
+                  placeholder={(lang === 'en' ? "Mild sunshine, temperature 28°C..." : "Nắng nhẹ, nhiệt độ 28°C...")}
                   value={weatherNotes}
                   onChange={(e) => setWeatherNotes(e.target.value)}
                 />
@@ -1046,9 +1046,9 @@ export function FarmingActivitiesPage() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="act-result-input" className="structured-field-label">
-                  Đánh giá kết quả
+                  {(lang === 'en' ? "Result assessment" : "Đánh giá kết quả")}
                 </label>
-                <span className="structured-field-badge">Nghiệm thu</span>
+                <span className="structured-field-badge">{(lang === 'en' ? "Review" : "Nghiệm thu")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
@@ -1098,7 +1098,7 @@ export function FarmingActivitiesPage() {
                   color: getActivityMeta(selectedActivity.activityType).pillColor,
                 }}
               >
-                {selectedActivity.activityType}
+                {translate(selectedActivity.activityType)}
               </span>
               <span style={{ fontSize: '12.5px', color: '#64748b' }}>
                 📅 {new Date(selectedActivity.startedAt).toLocaleString('vi-VN')}
@@ -1124,7 +1124,7 @@ export function FarmingActivitiesPage() {
                   <dd style={{ fontWeight: 700 }}>
                     {selectedActivity.blockName ||
                       seasonBlocks.find((b) => b.blockId === selectedActivity.blockId)?.blockName ||
-                      (seasonBlocks.length === 1 ? seasonBlocks[0].blockName : 'Toàn mùa vụ')}
+                      (seasonBlocks.length === 1 ? seasonBlocks[0].blockName : (lang === 'en' ? "Entire season" : 'Toàn mùa vụ'))}
                   </dd>
                 </div>
                 <div>
@@ -1133,20 +1133,20 @@ export function FarmingActivitiesPage() {
                 </div>
                 <div>
                   <dt>{lang === 'en' ? 'Weather Conditions' : 'Điều kiện thời tiết'}</dt>
-                  <dd>{selectedActivity.weatherNotes || 'Bình thường'}</dd>
+                  <dd>{(lang === 'en' ? selectedActivity.weatherNotes || "Normal" : selectedActivity.weatherNotes || 'Bình thường')}</dd>
                 </div>
                 <div>
                   <dt>{lang === 'en' ? 'Recorded By' : 'Người ghi chép'}</dt>
-                  <dd>{selectedActivity.recorderName || 'Nhân viên kỹ thuật'}</dd>
+                  <dd>{(lang === 'en' ? selectedActivity.recorderName || "Technical staff" : selectedActivity.recorderName || 'Nhân viên kỹ thuật')}</dd>
                 </div>
                 <div>
                   <dt>{lang === 'en' ? 'Total Workers' : 'Tổng nhân công'}</dt>
-                  <dd>{selectedActivity.workerCount || 1} người</dd>
+                  <dd>{selectedActivity.workerCount || 1} {(lang === 'en' ? " people" : " người")}</dd>
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <dt>{lang === 'en' ? 'Result Assessment' : 'Đánh giá kết quả'}</dt>
                   <dd style={{ color: '#059669', fontWeight: 600 }}>
-                    {selectedActivity.resultNotes || 'Đạt tiêu chuẩn VietGAP'}
+                    {(lang === 'en' ? selectedActivity.resultNotes || "Meets VietGAP standards" : selectedActivity.resultNotes || 'Đạt tiêu chuẩn VietGAP')}
                   </dd>
                 </div>
               </dl>
@@ -1171,10 +1171,10 @@ export function FarmingActivitiesPage() {
                   setIsModalOpen(true);
                 }}
               >
-                <Icon name="edit" size={15} /> Chỉnh sửa
+                <Icon name="edit" size={15} /> {(lang === 'en' ? " Edit" : " Chỉnh sửa")}
               </button>
               <button type="button" className="primary-button" onClick={() => setSelectedActivity(null)}>
-                Đóng
+                {(lang === 'en' ? "Close" : "Đóng")}
               </button>
             </div>
           </div>

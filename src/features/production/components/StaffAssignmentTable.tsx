@@ -16,11 +16,11 @@ interface StaffAssignmentsTableProps {
 export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }: StaffAssignmentsTableProps) {
   const { lang } = useLanguage();
   if (loading) {
-    return <p className="status-note">Đang tải danh sách phân công...</p>;
+    return <p className="status-note">{(lang === 'en' ? "Loading assignments..." : "Đang tải danh sách phân công...")}</p>;
   }
 
   if (assignments.length === 0) {
-    return <p className="status-note">Chưa có nhân viên nào được phân công cho khu sản xuất này.</p>;
+    return <p className="status-note">{(lang === 'en' ? "No staff have been assigned to this production area." : "Chưa có nhân viên nào được phân công cho khu sản xuất này.")}</p>;
   }
 
   return (
@@ -28,12 +28,12 @@ export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }:
       <table className="data-table">
         <thead>
           <tr>
-            <th>Nhân viên</th>
-            <th>Trạng thái</th>
-            <th>Ngày bắt đầu</th>
-            <th>Ngày kết thúc</th>
-            <th>Ghi chú</th>
-            <th>Hành động</th>
+            <th>{(lang === 'en' ? "Staff" : "Nhân viên")}</th>
+            <th>{(lang === 'en' ? "Status" : "Trạng thái")}</th>
+            <th>{(lang === 'en' ? "Start date" : "Ngày bắt đầu")}</th>
+            <th>{(lang === 'en' ? "End date" : "Ngày kết thúc")}</th>
+            <th>{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
+            <th>{(lang === 'en' ? "Actions" : "Hành động")}</th>
           </tr>
         </thead>
         <tbody>
@@ -47,7 +47,7 @@ export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }:
                 </td>
                 <td>
                   <StatusBadge
-                    label={isCurrent ? 'Đang phụ trách' : 'Đã kết thúc'}
+                    label={(lang === 'en' ? isCurrent ? "Currently assigned" : "Ended" : isCurrent ? 'Đang phụ trách' : 'Đã kết thúc')}
                     tone={isCurrent ? 'success' : 'neutral'}
                   />
                 </td>
@@ -59,8 +59,8 @@ export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }:
                     <button
                       type="button"
                       className="icon-button"
-                      aria-label={`Kết thúc phân công cho ${assignment.staffName}`}
-                      title="Kết thúc phân công"
+                      aria-label={(lang === 'en' ? `End assignment for ${assignment.staffName}` : `Kết thúc phân công cho ${assignment.staffName}`)}
+                      title={(lang === 'en' ? "End assignment" : "Kết thúc phân công")}
                       disabled={endingId === assignment.staffAreaAssignmentId}
                       onClick={() => onEnd(assignment)}
                     >

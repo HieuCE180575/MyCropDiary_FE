@@ -38,7 +38,7 @@ export function HarvestPage() {
 }
 
 function HarvestContent() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const [seasonInput, setSeasonInput] = useState('');
   const [cropSeasonId, setCropSeasonId] = useState<number | null>(null);
@@ -110,7 +110,7 @@ function HarvestContent() {
       const items = await fetchCropSeasonsByFarm(selectedFarm.id);
       setAvailableSeasons(items);
     } catch {
-      setNotification({ text: 'Không tải được danh sách mùa vụ của trang trại.', type: 'error' });
+      setNotification({ text: (lang === 'en' ? "Unable to load the farm's seasons." : 'Không tải được danh sách mùa vụ của trang trại.'), type: 'error' });
     } finally {
       setLoadingSeasons(false);
     }
@@ -119,7 +119,7 @@ function HarvestContent() {
   const loadHarvests = async (id: number | null) => {
     if (!selectedFarm || id === null) return;
     if (!Number.isSafeInteger(id) || id <= 0 || id > 2147483647) {
-      setNotification({ text: 'ID mùa vụ phải là số nguyên dương hợp lệ.', type: 'error' });
+      setNotification({ text: (lang === 'en' ? "The season ID must be a valid positive integer." : 'ID mùa vụ phải là số nguyên dương hợp lệ.'), type: 'error' });
       return;
     }
     listRequest.current?.abort();
@@ -159,7 +159,7 @@ function HarvestContent() {
         .catch(() => {});
     } catch (error) {
       if (!controller.signal.aborted) {
-        setLoadError(error instanceof Error ? error.message : 'Lỗi tải lịch sử thu hoạch.');
+        setLoadError((lang === 'en' ? error instanceof Error ? translate(error.message) : "Unable to load harvest history." : error instanceof Error ? error.message : 'Lỗi tải lịch sử thu hoạch.'));
       }
     } finally {
       if (!controller.signal.aborted) setLoading(false);
@@ -214,7 +214,7 @@ function HarvestContent() {
     } catch (error) {
       if (!controller.signal.aborted) {
         setNotification({
-          text: error instanceof Error ? error.message : 'Không tải được chi tiết thu hoạch.',
+          text: (lang === 'en' ? error instanceof Error ? translate(error.message) : "Unable to load harvest details." : error instanceof Error ? error.message : 'Không tải được chi tiết thu hoạch.'),
           type: 'error',
         });
       }
@@ -227,13 +227,13 @@ function HarvestContent() {
     e.preventDefault();
     if (saving || cropSeasonId === null || !selectedFarm) return;
     if (!quantity || !Number.isFinite(quantity) || quantity <= 0 || !unit.trim() || !harvestedAt) {
-      setNotification({ text: 'Nhập ngày thu hoạch, đơn vị và sản lượng lớn hơn 0.', type: 'error' });
+      setNotification({ text: (lang === 'en' ? "Enter a harvest date, unit, and yield greater than 0." : 'Nhập ngày thu hoạch, đơn vị và sản lượng lớn hơn 0.'), type: 'error' });
       return;
     }
 
     if (currentSeason?.startDate && harvestedAt < currentSeason.startDate) {
       setNotification({
-        text: `Ngày thu hoạch (${harvestedAt}) không thể trước ngày bắt đầu mùa vụ (${currentSeason.startDate}).`,
+        text: (lang === 'en' ? `Harvest date (${harvestedAt}) cannot be before the season start date (${currentSeason.startDate}).` : `Ngày thu hoạch (${harvestedAt}) không thể trước ngày bắt đầu mùa vụ (${currentSeason.startDate}).`),
         type: 'error',
       });
       return;
@@ -243,7 +243,7 @@ function HarvestContent() {
       const matchedBlk = seasonBlocks.find((sb) => sb.blockId === Number(selectedBlockId));
       if (matchedBlk?.plantedAt && harvestedAt < matchedBlk.plantedAt) {
         setNotification({
-          text: `Ngày thu hoạch (${harvestedAt}) không thể trước ngày xuống giống tại lô đất ${matchedBlk.blockName || '#' + matchedBlk.blockId} (${matchedBlk.plantedAt}).`,
+          text: (lang === 'en' ? `Harvest date (${harvestedAt}) cannot be before the block planting date ${matchedBlk.blockName || '#' + matchedBlk.blockId} (${matchedBlk.plantedAt}).` : `Ngày thu hoạch (${harvestedAt}) không thể trước ngày xuống giống tại lô đất ${matchedBlk.blockName || '#' + matchedBlk.blockId} (${matchedBlk.plantedAt}).`),
           type: 'error',
         });
         return;
@@ -282,16 +282,16 @@ function HarvestContent() {
           : [res.data, ...prev]
       );
       setNotification({
-        text: editingRecord
+        text: (lang === 'en' ? editingRecord ? "Harvest updated successfully!" : `Recorded harvest batch "${lotCode}" successfully!` : editingRecord
           ? 'Đã cập nhật thu hoạch thành công!'
-          : `Đã ghi nhận lô thu hoạch "${lotCode}" thành công!`,
+          : `Đã ghi nhận lô thu hoạch "${lotCode}" thành công!`),
         type: 'success',
       });
       setIsModalOpen(false);
       resetForm();
     } catch (error) {
       setNotification({
-        text: error instanceof Error ? error.message : 'Không lưu được thu hoạch.',
+        text: (lang === 'en' ? error instanceof Error ? translate(error.message) : "Unable to save harvest." : error instanceof Error ? error.message : 'Không lưu được thu hoạch.'),
         type: 'error',
       });
     } finally {
@@ -392,7 +392,7 @@ function HarvestContent() {
                 '—'
               ) : (
                 <>
-                  {totalYield.toLocaleString('vi-VN')} <span className="stat-unit">{yieldUnit}</span>
+                  {totalYield.toLocaleString('vi-VN')} <span className="stat-unit">{translate(yieldUnit)}</span>
                 </>
               )}
             </strong>
@@ -410,7 +410,7 @@ function HarvestContent() {
                 '—'
               ) : (
                 <>
-                  {records.length} <span className="stat-unit">lô</span>
+                  {records.length} <span className="stat-unit">{(lang === 'en' ? "blocks" : "lô")}</span>
                 </>
               )}
             </strong>
@@ -424,7 +424,7 @@ function HarvestContent() {
           <div className="zone-stat-content">
             <h4>{lang === 'en' ? 'Target Season' : 'Mùa vụ tra cứu'}</h4>
             <strong className="stat-number" style={{ fontSize: '1rem' }}>
-              {cropSeasonId !== null ? currentSeason?.seasonName || `Mùa vụ #${cropSeasonId}` : 'Chưa chọn'}
+              {(lang === 'en' ? cropSeasonId !== null ? (currentSeason?.seasonName || `Season #${cropSeasonId}`) : "Not selected" : cropSeasonId !== null ? currentSeason?.seasonName || `Mùa vụ #${cropSeasonId}` : 'Chưa chọn')}
             </strong>
           </div>
         </div>
@@ -458,7 +458,7 @@ function HarvestContent() {
       >
         <div className="filter-group" style={{ flex: '1.5 1 280px' }}>
           <label htmlFor="harvest-season-id" className="filter-label">
-            Mã mùa vụ canh tác ({selectedFarm?.farmName || 'Trang trại'})
+            {(lang === 'en' ? "Crop season ID (" : "Mã mùa vụ canh tác (")}{(lang === 'en' ? selectedFarm?.farmName || "Farm" : selectedFarm?.farmName || 'Trang trại')})
           </label>
           <div className="filter-input-wrap">
             <span className="filter-icon">🌾</span>
@@ -480,7 +480,7 @@ function HarvestContent() {
         {availableSeasons !== null && (
           <div className="filter-group" style={{ flex: '1.4 1 240px' }}>
             <label htmlFor="harvest-season-select-quick" className="filter-label">
-              Chọn nhanh mùa vụ ({availableSeasons.length} mùa vụ)
+              {(lang === 'en' ? "Quick-select season (" : "Chọn nhanh mùa vụ (")}{availableSeasons.length} {(lang === 'en' ? " seasons)" : " mùa vụ)")}
             </label>
             <select
               id="harvest-season-select-quick"
@@ -492,7 +492,7 @@ function HarvestContent() {
                 if (val) void loadHarvests(Number(val));
               }}
             >
-              <option value="">-- Chọn mùa vụ của trang trại --</option>
+              <option value="">{(lang === 'en' ? "-- Select a farm season --" : "-- Chọn mùa vụ của trang trại --")}</option>
               {availableSeasons.map((s) => (
                 <option key={s.cropSeasonId} value={String(s.cropSeasonId)}>
                   #{s.cropSeasonId} · {s.seasonName} {s.cropCategoryName ? `(${s.cropCategoryName})` : ''}
@@ -508,7 +508,7 @@ function HarvestContent() {
           style={{ height: '42px', minHeight: '42px', padding: '0 18px' }}
           disabled={!selectedFarm || loading || saving || detailLoading}
         >
-          Xem thu hoạch
+          {(lang === 'en' ? "View harvests" : "Xem thu hoạch")}
         </button>
 
         {availableSeasons === null && (
@@ -519,7 +519,7 @@ function HarvestContent() {
             disabled={!selectedFarm || loadingSeasons || loading}
             onClick={handleLoadSeasonList}
           >
-            {loadingSeasons ? 'Đang tải...' : '📋 Chọn từ danh sách mùa vụ'}
+            {(lang === 'en' ? loadingSeasons ? "Loading..." : "📋 Select from season list" : loadingSeasons ? 'Đang tải...' : '📋 Chọn từ danh sách mùa vụ')}
           </button>
         )}
 
@@ -538,7 +538,7 @@ function HarvestContent() {
               setBlockFilter('ALL');
             }}
           >
-            ✕ Đặt lại bộ lọc
+            {(lang === 'en' ? "✕ Reset filters" : "✕ Đặt lại bộ lọc")}
           </button>
         )}
 
@@ -555,7 +555,7 @@ function HarvestContent() {
               fontWeight: 700,
             }}
           >
-            Đang xem mùa vụ #{cropSeasonId}
+            {(lang === 'en' ? "Viewing season #" : "Đang xem mùa vụ #")}{cropSeasonId}
           </span>
         )}
       </form>
@@ -574,7 +574,7 @@ function HarvestContent() {
           }}
         >
           <span style={{ fontSize: '13px', fontWeight: 700, color: '#065f46' }}>
-            🌱 Lô đất thuộc mùa vụ #{cropSeasonId}:
+            {(lang === 'en' ? "🌱 Blocks in season #" : "🌱 Lô đất thuộc mùa vụ #")}{cropSeasonId}:
           </span>
           <button
             type="button"
@@ -591,7 +591,7 @@ function HarvestContent() {
               color: blockFilter === 'ALL' ? '#ffffff' : '#334155',
             }}
           >
-            Tất cả lô ({seasonBlocks.length})
+            {(lang === 'en' ? "All blocks (" : "Tất cả lô (")}{seasonBlocks.length})
           </button>
           {seasonBlocks.map((sb) => (
             <button
@@ -610,7 +610,7 @@ function HarvestContent() {
                 color: blockFilter === sb.blockId ? '#ffffff' : '#065f46',
               }}
             >
-              🌱 {sb.blockName} ({sb.plantedArea ?? sb.blockArea} {sb.areaUnit || 'm²'})
+              🌱 {sb.blockName} ({sb.plantedArea ?? sb.blockArea} {translate(sb.areaUnit || 'm²')})
             </button>
           ))}
         </div>
@@ -623,7 +623,7 @@ function HarvestContent() {
           style={{ marginBottom: '16px' }}
         >
           <span>
-            <strong>{notification.type === 'success' ? '✓ Thành công:' : '⚠️ Thông báo:'}</strong> {notification.text}
+            <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success:" : "⚠️ Notice:" : notification.type === 'success' ? '✓ Thành công:' : '⚠️ Thông báo:')}</strong> {translate(notification.text)}
           </span>
           <button type="button" className="ghost-button" onClick={() => setNotification(null)}>
             ✕
@@ -634,7 +634,7 @@ function HarvestContent() {
       {detailLoading && (
         <div className="panel" style={{ padding: '16px 20px', marginBottom: '16px', textAlign: 'center' }}>
           <p role="status" className="muted" style={{ margin: 0 }}>
-            ⏳ Đang tải chi tiết thu hoạch...
+            {(lang === 'en' ? "⏳ Loading harvest details..." : "⏳ Đang tải chi tiết thu hoạch...")}
           </p>
         </div>
       )}
@@ -642,32 +642,32 @@ function HarvestContent() {
       {loading ? (
         <div className="panel empty-state">
           <div className="empty-icon">⏳</div>
-          <h2>Đang tải danh sách thu hoạch...</h2>
-          <p>Hệ thống đang truy xuất lịch sử các lô thu hoạch của mùa vụ.</p>
+          <h2>{(lang === 'en' ? "Loading harvests..." : "Đang tải danh sách thu hoạch...")}</h2>
+          <p>{(lang === 'en' ? "Retrieving harvest batch history for this season." : "Hệ thống đang truy xuất lịch sử các lô thu hoạch của mùa vụ.")}</p>
         </div>
       ) : loadError ? (
         <div className="panel empty-state" role="alert">
           <div className="empty-icon">⚠️</div>
-          <h2>Không thể tải dữ liệu thu hoạch</h2>
-          <p>{loadError}</p>
+          <h2>{(lang === 'en' ? "Unable to load harvest data" : "Không thể tải dữ liệu thu hoạch")}</h2>
+          <p>{translate(loadError)}</p>
           <div className="button-row" style={{ justifyContent: 'center' }}>
             <button type="button" className="primary-button" onClick={() => loadHarvests(Number(seasonInput))}>
-              Thử lại
+              {(lang === 'en' ? "Retry" : "Thử lại")}
             </button>
           </div>
         </div>
       ) : cropSeasonId === null ? (
         <div className="panel empty-state">
           <div className="empty-icon">🌾</div>
-          <h2>{selectedFarm ? 'Nhập ID mùa vụ để xem thu hoạch' : 'Hãy chọn trang trại trước'}</h2>
+          <h2>{(lang === 'en' ? selectedFarm ? "Enter a season ID to view harvests" : "Select a farm first" : selectedFarm ? 'Nhập ID mùa vụ để xem thu hoạch' : 'Hãy chọn trang trại trước')}</h2>
           <p>
-            Nhập mã số định danh (ID) mùa vụ thuộc <strong>{selectedFarm?.farmName || 'trang trại đang chọn'}</strong> trên thanh công cụ tìm kiếm để xem và ghi nhận các đợt thu hoạch nông sản.
+            {(lang === 'en' ? "Enter the ID of a season belonging to " : "Nhập mã số định danh (ID) mùa vụ thuộc ")} <strong>{(lang === 'en' ? selectedFarm?.farmName || "the selected farm" : selectedFarm?.farmName || 'trang trại đang chọn')}</strong> {(lang === 'en' ? " in the search toolbar to view and record harvests." : " trên thanh công cụ tìm kiếm để xem và ghi nhận các đợt thu hoạch nông sản.")}
           </p>
         </div>
       ) : records.length === 0 ? (
         <div className="panel empty-state">
           <div className="empty-icon">📦</div>
-          <h2>Chưa có đợt thu hoạch nào được ghi nhận</h2>
+          <h2>{(lang === 'en' ? "No harvests recorded yet" : "Chưa có đợt thu hoạch nào được ghi nhận")}</h2>
           <p>{lang === 'en' ? 'When harvest time arrives, click "Record Harvest Batch" to log crop yield per block and issue VietGAP traceability codes.' : 'Khi đến vụ thu hoạch, hãy nhấn "Ghi nhận đợt thu hoạch" để lưu sản lượng theo từng lô đất và cấp mã truy xuất nguồn gốc VietGAP.'}</p>
           <div className="button-row" style={{ justifyContent: 'center' }}>
             <button
@@ -687,8 +687,8 @@ function HarvestContent() {
         <div className="panel" style={{ padding: '24px' }}>
           <div className="panel-title" style={{ marginBottom: '18px' }}>
             <div>
-              <span className="eyebrow">Hồ sơ sản lượng &amp; Truy xuất nguồn gốc</span>
-              <h2 style={{ margin: '4px 0 0' }}>Danh sách lô thu hoạch ({filteredRecords.length})</h2>
+              <span className="eyebrow">{(lang === 'en' ? "Yield Records & Traceability" : "Hồ sơ sản lượng & Truy xuất nguồn gốc")}</span>
+              <h2 style={{ margin: '4px 0 0' }}>{(lang === 'en' ? "Harvest batches (" : "Danh sách lô thu hoạch (")}{filteredRecords.length})</h2>
             </div>
             <button
               type="button"
@@ -707,7 +707,7 @@ function HarvestContent() {
             <div className="production-filter-panel" style={{ marginBottom: '20px', background: '#f8fafc' }}>
               <div className="filter-group" style={{ flex: '1.5 1 260px' }}>
                 <label htmlFor="harvest-sub-search" className="filter-label">
-                  Tìm kiếm lô thu hoạch
+                  {(lang === 'en' ? "Search harvest batches" : "Tìm kiếm lô thu hoạch")}
                 </label>
                 <div className="filter-input-wrap">
                   <span className="filter-icon">🔍</span>
@@ -723,17 +723,17 @@ function HarvestContent() {
 
               <div className="filter-group" style={{ flex: '1 1 200px' }}>
                 <label htmlFor="harvest-sub-grade" className="filter-label">
-                  Lọc theo phẩm chất
+                  {(lang === 'en' ? "Filter by quality" : "Lọc theo phẩm chất")}
                 </label>
                 <select
                   id="harvest-sub-grade"
                   value={gradeFilter}
                   onChange={(e) => setGradeFilter(e.target.value)}
                 >
-                  <option value="">Tất cả phẩm chất</option>
+                  <option value="">{(lang === 'en' ? "All qualities" : "Tất cả phẩm chất")}</option>
                   {uniqueGrades.map((g) => (
                     <option key={g} value={g}>
-                      {g}
+                      {translate(g)}
                     </option>
                   ))}
                 </select>
@@ -748,7 +748,7 @@ function HarvestContent() {
                     setGradeFilter('');
                   }}
                 >
-                  ✕ Đặt lại
+                  {(lang === 'en' ? "✕ Reset" : "✕ Đặt lại")}
                 </button>
               )}
             </div>
@@ -806,7 +806,7 @@ function HarvestContent() {
                             🌱 {displayBlockName}
                           </span>
                         )}
-                        <span className="status-badge active">{r.qualityGrade || 'Tiêu chuẩn'}</span>
+                        <span className="status-badge active">{(lang === 'en' ? r.qualityGrade || "Standard" : r.qualityGrade || 'Tiêu chuẩn')}</span>
                       </div>
                     </div>
 
@@ -820,10 +820,10 @@ function HarvestContent() {
                           letterSpacing: '0.04em',
                         }}
                       >
-                        Sản lượng thu được
+                        {(lang === 'en' ? "Harvest yield" : "Sản lượng thu được")}
                       </span>
                       <div style={{ fontSize: '24px', fontWeight: 800, color: '#047857', marginTop: '4px' }}>
-                        {r.quantity.toLocaleString('vi-VN')} {r.unit}
+                        {r.quantity.toLocaleString('vi-VN')} {translate(r.unit)}
                       </div>
                     </div>
 
@@ -838,29 +838,29 @@ function HarvestContent() {
                     >
                       {displayBlockName && (
                         <>
-                          <dt style={{ color: '#64748b', fontWeight: 600 }}>Lô đất trồng:</dt>
+                          <dt style={{ color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "Growing block:" : "Lô đất trồng:")}</dt>
                           <dd style={{ margin: 0, fontWeight: 700, color: '#065f46' }}>{displayBlockName}</dd>
                         </>
                       )}
 
                       {matchedBlk?.plantedAt && (
                         <>
-                          <dt style={{ color: '#64748b', fontWeight: 600 }}>Xuống giống:</dt>
+                          <dt style={{ color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "Planted:" : "Xuống giống:")}</dt>
                           <dd style={{ margin: 0, color: '#334155' }}>
                             {new Date(matchedBlk.plantedAt).toLocaleDateString('vi-VN')}
                           </dd>
                         </>
                       )}
 
-                      <dt style={{ color: '#64748b', fontWeight: 600 }}>Ngày thu hoạch:</dt>
+                      <dt style={{ color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "Harvest date:" : "Ngày thu hoạch:")}</dt>
                       <dd style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
                         {new Date(r.harvestedAt).toLocaleDateString('vi-VN')}
                       </dd>
 
-                      <dt style={{ color: '#64748b', fontWeight: 600 }}>Nơi lưu kho:</dt>
-                      <dd style={{ margin: 0, color: '#334155' }}>{r.storageLocation || 'Kho bảo quản trang trại'}</dd>
+                      <dt style={{ color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "Storage location:" : "Nơi lưu kho:")}</dt>
+                      <dd style={{ margin: 0, color: '#334155' }}>{(lang === 'en' ? r.storageLocation || "Farm storage warehouse" : r.storageLocation || 'Kho bảo quản trang trại')}</dd>
 
-                      <dt style={{ color: '#64748b', fontWeight: 600 }}>Mã VietGAP:</dt>
+                      <dt style={{ color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "VietGAP ID:" : "Mã VietGAP:")}</dt>
                       <dd style={{ margin: 0, color: '#059669', fontWeight: 700 }}>{r.traceabilityCode || '—'}</dd>
                     </dl>
 
@@ -897,35 +897,35 @@ function HarvestContent() {
                       <button
                         type="button"
                         className="table-icon-btn primary"
-                        title="Xem chi tiết"
-                        aria-label={`Chi tiết lô ${r.harvestLotCode || r.harvestRecordId}`}
+                        title={(lang === 'en' ? "View details" : "Xem chi tiết")}
+                        aria-label={(lang === 'en' ? `Batch details ${r.harvestLotCode || r.harvestRecordId}` : `Chi tiết lô ${r.harvestLotCode || r.harvestRecordId}`)}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId)}
                       >
                         <Icon name="eye" size={16} />
-                        <span className="sr-only">Chi tiết</span>
+                        <span className="sr-only">{(lang === 'en' ? "Details" : "Chi tiết")}</span>
                       </button>
                       <button
                         type="button"
                         className="table-icon-btn edit"
-                        title="Chỉnh sửa"
-                        aria-label={`Chỉnh sửa lô ${r.harvestLotCode || r.harvestRecordId}`}
+                        title={(lang === 'en' ? "Edit" : "Chỉnh sửa")}
+                        aria-label={(lang === 'en' ? `Edit batch ${r.harvestLotCode || r.harvestRecordId}` : `Chỉnh sửa lô ${r.harvestLotCode || r.harvestRecordId}`)}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId, true)}
                       >
                         <Icon name="edit" size={16} />
-                        <span className="sr-only">Chỉnh sửa</span>
+                        <span className="sr-only">{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</span>
                       </button>
                       <button
                         type="button"
                         className="table-icon-btn assign"
-                        title="Tem QR"
-                        aria-label={`Tem QR lô ${r.harvestLotCode || r.harvestRecordId}`}
+                        title={(lang === 'en' ? "QR label" : "Tem QR")}
+                        aria-label={(lang === 'en' ? `Batch QR label ${r.harvestLotCode || r.harvestRecordId}` : `Tem QR lô ${r.harvestLotCode || r.harvestRecordId}`)}
                         disabled={detailLoading}
                         onClick={() => openHarvest(r.harvestRecordId)}
                       >
                         <Icon name="sparkles" size={16} />
-                        <span className="sr-only">Tem QR</span>
+                        <span className="sr-only">{(lang === 'en' ? "QR label" : "Tem QR")}</span>
                       </button>
                     </div>
                     <small style={{ color: '#94a3b8', fontWeight: 600 }}>#{r.harvestRecordId}</small>
@@ -961,16 +961,16 @@ function HarvestContent() {
               }}
             >
               <span>
-                🌾 Mùa vụ canh tác:{' '}
+                {(lang === 'en' ? "🌾 Crop season:" : "🌾 Mùa vụ canh tác:")}{' '}
                 {currentSeason?.seasonName || `#${editingRecord?.cropSeasonId ?? cropSeasonId}`}
               </span>
-              <span className="structured-field-badge">Trang trại {selectedFarm?.farmName}</span>
+              <span className="structured-field-badge">{(lang === 'en' ? "Farm " : "Trang trại ")} {selectedFarm?.farmName}</span>
             </div>
           </div>
 
           {notification?.type === 'error' && (
             <p role="alert" className="form-error-banner" style={{ margin: 0 }}>
-              {notification.text}
+              {translate(notification.text)}
             </p>
           )}
 
@@ -979,9 +979,9 @@ function HarvestContent() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="harvest-block-select" className="structured-field-label">
-                  🌱 Lô đất thu hoạch (Thuộc mùa vụ)
+                  {(lang === 'en' ? "🌱 Harvest block (within season)" : "🌱 Lô đất thu hoạch (Thuộc mùa vụ)")}
                 </label>
-                <span className="structured-field-badge">{seasonBlocks.length} lô được phân bổ</span>
+                <span className="structured-field-badge">{seasonBlocks.length} {(lang === 'en' ? " assigned blocks" : " lô được phân bổ")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <select
@@ -989,11 +989,11 @@ function HarvestContent() {
                   value={selectedBlockId}
                   onChange={(e) => setSelectedBlockId(e.target.value ? Number(e.target.value) : '')}
                 >
-                  <option value="">-- Chọn lô đất thu hoạch --</option>
+                  <option value="">{(lang === 'en' ? "-- Select harvest block --" : "-- Chọn lô đất thu hoạch --")}</option>
                   {seasonBlocks.map((sb) => (
                     <option key={sb.blockId} value={sb.blockId}>
-                      {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} · Diện tích trồng:{' '}
-                      {sb.plantedArea ?? sb.blockArea} {sb.areaUnit || 'm²'}
+                      {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} {(lang === 'en' ? " · Planted area:" : " · Diện tích trồng:")}{' '}
+                      {sb.plantedArea ?? sb.blockArea} {translate(sb.areaUnit || 'm²')}
                       {sb.plantedAt ? ` · Gieo: ${sb.plantedAt}` : ''})
                     </option>
                   ))}
@@ -1006,9 +1006,9 @@ function HarvestContent() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="harvest-lot-code" className="structured-field-label">
-                  Mã lô thu hoạch <span style={{ color: '#dc2626' }}>*</span>
+                  {(lang === 'en' ? "Harvest batch code " : "Mã lô thu hoạch ")} <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <span className="structured-field-badge">{editingRecord ? 'Cố định' : 'Bắt buộc'}</span>
+                <span className="structured-field-badge">{(lang === 'en' ? editingRecord ? "Fixed" : "Required" : editingRecord ? 'Cố định' : 'Bắt buộc')}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
@@ -1026,9 +1026,9 @@ function HarvestContent() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="harvest-trace-code" className="structured-field-label">
-                  Mã truy xuất nguồn gốc <span style={{ color: '#dc2626' }}>*</span>
+                  {(lang === 'en' ? "Traceability code " : "Mã truy xuất nguồn gốc ")} <span style={{ color: '#dc2626' }}>*</span>
                 </label>
-                <span className="structured-field-badge">{editingRecord ? 'Cố định' : 'VietGAP'}</span>
+                <span className="structured-field-badge">{(lang === 'en' ? editingRecord ? "Fixed" : "VietGAP" : editingRecord ? 'Cố định' : 'VietGAP')}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
@@ -1046,9 +1046,9 @@ function HarvestContent() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="harvest-date" className="structured-field-label">
-                Ngày giờ thu hoạch <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Harvest date and time " : "Ngày giờ thu hoạch ")} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">Bắt buộc</span>
+              <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
@@ -1066,9 +1066,9 @@ function HarvestContent() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <span className="structured-field-label">
-                  Sản lượng &amp; Đơn vị <span style={{ color: '#dc2626' }}>*</span>
+                  {(lang === 'en' ? "Yield & Unit " : "Sản lượng & Đơn vị ")} <span style={{ color: '#dc2626' }}>*</span>
                 </span>
-                <span className="structured-field-badge">Số dương</span>
+                <span className="structured-field-badge">{(lang === 'en' ? "Positive number" : "Số dương")}</span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <div className="form-field" style={{ flex: 2, marginBottom: 0 }}>
@@ -1084,10 +1084,10 @@ function HarvestContent() {
                 </div>
                 <div className="form-field" style={{ flex: 1, marginBottom: 0 }}>
                   <select aria-label={lang === 'en' ? 'Unit' : 'Đơn vị'} value={unit} onChange={(e) => setUnit(e.target.value)}>
-                    {!['kg', 'tấn', 'thùng'].includes(unit) && <option value={unit}>{unit}</option>}
+                    {!['kg', 'tấn', 'thùng'].includes(unit) && <option value={unit}>{translate(unit)}</option>}
                     <option value="kg">kg</option>
-                    <option value="tấn">tấn</option>
-                    <option value="thùng">thùng</option>
+                    <option value="tấn">{(lang === 'en' ? "tonnes" : "tấn")}</option>
+                    <option value="thùng">{(lang === 'en' ? "boxes" : "thùng")}</option>
                   </select>
                 </div>
               </div>
@@ -1095,8 +1095,8 @@ function HarvestContent() {
 
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
-                <span className="structured-field-label">Phân loại phẩm chất</span>
-                <span className="structured-field-badge">Phẩm cấp</span>
+                <span className="structured-field-label">{(lang === 'en' ? "Quality classification" : "Phân loại phẩm chất")}</span>
+                <span className="structured-field-badge">{(lang === 'en' ? "Grade" : "Phẩm cấp")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <select
@@ -1106,11 +1106,11 @@ function HarvestContent() {
                 >
                   {!['Loại 1 (Xuất khẩu)', 'Loại 1 (Siêu thị)', 'Loại 2 (Nội địa)', 'Chế biến'].includes(
                     qualityGrade
-                  ) && <option value={qualityGrade}>{qualityGrade || 'Chưa phân loại'}</option>}
-                  <option value="Loại 1 (Xuất khẩu)">Loại 1 (Xuất khẩu)</option>
-                  <option value="Loại 1 (Siêu thị)">Loại 1 (Siêu thị)</option>
-                  <option value="Loại 2 (Nội địa)">Loại 2 (Nội địa)</option>
-                  <option value="Chế biến">Hàng phục vụ chế biến</option>
+                  ) && <option value={qualityGrade}>{(lang === 'en' ? qualityGrade || "Unclassified" : qualityGrade || 'Chưa phân loại')}</option>}
+                  <option value="Loại 1 (Xuất khẩu)">{(lang === 'en' ? "Grade 1 (Export)" : "Loại 1 (Xuất khẩu)")}</option>
+                  <option value="Loại 1 (Siêu thị)">{(lang === 'en' ? "Grade 1 (Supermarket)" : "Loại 1 (Siêu thị)")}</option>
+                  <option value="Loại 2 (Nội địa)">{(lang === 'en' ? "Grade 2 (Domestic)" : "Loại 2 (Nội địa)")}</option>
+                  <option value="Chế biến">{(lang === 'en' ? "For processing" : "Hàng phục vụ chế biến")}</option>
                 </select>
               </div>
             </div>
@@ -1118,15 +1118,15 @@ function HarvestContent() {
 
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
-              <span className="structured-field-label">Địa điểm / Kho lưu trữ bảo quản</span>
-              <span className="structured-field-badge">Tùy chọn</span>
+              <span className="structured-field-label">{(lang === 'en' ? "Storage location / Warehouse" : "Địa điểm / Kho lưu trữ bảo quản")}</span>
+              <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
-                aria-label="Kho lưu trữ"
+                aria-label={(lang === 'en' ? "Warehouse" : "Kho lưu trữ")}
                 type="text"
                 maxLength={200}
-                placeholder="VD: Kho lạnh số 1, Khu đóng gói trung tâm..."
+                placeholder={(lang === 'en' ? "Example: Cold storage 1, Central packing area..." : "VD: Kho lạnh số 1, Khu đóng gói trung tâm...")}
                 value={storageLocation}
                 onChange={(e) => setStorageLocation(e.target.value)}
               />
@@ -1135,15 +1135,15 @@ function HarvestContent() {
 
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
-              <span className="structured-field-label">Ghi chú chất lượng kiểm định</span>
-              <span className="structured-field-badge">{notes.length}/1000 ký tự</span>
+              <span className="structured-field-label">{(lang === 'en' ? "Quality inspection notes" : "Ghi chú chất lượng kiểm định")}</span>
+              <span className="structured-field-badge">{notes.length}{(lang === 'en' ? "/1000 characters" : "/1000 ký tự")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <textarea
-                aria-label="Ghi chú"
+                aria-label={(lang === 'en' ? "Notes" : "Ghi chú")}
                 rows={2}
                 maxLength={1000}
-                placeholder="Ghi chú độ đồng đều, độ ngọt Brix, tình trạng bao bì..."
+                placeholder={(lang === 'en' ? "Note uniformity, Brix sweetness, packaging condition..." : "Ghi chú độ đồng đều, độ ngọt Brix, tình trạng bao bì...")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -1152,10 +1152,10 @@ function HarvestContent() {
 
           <div className="confirm-dialog-actions" style={{ marginTop: '6px' }}>
             <button type="button" className="ghost-button" disabled={saving} onClick={() => setIsModalOpen(false)}>
-              Hủy
+              {(lang === 'en' ? "Cancel" : "Hủy")}
             </button>
             <button type="submit" className="primary-button" disabled={saving}>
-              {saving ? 'Đang lưu...' : editingRecord ? 'Lưu thay đổi' : 'Xác nhận thu hoạch'}
+              {(lang === 'en' ? saving ? "Saving..." : editingRecord ? "Save changes" : "Confirm harvest" : saving ? 'Đang lưu...' : editingRecord ? 'Lưu thay đổi' : 'Xác nhận thu hoạch')}
             </button>
           </div>
         </form>
@@ -1166,9 +1166,9 @@ function HarvestContent() {
         <Modal open onClose={() => setSelectedTraceRecord(null)} title={lang === 'en' ? 'Harvest Batch & Traceability Details' : 'Chi tiết thu hoạch & Tem truy xuất'}>
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '36px', display: 'block', marginBottom: '6px' }}>🏷️</span>
-            <h3 style={{ margin: '0 0 4px', fontSize: '19px', color: '#0f172a' }}>Tem truy xuất nguồn gốc VietGAP</h3>
+            <h3 style={{ margin: '0 0 4px', fontSize: '19px', color: '#0f172a' }}>{(lang === 'en' ? "VietGAP traceability label" : "Tem truy xuất nguồn gốc VietGAP")}</h3>
             <p className="muted" style={{ margin: '0 0 18px', fontSize: '13.5px' }}>
-              Thông tin lô thu hoạch được trích xuất minh bạch từ nhật ký mùa vụ và lô đất sản xuất
+              {(lang === 'en' ? "Harvest batch information is transparently sourced from season diaries and production blocks" : "Thông tin lô thu hoạch được trích xuất minh bạch từ nhật ký mùa vụ và lô đất sản xuất")}
             </p>
 
             {/* Simulated QR Box */}
@@ -1196,7 +1196,7 @@ function HarvestContent() {
               />
             </div>
             <p className="muted" style={{ fontSize: '12.5px', marginBottom: '14px' }}>
-              Mã định danh: <strong style={{ color: '#059669' }}>{selectedTraceRecord.traceabilityCode}</strong>
+              {(lang === 'en' ? "ID: " : "Mã định danh: ")} <strong style={{ color: '#059669' }}>{selectedTraceRecord.traceabilityCode}</strong>
             </p>
 
             {/* VietGAP Origin Highlight Banner */}
@@ -1213,48 +1213,48 @@ function HarvestContent() {
                 lineHeight: 1.55,
               }}
             >
-              <strong>✓ Chứng nhận truy xuất VietGAP:</strong> Lô nông sản thuộc{' '}
+              <strong>{(lang === 'en' ? "✓ VietGAP traceability certification:" : "✓ Chứng nhận truy xuất VietGAP:")}</strong> {(lang === 'en' ? " This produce batch belongs to" : " Lô nông sản thuộc")}{' '}
               <strong>
-                {selectedTraceRecord.seasonName || currentSeason?.seasonName || `Mùa vụ #${selectedTraceRecord.cropSeasonId}`}
+                {(lang === 'en' ? (selectedTraceRecord.seasonName ||
+                    currentSeason?.seasonName) || `Season #${selectedTraceRecord.cropSeasonId}` : selectedTraceRecord.seasonName || currentSeason?.seasonName || `Mùa vụ #${selectedTraceRecord.cropSeasonId}`)}
               </strong>
-              , được canh tác tại{' '}
+              {(lang === 'en' ? ", grown in" : ", được canh tác tại")}{' '}
               <strong>
-                {selectedTraceRecord.blockName || matchedTraceBlock?.blockName || 'Khu sản xuất tập trung'}
+                {(lang === 'en' ? (selectedTraceRecord.blockName || matchedTraceBlock?.blockName) || "Central production area" : selectedTraceRecord.blockName || matchedTraceBlock?.blockName || 'Khu sản xuất tập trung')}
               </strong>{' '}
-              của <strong>{selectedTraceRecord.farmName || selectedFarm?.farmName}</strong>
+              {(lang === 'en' ? "of " : "của ")} <strong>{selectedTraceRecord.farmName || selectedFarm?.farmName}</strong>
               {(matchedTraceBlock?.plantedAt || currentSeason?.startDate) && (
-                <>
-                  , xuống giống ngày{' '}
+                <>{(lang === 'en' ? ", planted on" : ", xuống giống ngày")}{' '}
                   <strong>
                     {new Date(matchedTraceBlock?.plantedAt || currentSeason!.startDate).toLocaleDateString('vi-VN')}
                   </strong>
                 </>
               )}{' '}
-              và thu hoạch ngày{' '}
+              {(lang === 'en' ? "and harvested on" : "và thu hoạch ngày")}{' '}
               <strong>{new Date(selectedTraceRecord.harvestedAt).toLocaleDateString('vi-VN')}</strong>.
             </div>
 
             <dl className="detail-list" style={{ textAlign: 'left', marginBottom: '18px' }}>
               <div>
-                <dt>Mã lô hàng</dt>
+                <dt>{(lang === 'en' ? "Batch code" : "Mã lô hàng")}</dt>
                 <dd>{selectedTraceRecord.harvestLotCode}</dd>
               </div>
               <div>
-                <dt>Sản lượng</dt>
+                <dt>{(lang === 'en' ? "Yield" : "Sản lượng")}</dt>
                 <dd>
-                  {selectedTraceRecord.quantity.toLocaleString('vi-VN')} {selectedTraceRecord.unit}
+                  {selectedTraceRecord.quantity.toLocaleString('vi-VN')} {translate(selectedTraceRecord.unit)}
                 </dd>
               </div>
               <div>
-                <dt>Phẩm chất</dt>
-                <dd>{selectedTraceRecord.qualityGrade || 'Chưa cập nhật'}</dd>
+                <dt>{(lang === 'en' ? "Quality" : "Phẩm chất")}</dt>
+                <dd>{(lang === 'en' ? selectedTraceRecord.qualityGrade || "Not updated" : selectedTraceRecord.qualityGrade || 'Chưa cập nhật')}</dd>
               </div>
               <div>
-                <dt>Trang trại</dt>
+                <dt>{(lang === 'en' ? 'Farm' : 'Trang trại')}</dt>
                 <dd>{selectedTraceRecord.farmName || selectedFarm?.farmName}</dd>
               </div>
               <div>
-                <dt>Mùa vụ canh tác</dt>
+                <dt>{(lang === 'en' ? "Crop seasons" : "Mùa vụ canh tác")}</dt>
                 <dd>
                   {selectedTraceRecord.seasonName ||
                     currentSeason?.seasonName ||
@@ -1262,47 +1262,47 @@ function HarvestContent() {
                 </dd>
               </div>
               <div>
-                <dt>Lô đất trồng (Block)</dt>
-                <dd>{selectedTraceRecord.blockName || matchedTraceBlock?.blockName || 'Chưa cập nhật'}</dd>
+                <dt>{(lang === 'en' ? "Growing block" : "Lô đất trồng (Block)")}</dt>
+                <dd>{(lang === 'en' ? (selectedTraceRecord.blockName || matchedTraceBlock?.blockName) || "Not updated" : selectedTraceRecord.blockName || matchedTraceBlock?.blockName || 'Chưa cập nhật')}</dd>
               </div>
               <div>
-                <dt>Ngày xuống giống</dt>
+                <dt>{(lang === 'en' ? "Planting date" : "Ngày xuống giống")}</dt>
                 <dd>
-                  {matchedTraceBlock?.plantedAt
+                  {(lang === 'en' ? matchedTraceBlock?.plantedAt ? new Date(matchedTraceBlock.plantedAt).toLocaleDateString('vi-VN') : currentSeason?.startDate ? new Date(currentSeason.startDate).toLocaleDateString('vi-VN') : "Based on season records" : matchedTraceBlock?.plantedAt
                     ? new Date(matchedTraceBlock.plantedAt).toLocaleDateString('vi-VN')
                     : currentSeason?.startDate
                     ? new Date(currentSeason.startDate).toLocaleDateString('vi-VN')
-                    : 'Theo hồ sơ mùa vụ'}
+                    : 'Theo hồ sơ mùa vụ')}
                 </dd>
               </div>
               <div>
-                <dt>Ngày thu hoạch</dt>
+                <dt>{(lang === 'en' ? "Harvest date" : "Ngày thu hoạch")}</dt>
                 <dd>{new Date(selectedTraceRecord.harvestedAt).toLocaleDateString('vi-VN')}</dd>
               </div>
               <div>
-                <dt>Kho lưu trữ</dt>
-                <dd>{selectedTraceRecord.storageLocation || 'Chưa cập nhật'}</dd>
+                <dt>{(lang === 'en' ? "Warehouse" : "Kho lưu trữ")}</dt>
+                <dd>{(lang === 'en' ? selectedTraceRecord.storageLocation || "Not updated" : selectedTraceRecord.storageLocation || 'Chưa cập nhật')}</dd>
               </div>
               <div>
-                <dt>Người ghi nhận</dt>
-                <dd>{selectedTraceRecord.recorderFullName || 'Chưa cập nhật'}</dd>
+                <dt>{(lang === 'en' ? "Recorded by" : "Người ghi nhận")}</dt>
+                <dd>{(lang === 'en' ? selectedTraceRecord.recorderFullName || "Not updated" : selectedTraceRecord.recorderFullName || 'Chưa cập nhật')}</dd>
               </div>
               <div>
-                <dt>Tiêu chuẩn</dt>
-                <dd>Thực hành nông nghiệp tốt VietGAP</dd>
+                <dt>{(lang === 'en' ? "Standard" : "Tiêu chuẩn")}</dt>
+                <dd>{(lang === 'en' ? "VietGAP Good Agricultural Practices" : "Thực hành nông nghiệp tốt VietGAP")}</dd>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <dt>Ghi chú kiểm định</dt>
-                <dd>{selectedTraceRecord.notes || 'Chưa cập nhật'}</dd>
+                <dt>{(lang === 'en' ? "Inspection notes" : "Ghi chú kiểm định")}</dt>
+                <dd>{(lang === 'en' ? selectedTraceRecord.notes || "Not updated" : selectedTraceRecord.notes || 'Chưa cập nhật')}</dd>
               </div>
             </dl>
 
             <div className="confirm-dialog-actions" style={{ justifyContent: 'center' }}>
               <button type="button" className="action-button" onClick={() => window.print()}>
-                🖨️ In tem QR
+                {(lang === 'en' ? " 🖨️ Print QR label " : " 🖨️ In tem QR ")}
               </button>
               <button type="button" className="primary-button" onClick={() => setSelectedTraceRecord(null)}>
-                Đóng
+                {(lang === 'en' ? "Close" : "Đóng")}
               </button>
             </div>
           </div>

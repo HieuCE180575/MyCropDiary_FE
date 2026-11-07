@@ -27,7 +27,7 @@ export function BlockModal({
   onClose,
   onSuccess,
 }: BlockModalProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [selectedZoneId, setSelectedZoneId] = useState<number>(zoneId);
   const [values, setValues] = useState<BlockFormValues>({
     blockName: '',
@@ -92,12 +92,12 @@ export function BlockModal({
     e.preventDefault();
     const trimmedBlockName = values.blockName.trim();
     if (!trimmedBlockName) {
-      setError('Vui lòng nhập tên Lô sản xuất (Block Name).');
+      setError((lang === 'en' ? "Enter a production block name." : 'Vui lòng nhập tên Lô sản xuất (Block Name).'));
       return;
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError('Area Block (Area) phải lớn hơn 0.');
+      setError((lang === 'en' ? "Block area must be greater than 0." : 'Area Block (Area) phải lớn hơn 0.'));
       return;
     }
 
@@ -109,13 +109,13 @@ export function BlockModal({
           (mode === 'create' || b.blockId !== initialBlock?.blockId)
       );
       if (isDuplicate) {
-        setError(`Tên lô / thửa đất "${trimmedBlockName}" đã tồn tại trong khu vực "${targetZone.zoneName}". Vui lòng đặt tên khác.`);
+        setError((lang === 'en' ? `Block name "${trimmedBlockName}" already exists in zone "${targetZone.zoneName}". Choose another name.` : `Tên lô / thửa đất "${trimmedBlockName}" đã tồn tại trong khu vực "${targetZone.zoneName}". Vui lòng đặt tên khác.`));
         return;
       }
     }
     if (targetZone && targetZone.areaValue && areaNum > targetZone.areaValue) {
       setError(
-        `Diện tích Block (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`
+        (lang === 'en' ? `Block area (${areaNum} ${values.areaUnit}) must not exceed the zone area ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).` : `Diện tích Block (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`)
       );
       return;
     }
@@ -134,7 +134,7 @@ export function BlockModal({
       onSuccess(saved);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Block.');
+      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Block information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Block.'));
     } finally {
       setLoading(false);
     }
@@ -156,7 +156,7 @@ export function BlockModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{error}</p> : null}
+          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
 
           {/* Parent Zone Field */}
           <div
@@ -191,7 +191,7 @@ export function BlockModal({
                 >
                   {availableZones.map((z) => (
                     <option key={z.zoneId} value={z.zoneId}>
-                      {z.zoneName} ({z.areaValue} {z.areaUnit})
+                      {z.zoneName} ({z.areaValue} {translate(z.areaUnit)})
                     </option>
                   ))}
                 </select>
@@ -235,7 +235,7 @@ export function BlockModal({
                   type="number"
                   step="0.01"
                   min="0.01"
-                  placeholder="VD: 500"
+                  placeholder={(lang === 'en' ? "e.g. 500" : "VD: 500")}
                   value={values.areaValue}
                   onChange={(e) => setValues({ ...values, areaValue: e.target.value })}
                   required
@@ -267,7 +267,7 @@ export function BlockModal({
               <label htmlFor="block-soil-input" className="structured-field-label">
                 {lang === 'en' ? 'Soil Type & Substrate' : 'Loại đất & nền thổ nhưỡng'}
               </label>
-              <span className="structured-field-badge">{values.soilType.length}/120 ký tự</span>
+              <span className="structured-field-badge">{values.soilType.length}{(lang === 'en' ? "/120 characters" : "/120 ký tự")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
@@ -296,7 +296,7 @@ export function BlockModal({
                   id="block-lat-input"
                   type="number"
                   step="0.000001"
-                  placeholder="VD: 10.762622"
+                  placeholder={(lang === 'en' ? "e.g. 10.762622" : "VD: 10.762622")}
                   value={values.latitude}
                   onChange={(e) => setValues({ ...values, latitude: e.target.value })}
                 />
@@ -307,7 +307,7 @@ export function BlockModal({
                   id="block-lng-input"
                   type="number"
                   step="0.000001"
-                  placeholder="VD: 106.660172"
+                  placeholder={(lang === 'en' ? "e.g. 106.660172" : "VD: 106.660172")}
                   value={values.longitude}
                   onChange={(e) => setValues({ ...values, longitude: e.target.value })}
                 />
@@ -336,7 +336,7 @@ export function BlockModal({
               <label htmlFor="block-desc-input" className="structured-field-label">
                 {lang === 'en' ? 'Block Description' : 'Mô tả lô sản xuất'}
               </label>
-              <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
+              <span className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <textarea

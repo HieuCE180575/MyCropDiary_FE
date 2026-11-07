@@ -1,3 +1,4 @@
+import { useLanguage } from '../i18n/LanguageContext';
 import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 
@@ -12,6 +13,7 @@ interface ModalProps {
 
 /** Modal/hộp thoại dùng lại để hiển thị chi tiết hoặc xác nhận. */
 export function Modal({ open, onClose, title, children, className, headerIcon }: ModalProps) {
+  const { lang, t: translate } = useLanguage();
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -25,10 +27,10 @@ export function Modal({ open, onClose, title, children, className, headerIcon }:
 
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
-      <div className={['modal-card', className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
+      <div className={['modal-card', className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-label={translate(title ?? '')} onClick={(event) => event.stopPropagation()}>
         <div className="modal-header">
-          {title ? <h2>{headerIcon}{title}</h2> : <span />}
-          <button type="button" className="modal-close" aria-label="Đóng" onClick={onClose}>
+          {title ? <h2>{headerIcon}{translate(title)}</h2> : <span />}
+          <button type="button" className="modal-close" aria-label={(lang === 'en' ? "Close" : "Đóng")} onClick={onClose}>
             ✕
           </button>
         </div>

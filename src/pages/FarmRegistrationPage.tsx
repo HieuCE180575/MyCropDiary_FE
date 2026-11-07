@@ -14,7 +14,7 @@ import { useLanguage } from '../shared/i18n/LanguageContext';
 
 export function FarmRegistrationPage() {
   const { user } = useAuth();
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { retry: reloadFarms } = useFarmWorkspace();
   const [registration, setRegistration] = useState<FarmRegistration | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -132,7 +132,7 @@ export function FarmRegistrationPage() {
         </div>
       ) : loadError ? (
         <div className="panel">
-          <p role="alert">{loadError}</p>
+          <p role="alert">{translate(loadError)}</p>
           <button className="primary-button" onClick={() => void loadRegistration()}>
             {lang === 'en' ? 'Retry' : 'Thử lại'}
           </button>

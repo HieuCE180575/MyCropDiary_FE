@@ -15,7 +15,7 @@ import {
 } from './procurementService';
 
 export function SuppliersPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
 
@@ -64,7 +64,7 @@ export function SuppliersPage() {
       setSuppliers(data);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể tải danh sách nhà cung cấp.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load suppliers." : err instanceof Error ? err.message : 'Không thể tải danh sách nhà cung cấp.'),
         type: 'error',
       });
     } finally {
@@ -117,7 +117,7 @@ export function SuppliersPage() {
     e.preventDefault();
     if (!farmId) return;
     if (!createForm.supplierName.trim()) {
-      alert('Vui lòng nhập tên nhà cung cấp.');
+      alert((lang === 'en' ? "Enter a supplier name." : 'Vui lòng nhập tên nhà cung cấp.'));
       return;
     }
     setSubmittingCreate(true);
@@ -132,13 +132,13 @@ export function SuppliersPage() {
       });
       setSuppliers((prev) => [created, ...prev]);
       setNotification({
-        text: `Đã thêm nhà cung cấp "${created.supplierName}" thành công!`,
+        text: (lang === 'en' ? `Added supplier "${created.supplierName}" successfully!` : `Đã thêm nhà cung cấp "${created.supplierName}" thành công!`),
         type: 'success',
       });
       setIsCreateOpen(false);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể tạo nhà cung cấp.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to create supplier." : err instanceof Error ? err.message : 'Không thể tạo nhà cung cấp.'),
         type: 'error',
       });
     } finally {
@@ -164,7 +164,7 @@ export function SuppliersPage() {
     e.preventDefault();
     if (!editingSupplier) return;
     if (!updateForm.supplierName.trim()) {
-      alert('Tên nhà cung cấp không được để trống.');
+      alert((lang === 'en' ? "Supplier name is required." : 'Tên nhà cung cấp không được để trống.'));
       return;
     }
     setSubmittingUpdate(true);
@@ -184,13 +184,13 @@ export function SuppliersPage() {
         setSelectedSupplier(updated);
       }
       setNotification({
-        text: `Đã cập nhật nhà cung cấp "${updated.supplierName}" thành công!`,
+        text: (lang === 'en' ? `Updated supplier "${updated.supplierName}" successfully!` : `Đã cập nhật nhà cung cấp "${updated.supplierName}" thành công!`),
         type: 'success',
       });
       setEditingSupplier(null);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể cập nhật nhà cung cấp.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to update supplier." : err instanceof Error ? err.message : 'Không thể cập nhật nhà cung cấp.'),
         type: 'error',
       });
     } finally {
@@ -214,13 +214,13 @@ export function SuppliersPage() {
         setSelectedSupplier(null);
       }
       setNotification({
-        text: `Đã xóa nhà cung cấp "${deletingSupplier.supplierName}" thành công!`,
+        text: (lang === 'en' ? `Deleted supplier "${deletingSupplier.supplierName}" successfully!` : `Đã xóa nhà cung cấp "${deletingSupplier.supplierName}" thành công!`),
         type: 'success',
       });
       setDeletingSupplier(null);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể xóa nhà cung cấp (đã phát sinh hóa đơn mua hàng).',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete supplier with linked purchase invoices." : err instanceof Error ? err.message : 'Không thể xóa nhà cung cấp (đã phát sinh hóa đơn mua hàng).'),
         type: 'error',
       });
     } finally {
@@ -250,8 +250,8 @@ export function SuppliersPage() {
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
           <span>
-            <strong>{notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: '}</strong>
-            {notification.text}
+            <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success: " : "⚠️ Notice: " : notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: ')}</strong>
+            {translate(notification.text)}
           </span>
           <button
             type="button"

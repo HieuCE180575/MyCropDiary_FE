@@ -24,7 +24,7 @@ import { useRealtimeSync } from '../shared/realtime/realtimeSync';
 import { useLanguage } from '../shared/i18n/LanguageContext';
 
 export function FarmInfoPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedFarm, farms, selectFarm, retry } = useFarmWorkspace();
   const [farmDetail, setFarmDetail] = useState<FarmDetail | null>(null);
@@ -113,7 +113,7 @@ export function FarmInfoPage() {
         setMembers(memberList);
       })
       .catch((err) => {
-        if (active) setError(err instanceof Error ? err.message : 'Lỗi tải thông tin trang trại');
+        if (active) setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load farm information" : err instanceof Error ? err.message : 'Lỗi tải thông tin trang trại'));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -178,7 +178,7 @@ export function FarmInfoPage() {
       setMembers((prev) => [...prev, newMember]);
       setNewMemberEmail('');
       setIsAddMemberOpen(false);
-      setActionMsg({ text: `Đã thêm thành viên ${newMember.fullName || newMember.email}`, type: 'success' });
+      setActionMsg({ text: (lang === 'en' ? `Member added ${(newMember.fullName || newMember.email)}` : `Đã thêm thành viên ${newMember.fullName || newMember.email}`), type: 'success' });
     } catch (err) {
       setActionMsg({ text: err instanceof Error ? err.message : (lang === 'en' ? 'Failed to add member' : 'Thêm thành viên thất bại'), type: 'error' });
     } finally {
@@ -188,11 +188,11 @@ export function FarmInfoPage() {
 
   const handleRemoveMember = async (memberId: number, memberName: string) => {
     if (!selectedFarm?.id) return;
-    if (!window.confirm(`Bạn có chắc muốn xóa thành viên "${memberName}" khỏi trang trại?`)) return;
+    if (!window.confirm((lang === 'en' ? `Are you sure you want to remove member "${memberName}" from the farm?` : `Bạn có chắc muốn xóa thành viên "${memberName}" khỏi trang trại?`))) return;
     try {
       await removeFarmMember(selectedFarm.id, memberId);
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
-      setActionMsg({ text: `Đã xóa thành viên "${memberName}"`, type: 'success' });
+      setActionMsg({ text: (lang === 'en' ? `Removed member "${memberName}"` : `Đã xóa thành viên "${memberName}"`), type: 'success' });
     } catch (err) {
       setActionMsg({ text: err instanceof Error ? err.message : 'Xóa thành viên thất bại', type: 'error' });
     }
@@ -219,7 +219,7 @@ export function FarmInfoPage() {
       setCreateLat(null);
       setCreateLng(null);
       setCreateBoundary([]);
-      setActionMsg({ text: `Tạo trang trại "${newFarm.farmName}" thành công!`, type: 'success' });
+      setActionMsg({ text: (lang === 'en' ? `Created farm "${newFarm.farmName}" successfully!` : `Tạo trang trại "${newFarm.farmName}" thành công!`), type: 'success' });
       retry();
       selectFarm(newFarm.id);
     } catch (err) {
@@ -253,7 +253,7 @@ export function FarmInfoPage() {
 
       {actionMsg && (
         <div className={`notification-popover ${actionMsg.type === 'error' ? 'form-error-banner' : ''}`} style={{ marginBottom: '16px', position: 'static' }}>
-          <strong>{actionMsg.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo'}:</strong> {actionMsg.text}
+          <strong>{(lang === 'en' ? actionMsg.type === 'success' ? "✓ Success" : "⚠️ Notice" : actionMsg.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo')}:</strong> {translate(actionMsg.text)}
         </div>
       )}
 
@@ -268,13 +268,13 @@ export function FarmInfoPage() {
                 <div key={f.id} className="farm-card" style={{ padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#ffffff', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => selectFarm(f.id)}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                     <span className="profile-tag-pill" style={{ background: '#ecfdf5', color: '#059669' }}>
-                      <Icon name="leaf" /> {farmRole(f) === 'OWNER' ? 'Chủ trang trại' : 'Nhân viên'}
+                      <Icon name="leaf" /> {(lang === 'en' ? farmRole(f) === 'OWNER' ? "Farm owner" : "Staff" : farmRole(f) === 'OWNER' ? 'Chủ trang trại' : 'Nhân viên')}
                     </span>
                     <span className="status-badge status-badge--success">{f.status ? (lang === 'en' && f.status === 'ACTIVE' ? 'Active' : f.status) : (lang === 'en' ? 'Active' : 'Hoạt động')}</span>
                   </div>
                   <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', color: '#0f172a' }}>{f.farmName}</h3>
                   <p style={{ margin: 0, color: '#64748b', fontSize: '13.5px' }}>
-                    📍 {[f.district, f.province].filter(Boolean).join(', ') || 'Chưa cập nhật địa chỉ'}
+                    📍 {(lang === 'en' ? [f.district, f.province].filter(Boolean).join(', ') || "No address provided" : [f.district, f.province].filter(Boolean).join(', ') || 'Chưa cập nhật địa chỉ')}
                   </p>
                   <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
                     <span style={{ color: '#10b981', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -304,7 +304,7 @@ export function FarmInfoPage() {
         <div className="panel empty-state">
           <div className="empty-icon">⚠️</div>
           <h2>{lang === 'en' ? 'Failed to load farm information' : 'Không thể tải thông tin'}</h2>
-          <p>{error}</p>
+          <p>{translate(error)}</p>
         </div>
       ) : farmDetail ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -323,17 +323,17 @@ export function FarmInfoPage() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <span className="status-badge status-badge--success">{lang === 'en' ? 'VietGAP Standard' : 'Chuẩn VietGAP'}</span>
-                  <span className="profile-role-pill">{isOwner ? 'Chủ sở hữu' : 'Nhân sự vận hành'}</span>
+                  <span className="profile-role-pill">{(lang === 'en' ? isOwner ? "Owner" : "Operations staff" : isOwner ? 'Chủ sở hữu' : 'Nhân sự vận hành')}</span>
                 </div>
               </div>
 
               <p style={{ margin: '20px 0', color: '#334155', fontSize: '15px', lineHeight: 1.6, background: '#f8fafc', padding: '16px', borderRadius: '10px' }}>
-                {farmDetail.description || 'Trang trại áp dụng quy chuẩn Thực hành nông nghiệp tốt (VietGAP) hướng đến nông sản an toàn, minh bạch và truy xuất nguồn gốc số.'}
+                {(lang === 'en' ? farmDetail.description || "The farm follows VietGAP Good Agricultural Practices for safe produce, transparency, and digital traceability." : farmDetail.description || 'Trang trại áp dụng quy chuẩn Thực hành nông nghiệp tốt (VietGAP) hướng đến nông sản an toàn, minh bạch và truy xuất nguồn gốc số.')}
               </p>
 
               <dl style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', margin: '20px 0 0', fontSize: '14px' }}>
                 <dt style={{ color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'Address:' : 'Địa chỉ:'}</dt>
-                <dd style={{ margin: 0, color: '#0f172a', fontWeight: 500 }}>{farmDetail.address || 'Chưa cập nhật'}</dd>
+                <dd style={{ margin: 0, color: '#0f172a', fontWeight: 500 }}>{(lang === 'en' ? farmDetail.address || "Not updated" : farmDetail.address || 'Chưa cập nhật')}</dd>
 
                 {farmDetail.latitude != null && farmDetail.longitude != null && (
                   <>
@@ -346,11 +346,11 @@ export function FarmInfoPage() {
 
                 <dt style={{ color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'Total Area:' : 'Diện tích:'}</dt>
                 <dd style={{ margin: 0, color: '#0f172a', fontWeight: 500 }}>
-                  {selectedFarm.totalAreaM2
+                  {(lang === 'en' ? selectedFarm.totalAreaM2 ? `${selectedFarm.totalAreaM2.toLocaleString('vi-VN')} m²` : polygonAreaM2 > 0 ? `${polygonAreaM2.toLocaleString('vi-VN')} m² (~${(polygonAreaM2 / 10000).toFixed(2)} ha based on the map boundary)` : "Compliant scale" : selectedFarm.totalAreaM2
                     ? `${selectedFarm.totalAreaM2.toLocaleString('vi-VN')} m²`
                     : polygonAreaM2 > 0
                       ? `${polygonAreaM2.toLocaleString('vi-VN')} m² (~${(polygonAreaM2 / 10000).toFixed(2)} ha theo sơ đồ bản đồ)`
-                      : 'Quy mô đạt chuẩn'}
+                      : 'Quy mô đạt chuẩn')}
                 </dd>
 
                 <dt style={{ color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'Status:' : 'Trạng thái:'}</dt>
@@ -415,10 +415,10 @@ export function FarmInfoPage() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <span className="profile-tag-pill" style={{ fontSize: '11.5px', padding: '2px 8px' }}>
-                          {m.role === 'OWNER' ? 'Chủ trại' : 'Nhân viên'}
+                          {(lang === 'en' ? m.role === 'OWNER' ? "Farm owner" : "Staff" : m.role === 'OWNER' ? 'Chủ trại' : 'Nhân viên')}
                         </span>
                         {isOwner && m.role !== 'OWNER' && (
-                          <button type="button" className="icon-button" title="Xóa thành viên" style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m.id, m.fullName || m.email)}>
+                          <button type="button" className="icon-button" title={(lang === 'en' ? "Remove member" : "Xóa thành viên")} style={{ color: '#ef4444' }} onClick={() => handleRemoveMember(m.id, m.fullName || m.email)}>
                             ✕
                           </button>
                         )}
@@ -450,7 +450,7 @@ export function FarmInfoPage() {
       {/* Edit Farm Modal */}
       {isEditOpen && (
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
-          <div className="panel" role="dialog" aria-modal="true" aria-label="Chỉnh sửa thông tin trang trại" style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="panel" role="dialog" aria-modal="true" aria-label={(lang === 'en' ? "Edit farm information" : "Chỉnh sửa thông tin trang trại")} style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>{lang === 'en' ? 'Edit Farm Information & Map' : 'Chỉnh sửa thông tin & Bản đồ trang trại'}</h2>
             <form onSubmit={handleUpdateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
@@ -482,7 +482,7 @@ export function FarmInfoPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>lang === 'en' ? 'Scale Description / Overview' : 'Mô tả quy mô / Giới thiệu'</label>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Scale Description / Overview' : 'Mô tả quy mô / Giới thiệu'}</label>
                 <textarea rows={3} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
@@ -500,7 +500,7 @@ export function FarmInfoPage() {
       {isAddMemberOpen && (
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px' }}>
           <div className="panel" style={{ width: '100%', maxWidth: '460px', borderRadius: '16px', padding: '28px' }}>
-            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>{lang === 'en' ? 'Add Member' : 'Thêm thành viên'} mới</h2>
+            <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>{lang === 'en' ? 'Add Member' : 'Thêm thành viên'} {(lang === 'en' ? " new" : " mới")}</h2>
             <form onSubmit={handleAddMember} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Account Email' : 'Email tài khoản'}</label>
@@ -532,11 +532,11 @@ export function FarmInfoPage() {
             <form onSubmit={handleCreateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Farm Name *' : 'Tên trang trại *'}</label>
-                <input type="text" required placeholder="Ví dụ: Nông trại Hữu cơ An Nhiên" value={createFarmName} onChange={(e) => setCreateFarmName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <input type="text" required placeholder={(lang === 'en' ? "Example: An Nhien Organic Farm" : "Ví dụ: Nông trại Hữu cơ An Nhiên")} value={createFarmName} onChange={(e) => setCreateFarmName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Address' : 'Địa chỉ'}</label>
-                <input type="text" placeholder="Xã/Huyện/Tỉnh..." value={createFarmAddress} onChange={(e) => setCreateFarmAddress(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <input type="text" placeholder={(lang === 'en' ? "Commune / District / Province..." : "Xã/Huyện/Tỉnh...")} value={createFarmAddress} onChange={(e) => setCreateFarmAddress(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Location & Farm Boundary Plan' : 'Vẽ vị trí & Sơ đồ ranh giới trang trại'}</label>
@@ -560,7 +560,7 @@ export function FarmInfoPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Scale & Description' : 'Mô tả quy mô'}</label>
-                <textarea rows={3} placeholder="Mô tả các loại cây trồng và diện tích dự kiến..." value={createFarmDesc} onChange={(e) => setCreateFarmDesc(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <textarea rows={3} placeholder={(lang === 'en' ? "Describe crop types and planned area..." : "Mô tả các loại cây trồng và diện tích dự kiến...")} value={createFarmDesc} onChange={(e) => setCreateFarmDesc(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
                 <button type="button" className="action-button" onClick={() => setIsCreateFarmOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</button>

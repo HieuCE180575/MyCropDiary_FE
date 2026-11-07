@@ -34,7 +34,7 @@ interface SelectedBlockConfig {
 }
 
 export function CropSeasonsPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const navigate = useNavigate();
   const { cropSeasonId: paramSeasonId } = useParams<{ cropSeasonId?: string }>();
   const detailSeasonId = paramSeasonId ? parseInt(paramSeasonId, 10) : null;
@@ -146,7 +146,7 @@ export function CropSeasonsPage() {
       if (silent) setError(null);
     } catch (err) {
       if (!silent) {
-        setError(err instanceof Error ? err.message : 'Không thể tải dữ liệu mùa vụ canh tác.');
+        setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load crop season data." : err instanceof Error ? err.message : 'Không thể tải dữ liệu mùa vụ canh tác.'));
       }
     } finally {
       if (!silent) setLoading(false);
@@ -315,7 +315,7 @@ export function CropSeasonsPage() {
     e.preventDefault();
     const trimmedSeasonName = formValues.seasonName.trim();
     if (!trimmedSeasonName) {
-      setSeasonModalError('Vui lòng nhập tên mùa vụ canh tác.');
+      setSeasonModalError((lang === 'en' ? "Enter a crop season name." : 'Vui lòng nhập tên mùa vụ canh tác.'));
       return;
     }
 
@@ -326,14 +326,14 @@ export function CropSeasonsPage() {
         (modalMode === 'create' || s.cropSeasonId !== selectedSeason?.cropSeasonId)
     );
     if (duplicateSeason) {
-      const msg = `Season Name "${trimmedSeasonName}" đã tồn tại trong nông trại này. Vui lòng đặt tên khác.`;
+      const msg = (lang === 'en' ? `Season Name "${trimmedSeasonName}" already exists in this farm. Choose another name.` : `Season Name "${trimmedSeasonName}" đã tồn tại trong nông trại này. Vui lòng đặt tên khác.`);
       setSeasonModalError(msg);
       showToast(msg, 'error');
       return;
     }
 
     if (formValues.endDate && formValues.endDate < formValues.startDate) {
-      const msg = `End Date mùa vụ (${formValues.endDate}) không thể trước ngày bắt đầu (${formValues.startDate}).`;
+      const msg = (lang === 'en' ? `Season end date (${formValues.endDate}) cannot be before the start date (${formValues.startDate}).` : `End Date mùa vụ (${formValues.endDate}) không thể trước ngày bắt đầu (${formValues.startDate}).`);
       setSeasonModalError(msg);
       showToast(msg, 'error');
       return;
@@ -346,7 +346,7 @@ export function CropSeasonsPage() {
       const blk = allFarmBlocks.find((b) => b.blockId === cfg.blockId);
       const plantedAreaNum = parseFloat(cfg.plantedArea) || 0;
       if (blk && blk.areaValue && plantedAreaNum > blk.areaValue) {
-        const msg = `Lô "${blk.blockName}": Diện tích trồng (${plantedAreaNum} ${cfg.areaUnit}) vượt quá diện tích thực tế của lô đất (${blk.areaValue} ${blk.areaUnit || 'm²'}).`;
+        const msg = (lang === 'en' ? `Block "${blk.blockName}": planted area (${plantedAreaNum} ${cfg.areaUnit}) exceeds the block's actual area (${blk.areaValue} ${(blk.areaUnit || "m²")}).` : `Lô "${blk.blockName}": Diện tích trồng (${plantedAreaNum} ${cfg.areaUnit}) vượt quá diện tích thực tế của lô đất (${blk.areaValue} ${blk.areaUnit || 'm²'}).`);
         setSeasonModalError(msg);
         showToast(msg, 'error');
         return;
@@ -359,7 +359,7 @@ export function CropSeasonsPage() {
         currentSeasonId
       );
       if (conflict) {
-        const msg = `Lô "${blk?.blockName || '#' + cfg.blockId}" đang có lịch canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Không thể phân bổ trùng thời gian!`;
+        const msg = (lang === 'en' ? `Block "${(blk?.blockName || '#' + cfg.blockId)}" is already scheduled in season "${conflict.seasonName}" (${conflict.startDate} → ${(conflict.endDate || "Current")}). Overlapping allocations are not allowed!` : `Lô "${blk?.blockName || '#' + cfg.blockId}" đang có lịch canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Không thể phân bổ trùng thời gian!`);
         setSeasonModalError(msg);
         showToast(msg, 'error');
         return;
@@ -396,19 +396,19 @@ export function CropSeasonsPage() {
             });
             if (res) assignedResults.push(res);
           } catch (err) {
-            assignErrors.push(err instanceof Error ? err.message : `Lỗi phân bổ lô #${cfg.blockId}`);
+            assignErrors.push(err instanceof Error ? err.message : (lang === 'en' ? `Unable to assign block #${cfg.blockId}` : `Lỗi phân bổ lô #${cfg.blockId}`));
           }
         }
 
         setSeasons((prev) => [created, ...prev]);
         setSeasonBlocksMap((prev) => ({ ...prev, [created.cropSeasonId]: assignedResults }));
         if (assignErrors.length > 0) {
-          showToast(`Đã tạo mùa vụ "${created.seasonName}", nhưng một số lô đất gặp lỗi: ${assignErrors.join('; ')}`, 'error');
+          showToast((lang === 'en' ? `Created season "${created.seasonName}", but some blocks could not be assigned: ${assignErrors.join('; ')}` : `Đã tạo mùa vụ "${created.seasonName}", nhưng một số lô đất gặp lỗi: ${assignErrors.join('; ')}`), 'error');
         } else {
           showToast(
-            assignedResults.length > 0
+            (lang === 'en' ? assignedResults.length > 0 ? `Created season "${created.seasonName}" and assigned ${assignedResults.length} blocks!` : `Created season "${created.seasonName}" successfully.` : assignedResults.length > 0
               ? `Đã tạo mùa vụ "${created.seasonName}" và phân bổ vào ${assignedResults.length} lô đất!`
-              : `Khởi tạo mùa vụ "${created.seasonName}" thành công.`
+              : `Khởi tạo mùa vụ "${created.seasonName}" thành công.`)
           );
         }
       } else if (modalMode === 'edit' && selectedSeason) {
@@ -459,7 +459,7 @@ export function CropSeasonsPage() {
         } else {
           setSeasons((prev) => prev.map((s) => (s.cropSeasonId === updated.cropSeasonId ? updated : s)));
         }
-        showToast(`Đã cập nhật mùa vụ "${updated.seasonName}" (${refreshedBlocks.length} lô đất áp dụng).`);
+        showToast((lang === 'en' ? `Updated season "${updated.seasonName}" (${refreshedBlocks.length} assigned blocks).` : `Đã cập nhật mùa vụ "${updated.seasonName}" (${refreshedBlocks.length} lô đất áp dụng).`));
       }
       setModalMode(null);
     } catch (err) {
@@ -487,9 +487,9 @@ export function CropSeasonsPage() {
             : nextStatus === 'cancelled'
               ? 'Đã hủy'
               : 'Dự kiến';
-      showToast(`Đã chuyển trạng thái mùa vụ sang: ${label}.`);
+      showToast((lang === 'en' ? `Season status changed to: ${label}.` : `Đã chuyển trạng thái mùa vụ sang: ${label}.`));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể cập nhật trạng thái mùa vụ.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to update season status." : err instanceof Error ? err.message : 'Không thể cập nhật trạng thái mùa vụ.'), 'error');
     }
   };
 
@@ -503,14 +503,14 @@ export function CropSeasonsPage() {
 
     // BR: Check if block already in this season
     if (seasonBlocks.some((b) => b.blockId === blockIdNum)) {
-      const msg = `Lô đất "${chosenBlock?.blockName || '#' + blockIdNum}" đã được phân bổ vào mùa vụ "${selectedSeason.seasonName}" rồi. Không thể gán trùng lặp!`;
+      const msg = (lang === 'en' ? `Block "${(chosenBlock?.blockName || '#' + blockIdNum)}" is already assigned to season "${selectedSeason.seasonName}". Duplicate assignments are not allowed!` : `Lô đất "${chosenBlock?.blockName || '#' + blockIdNum}" đã được phân bổ vào mùa vụ "${selectedSeason.seasonName}" rồi. Không thể gán trùng lặp!`);
       setAssignBlockModalError(msg);
       showToast(msg, 'error');
       return;
     }
 
     if (chosenBlock && chosenBlock.areaValue && plantedAreaNum > chosenBlock.areaValue) {
-      const msg = `Diện tích phân bổ (${plantedAreaNum} ${assignBlockForm.areaUnit}) không được lớn hơn diện tích thực tế của lô đất (${chosenBlock.areaValue} ${chosenBlock.areaUnit || 'm²'}).`;
+      const msg = (lang === 'en' ? `Assigned area (${plantedAreaNum} ${assignBlockForm.areaUnit}) must not exceed the block's actual area (${chosenBlock.areaValue} ${(chosenBlock.areaUnit || "m²")}).` : `Diện tích phân bổ (${plantedAreaNum} ${assignBlockForm.areaUnit}) không được lớn hơn diện tích thực tế của lô đất (${chosenBlock.areaValue} ${chosenBlock.areaUnit || 'm²'}).`);
       setAssignBlockModalError(msg);
       showToast(msg, 'error');
       return;
@@ -519,7 +519,7 @@ export function CropSeasonsPage() {
     const plantedAt = assignBlockForm.plantedAt || selectedSeason.startDate;
     const expectedHarvest = assignBlockForm.expectedHarvestAt || selectedSeason.endDate;
     if (plantedAt && expectedHarvest && expectedHarvest < plantedAt) {
-      const msg = `Ngày dự kiến thu hoạch (${expectedHarvest}) không thể trước ngày xuống giống (${plantedAt}) tại lô đất.`;
+      const msg = (lang === 'en' ? `Expected harvest date (${expectedHarvest}) cannot be before the planting date (${plantedAt}) in the block.` : `Ngày dự kiến thu hoạch (${expectedHarvest}) không thể trước ngày xuống giống (${plantedAt}) tại lô đất.`);
       setAssignBlockModalError(msg);
       showToast(msg, 'error');
       return;
@@ -532,7 +532,7 @@ export function CropSeasonsPage() {
       selectedSeason.cropSeasonId
     );
     if (conflict) {
-      const msg = `Lô đất này đang được canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Không thể gán vào mùa vụ trùng thời gian!`;
+      const msg = (lang === 'en' ? `This block is already growing crops in season "${conflict.seasonName}" (${conflict.startDate} → ${(conflict.endDate || "Current")}). Assignment to overlapping seasons is not allowed!` : `Lô đất này đang được canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Không thể gán vào mùa vụ trùng thời gian!`);
       setAssignBlockModalError(msg);
       showToast(msg, 'error');
       return;
@@ -552,7 +552,7 @@ export function CropSeasonsPage() {
         return next;
       });
       setIsAssignBlockOpen(false);
-      showToast(`Đã gán lô đất "${added.blockName || 'Lô #' + added.blockId}" vào mùa vụ ${selectedSeason.seasonName}.`);
+      showToast((lang === 'en' ? `Assigned block "${added.blockName || 'Lô #' + added.blockId}" to season ${selectedSeason.seasonName}.` : `Đã gán lô đất "${added.blockName || 'Lô #' + added.blockId}" vào mùa vụ ${selectedSeason.seasonName}.`));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể gán lô đất vào mùa vụ.';
       setAssignBlockModalError(msg);
@@ -569,9 +569,9 @@ export function CropSeasonsPage() {
         setSeasonBlocksMap((m) => ({ ...m, [selectedSeason.cropSeasonId]: next }));
         return next;
       });
-      showToast('Đã gỡ lô đất khỏi mùa vụ canh tác.');
+      showToast((lang === 'en' ? "Block removed from season." : 'Đã gỡ lô đất khỏi mùa vụ canh tác.'));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể gỡ lô đất khỏi mùa vụ.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to remove block from season." : err instanceof Error ? err.message : 'Không thể gỡ lô đất khỏi mùa vụ.'), 'error');
     }
   };
 
@@ -581,13 +581,13 @@ export function CropSeasonsPage() {
     try {
       await deleteCropSeason(seasonToDelete.cropSeasonId);
       setSeasons((prev) => prev.filter((s) => s.cropSeasonId !== seasonToDelete.cropSeasonId));
-      showToast(`Đã xóa mùa vụ "${seasonToDelete.seasonName}" thành công.`);
+      showToast((lang === 'en' ? `Deleted season "${seasonToDelete.seasonName}" successfully.` : `Đã xóa mùa vụ "${seasonToDelete.seasonName}" thành công.`));
       setSeasonToDelete(null);
       if (detailSeasonId) {
         navigate('/crop-seasons');
       }
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể xóa mùa vụ này.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete this season." : err instanceof Error ? err.message : 'Không thể xóa mùa vụ này.'), 'error');
       setSeasonToDelete(null);
     } finally {
       setIsDeleting(false);
@@ -610,7 +610,7 @@ export function CropSeasonsPage() {
               <span className="eyebrow">{lang === 'en' ? 'Season Profile & Block Allocation (N-N)' : 'Hồ sơ mùa vụ & Phân bổ lô đất (N-N)'}</span>
               <h2>{modalMode === 'create' ? (lang === 'en' ? 'Create New Crop Season' : 'Create Season canh tác mới') : (lang === 'en' ? 'Update Season & Blocks' : 'Update Season & lô đất áp dụng')}</h2>
             </div>
-            <button type="button" className="modal-close" onClick={() => setModalMode(null)} aria-label="Đóng">
+            <button type="button" className="modal-close" onClick={() => setModalMode(null)} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
               ✕
             </button>
           </div>
@@ -618,7 +618,7 @@ export function CropSeasonsPage() {
           <form className="modal-body" onSubmit={handleSaveSeason} noValidate>
             {seasonModalError && (
               <p className="form-error-banner" role="alert" style={{ margin: '0 0 16px' }}>
-                {seasonModalError}
+                {translate(seasonModalError)}
               </p>
             )}
             <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
@@ -653,7 +653,7 @@ export function CropSeasonsPage() {
                   <label htmlFor="modal-cs-start" className="structured-field-label">
                     {lang === 'en' ? 'Season Start Date' : 'Start Date mùa vụ'} <span style={{ color: '#dc2626' }}>*</span>
                   </label>
-                  <span className="structured-field-badge">Bắt buộc</span>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input
@@ -671,7 +671,7 @@ export function CropSeasonsPage() {
                   <label htmlFor="modal-cs-end" className="structured-field-label">
                     {lang === 'en' ? 'Expected End Date' : 'End Date dự kiến'}
                   </label>
-                  <span className="structured-field-badge">Tùy chọn</span>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input
@@ -753,11 +753,11 @@ export function CropSeasonsPage() {
                     color: '#64748b',
                   }}
                 >
-                  Trang trại chưa có lô đất nào. Bạn có thể tạo lô đất tại mục{' '}
+                  {(lang === 'en' ? "The farm has no blocks yet. Create blocks under" : "Trang trại chưa có lô đất nào. Bạn có thể tạo lô đất tại mục")}{' '}
                   <Link to="/zones" style={{ color: '#059669', fontWeight: 700 }}>
-                    Khu sản xuất &amp; lô đất
+                    {(lang === 'en' ? "Zones & Blocks" : "Khu sản xuất & lô đất")}
                   </Link>{' '}
-                  hoặc tạo mùa vụ trước rồi gán lô sau.
+                  {(lang === 'en' ? "or create a season first and assign blocks later." : "hoặc tạo mùa vụ trước rồi gán lô sau.")}
                 </div>
               ) : (
                 <div
@@ -829,9 +829,9 @@ export function CropSeasonsPage() {
                                   borderRadius: '999px',
                                   border: '1px solid #fecaca',
                                 }}
-                                title={`Lô đất đang canh tác trong mùa vụ: ${conflict.seasonName} (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'})`}
+                                title={(lang === 'en' ? `Block is growing crops in season: ${conflict.seasonName} (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'})` : `Lô đất đang canh tác trong mùa vụ: ${conflict.seasonName} (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'})`)}
                               >
-                                ⚠️ Trùng lịch: {conflict.seasonName}
+                                {(lang === 'en' ? "⚠️ Schedule conflict: " : "⚠️ Trùng lịch: ")} {conflict.seasonName}
                               </span>
                             )}
                             <span
@@ -844,7 +844,7 @@ export function CropSeasonsPage() {
                                 borderRadius: '999px',
                               }}
                             >
-                              Diện tích gốc: {block.areaValue} {block.areaUnit || 'm²'}
+                              {(lang === 'en' ? "Original area: " : "Diện tích gốc: ")} {block.areaValue} {translate(block.areaUnit || 'm²')}
                             </span>
                           </div>
                         </label>
@@ -870,7 +870,7 @@ export function CropSeasonsPage() {
                                   marginBottom: '4px',
                                 }}
                               >
-                                Diện tích trồng ({cfg.areaUnit || 'm²'})
+                                {(lang === 'en' ? "Planted area (" : "Diện tích trồng (")}{translate(cfg.areaUnit || 'm²')})
                               </label>
                               <input
                                 type="number"
@@ -900,7 +900,7 @@ export function CropSeasonsPage() {
                                   marginBottom: '4px',
                                 }}
                               >
-                                {lang === 'en' ? 'Planted Date' : 'Ngày xuống giống'} tại {block.blockName}
+                                {lang === 'en' ? 'Planted Date' : 'Ngày xuống giống'} {(lang === 'en' ? " at " : " tại ")} {block.blockName}
                               </label>
                               <input
                                 type="date"
@@ -932,7 +932,7 @@ export function CropSeasonsPage() {
                 <label htmlFor="modal-cs-notes" className="structured-field-label">
                   {lang === 'en' ? 'Season Notes' : 'Ghi chú mùa vụ'}
                 </label>
-                <span className="structured-field-badge">{formValues.notes.length}/1000 ký tự</span>
+                <span className="structured-field-badge">{formValues.notes.length}{(lang === 'en' ? "/1000 characters" : "/1000 ký tự")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <textarea
@@ -970,7 +970,7 @@ export function CropSeasonsPage() {
       return (
         <div className="farm-registration-page">
           <div className="panel" style={{ textAlign: 'center', padding: '48px 20px' }}>
-            <p className="muted">Đang tải chi tiết mùa vụ canh tác...</p>
+            <p className="muted">{(lang === 'en' ? "Loading crop season details..." : "Đang tải chi tiết mùa vụ canh tác...")}</p>
           </div>
         </div>
       );
@@ -981,11 +981,11 @@ export function CropSeasonsPage() {
         <div className="farm-registration-page">
           <div className="alert-error" role="alert">
             <div>
-              <strong>Không tìm thấy thông tin mùa vụ</strong>
-              <p style={{ margin: '4px 0 0' }}>{error || `Mùa vụ #${detailSeasonId} không tồn tại.`}</p>
+              <strong>{(lang === 'en' ? "Crop season not found" : "Không tìm thấy thông tin mùa vụ")}</strong>
+              <p style={{ margin: '4px 0 0' }}>{(lang === 'en' ? error || `Season #${detailSeasonId} does not exist.` : error || `Mùa vụ #${detailSeasonId} không tồn tại.`)}</p>
             </div>
             <Link to="/crop-seasons" className="primary-button" style={{ textDecoration: 'none' }}>
-              Quay lại danh sách mùa vụ
+              {(lang === 'en' ? "Back to crop seasons" : "Quay lại danh sách mùa vụ")}
             </Link>
           </div>
         </div>
@@ -998,7 +998,7 @@ export function CropSeasonsPage() {
       <div className="farm-registration-page">
         {notification && (
           <div className={notification.type === 'success' ? 'alert-success' : 'alert-error'} role="status">
-            <span>{notification.text}</span>
+            <span>{translate(notification.text)}</span>
             <button type="button" className="ghost-button" onClick={() => setNotification(null)}>
               ✕
             </button>
@@ -1020,7 +1020,7 @@ export function CropSeasonsPage() {
             <>
               <span className="sep">→</span>
               <Link to={`/zones/${primaryBlock.zoneId || 1}/blocks/${primaryBlock.blockId}`}>
-                {primaryBlock.blockName || `Lô #${primaryBlock.blockId}`}
+                {(lang === 'en' ? primaryBlock.blockName || `Block #${primaryBlock.blockId}` : primaryBlock.blockName || `Lô #${primaryBlock.blockId}`)}
               </Link>
             </>
           )}
@@ -1083,9 +1083,9 @@ export function CropSeasonsPage() {
               <Icon name="sprout" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Cây trồng</h4>
+              <h4>{(lang === 'en' ? "Crop" : "Cây trồng")}</h4>
               <strong className="stat-number" style={{ fontSize: '1.05rem' }}>
-                {selectedSeason.cropCategoryName || `Nhóm #${selectedSeason.cropCategoryId}`}
+                {(lang === 'en' ? selectedSeason.cropCategoryName || `Group #${selectedSeason.cropCategoryId}` : selectedSeason.cropCategoryName || `Nhóm #${selectedSeason.cropCategoryId}`)}
               </strong>
             </div>
           </div>
@@ -1095,9 +1095,9 @@ export function CropSeasonsPage() {
               <Icon name="calendar" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Thời gian</h4>
+              <h4>{(lang === 'en' ? "Time" : "Thời gian")}</h4>
               <strong className="stat-number" style={{ fontSize: '0.95rem' }}>
-                {selectedSeason.startDate} → {selectedSeason.endDate || 'Hiện tại'}
+                {selectedSeason.startDate} → {(lang === 'en' ? selectedSeason.endDate || "Current" : selectedSeason.endDate || 'Hiện tại')}
               </strong>
             </div>
           </div>
@@ -1107,8 +1107,8 @@ export function CropSeasonsPage() {
               <Icon name="plots" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Lô phân bổ</h4>
-              <strong className="stat-number">{seasonBlocks.length} lô</strong>
+              <h4>{(lang === 'en' ? "Assigned blocks" : "Lô phân bổ")}</h4>
+              <strong className="stat-number">{seasonBlocks.length} {(lang === 'en' ? " blocks" : " lô")}</strong>
             </div>
           </div>
 
@@ -1117,7 +1117,7 @@ export function CropSeasonsPage() {
               <Icon name="check" size={18} />
             </div>
             <div className="zone-stat-content">
-              <h4>Trạng thái</h4>
+              <h4>{(lang === 'en' ? "Status" : "Trạng thái")}</h4>
               <strong className="stat-number" style={{ textTransform: 'uppercase', fontSize: '1rem' }}>
                 {selectedSeason.seasonStatus}
               </strong>
@@ -1129,8 +1129,8 @@ export function CropSeasonsPage() {
           <article className="panel">
             <div className="panel-title">
               <div>
-                <p className="eyebrow">Hồ sơ mùa vụ</p>
-                <h3>Thông tin chi tiết mùa vụ</h3>
+                <p className="eyebrow">{(lang === 'en' ? "Season record" : "Hồ sơ mùa vụ")}</p>
+                <h3>{(lang === 'en' ? "Season details" : "Thông tin chi tiết mùa vụ")}</h3>
               </div>
               <span className={`status-dot-badge ${selectedSeason.seasonStatus === 'active' ? 'active' : 'completed'}`}>
                 <span className="dot" />
@@ -1140,7 +1140,7 @@ export function CropSeasonsPage() {
 
             <dl className="detail-list">
               <div>
-                <dt>Mã định danh mùa vụ</dt>
+                <dt>{(lang === 'en' ? "Season ID" : "Mã định danh mùa vụ")}</dt>
                 <dd>#{selectedSeason.cropSeasonId} (CS-{String(selectedSeason.cropSeasonId).padStart(3, '0')})</dd>
               </div>
               <div>
@@ -1148,24 +1148,24 @@ export function CropSeasonsPage() {
                 <dd>{selectedSeason.seasonName}</dd>
               </div>
               <div>
-                <dt>Danh mục cây trồng</dt>
-                <dd>{selectedSeason.cropCategoryName || `Nhóm #${selectedSeason.cropCategoryId}`}</dd>
+                <dt>{(lang === 'en' ? "Crop categories" : "Danh mục cây trồng")}</dt>
+                <dd>{(lang === 'en' ? selectedSeason.cropCategoryName || `Group #${selectedSeason.cropCategoryId}` : selectedSeason.cropCategoryName || `Nhóm #${selectedSeason.cropCategoryId}`)}</dd>
               </div>
               <div>
-                <dt>Trang trại trực thuộc</dt>
+                <dt>{(lang === 'en' ? "Farm" : "Trang trại trực thuộc")}</dt>
                 <dd>{selectedSeason.farmName || farmName}</dd>
               </div>
               <div>
-                <dt>Thời gian canh tác</dt>
+                <dt>{(lang === 'en' ? "Growing period" : "Thời gian canh tác")}</dt>
                 <dd>{selectedSeason.startDate} → {selectedSeason.endDate || 'Active'}</dd>
               </div>
               <div>
-                <dt>Người khởi tạo</dt>
-                <dd>{selectedSeason.createdByFullName || 'Ban quản lý trang trại'}</dd>
+                <dt>{(lang === 'en' ? "Created by" : "Người khởi tạo")}</dt>
+                <dd>{(lang === 'en' ? selectedSeason.createdByFullName || "Farm management" : selectedSeason.createdByFullName || 'Ban quản lý trang trại')}</dd>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <dt>Ghi chú mùa vụ</dt>
-                <dd>{selectedSeason.notes || 'Không có ghi chú bổ sung.'}</dd>
+                <dt>{(lang === 'en' ? "Season notes" : "Ghi chú mùa vụ")}</dt>
+                <dd>{(lang === 'en' ? selectedSeason.notes || "No additional notes." : selectedSeason.notes || 'Không có ghi chú bổ sung.')}</dd>
               </div>
             </dl>
           </article>
@@ -1174,15 +1174,15 @@ export function CropSeasonsPage() {
           <article className="panel">
             <div className="panel-title">
               <div>
-                <p className="eyebrow">Lô canh tác tham gia mùa vụ (CropSeasonBlock)</p>
-                <h3>Lô sản xuất tham gia mùa vụ ({seasonBlocks.length})</h3>
+                <p className="eyebrow">{(lang === 'en' ? "Season blocks (CropSeasonBlock)" : "Lô canh tác tham gia mùa vụ (CropSeasonBlock)")}</p>
+                <h3>{(lang === 'en' ? "Season production blocks (" : "Lô sản xuất tham gia mùa vụ (")}{seasonBlocks.length})</h3>
               </div>
               <div className="button-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Link to="/activities" className="action-button" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Icon name="book" size={15} /> Nhật ký canh tác
+                  <Icon name="book" size={15} /> {(lang === 'en' ? " Farming diary" : " Nhật ký canh tác")}
                 </Link>
                 <Link to="/harvests" className="action-button" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <Icon name="qr" size={15} /> Thu hoạch &amp; QR
+                  <Icon name="qr" size={15} /> {(lang === 'en' ? " Harvest & QR" : " Thu hoạch & QR")}
                 </Link>
                 <button
                   type="button"
@@ -1204,21 +1204,21 @@ export function CropSeasonsPage() {
                     setIsAssignBlockOpen(true);
                   }}
                 >
-                  <Icon name="plus" size={15} /> Gán thêm lô đất
+                  <Icon name="plus" size={15} /> {(lang === 'en' ? " Assign more blocks" : " Gán thêm lô đất")}
                 </button>
               </div>
             </div>
 
             {seasonBlocks.length === 0 ? (
               <div className="zone-empty-hero" style={{ padding: '32px 20px' }}>
-                <p className="muted">Chưa có lô đất nào được gán vào mùa vụ này.</p>
+                <p className="muted">{(lang === 'en' ? "No blocks assigned to this season." : "Chưa có lô đất nào được gán vào mùa vụ này.")}</p>
                 <button
                   type="button"
                   className="primary-button"
                   style={{ marginTop: '10px' }}
                   onClick={() => void openEditModal(selectedSeason)}
                 >
-                  + Chọn lô đất áp dụng cho mùa vụ
+                  {(lang === 'en' ? "+ Select blocks for the season" : "+ Chọn lô đất áp dụng cho mùa vụ")}
                 </button>
               </div>
             ) : (
@@ -1256,7 +1256,7 @@ export function CropSeasonsPage() {
                               to={`/zones/${sb.zoneId || 1}/blocks/${sb.blockId}`}
                               style={{ color: '#0f172a', fontWeight: 700, textDecoration: 'none' }}
                             >
-                              {sb.blockName || `Lô #${sb.blockId}`}
+                              {(lang === 'en' ? sb.blockName || `Block #${sb.blockId}` : sb.blockName || `Lô #${sb.blockId}`)}
                             </Link>
                           </div>
                         </td>
@@ -1270,7 +1270,7 @@ export function CropSeasonsPage() {
                         </td>
                         <td>
                           <strong style={{ color: '#334155' }}>
-                            {sb.plantedArea ?? sb.blockArea} {sb.areaUnit || sb.blockAreaUnit || 'm²'}
+                            {sb.plantedArea ?? sb.blockArea} {translate(sb.areaUnit || sb.blockAreaUnit || 'm²')}
                           </strong>
                         </td>
                         <td className="muted" style={{ fontSize: '13.5px' }}>
@@ -1281,22 +1281,22 @@ export function CropSeasonsPage() {
                             <Link
                               to={`/zones/${sb.zoneId || 1}/blocks/${sb.blockId}`}
                               className="table-icon-btn primary"
-                              title="Xem chi tiết lô đất"
-                              aria-label={`Xem chi tiết ${sb.blockName}`}
+                              title={(lang === 'en' ? "View block details" : "Xem chi tiết lô đất")}
+                              aria-label={(lang === 'en' ? `View details ${sb.blockName}` : `Xem chi tiết ${sb.blockName}`)}
                             >
                               <Icon name="eye" size={15} />
-                              <span className="sr-only">Xem chi tiết</span>
+                              <span className="sr-only">{(lang === 'en' ? "View details" : "Xem chi tiết")}</span>
                             </Link>
                             {isOwner && (
                               <button
                                 type="button"
                                 className="table-icon-btn danger"
-                                title="Gỡ lô đất khỏi mùa vụ"
-                                aria-label={`Gỡ lô đất ${sb.blockName}`}
+                                title={(lang === 'en' ? "Remove block from season" : "Gỡ lô đất khỏi mùa vụ")}
+                                aria-label={(lang === 'en' ? `Remove block ${sb.blockName}` : `Gỡ lô đất ${sb.blockName}`)}
                                 onClick={() => handleRemoveBlockFromSeason(sb.blockId)}
                               >
                                 <Icon name="trash" size={15} />
-                                <span className="sr-only">Gỡ lô đất</span>
+                                <span className="sr-only">{(lang === 'en' ? "Remove block" : "Gỡ lô đất")}</span>
                               </button>
                             )}
                           </div>
@@ -1319,7 +1319,7 @@ export function CropSeasonsPage() {
                   <span className="eyebrow">{lang === 'en' ? 'Block Allocation' : 'Phân công lô đất canh tác'}</span>
                   <h2>{lang === 'en' ? 'Allocate Block to: ' : 'Gán lô đất vào: '}{selectedSeason.seasonName}</h2>
                 </div>
-                <button type="button" className="modal-close" onClick={() => setIsAssignBlockOpen(false)} aria-label="Đóng">
+                <button type="button" className="modal-close" onClick={() => setIsAssignBlockOpen(false)} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
                   ✕
                 </button>
               </div>
@@ -1327,7 +1327,7 @@ export function CropSeasonsPage() {
               <form className="modal-body" onSubmit={handleAssignBlock} noValidate>
                 {assignBlockModalError && (
                   <p className="form-error-banner" role="alert" style={{ margin: '0 0 16px' }}>
-                    {assignBlockModalError}
+                    {translate(assignBlockModalError)}
                   </p>
                 )}
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
@@ -1335,7 +1335,7 @@ export function CropSeasonsPage() {
                     <label htmlFor="assign-block-select" className="structured-field-label">
                       {lang === 'en' ? 'Target Production Block' : 'Lô sản xuất mục tiêu'} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <span className="structured-field-badge">Trang trại {farmName}</span>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Farm " : "Trang trại ")} {farmName}</span>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <select
@@ -1354,7 +1354,7 @@ export function CropSeasonsPage() {
                     >
                       {allFarmBlocks.map((b) => (
                         <option key={b.blockId} value={b.blockId}>
-                          {b.blockName} ({b.zoneName || `Khu #${b.zoneId}`} - {b.areaValue} {b.areaUnit})
+                          {b.blockName} ({b.zoneName || `Khu #${b.zoneId}`} - {b.areaValue} {translate(b.areaUnit)})
                         </option>
                       ))}
                     </select>
@@ -1364,9 +1364,9 @@ export function CropSeasonsPage() {
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
                     <label htmlFor="assign-block-area" className="structured-field-label">
-                      {lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'} ({assignBlockForm.areaUnit || 'm²'}) <span style={{ color: '#dc2626' }}>*</span>
+                      {lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'} ({translate(assignBlockForm.areaUnit || 'm²')}) <span style={{ color: '#dc2626' }}>*</span>
                     </label>
-                    <span className="structured-field-badge">Số dương</span>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Positive number" : "Số dương")}</span>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <input
@@ -1374,7 +1374,7 @@ export function CropSeasonsPage() {
                       type="number"
                       step="0.01"
                       min="0.01"
-                      placeholder="VD: 500"
+                      placeholder={(lang === 'en' ? "e.g. 500" : "VD: 500")}
                       value={assignBlockForm.plantedArea}
                       onChange={(e) => setAssignBlockForm({ ...assignBlockForm, plantedArea: e.target.value })}
                       required
@@ -1386,9 +1386,9 @@ export function CropSeasonsPage() {
                   <div className="structured-field-card" style={{ marginBottom: 0 }}>
                     <div className="structured-field-header">
                       <label htmlFor="assign-block-planted-at" className="structured-field-label">
-                        Ngày xuống giống
+                        {(lang === 'en' ? "Planting date" : "Ngày xuống giống")}
                       </label>
-                      <span className="structured-field-badge">Ngày</span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</span>
                     </div>
                     <div className="form-field" style={{ marginBottom: 0 }}>
                       <input
@@ -1403,9 +1403,9 @@ export function CropSeasonsPage() {
                   <div className="structured-field-card" style={{ marginBottom: 0 }}>
                     <div className="structured-field-header">
                       <label htmlFor="assign-block-harvest-at" className="structured-field-label">
-                        Dự kiến thu hoạch
+                        {(lang === 'en' ? "Expected harvest" : "Dự kiến thu hoạch")}
                       </label>
-                      <span className="structured-field-badge">Tùy chọn</span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
                     </div>
                     <div className="form-field" style={{ marginBottom: 0 }}>
                       <input
@@ -1433,8 +1433,8 @@ export function CropSeasonsPage() {
 
         <ConfirmDialog
           open={Boolean(seasonToDelete)}
-          title="Xác nhận xóa mùa vụ"
-          description={`Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`}
+          title={(lang === 'en' ? "Confirm season deletion" : "Xác nhận xóa mùa vụ")}
+          description={(lang === 'en' ? `Are you sure you want to delete season "${seasonToDelete?.seasonName}"? This removes the season record if it has no linked diary entries.` : `Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`)}
           confirmLabel="Xóa mùa vụ"
           cancelLabel="Cancel"
           tone="danger"
@@ -1486,7 +1486,7 @@ export function CropSeasonsPage() {
     <div className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {notification && (
         <div className={notification.type === 'success' ? 'alert-success' : 'alert-error'} role="status">
-          <span>{notification.text}</span>
+          <span>{translate(notification.text)}</span>
           <button type="button" className="ghost-button" onClick={() => setNotification(null)}>
             ✕
           </button>
@@ -1551,12 +1551,12 @@ export function CropSeasonsPage() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            aria-label="Lọc theo cây trồng"
+            aria-label={(lang === 'en' ? "Filter by crop" : "Lọc theo cây trồng")}
           >
             <option value="all">{lang === 'en' ? 'All Crop Categories' : 'Tất cả cây trồng'}</option>
             {categories.map((c) => (
               <option key={c.id} value={String(c.id)}>
-                {c.categoryName}
+                {translate(c.categoryName)}
               </option>
             ))}
           </select>
@@ -1572,7 +1572,7 @@ export function CropSeasonsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            aria-label="Lọc theo trạng thái"
+            aria-label={(lang === 'en' ? "Filter by status" : "Lọc theo trạng thái")}
           >
             <option value="all">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>
             <option value="active">{lang === 'en' ? 'Active' : 'Đang canh tác'}</option>
@@ -1628,7 +1628,7 @@ export function CropSeasonsPage() {
               </Link>
               {isOwner && (
                 <button type="button" className="primary-button" onClick={openCreateModal}>
-                  <Icon name="plus" size={16} /> Thêm mùa vụ
+                  <Icon name="plus" size={16} /> {(lang === 'en' ? " Add season" : " Thêm mùa vụ")}
                 </button>
               )}
             </div>
@@ -1669,7 +1669,7 @@ export function CropSeasonsPage() {
 
                   // Format Block info string: e.g. "Lô A01 • 500 m²"
                   const blockText = assignedBlocks.length === 0
-                    ? 'Chưa gán lô'
+                    ? (lang === 'en' ? "No blocks assigned" : 'Chưa gán lô')
                     : assignedBlocks.length === 1
                       ? `${assignedBlocks[0].blockName} • ${(assignedBlocks[0].plantedArea ?? assignedBlocks[0].blockArea ?? 0).toLocaleString('vi-VN')} ${assignedBlocks[0].areaUnit || 'm²'}`
                       : `${assignedBlocks.map(b => b.blockName).join(', ')} • ${assignedBlocks.reduce((sum, b) => sum + (Number(b.plantedArea ?? b.blockArea) || 0), 0).toLocaleString('vi-VN')} m²`;
@@ -1706,7 +1706,7 @@ export function CropSeasonsPage() {
 
                       <td style={{ padding: '14px 16px' }}>
                         <span className={`crop-cat-pill ${meta.color}`}>
-                          {s.cropCategoryName || 'Cây trồng chung'}
+                          {(lang === 'en' ? s.cropCategoryName || "General crop" : s.cropCategoryName || 'Cây trồng chung')}
                         </span>
                       </td>
 
@@ -1718,7 +1718,7 @@ export function CropSeasonsPage() {
                             style={{ minHeight: '30px', padding: '3px 10px', fontSize: '12px', borderRadius: '8px' }}
                             onClick={() => void openEditModal(s)}
                           >
-                            + Gán lô đất
+                            {(lang === 'en' ? "+ Assign blocks" : "+ Gán lô đất")}
                           </button>
                         ) : (
                           <span>{blockText}</span>
@@ -1726,7 +1726,7 @@ export function CropSeasonsPage() {
                       </td>
 
                       <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
-                        {formatVietnameseDate(s.startDate)} – {formatVietnameseDate(s.endDate) || 'Hiện tại'}
+                        {formatVietnameseDate(s.startDate)} – {(lang === 'en' ? formatVietnameseDate(s.endDate) || "Current" : formatVietnameseDate(s.endDate) || 'Hiện tại')}
                       </td>
 
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
@@ -1747,8 +1747,8 @@ export function CropSeasonsPage() {
                           <button
                             type="button"
                             className="table-icon-btn primary"
-                            title="Xem chi tiết mùa vụ"
-                            aria-label={`Xem chi tiết ${s.seasonName}`}
+                            title={(lang === 'en' ? "View season details" : "Xem chi tiết mùa vụ")}
+                            aria-label={(lang === 'en' ? `View details ${s.seasonName}` : `Xem chi tiết ${s.seasonName}`)}
                             onClick={() => navigate(`/crop-seasons/${s.cropSeasonId}`)}
                           >
                             <Icon name="eye" size={16} />
@@ -1758,8 +1758,8 @@ export function CropSeasonsPage() {
                             <button
                               type="button"
                               className="table-icon-btn edit"
-                              title="Chỉnh sửa mùa vụ & lô đất"
-                              aria-label={`Chỉnh sửa ${s.seasonName}`}
+                              title={(lang === 'en' ? "Edit season & blocks" : "Chỉnh sửa mùa vụ & lô đất")}
+                              aria-label={(lang === 'en' ? `Edit ${s.seasonName}` : `Chỉnh sửa ${s.seasonName}`)}
                               onClick={() => void openEditModal(s)}
                             >
                               <Icon name="edit" size={16} />
@@ -1770,8 +1770,8 @@ export function CropSeasonsPage() {
                             <button
                               type="button"
                               className="table-icon-btn danger"
-                              title="Xóa mùa vụ"
-                              aria-label={`Xóa ${s.seasonName}`}
+                              title={(lang === 'en' ? "Delete season" : "Xóa mùa vụ")}
+                              aria-label={(lang === 'en' ? `Delete ${s.seasonName}` : `Xóa ${s.seasonName}`)}
                               onClick={() => setSeasonToDelete(s)}
                             >
                               <Icon name="trash" size={16} />
@@ -1787,7 +1787,7 @@ export function CropSeasonsPage() {
           </div>
         )}
         <div className="zone-table-footer" style={{ margin: '16px -24px -24px' }}>
-          <span>Hiển thị 1–{filteredSeasons.length} trong {seasons.length} mùa vụ</span>
+          <span>{(lang === 'en' ? "Showing 1–" : "Hiển thị 1–")}{filteredSeasons.length} {(lang === 'en' ? " of " : " trong ")} {seasons.length} {(lang === 'en' ? " seasons" : " mùa vụ")}</span>
           <div className="zone-pagination-wrap">
             <button type="button" className="zone-page-btn" disabled>&lt;</button>
             <button type="button" className="zone-page-btn active">1</button>
@@ -1800,8 +1800,8 @@ export function CropSeasonsPage() {
 
       <ConfirmDialog
         open={Boolean(seasonToDelete)}
-        title="Xác nhận xóa mùa vụ"
-        description={`Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`}
+        title={(lang === 'en' ? "Confirm season deletion" : "Xác nhận xóa mùa vụ")}
+        description={(lang === 'en' ? `Are you sure you want to delete season "${seasonToDelete?.seasonName}"? This removes the season record if it has no linked diary entries.` : `Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`)}
         confirmLabel="Xóa mùa vụ"
         cancelLabel="Cancel"
         tone="danger"

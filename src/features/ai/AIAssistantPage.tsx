@@ -33,7 +33,7 @@ interface AIAssistantPageProps {
 }
 
 export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const [activeTab, setActiveTab] = useState<'ai' | 'ai-history' | 'ai-feedback' | 'ai-drafts'>(initialTab);
 
@@ -132,9 +132,9 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       setActiveConversationId(newConv.conversationId);
       await selectConversation(newConv.conversationId);
       setActiveTab('ai');
-      showToast('Đã bắt đầu phiên trò chuyện mới với AI');
+      showToast((lang === 'en' ? "New AI conversation started" : 'Đã bắt đầu phiên trò chuyện mới với AI'));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể tạo phiên mới', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to start a new conversation" : err instanceof Error ? err.message : 'Không thể tạo phiên mới'), 'error');
     }
   };
 
@@ -203,28 +203,28 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     setSubmittingReport(true);
     try {
       await reportAIMessage(reportingMessage.messageId, reportRating, reportReason.trim());
-      showToast('Đã gửi phản hồi báo cáo câu trả lời thành công. Cảm ơn bạn!');
+      showToast((lang === 'en' ? "Answer report submitted successfully. Thank you!" : 'Đã gửi phản hồi báo cáo câu trả lời thành công. Cảm ơn bạn!'));
       setReportingMessage(null);
       void loadFeedbackHistory();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Gửi báo cáo thất bại', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to submit report" : err instanceof Error ? err.message : 'Gửi báo cáo thất bại'), 'error');
     } finally {
       setSubmittingReport(false);
     }
   };
 
   const handleDeleteConversation = async (convId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa cuộc hội thoại này?')) return;
+    if (!window.confirm((lang === 'en' ? "Are you sure you want to delete this conversation?" : 'Bạn có chắc chắn muốn xóa cuộc hội thoại này?'))) return;
     try {
       await deleteAIConversation(convId);
-      showToast('Đã xóa cuộc hội thoại thành công.');
+      showToast((lang === 'en' ? "Conversation deleted successfully." : 'Đã xóa cuộc hội thoại thành công.'));
       if (activeConversationId === convId) {
         setActiveConversationId(null);
         setMessages([]);
       }
       await loadConversations();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Xóa hội thoại thất bại', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete conversation" : err instanceof Error ? err.message : 'Xóa hội thoại thất bại'), 'error');
     }
   };
 
@@ -241,11 +241,11 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     setSubmittingEdit(true);
     try {
       await updateAIFeedback(editingFeedback.feedbackId, editRating, editReason.trim());
-      showToast('Cập nhật phản hồi thành công.');
+      showToast((lang === 'en' ? "Feedback updated successfully." : 'Cập nhật phản hồi thành công.'));
       setEditingFeedback(null);
       void loadFeedbackHistory();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Cập nhật phản hồi thất bại', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to update feedback" : err instanceof Error ? err.message : 'Cập nhật phản hồi thất bại'), 'error');
     } finally {
       setSubmittingEdit(false);
     }
@@ -256,7 +256,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     if (!feedbackText.trim()) return;
     setFeedbackSent(true);
     setFeedbackText('');
-    showToast('Cảm ơn đóng góp ý kiến của bạn về Trợ lý AI!');
+    showToast((lang === 'en' ? "Thank you for your feedback on the AI Assistant!" : 'Cảm ơn đóng góp ý kiến của bạn về Trợ lý AI!'));
     setTimeout(() => setFeedbackSent(false), 3000);
   };
 
@@ -283,7 +283,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     setDrafts((prev) =>
       prev.map((d) => (d.id === draftId ? { ...d, status: 'APPROVED' } : d))
     );
-    showToast('Đã xác nhận và chuyển bản nháp AI vào Nhật ký canh tác!');
+    showToast((lang === 'en' ? "AI draft confirmed and added to the farming diary!" : 'Đã xác nhận và chuyển bản nháp AI vào Nhật ký canh tác!'));
   };
 
   const handleRejectDraft = (draftId: string) => {
@@ -296,14 +296,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     <section className="ai-assistant-page">
       <div className="page-heading">
         <div>
-          <h1>Trợ lý AI Nông nghiệp VietGAP</h1>
+          <h1>{(lang === 'en' ? "VietGAP Farming AI Assistant" : "Trợ lý AI Nông nghiệp VietGAP")}</h1>
           <p className="page-subtitle">
-            Hỗ trợ chẩn đoán dịch hại, tư vấn canh tác chuẩn quốc gia, lưu trữ lịch sử hội thoại và phản hồi chuyên gia
+            {(lang === 'en' ? "Get pest diagnosis support and farming advice, save conversations, and submit feedback to specialists" : "Hỗ trợ chẩn đoán dịch hại, tư vấn canh tác chuẩn quốc gia, lưu trữ lịch sử hội thoại và phản hồi chuyên gia")}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button type="button" className="primary-button" onClick={handleStartNewConversation}>
-            <Icon name="plus" /> Cuộc trò chuyện mới
+            <Icon name="plus" /> {(lang === 'en' ? " New conversation" : " Cuộc trò chuyện mới")}
           </button>
         </div>
       </div>
@@ -324,7 +324,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           }}
         >
           <Icon name={toastMessage.type === 'success' ? 'check' : 'alert-circle'} />
-          <span>{toastMessage.text}</span>
+          <span>{translate(toastMessage.text)}</span>
         </div>
       )}
 
@@ -412,8 +412,8 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
               {messages.length === 0 ? (
                 <div style={{ textAlign: 'center', margin: 'auto', color: '#64748b' }}>
                   <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>🌱</span>
-                  <strong>Chào bạn! Hãy đặt câu hỏi cho Trợ lý AI VietGAP.</strong>
-                  <p style={{ margin: '4px 0 0', fontSize: '13px' }}>Hỏi về phòng trừ sâu bệnh sinh học, công thức bón phân hoặc tiêu chuẩn đất nước.</p>
+                  <strong>{(lang === 'en' ? "Hello! Ask the VietGAP AI Assistant a question." : "Chào bạn! Hãy đặt câu hỏi cho Trợ lý AI VietGAP.")}</strong>
+                  <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{(lang === 'en' ? "Ask about biological pest control, fertilizer formulas, or soil and water standards." : "Hỏi về phòng trừ sâu bệnh sinh học, công thức bón phân hoặc tiêu chuẩn đất nước.")}</p>
                 </div>
               ) : (
                 messages.map((m) => (
@@ -442,14 +442,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                       {m.messageText}
                       {m.sources && m.sources.length > 0 && (
                         <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid #e2e8f0', fontSize: '11.5px', color: '#059669' }}>
-                          📚 <strong>Nguồn quy chuẩn:</strong> {m.sources.join(', ')}
+                          📚 <strong>{(lang === 'en' ? "Standards sources:" : "Nguồn quy chuẩn:")}</strong> {m.sources.join(', ')}
                         </div>
                       )}
                     </div>
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', padding: '0 6px' }}>
                       <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                        {m.createdAt ? new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong'}
+                        {(lang === 'en' ? m.createdAt ? new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : "Just now" : m.createdAt ? new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong')}
                       </span>
                       {m.senderType === 'assistant' && m.modelName && (
                         <span style={{ fontSize: '11px', color: '#059669', background: '#ecfdf5', padding: '1px 7px', borderRadius: '4px', fontWeight: 600 }}>
@@ -471,9 +471,9 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                             gap: '3px',
                             padding: '2px 4px',
                           }}
-                          title="Báo cáo câu trả lời này nếu chưa chính xác"
+                          title={(lang === 'en' ? "Report this answer if it is inaccurate" : "Báo cáo câu trả lời này nếu chưa chính xác")}
                         >
-                          🚩 Báo cáo câu trả lời
+                          {(lang === 'en' ? "🚩 Report answer" : "🚩 Báo cáo câu trả lời")}
                         </button>
                       )}
                     </div>
@@ -482,7 +482,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
               )}
               {isTyping && (
                 <div style={{ alignSelf: 'flex-start', background: '#f1f5f9', padding: '10px 16px', borderRadius: '14px', color: '#64748b', fontSize: '13px' }}>
-                  ⏳ AI đang tra cứu quy chuẩn VietGAP và tổng hợp câu trả lời...
+                  {(lang === 'en' ? "⏳ AI is checking VietGAP standards and preparing an answer..." : "⏳ AI đang tra cứu quy chuẩn VietGAP và tổng hợp câu trả lời...")}
                 </div>
               )}
             </div>
@@ -491,14 +491,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '10px', marginTop: '16px', borderTop: '1px solid #e2e8f0', paddingTop: '14px' }}>
               <input
                 type="text"
-                placeholder="Hỏi AI về sâu bệnh, liều lượng bón phân hoặc quy trình VietGAP..."
+                placeholder={(lang === 'en' ? "Ask AI about pests, fertilizer dosage, or VietGAP procedures..." : "Hỏi AI về sâu bệnh, liều lượng bón phân hoặc quy trình VietGAP...")}
                 value={inputQuestion}
                 onChange={(e) => setInputQuestion(e.target.value)}
                 disabled={isTyping}
                 style={{ flex: 1, padding: '12px 16px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '14px' }}
               />
               <button type="submit" className="primary-button" disabled={isTyping || !inputQuestion.trim()} style={{ padding: '0 20px', borderRadius: '10px' }}>
-                Gửi câu hỏi
+                {(lang === 'en' ? "Send question" : "Gửi câu hỏi")}
               </button>
             </form>
           </div>
@@ -507,7 +507,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div className="panel" style={{ padding: '18px' }}>
               <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block', marginBottom: '10px' }}>
-                💡 Câu hỏi gợi ý nhanh:
+                {(lang === 'en' ? "💡 Suggested questions:" : "💡 Câu hỏi gợi ý nhanh:")}
               </strong>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {[
@@ -520,7 +520,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                   <button
                     key={sug}
                     type="button"
-                    onClick={() => setInputQuestion(sug)}
+                    onClick={() => setInputQuestion(translate(sug))}
                     style={{
                       textAlign: 'left',
                       padding: '8px 12px',
@@ -533,7 +533,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                       lineHeight: 1.4,
                     }}
                   >
-                    {sug}
+                    {translate(sug)}
                   </button>
                 ))}
               </div>
@@ -541,10 +541,10 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
             <div className="panel" style={{ padding: '18px', background: '#f0fdf4', borderColor: '#bbf7d0' }}>
               <strong style={{ fontSize: '13.5px', color: '#166534', display: 'block', marginBottom: '6px' }}>
-                🔒 Chuẩn hóa tri thức VietGAP
+                {(lang === 'en' ? "🔒 Standardized VietGAP knowledge" : "🔒 Chuẩn hóa tri thức VietGAP")}
               </strong>
               <p style={{ margin: 0, fontSize: '12px', color: '#15803d', lineHeight: 1.5 }}>
-                Mọi thông tin phản hồi từ AI đều được đối chiếu trực tiếp với TCVN 11892-1:2017 và danh mục vật tư nông nghiệp cho phép.
+                {(lang === 'en' ? "AI answers are checked against TCVN 11892-1:2017 and the approved agricultural input list." : "Mọi thông tin phản hồi từ AI đều được đối chiếu trực tiếp với TCVN 11892-1:2017 và danh mục vật tư nông nghiệp cho phép.")}
               </p>
             </div>
           </div>
@@ -558,9 +558,9 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
         <div className="panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
             <div>
-              <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>Lịch sử các phiên tư vấn AI</h2>
+              <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "AI conversation history" : "Lịch sử các phiên tư vấn AI")}</h2>
               <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13.5px' }}>
-                Xem lại các phiên hỏi đáp trước đây hoặc tìm kiếm chủ đề bạn quan tâm
+                {(lang === 'en' ? "Review previous conversations or search for a topic" : "Xem lại các phiên hỏi đáp trước đây hoặc tìm kiếm chủ đề bạn quan tâm")}
               </p>
             </div>
 
@@ -568,7 +568,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             <div style={{ display: 'flex', gap: '8px', width: 'min(380px, 100%)' }}>
               <input
                 type="text"
-                placeholder="Tìm kiếm cuộc trò chuyện..."
+                placeholder={(lang === 'en' ? "Search conversations..." : "Tìm kiếm cuộc trò chuyện...")}
                 value={searchHistoryQuery}
                 onChange={(e) => {
                   setSearchHistoryQuery(e.target.value);
@@ -587,14 +587,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           </div>
 
           {loadingHistory ? (
-            <p style={{ color: '#059669', textAlign: 'center', padding: '24px' }}>Đang tải lịch sử hội thoại...</p>
+            <p style={{ color: '#059669', textAlign: 'center', padding: '24px' }}>{(lang === 'en' ? "Loading conversation history..." : "Đang tải lịch sử hội thoại...")}</p>
           ) : conversations.length === 0 ? (
             <div className="empty-state" style={{ textAlign: 'center', padding: '36px' }}>
               <span style={{ fontSize: '32px' }}>💬</span>
-              <h3>Chưa có cuộc trò chuyện nào</h3>
-              <p style={{ color: '#64748b' }}>Hãy bắt đầu phiên hỏi đáp đầu tiên với Trợ lý AI nông nghiệp.</p>
+              <h3>{(lang === 'en' ? "No conversations yet" : "Chưa có cuộc trò chuyện nào")}</h3>
+              <p style={{ color: '#64748b' }}>{(lang === 'en' ? "Start your first conversation with the farming AI assistant." : "Hãy bắt đầu phiên hỏi đáp đầu tiên với Trợ lý AI nông nghiệp.")}</p>
               <button type="button" className="primary-button" onClick={handleStartNewConversation}>
-                Bắt đầu trò chuyện
+                {(lang === 'en' ? "Start conversation" : "Bắt đầu trò chuyện")}
               </button>
             </div>
           ) : (
@@ -616,16 +616,16 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                 >
                   <div style={{ flex: 1, minWidth: '240px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '15px', color: '#0f172a' }}>{c.title}</strong>
+                      <strong style={{ fontSize: '15px', color: '#0f172a' }}>{translate(c.title)}</strong>
                       <span className="knowledge-tag" style={{ fontSize: '11px' }}>
-                        {c.messageCount} tin nhắn
+                        {c.messageCount} {(lang === 'en' ? " messages" : " tin nhắn")}
                       </span>
                     </div>
                     <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
                       {c.lastMessageSnippet}
                     </p>
                     <small style={{ color: '#94a3b8', display: 'block', marginTop: '4px' }}>
-                      Cập nhật: {new Date(c.updatedAt).toLocaleString('vi-VN')}
+                      {(lang === 'en' ? "Updated: " : "Cập nhật: ")} {new Date(c.updatedAt).toLocaleString('vi-VN')}
                     </small>
                   </div>
 
@@ -639,7 +639,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                         setActiveTab('ai');
                       }}
                     >
-                      Xem lại &amp; Tiếp tục
+                      {(lang === 'en' ? "Review & Continue" : "Xem lại & Tiếp tục")}
                     </button>
                     <button
                       type="button"
@@ -647,7 +647,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                       style={{ fontSize: '13px', padding: '6px 12px', color: '#dc2626', borderColor: '#fca5a5' }}
                       onClick={() => void handleDeleteConversation(c.conversationId)}
                     >
-                      Xóa
+                      {(lang === 'en' ? "Delete" : "Xóa")}
                     </button>
                   </div>
                 </div>
@@ -665,16 +665,16 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           {/* View Feedback History */}
           <div className="panel" style={{ padding: '24px' }}>
             <h2 style={{ margin: '0 0 6px', fontSize: '18px', color: '#0f172a' }}>
-              Lịch sử các phản hồi &amp; Báo cáo của bạn
+              {(lang === 'en' ? "Your feedback and report history" : "Lịch sử các phản hồi & Báo cáo của bạn")}
             </h2>
             <p style={{ margin: '0 0 18px', color: '#64748b', fontSize: '13.5px' }}>
-              Theo dõi tình trạng xử lý các câu trả lời bạn đã đóng góp hoặc báo cáo với chuyên gia
+              {(lang === 'en' ? "Track the review status of feedback and answers reported to specialists" : "Theo dõi tình trạng xử lý các câu trả lời bạn đã đóng góp hoặc báo cáo với chuyên gia")}
             </p>
 
             {feedbackHistory.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
                 <span style={{ fontSize: '28px' }}>📝</span>
-                <p>Bạn chưa gửi báo cáo hoặc ý kiến phản hồi nào cho các câu trả lời AI.</p>
+                <p>{(lang === 'en' ? "You have not submitted any reports or feedback on AI answers." : "Bạn chưa gửi báo cáo hoặc ý kiến phản hồi nào cho các câu trả lời AI.")}</p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -690,7 +690,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <span style={{ color: '#d97706', fontWeight: 700 }}>
-                        {'⭐'.repeat(fb.rating || 1)} ({fb.rating}/5 sao)
+                        {'⭐'.repeat(fb.rating || 1)} ({fb.rating}{(lang === 'en' ? "/5 stars) " : "/5 sao) ")}
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <small style={{ color: '#94a3b8' }}>
@@ -702,26 +702,26 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                           style={{ fontSize: '11.5px', padding: '3px 8px' }}
                           onClick={() => handleStartEditFeedback(fb)}
                         >
-                          Chỉnh sửa
+                          {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
                         </button>
                       </div>
                     </div>
 
                     {fb.aiResponseSnippet && (
                       <div style={{ background: '#f1f5f9', padding: '8px 12px', borderRadius: '6px', fontSize: '12.5px', color: '#475569', marginBottom: '8px' }}>
-                        <strong>Câu trả lời AI:</strong> &quot;{fb.aiResponseSnippet}&quot;
+                        <strong>{(lang === 'en' ? "AI answer:" : "Câu trả lời AI:")}</strong> &quot;{fb.aiResponseSnippet}&quot;
                       </div>
                     )}
 
                     <p style={{ margin: '0 0 8px', fontSize: '13.5px', color: '#0f172a' }}>
-                      <strong>Nội dung phản hồi:</strong> {fb.feedbackText}
+                      <strong>{(lang === 'en' ? "Feedback:" : "Nội dung phản hồi:")}</strong> {fb.feedbackText}
                     </p>
 
                     {fb.replies && fb.replies.length > 0 && (
                       <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e2e8f0' }}>
                         {fb.replies.map((r, idx) => (
                           <div key={idx} style={{ background: '#ecfdf5', color: '#065f46', padding: '8px 12px', borderRadius: '6px', fontSize: '12px' }}>
-                            <strong>Phản hồi từ Ban chuyên môn:</strong> {r}
+                            <strong>{(lang === 'en' ? "Specialist response:" : "Phản hồi từ Ban chuyên môn:")}</strong> {r}
                           </div>
                         ))}
                       </div>
@@ -734,14 +734,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
           {/* General Feedback Box */}
           <div className="panel" style={{ padding: '20px', height: 'fit-content' }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#0f172a' }}>Đóng góp ý kiến chung</h3>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#0f172a' }}>{(lang === 'en' ? "General feedback" : "Đóng góp ý kiến chung")}</h3>
             <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: '13px' }}>
-              Chia sẻ cảm nhận hoặc đề xuất tính năng mới để hoàn thiện ứng dụng.
+              {(lang === 'en' ? "Share your experience or suggest features to improve the application." : "Chia sẻ cảm nhận hoặc đề xuất tính năng mới để hoàn thiện ứng dụng.")}
             </p>
 
             {feedbackSent && (
               <div style={{ background: '#ecfdf5', color: '#065f46', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px', fontSize: '13px' }}>
-                ✓ Đã ghi nhận đóng góp ý kiến của bạn!
+                {(lang === 'en' ? "✓ Your feedback has been recorded!" : "✓ Đã ghi nhận đóng góp ý kiến của bạn!")}
               </div>
             )}
 
@@ -749,13 +749,13 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
               <textarea
                 rows={4}
                 required
-                placeholder="Nhập nội dung đóng góp của bạn..."
+                placeholder={(lang === 'en' ? "Enter your feedback..." : "Nhập nội dung đóng góp của bạn...")}
                 value={feedbackText}
                 onChange={(e) => setFeedbackText(e.target.value)}
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
               />
               <button type="submit" className="primary-button" style={{ alignSelf: 'flex-end' }}>
-                Gửi ý kiến
+                {(lang === 'en' ? "Send feedback" : "Gửi ý kiến")}
               </button>
             </form>
           </div>
@@ -768,9 +768,9 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       {activeTab === 'ai-drafts' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div className="panel" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', padding: '16px 20px' }}>
-            <strong style={{ color: '#166534', fontSize: '14.5px' }}>Bản nháp canh tác do AI đề xuất:</strong>
+            <strong style={{ color: '#166534', fontSize: '14.5px' }}>{(lang === 'en' ? "AI farming draft suggestions:" : "Bản nháp canh tác do AI đề xuất:")}</strong>
             <p style={{ margin: '4px 0 0', color: '#15803d', fontSize: '13px' }}>
-              Hệ thống tự động phân tích thời tiết và giai đoạn mùa vụ để gợi ý công việc. Bản nháp chỉ trở thành Nhật ký chính thức khi bạn bấm Xác nhận.
+              {(lang === 'en' ? "The system analyzes weather and crop stages to suggest tasks. Drafts become official diary records only after you confirm them." : "Hệ thống tự động phân tích thời tiết và giai đoạn mùa vụ để gợi ý công việc. Bản nháp chỉ trở thành Nhật ký chính thức khi bạn bấm Xác nhận.")}
             </p>
           </div>
 
@@ -778,28 +778,28 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             <div key={d.id} className="panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
               <div style={{ flex: 1, minWidth: '280px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span className="profile-tag-pill">{d.activityType}</span>
-                  <span style={{ fontSize: '12.5px', color: '#64748b' }}>📅 Đề xuất thực hiện: {d.recommendedDate}</span>
+                  <span className="profile-tag-pill">{translate(d.activityType)}</span>
+                  <span style={{ fontSize: '12.5px', color: '#64748b' }}>{(lang === 'en' ? "📅 Suggested date: " : "📅 Đề xuất thực hiện: ")} {d.recommendedDate}</span>
                   <span className={`status-badge ${d.status === 'APPROVED' ? 'status-badge--success' : ''}`}>
                     {d.status === 'PENDING' ? (lang === 'en' ? 'Pending Review' : 'Chờ duyệt') : d.status === 'APPROVED' ? (lang === 'en' ? 'Approved' : 'Đã duyệt') : (lang === 'en' ? 'Cancelled' : 'Đã hủy')}
                   </span>
                 </div>
-                <h3 style={{ margin: '0 0 6px', fontSize: '16.5px', color: '#0f172a' }}>{d.title}</h3>
+                <h3 style={{ margin: '0 0 6px', fontSize: '16.5px', color: '#0f172a' }}>{translate(d.title)}</h3>
                 <p style={{ margin: '0 0 8px', color: '#059669', fontSize: '13.5px', fontWeight: 600 }}>
-                  Vật tư khuyến cáo: {d.suggestedMaterial}
+                  {(lang === 'en' ? "Recommended materials: " : "Vật tư khuyến cáo: ")} {translate(d.suggestedMaterial)}
                 </p>
                 <p style={{ margin: 0, color: '#475569', fontSize: '13px', background: '#f8fafc', padding: '10px 12px', borderRadius: '8px' }}>
-                  💡 <strong>Lý do AI đề xuất:</strong> {d.reason}
+                  💡 <strong>{(lang === 'en' ? "Reason for the AI suggestion:" : "Lý do AI đề xuất:")}</strong> {translate(d.reason)}
                 </p>
               </div>
 
               {d.status === 'PENDING' && (
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button type="button" className="action-button" style={{ color: '#ef4444' }} onClick={() => handleRejectDraft(d.id)}>
-                    Hủy bỏ
+                    {(lang === 'en' ? "Discard" : "Hủy bỏ")}
                   </button>
                   <button type="button" className="primary-button" onClick={() => handleApproveDraft(d.id)}>
-                    ✓ Xác nhận ghi nhật ký
+                    {(lang === 'en' ? "✓ Confirm diary entry" : "✓ Xác nhận ghi nhật ký")}
                   </button>
                 </div>
               )}
@@ -816,21 +816,21 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           <div className="modal-card" style={{ width: 'min(540px, 100%)' }}>
             <div className="modal-header">
               <div>
-                <span className="eyebrow" style={{ color: '#dc2626' }}>Báo cáo câu trả lời</span>
-                <h2>Phản hồi chất lượng tư vấn AI</h2>
+                <span className="eyebrow" style={{ color: '#dc2626' }}>{(lang === 'en' ? "Report answer" : "Báo cáo câu trả lời")}</span>
+                <h2>{(lang === 'en' ? "AI advice quality feedback" : "Phản hồi chất lượng tư vấn AI")}</h2>
               </div>
               <button type="button" className="modal-close" onClick={() => setReportingMessage(null)}>✕</button>
             </div>
 
             <form className="modal-body" onSubmit={handleSubmitReport}>
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#475569', maxHeight: '120px', overflowY: 'auto' }}>
-                <strong>Nội dung câu trả lời của AI:</strong>
+                <strong>{(lang === 'en' ? "AI answer:" : "Nội dung câu trả lời của AI:")}</strong>
                 <p style={{ margin: '4px 0 0', fontStyle: 'italic' }}>&quot;{reportingMessage.messageText}&quot;</p>
               </div>
 
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
-                  Mức độ hài lòng / Độ chính xác:
+                  {(lang === 'en' ? "Satisfaction / Accuracy:" : "Mức độ hài lòng / Độ chính xác:")}
                 </label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -857,12 +857,12 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
-                  Lý do báo cáo / Thông tin cần cải thiện:
+                  {(lang === 'en' ? "Report reason / Suggested improvements:" : "Lý do báo cáo / Thông tin cần cải thiện:")}
                 </label>
                 <textarea
                   rows={3}
                   required
-                  placeholder="Ví dụ: Liều lượng thuốc BVTV chưa đúng theo TCVN, thời gian cách ly PHI ngắn hơn thực tế..."
+                  placeholder={(lang === 'en' ? "For example: pesticide dosage does not meet TCVN, or the PHI is shorter than required..." : "Ví dụ: Liều lượng thuốc BVTV chưa đúng theo TCVN, thời gian cách ly PHI ngắn hơn thực tế...")}
                   value={reportReason}
                   onChange={(e) => setReportReason(e.target.value)}
                   style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
@@ -871,10 +871,10 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
               <div className="confirm-dialog-actions" style={{ marginTop: '10px' }}>
                 <button type="button" className="ghost-button" onClick={() => setReportingMessage(null)}>
-                  Hủy
+                  {(lang === 'en' ? "Cancel" : "Hủy")}
                 </button>
                 <button type="submit" className="primary-button" disabled={submittingReport}>
-                  {submittingReport ? 'Đang gửi...' : 'Gửi báo cáo'}
+                  {(lang === 'en' ? submittingReport ? "Sending..." : "Submit report" : submittingReport ? 'Đang gửi...' : 'Gửi báo cáo')}
                 </button>
               </div>
             </form>
@@ -888,8 +888,8 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           <div className="modal-card" style={{ maxWidth: '520px' }}>
             <div className="modal-header">
               <div>
-                <span className="eyebrow" style={{ color: '#059669' }}>Cập nhật ý kiến</span>
-                <h2>Chỉnh sửa phản hồi câu trả lời</h2>
+                <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "Update feedback" : "Cập nhật ý kiến")}</span>
+                <h2>{(lang === 'en' ? "Edit answer feedback" : "Chỉnh sửa phản hồi câu trả lời")}</h2>
               </div>
               <button type="button" className="modal-close" onClick={() => setEditingFeedback(null)}>✕</button>
             </div>
@@ -897,14 +897,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             <form className="modal-body" onSubmit={handleSubmitEditFeedback}>
               {editingFeedback.aiResponseSnippet && (
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#475569', maxHeight: '120px', overflowY: 'auto' }}>
-                  <strong>Câu trả lời AI:</strong>
+                  <strong>{(lang === 'en' ? "AI answer:" : "Câu trả lời AI:")}</strong>
                   <p style={{ margin: '4px 0 0', fontStyle: 'italic' }}>&quot;{editingFeedback.aiResponseSnippet}&quot;</p>
                 </div>
               )}
 
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
-                  Đánh giá số sao:
+                  {(lang === 'en' ? "Star rating:" : "Đánh giá số sao:")}
                 </label>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -931,7 +931,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
-                  Nội dung phản hồi / góp ý:
+                  {(lang === 'en' ? "Feedback / suggestions:" : "Nội dung phản hồi / góp ý:")}
                 </label>
                 <textarea
                   rows={3}
@@ -944,10 +944,10 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
               <div className="confirm-dialog-actions" style={{ marginTop: '10px' }}>
                 <button type="button" className="ghost-button" onClick={() => setEditingFeedback(null)}>
-                  Hủy
+                  {(lang === 'en' ? "Cancel" : "Hủy")}
                 </button>
                 <button type="submit" className="primary-button" disabled={submittingEdit}>
-                  {submittingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+                  {(lang === 'en' ? submittingEdit ? "Saving..." : "Save changes" : submittingEdit ? 'Đang lưu...' : 'Lưu thay đổi')}
                 </button>
               </div>
             </form>

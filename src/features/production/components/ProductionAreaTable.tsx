@@ -40,7 +40,7 @@ export function ProductionAreaTable({
   onArchive,
   onRestore,
 }: ProductionAreaTableProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   return (
     <div className="zone-table-wrap">
       <table className="data-table">
@@ -54,7 +54,7 @@ export function ProductionAreaTable({
                     className="sortable-header"
                     onClick={() => onSortChange(col.field as ProductionAreaSortField)}
                   >
-                    {col.label}
+                    {translate(col.label)}
                     <span className="sort-indicator">
                       {sortField === col.field ? (sortDirection === 'asc' ? '▲' : '▼') : ''}
                     </span>
@@ -98,15 +98,15 @@ export function ProductionAreaTable({
                       to={`/production-areas/${area.productionAreaId}`}
                       className="icon-button"
                       aria-label={`Xem ${area.areaName}`}
-                      title="Xem chi tiết"
+                      title={(lang === 'en' ? "View details" : "Xem chi tiết")}
                     >
                       👁
                     </Link>
                     <Link
                       to={`/production-areas/${area.productionAreaId}/edit`}
                       className="icon-button"
-                      aria-label={`Sửa ${area.areaName}`}
-                      title="Chỉnh sửa"
+                      aria-label={(lang === 'en' ? `Edit ${area.areaName}` : `Sửa ${area.areaName}`)}
+                      title={(lang === 'en' ? "Edit" : "Chỉnh sửa")}
                     >
                       ✏️
                     </Link>
@@ -114,8 +114,8 @@ export function ProductionAreaTable({
                       <button
                         type="button"
                         className="icon-button"
-                        aria-label={`Khôi phục ${area.areaName}`}
-                        title="Khôi phục"
+                        aria-label={(lang === 'en' ? `Restore ${area.areaName}` : `Khôi phục ${area.areaName}`)}
+                        title={(lang === 'en' ? "Restore" : "Khôi phục")}
                         onClick={() => onRestore(area)}
                       >
                         ↺
@@ -124,8 +124,8 @@ export function ProductionAreaTable({
                       <button
                         type="button"
                         className="icon-button"
-                        aria-label={`Lưu trữ ${area.areaName}`}
-                        title="Lưu trữ"
+                        aria-label={(lang === 'en' ? `Archive ${area.areaName}` : `Lưu trữ ${area.areaName}`)}
+                        title={(lang === 'en' ? "Archive" : "Lưu trữ")}
                         onClick={() => onArchive(area)}
                       >
                         🗄

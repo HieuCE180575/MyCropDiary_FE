@@ -1,3 +1,4 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 export type RegistrationStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
 const steps = [
@@ -12,6 +13,7 @@ export function RegistrationGuide({ status, loading = false, error = false }: {
   loading?: boolean;
   error?: boolean;
 }) {
+  const { lang, t: translate } = useLanguage();
   const currentStep = loading || error || status === undefined ? null
     : status === 'APPROVED' ? 2 : status === 'PENDING' ? 1 : 0;
   const message = loading ? 'Đang tải tiến độ đăng ký…'
@@ -22,14 +24,14 @@ export function RegistrationGuide({ status, loading = false, error = false }: {
     : 'Theo dõi yêu cầu của bạn tại mục Đăng ký trang trại.';
 
   return <section className="registration-guide" aria-labelledby="registration-guide-title" aria-busy={loading}>
-    <div><h2 id="registration-guide-title">Từ tài khoản cá nhân đến trang trại của bạn</h2><p role="status">{message}</p></div>
+    <div><h2 id="registration-guide-title">{(lang === 'en' ? "From your personal account to your farm" : "Từ tài khoản cá nhân đến trang trại của bạn")}</h2><p role="status">{translate(message)}</p></div>
     <ol>{steps.map((step, index) => {
       const current = index === currentStep;
       const complete = currentStep !== null && index < currentStep;
       return <li key={step.title} className={`registration-step${current ? ' is-current' : complete ? ' is-complete' : ''}`} aria-current={current ? 'step' : undefined}>
         <span>{index + 1}</span>
-        <div><strong>{step.title}</strong><p>{step.description}</p>
-          {(current || complete) && <small className="registration-step-status">{current ? 'Hiện tại' : 'Đã hoàn thành'}</small>}
+        <div><strong>{translate(step.title)}</strong><p>{translate(step.description)}</p>
+          {(current || complete) && <small className="registration-step-status">{(lang === 'en' ? current ? "Current" : "Completed" : current ? 'Hiện tại' : 'Đã hoàn thành')}</small>}
         </div>
       </li>;
     })}</ol>

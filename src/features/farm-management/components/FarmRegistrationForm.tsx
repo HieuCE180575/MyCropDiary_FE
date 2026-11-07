@@ -45,7 +45,7 @@ interface FarmRegistrationFormProps {
 type FieldName = keyof FarmRegistrationFormValues;
 
 export function FarmRegistrationForm({ submitting, submitError, onSubmit }: FarmRegistrationFormProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [values, setValues] = useState<FarmRegistrationFormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<FarmRegistrationFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
@@ -331,7 +331,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         </div>
       </div>
 
-      {submitError ? <p className="form-error-banner">{submitError}</p> : null}
+      {submitError ? <p className="form-error-banner">{translate(submitError)}</p> : null}
 
       <label className="form-field">
         <span>{lang === 'en' ? 'Proposed Farm Name *' : 'Tên trang trại dự kiến *'}</span>
@@ -427,23 +427,23 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
               }}
             >
               <div style={{ padding: '7px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: '12px', color: '#166534', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : 'Gõ phím bất kỳ để lọc nhanh Tỉnh/TP'}</span>
+                <span>{(lang === 'en' ? filterKeyword ? `🔍 Filtering: "${filterKeyword}"` : "Type to filter provinces/cities" : filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : 'Gõ phím bất kỳ để lọc nhanh Tỉnh/TP')}</span>
                 {filterKeyword && (
                   <button
-                    type="button"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      setFilterKeyword('');
-                    }}
-                    style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
-                  >
-                    Xóa lọc
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setFilterKeyword('');
+                        }}
+                        style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
+                      >
+                    {(lang === 'en' ? "Clear filter" : "Xóa lọc")}
                   </button>
                 )}
               </div>
               {filteredProvinces.length === 0 ? (
                 <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
-                  Không tìm thấy Tỉnh / Thành phố phù hợp
+                  {(lang === 'en' ? "No matching province / city" : "Không tìm thấy Tỉnh / Thành phố phù hợp")}
                 </div>
               ) : (
                 filteredProvinces.map((prov) => (
@@ -541,16 +541,16 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
             >
               {!values.province ? (
                 <div style={{ padding: '10px 12px', fontSize: '13px', color: '#d97706' }}>
-                  ⚠️ Vui lòng chọn Tỉnh / Thành phố trước để lọc Quận / Huyện
+                  {(lang === 'en' ? "⚠️ Select a Province / City first to filter Districts" : "⚠️ Vui lòng chọn Tỉnh / Thành phố trước để lọc Quận / Huyện")}
                 </div>
               ) : loadingDistricts ? (
                 <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
-                  ⏳ Đang tải Quận / Huyện của {values.province}...
+                  {(lang === 'en' ? "⏳ Loading Districts for " : "⏳ Đang tải Quận / Huyện của ")} {values.province}...
                 </div>
               ) : (
                 <>
                   <div style={{ padding: '7px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: '12px', color: '#166534', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : `Quận/Huyện thuộc ${values.province}`}</span>
+                    <span>{(lang === 'en' ? filterKeyword ? `🔍 Filtering: "${filterKeyword}"` : `Districts in ${values.province}` : filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : `Quận/Huyện thuộc ${values.province}`)}</span>
                     {filterKeyword && (
                       <button
                         type="button"
@@ -560,13 +560,13 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                         }}
                         style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
                       >
-                        Xóa lọc
+                        {(lang === 'en' ? "Clear filter" : "Xóa lọc")}
                       </button>
                     )}
                   </div>
                   {filteredDistricts.length === 0 ? (
                     <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
-                      Không có Quận / Huyện khớp từ khóa
+                      {(lang === 'en' ? "No districts match the keyword" : "Không có Quận / Huyện khớp từ khóa")}
                     </div>
                   ) : (
                     filteredDistricts.map((dist) => (
@@ -661,16 +661,16 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
             >
               {!values.district ? (
                 <div style={{ padding: '10px 12px', fontSize: '13px', color: '#d97706' }}>
-                  ⚠️ Vui lòng chọn Quận / Huyện trước để lọc Phường / Xã
+                  {(lang === 'en' ? "⚠️ Select a District first to filter Wards / Communes" : "⚠️ Vui lòng chọn Quận / Huyện trước để lọc Phường / Xã")}
                 </div>
               ) : loadingWards ? (
                 <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
-                  ⏳ Đang tải Phường / Xã của {values.district}...
+                  {(lang === 'en' ? "⏳ Loading Wards / Communes for " : "⏳ Đang tải Phường / Xã của ")} {values.district}...
                 </div>
               ) : (
                 <>
                   <div style={{ padding: '7px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: '12px', color: '#166534', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span>{filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : `Phường/Xã thuộc ${values.district}`}</span>
+                    <span>{(lang === 'en' ? filterKeyword ? `🔍 Filtering: "${filterKeyword}"` : `Wards/Communes in ${values.district}` : filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : `Phường/Xã thuộc ${values.district}`)}</span>
                     {filterKeyword && (
                       <button
                         type="button"
@@ -680,13 +680,13 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                         }}
                         style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
                       >
-                        Xóa lọc
+                        {(lang === 'en' ? "Clear filter" : "Xóa lọc")}
                       </button>
                     )}
                   </div>
                   {filteredWards.length === 0 ? (
                     <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
-                      Không có Phường / Xã khớp từ khóa
+                      {(lang === 'en' ? "No wards / communes match the keyword" : "Không có Phường / Xã khớp từ khóa")}
                     </div>
                   ) : (
                     filteredWards.map((w) => (
@@ -746,7 +746,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
           onBlur={() => handleBlur('description')}
           placeholder={lang === 'en' ? "Scale, target crops, soil and land condition..." : "Quy mô, loại cây trồng dự kiến, hiện trạng đất đai..."}
         />
-        {errors.description ? <small className="field-error">{errors.description}</small> : null}
+        {errors.description ? <small className="field-error">{translate(errors.description)}</small> : null}
       </label>
 
       <label className="form-field">

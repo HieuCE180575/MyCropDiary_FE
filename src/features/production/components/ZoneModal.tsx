@@ -24,7 +24,7 @@ export function ZoneModal({
   onClose,
   onSuccess,
 }: ZoneModalProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [values, setValues] = useState<ZoneFormValues>({
     zoneName: '',
     areaValue: '',
@@ -65,11 +65,11 @@ export function ZoneModal({
     e.preventDefault();
     const trimmedName = values.zoneName.trim();
     if (!trimmedName) {
-      setError('Vui lòng nhập tên khu vực quản lý (Zone Name).');
+      setError((lang === 'en' ? "Enter a management zone name." : 'Vui lòng nhập tên khu vực quản lý (Zone Name).'));
       return;
     }
     if (trimmedName.length > 100) {
-      setError('Tên phân khu (Zone) không được vượt quá 100 ký tự.');
+      setError((lang === 'en' ? "Zone name must not exceed 100 characters." : 'Tên phân khu (Zone) không được vượt quá 100 ký tự.'));
       return;
     }
 
@@ -80,13 +80,13 @@ export function ZoneModal({
           (mode === 'create' || z.zoneId !== initialZone?.zoneId)
       );
       if (isDuplicate) {
-        setError(`Tên phân khu (Zone) "${trimmedName}" đã tồn tại trong trang trại này. Vui lòng chọn tên khác.`);
+        setError((lang === 'en' ? `Zone name "${trimmedName}" already exists in this farm. Choose another name.` : `Tên phân khu (Zone) "${trimmedName}" đã tồn tại trong trang trại này. Vui lòng chọn tên khác.`));
         return;
       }
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError('Area Zone phải là số dương hợp lệ (> 0).');
+      setError((lang === 'en' ? "Zone area must be a valid positive number (> 0)." : 'Area Zone phải là số dương hợp lệ (> 0).'));
       return;
     }
 
@@ -94,7 +94,7 @@ export function ZoneModal({
       const currentBlocksTotal = initialZone.blocks.reduce((sum, b) => sum + (b.areaValue || 0), 0);
       if (areaNum < currentBlocksTotal) {
         setError(
-          `Area phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`
+          (lang === 'en' ? `Zone area (${areaNum} ${values.areaUnit}) must not be smaller than the total area of existing blocks (${currentBlocksTotal} ${values.areaUnit}).` : `Area phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`)
         );
         return;
       }
@@ -114,7 +114,7 @@ export function ZoneModal({
       onSuccess(saved);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Zone.');
+      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Zone information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Zone.'));
     } finally {
       setLoading(false);
     }
@@ -136,7 +136,7 @@ export function ZoneModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{error}</p> : null}
+          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
 
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
@@ -184,7 +184,7 @@ export function ZoneModal({
                   type="number"
                   step="0.01"
                   min="0.01"
-                  placeholder="VD: 2500"
+                  placeholder={(lang === 'en' ? "e.g. 2500" : "VD: 2500")}
                   value={values.areaValue}
                   onChange={(e) => setValues({ ...values, areaValue: e.target.value })}
                   required
@@ -215,7 +215,7 @@ export function ZoneModal({
               <label htmlFor="zone-desc-input" className="structured-field-label">
                 {lang === 'en' ? 'Zone Features & Infrastructure' : 'Mô tả đặc điểm phân khu & hạ tầng'}
               </label>
-              <span className="structured-field-badge">{values.description.length}/500 ký tự</span>
+              <span className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <textarea

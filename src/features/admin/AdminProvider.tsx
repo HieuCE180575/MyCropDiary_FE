@@ -1,3 +1,4 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Icon } from '../../shared/components/Icon';
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { getAdminRegistrations, getAdminRegistrationById, handleFarmRegistration, type RegistrationResponse } from '../farm-management/registrationService';
@@ -377,13 +378,14 @@ export function useAdmin() {
 }
 
 export function AdminNotice() {
+  const { lang, t: translate } = useLanguage();
   const { notice, noticeId, dismissNotice } = useAdmin();
   return (
     <>
       {notice && (
         <div key={noticeId} className="admin-toast" role="status">
-          <span>{notice}</span>
-          <button type="button" onClick={dismissNotice} aria-label="Đóng thông báo">
+          <span>{translate(notice)}</span>
+          <button type="button" onClick={dismissNotice} aria-label={(lang === 'en' ? "Dismiss notification" : "Đóng thông báo")}>
             <Icon name="close" />
           </button>
         </div>

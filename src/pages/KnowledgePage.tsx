@@ -21,7 +21,7 @@ const EMPTY_RESULT: PagedResult<KnowledgeArticle> = {
 };
 
 export function KnowledgePage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 350);
   const [category, setCategory] = useState<KnowledgeCategory | 'all'>('all');
@@ -84,12 +84,12 @@ export function KnowledgePage() {
             <div className="panel empty-state" role="alert">
               <div className="empty-icon">⚠️</div>
               <h2>{lang === 'en' ? 'An error occurred' : 'Đã có lỗi xảy ra'}</h2>
-              <p>{error}</p>
+              <p>{translate(error)}</p>
               <button type="button" className="primary-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button>
             </div>
           ) : (
             <>
-              {resultSummary && !loading ? <p className="knowledge-result-summary">{resultSummary}</p> : null}
+              {resultSummary && !loading ? <p className="knowledge-result-summary">{translate(resultSummary)}</p> : null}
 
               <KnowledgeList
                 articles={result.items}

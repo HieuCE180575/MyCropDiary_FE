@@ -58,16 +58,16 @@ export function formatArea(areaM2: number): string {
     : `${areaM2.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} m²`;
 }
 
-export function formatDate(value: string | null) {
-  if (!value) return 'Chưa cập nhật';
+export function formatDate(value: string | null, lang: 'vi' | 'en' = 'vi') {
+  if (!value) return lang === 'en' ? 'Not updated' : 'Chưa cập nhật';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? 'Chưa cập nhật' : date.toLocaleDateString('vi-VN');
+  return Number.isNaN(date.getTime()) ? (lang === 'en' ? 'Not updated' : 'Chưa cập nhật') : date.toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN');
 }
 
-export function relativeTime(value: string) {
+export function relativeTime(value: string, language: 'vi' | 'en' = 'vi') {
   const seconds = (new Date(value).getTime() - Date.now()) / 1000;
-  if (!Number.isFinite(seconds)) return 'Chưa rõ thời gian';
-  const format = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
+  if (!Number.isFinite(seconds)) return language === 'en' ? 'Unknown time' : 'Chưa rõ thời gian';
+  const format = new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
   if (Math.abs(seconds) < 3600) return format.format(Math.round(seconds / 60), 'minute');
   if (Math.abs(seconds) < 86400) return format.format(Math.round(seconds / 3600), 'hour');
   return format.format(Math.round(seconds / 86400), 'day');
@@ -80,11 +80,11 @@ function dayOffset(days: number, now: Date) {
 }
 
 // Visual demo data stays separate from backend records and is never persisted.
-export function makeDashboardDemo(now = new Date()) {
+export function makeDashboardDemo(now = new Date(), lang: 'vi' | 'en' = 'vi') {
   const year = now.getFullYear();
   const seasons: DashboardSeason[] = [
-    { cropSeasonId: -1, farmId: -1, seasonName: `Vụ dưa lưới Xuân ${year}`, cropCategoryName: 'Dưa lưới', seasonStatus: 'active', startDate: dayOffset(-60, now), endDate: dayOffset(40, now) },
-    { cropSeasonId: -2, farmId: -1, seasonName: `Vụ rau ăn lá ${year}`, cropCategoryName: 'Rau ăn lá', seasonStatus: 'active', startDate: dayOffset(-30, now), endDate: dayOffset(70, now) },
+    { cropSeasonId: -1, farmId: -1, seasonName: lang === 'en' ? `Spring melon season ${year}` : `Vụ dưa lưới Xuân ${year}`, cropCategoryName: 'Dưa lưới', seasonStatus: 'active', startDate: dayOffset(-60, now), endDate: dayOffset(40, now) },
+    { cropSeasonId: -2, farmId: -1, seasonName: lang === 'en' ? `Leafy vegetable season ${year}` : `Vụ rau ăn lá ${year}`, cropCategoryName: 'Rau ăn lá', seasonStatus: 'active', startDate: dayOffset(-30, now), endDate: dayOffset(70, now) },
   ];
   const crops: CropArea[] = [{ name: 'Dưa lưới', areaM2: 25000 }, { name: 'Rau ăn lá', areaM2: 15000 }, { name: 'Rau gia vị', areaM2: 5000 }, { name: 'Khác', areaM2: 5000 }];
   const tasks = [

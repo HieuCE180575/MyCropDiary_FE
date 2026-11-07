@@ -1,3 +1,4 @@
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { useEffect, useRef, useState } from 'react';
 import {
   calculatePolygonAreaM2,
@@ -100,6 +101,7 @@ export function FarmGoongMap({
   onLocationChange,
   onBoundaryChange,
 }: FarmGoongMapProps) {
+  const { lang } = useLanguage();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any>(null);
   const engineTypeRef = useRef<'goong' | 'leaflet' | null>(null);
@@ -315,10 +317,10 @@ export function FarmGoongMap({
     const popupHtml = `
       <div style="font-family: Inter, sans-serif; min-width: 180px; padding: 2px;">
         <strong style="color: #065f46; font-size: 13.5px; display: block; margin-bottom: 3px;">
-          🌱 ${farmName || 'Vị trí trang trại'}
+          🌱 ${farmName || (lang === 'en' ? "Farm location" : 'Vị trí trang trại')}
         </strong>
         <span style="color: #475569; font-size: 12px; display: block;">
-          ${[address, ward, district, province].filter(Boolean).join(', ') || 'Đã ghim tọa độ trên bản đồ'}
+          ${[address, ward, district, province].filter(Boolean).join(', ') || (lang === 'en' ? "Coordinates pinned on map" : 'Đã ghim tọa độ trên bản đồ')}
         </span>
         <span style="color: #059669; font-size: 11.5px; font-weight: 600; display: block; margin-top: 4px;">
           📍 ${activePoint.lat.toFixed(5)}, ${activePoint.lng.toFixed(5)}
@@ -362,7 +364,7 @@ export function FarmGoongMap({
         el.style.border = '2px solid #ffffff';
         el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.35)';
         el.style.cursor = editable ? 'grab' : 'pointer';
-        el.title = `Điểm mốc #${idx + 1}: ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}`;
+        el.title = (lang === 'en' ? `Boundary point #${idx + 1}: ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}` : `Điểm mốc #${idx + 1}: ${pt.lat.toFixed(5)}, ${pt.lng.toFixed(5)}`);
 
         const vm = new window.goongjs.Marker({ element: el, draggable: editable })
           .setLngLat([pt.lng, pt.lat])
@@ -478,7 +480,7 @@ export function FarmGoongMap({
       displayPolygon.forEach((pt, idx) => {
         const vertexIcon = L.divIcon({
           className: 'custom-farm-vertex',
-          html: `<div style="width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.35);" title="Điểm mốc #${idx + 1}"></div>`,
+          html: `<div style="width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.35);" title="${(lang === 'en' ? "Boundary point #" : 'Điểm mốc #')}${idx + 1}"></div>`,
           iconSize: [14, 14],
           iconAnchor: [7, 7],
         });
@@ -526,6 +528,11 @@ export function FarmGoongMap({
     }
   }, [activePoint.lat, activePoint.lng, boundary, farmName, address, province, district, ward]);
 
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const engine = engineTypeRef.current;
+    if (map && engine) syncMapOverlays(map, engine);
+  }, [lang]);
   const effectivePolygon =
     boundary.length >= 3
       ? boundary
@@ -559,16 +566,16 @@ export function FarmGoongMap({
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '13.5px', color: '#0f172a' }}>
-            🗺️ Bản đồ tọa độ & Ranh giới trang trại
+            {(lang === 'en' ? "🗺️ Farm coordinates & Boundary map" : "🗺️ Bản đồ tọa độ & Ranh giới trang trại")}
           </span>
           {areaM2 > 0 && (
             <span style={{ background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: '12px', padding: '3px 10px', borderRadius: '999px' }}>
-              📐 Diện tích vùng vẽ: {areaM2.toLocaleString('vi-VN')} m² (~{areaHa} ha)
+              {(lang === 'en' ? "📐 Drawn area: " : "📐 Diện tích vùng vẽ: ")} {areaM2.toLocaleString('vi-VN')} m² (~{areaHa} ha)
             </span>
           )}
           {reverseLoading && (
             <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
-              ⏳ Đang đồng bộ địa chỉ...
+              {(lang === 'en' ? "⏳ Syncing address..." : "⏳ Đang đồng bộ địa chỉ...")}
             </span>
           )}
         </div>
@@ -590,7 +597,7 @@ export function FarmGoongMap({
                   cursor: 'pointer',
                 }}
               >
-                📍 Đặt tâm trang trại
+                {(lang === 'en' ? "📍 Set farm center" : "📍 Đặt tâm trang trại")}
               </button>
               <button
                 type="button"
@@ -606,12 +613,12 @@ export function FarmGoongMap({
                   cursor: 'pointer',
                 }}
               >
-                ✏️ Vẽ vùng trang trại ({boundary.length} điểm)
+                {(lang === 'en' ? "✏️ Draw farm boundary (" : "✏️ Vẽ vùng trang trại (")}{boundary.length} {(lang === 'en' ? " points)" : " điểm)")}
               </button>
               <button
                 type="button"
                 onClick={handleGenerateSamplePolygon}
-                title="Tạo nhanh khung ranh giới trang trại quanh vị trí hiện tại"
+                title={(lang === 'en' ? "Create a farm boundary around the current location" : "Tạo nhanh khung ranh giới trang trại quanh vị trí hiện tại")}
                 style={{
                   padding: '6px 11px',
                   fontSize: '12.5px',
@@ -623,7 +630,7 @@ export function FarmGoongMap({
                   cursor: 'pointer',
                 }}
               >
-                📐 Tạo khung trang trại mẫu
+                {(lang === 'en' ? "📐 Create sample farm boundary" : "📐 Tạo khung trang trại mẫu")}
               </button>
               {boundary.length > 0 && (
                 <>
@@ -640,7 +647,7 @@ export function FarmGoongMap({
                       cursor: 'pointer',
                     }}
                   >
-                    ↩️ Hoàn tác
+                    {(lang === 'en' ? "↩️ Undo" : "↩️ Hoàn tác")}
                   </button>
                   <button
                     type="button"
@@ -655,7 +662,7 @@ export function FarmGoongMap({
                       cursor: 'pointer',
                     }}
                   >
-                    🗑️ Xóa vùng
+                    {(lang === 'en' ? "🗑️ Clear boundary" : "🗑️ Xóa vùng")}
                   </button>
                 </>
               )}
@@ -676,7 +683,7 @@ export function FarmGoongMap({
               cursor: 'pointer',
             }}
           >
-            {mapStyle === 'satellite' ? '🗺️ Bản đồ đường phố' : '🛰️ Ảnh vệ tinh'}
+            {(lang === 'en' ? mapStyle === 'satellite' ? "🗺️ Street map" : "🛰️ Satellite imagery" : mapStyle === 'satellite' ? '🗺️ Bản đồ đường phố' : '🛰️ Ảnh vệ tinh')}
           </button>
         </div>
       </div>
@@ -685,9 +692,9 @@ export function FarmGoongMap({
       {editable && (
         <div style={{ padding: '8px 16px', background: '#ecfdf5', borderBottom: '1px solid #d1fae5', fontSize: '12.5px', color: '#065f46', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <span>
-            {drawMode === 'pin'
+            {(lang === 'en' ? drawMode === 'pin' ? "💡 Tip: Select a Province/City, District, and Ward/Commune, or click the map to pin the farm center." : "💡 Tip: Click points on the map to draw the farm boundary polygon (at least 3 points), or click \"Create sample farm boundary\" and drag its vertices." : drawMode === 'pin'
               ? '💡 Mẹo: Chọn Tỉnh/Thành phố, Quận/Huyện, Phường/Xã hoặc nhấp trực tiếp lên bản đồ để ghim tọa độ tâm trang trại.'
-              : '💡 Mẹo: Nhấp lần lượt các điểm trên bản đồ để vẽ đa giác ranh giới trang trại (ít nhất 3 điểm), hoặc bấm "Tạo khung trang trại mẫu" rồi kéo các đỉnh.'}
+              : '💡 Mẹo: Nhấp lần lượt các điểm trên bản đồ để vẽ đa giác ranh giới trang trại (ít nhất 3 điểm), hoặc bấm "Tạo khung trang trại mẫu" rồi kéo các đỉnh.')}
           </span>
         </div>
       )}
@@ -707,16 +714,16 @@ export function FarmGoongMap({
       <div style={{ padding: '10px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', fontSize: '12.5px', color: '#475569' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <span>
-            <strong>📍 Tọa độ tâm:</strong>{' '}
-            {latitude != null && longitude != null
+            <strong>{(lang === 'en' ? "📍 Center coordinates:" : "📍 Tọa độ tâm:")}</strong>{' '}
+            {(lang === 'en' ? latitude != null && longitude != null ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}` : `${activePoint.lat.toFixed(6)}, ${activePoint.lng.toFixed(6)} (Automatic for selected area)` : latitude != null && longitude != null
               ? `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
-              : `${activePoint.lat.toFixed(6)}, ${activePoint.lng.toFixed(6)} (Tự động theo khu vực)`}
+              : `${activePoint.lat.toFixed(6)}, ${activePoint.lng.toFixed(6)} (Tự động theo khu vực)`)}
           </span>
           <span>
-            <strong>🗺️ Ranh giới vẽ trên map:</strong>{' '}
-            {effectivePolygon.length >= 3
+            <strong>{(lang === 'en' ? "🗺️ Boundary drawn on map:" : "🗺️ Ranh giới vẽ trên map:")}</strong>{' '}
+            {(lang === 'en' ? effectivePolygon.length >= 3 ? `Drawn ${effectivePolygon.length} vertices (${areaM2.toLocaleString('vi-VN')} m²)` : "No boundary polygon drawn" : effectivePolygon.length >= 3
               ? `Đã vẽ ${effectivePolygon.length} đỉnh (${areaM2.toLocaleString('vi-VN')} m²)`
-              : 'Chưa vẽ đa giác ranh giới'}
+              : 'Chưa vẽ đa giác ranh giới')}
           </span>
         </div>
         {province && (

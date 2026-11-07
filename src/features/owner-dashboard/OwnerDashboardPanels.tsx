@@ -12,11 +12,11 @@ export function DemoTag() {
 export function DashboardPanel({ title, to, demo, children, className = '', linkLabel }: {
   title: string; to?: string; demo?: boolean; children: ReactNode; className?: string; linkLabel?: string;
 }) {
-  const { lang } = useLanguage();
+  const { t: translate } = useLanguage();
   const resolvedLinkLabel = linkLabel || 'View all';
   return <section className={'owner-panel ' + className}>
-    <div className="owner-panel-heading"><div><h2>{title}</h2>{demo && <DemoTag />}</div>
-      {to && <Link to={to}>{resolvedLinkLabel} <Icon name="arrow" size={14} /></Link>}
+    <div className="owner-panel-heading"><div><h2>{translate(title)}</h2>{demo && <DemoTag />}</div>
+      {to && <Link to={to}>{translate(resolvedLinkLabel)} <Icon name="arrow" size={14} /></Link>}
     </div>{children}
   </section>;
 }
@@ -38,11 +38,11 @@ export function SeasonProgressPanel({ seasons, demo }: { seasons: DashboardSeaso
       const crop = season.cropCategoryName?.toLowerCase() ?? '';
       const illustration = crop.includes('dưa') ? 'melon' : crop.includes('rau') ? 'lettuce' : 'generic';
       return <Link to="/crop-seasons" className="owner-season-row" key={season.cropSeasonId}>
-        <span className={'owner-crop-thumb owner-crop-' + illustration} role="img" aria-label={'Ảnh minh họa ' + (season.cropCategoryName || 'cây trồng')}>{illustration === 'generic' && <Icon name="sprout" size={30} />}</span>
+        <span className={'owner-crop-thumb owner-crop-' + illustration} role="img" aria-label={(lang === 'en' ? "Illustration " + (season.cropCategoryName || "crop") : 'Ảnh minh họa ' + (season.cropCategoryName || 'cây trồng'))}>{illustration === 'generic' && <Icon name="sprout" size={30} />}</span>
         <div className="owner-season-body"><div className="owner-season-title"><h3>{season.seasonName}</h3><span className={'owner-season-status status-' + status}>{statuses[status] ?? season.seasonStatus}</span></div>
-          <p><Icon name="calendar" size={13} /><span>{formatDate(season.startDate)} – {formatDate(season.endDate)}</span></p>
-          <div className="owner-progress-row">{progress === null ? <span className="owner-missing">Chưa đủ ngày để tính tiến độ</span> : <>
-            <div className="owner-progress-track" role="progressbar" aria-label={'Tiến độ theo thời gian: ' + season.seasonName} aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: progress + '%' }} /></div><span>{progress}%</span>
+          <p><Icon name="calendar" size={13} /><span>{formatDate(season.startDate, lang)} – {formatDate(season.endDate, lang)}</span></p>
+          <div className="owner-progress-row">{progress === null ? <span className="owner-missing">{(lang === 'en' ? "Not enough date information to calculate progress" : "Chưa đủ ngày để tính tiến độ")}</span> : <>
+            <div className="owner-progress-track" role="progressbar" aria-label={(lang === 'en' ? "Progress over time: " + season.seasonName : 'Tiến độ theo thời gian: ' + season.seasonName)} aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: progress + '%' }} /></div><span>{progress}%</span>
           </>}</div>
         </div>
       </Link>;
@@ -52,10 +52,10 @@ export function SeasonProgressPanel({ seasons, demo }: { seasons: DashboardSeaso
 }
 
 export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolean }) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [hovered, setHovered] = useState<number | null>(null);
   const [mode, setMode] = useState('area');
-  const categories = crops.length > 4 ? [...crops.slice(0, 3), { name: 'Khác', areaM2: crops.slice(3).reduce((sum, crop) => sum + crop.areaM2, 0) }] : crops;
+  const categories = crops.length > 4 ? [...crops.slice(0, 3), { name: lang === 'en' ? 'Other' : 'Khác', areaM2: crops.slice(3).reduce((sum, crop) => sum + crop.areaM2, 0) }] : crops;
   const total = categories.reduce((sum, crop) => sum + crop.areaM2, 0);
   const showArea = (area: number) => total >= 10000
     ? `${(area / 10000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha` : formatArea(area);
@@ -64,25 +64,25 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
   const selected = hovered === null ? null : categories[hovered];
   return <section className="owner-panel owner-crop-panel">
     <div className="owner-panel-heading"><div><h2>Area by Crop Type</h2>{demo && <DemoTag />}</div>
-      <select aria-label="Cách hiển thị diện tích cây trồng" value={mode} onChange={event => setMode(event.target.value)}><option value="area">By Area</option><option value="percent">By Percentage</option></select>
+      <select aria-label={(lang === 'en' ? "Crop area display mode" : "Cách hiển thị diện tích cây trồng")} value={mode} onChange={event => setMode(event.target.value)}><option value="area">By Area</option><option value="percent">By Percentage</option></select>
     </div>
     <div className="owner-chart-layout">
       <div className="owner-donut">
-        <svg viewBox="0 0 160 160" role="img" aria-label={'Diện tích theo loại cây trồng, tổng ' + formatArea(total)}>
+        <svg viewBox="0 0 160 160" role="img" aria-label={(lang === 'en' ? "Area by crop type, total " + formatArea(total) : 'Diện tích theo loại cây trồng, tổng ' + formatArea(total))}>
           {categories.map((crop, index) => {
             const length = total ? crop.areaM2 / total * circumference : 0;
             const start = offset; offset += length;
             return <circle key={crop.name} cx="80" cy="80" r="66" fill="none" stroke={'var(--owner-chart-' + index + ')'} strokeWidth="26" strokeDasharray={`${length} ${circumference - length}`} strokeDashoffset={-start} transform="rotate(-90 80 80)"
               opacity={hovered === null || hovered === index ? 1 : .35} onMouseEnter={() => setHovered(index)} onMouseLeave={() => setHovered(null)}>
-              <title>{crop.name}: {showArea(crop.areaM2)} ({total ? Math.round(crop.areaM2 / total * 100) : 0}%)</title>
+              <title>{demo ? translate(crop.name) : crop.name}: {showArea(crop.areaM2)} ({total ? Math.round(crop.areaM2 / total * 100) : 0}%)</title>
             </circle>;
           })}
-        </svg><div className="owner-donut-label" aria-live="polite"><strong>{showArea(selected?.areaM2 ?? total)}</strong><span>{selected?.name ?? (lang === 'en' ? 'Total Area' : 'Tổng diện tích')}</span></div>
+        </svg><div className="owner-donut-label" aria-live="polite"><strong>{showArea(selected?.areaM2 ?? total)}</strong><span>{(selected ? (demo ? translate(selected.name) : selected.name) : null) ?? (lang === 'en' ? 'Total Area' : 'Tổng diện tích')}</span></div>
       </div>
       <div className="owner-chart-legend">{categories.map((crop, index) => {
         const percentage = total ? Math.round(crop.areaM2 / total * 100) : 0;
         return <button key={crop.name} type="button" onMouseEnter={() => setHovered(index)} onMouseLeave={() => setHovered(null)} onFocus={() => setHovered(index)} onBlur={() => setHovered(null)} onClick={() => setHovered(hovered === index ? null : index)}>
-          <span className="owner-legend-dot" style={{ background: 'var(--owner-chart-' + index + ')' }} /><span>{crop.name}</span><strong>{mode === 'area' ? `${showArea(crop.areaM2)} (${percentage}%)` : `${percentage}% · ${showArea(crop.areaM2)}`}</strong>
+          <span className="owner-legend-dot" style={{ background: 'var(--owner-chart-' + index + ')' }} /><span>{demo ? translate(crop.name) : crop.name}</span><strong>{mode === 'area' ? `${showArea(crop.areaM2)} (${percentage}%)` : `${percentage}% · ${showArea(crop.areaM2)}`}</strong>
         </button>;
       })}</div>
     </div>
@@ -91,17 +91,17 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
 
 type Demo = ReturnType<typeof makeDashboardDemo>;
 export function UpcomingTasksPanel({ tasks }: { tasks: Demo['tasks'] }) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   return <DashboardPanel title={lang === 'en' ? 'Upcoming Tasks' : 'Công việc sắp tới'} to="/tasks" demo>
     <div className="owner-task-list">{tasks.map(task => {
       const date = new Date(task.date + 'T00:00:00');
-      return <Link to="/tasks" key={task.name} className="owner-task-row"><span className="owner-task-date"><strong>{date.getDate().toString().padStart(2, '0')}</strong><span>Th{date.getMonth() + 1}</span></span><span className={'owner-small-icon icon-' + task.icon}><Icon name={task.icon} /></span><span className="owner-task-info"><strong>{task.name}</strong><span>{task.detail}</span></span></Link>;
+      return <Link to="/tasks" key={task.name} className="owner-task-row"><span className="owner-task-date"><strong>{date.getDate().toString().padStart(2, '0')}</strong><span>{lang === 'en' ? date.toLocaleDateString('en-US', { month: 'short' }) : 'Th' + (date.getMonth() + 1)}</span></span><span className={'owner-small-icon icon-' + task.icon}><Icon name={task.icon} /></span><span className="owner-task-info"><strong>{translate(task.name)}</strong><span>{translate(task.detail)}</span></span></Link>;
     })}</div>
   </DashboardPanel>;
 }
 
 export function EnvironmentPanel() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const measurements = [
     { name: lang === 'en' ? 'Temperature' : 'Nhiệt độ', value: '28,5', unit: '°C', change: '+1,2°C', icon: 'thermometer', tone: 'red' },
     { name: lang === 'en' ? 'Humidity' : 'Độ ẩm', value: '75', unit: '%', change: '+5%', icon: 'drop', tone: 'blue' },
@@ -110,16 +110,16 @@ export function EnvironmentPanel() {
   ];
   return <DashboardPanel title={lang === 'en' ? 'Environment & Field Conditions' : 'Điều kiện & môi trường'} demo className="owner-environment-panel" to="/environment" linkLabel="View Details">
     <div className="owner-environment-grid">{measurements.map(measurement => <div className={'owner-measurement tone-' + measurement.tone} key={measurement.name}>
-      <Icon name={measurement.icon} size={25} /><div><span>{measurement.name}</span><strong>{measurement.value}<small>{measurement.unit}</small></strong><span className="owner-change">{measurement.change.startsWith('+') && <Icon name="arrow-up" size={11} />}{measurement.change}</span></div>
+      <Icon name={measurement.icon} size={25} /><div><span>{measurement.name}</span><strong>{measurement.value}<small>{translate(measurement.unit)}</small></strong><span className="owner-change">{measurement.change.startsWith('+') && <Icon name="arrow-up" size={11} />}{measurement.change}</span></div>
     </div>)}</div>
   </DashboardPanel>;
 }
 
 export function RecentActivityPanel({ records, demo }: { records: RecentRecord[]; demo: boolean }) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   return <DashboardPanel title={lang === 'en' ? 'Recent Activity Log' : 'Nhật ký hoạt động gần đây'} to="/activities" demo>
     <div className="owner-recent-list">{records.map(record => <Link to={record.to} key={record.id} className="owner-recent-row">
-      <span className={'owner-small-icon icon-' + record.icon}><Icon name={record.icon} /></span><span className="owner-recent-body"><strong>{record.title}</strong><span>{record.detail}</span></span><time dateTime={record.at}>{relativeTime(record.at)}</time>
+      <span className={'owner-small-icon icon-' + record.icon}><Icon name={record.icon} /></span><span className="owner-recent-body"><strong>{translate(record.title)}</strong><span>{demo ? translate(record.detail) : record.detail}</span></span><time dateTime={record.at}>{relativeTime(record.at, lang)}</time>
     </Link>)}</div>
   </DashboardPanel>;
 }

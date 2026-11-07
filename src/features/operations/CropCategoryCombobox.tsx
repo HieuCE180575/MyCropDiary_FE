@@ -1,3 +1,4 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { Icon } from '../../shared/components/Icon';
 import type { CropCategoryResp } from './cropSeasonService';
@@ -22,6 +23,7 @@ export function CropCategoryCombobox({
   disabled = false,
   placeholder = 'Type to search or enter custom crop (e.g. Rau Muống, Dưa Leo)...',
 }: CropCategoryComboboxProps) {
+  const { lang, t: translate } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<'all' | 'short_term' | 'leafy' | 'fruit' | 'root'>('all');
@@ -254,7 +256,7 @@ export function CropCategoryCombobox({
                 whiteSpace: 'nowrap',
               }}
             >
-              🌱 Cây ngắn ngày
+              {(lang === 'en' ? "🌱 Short-season crops" : "🌱 Cây ngắn ngày")}
             </button>
             <button
               type="button"
@@ -271,7 +273,7 @@ export function CropCategoryCombobox({
                 whiteSpace: 'nowrap',
               }}
             >
-              🥬 Rau ăn lá
+              {(lang === 'en' ? "🥬 Leafy vegetables" : "🥬 Rau ăn lá")}
             </button>
             <button
               type="button"
@@ -288,7 +290,7 @@ export function CropCategoryCombobox({
                 whiteSpace: 'nowrap',
               }}
             >
-              🍅 Rau ăn quả
+              {(lang === 'en' ? "🍅 Fruiting vegetables" : "🍅 Rau ăn quả")}
             </button>
             <button
               type="button"
@@ -305,7 +307,7 @@ export function CropCategoryCombobox({
                 whiteSpace: 'nowrap',
               }}
             >
-              🥕 Củ quả
+              {(lang === 'en' ? "🥕 Root crops" : "🥕 Củ quả")}
             </button>
           </div>
 
@@ -329,7 +331,7 @@ export function CropCategoryCombobox({
             >
               <span style={{ fontWeight: 700, color: '#10b981' }}>+</span>
               <span>
-                Thêm cây trồng tự điền: <strong>"{query.trim()}"</strong>
+                {(lang === 'en' ? "Add a custom crop: " : "Thêm cây trồng tự điền: ")} <strong>"{query.trim()}"</strong>
               </span>
             </div>
           )}
@@ -338,7 +340,7 @@ export function CropCategoryCombobox({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
             {filteredCategories.length === 0 ? (
               <div style={{ padding: '16px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
-                Không tìm thấy cây trồng phù hợp. Bạn có thể tự điền tên cây trồng ở trên!
+                {(lang === 'en' ? "No matching crops. You can enter a custom crop name above!" : "Không tìm thấy cây trồng phù hợp. Bạn có thể tự điền tên cây trồng ở trên!")}
               </div>
             ) : (
               filteredCategories.map((cat) => {
@@ -369,11 +371,11 @@ export function CropCategoryCombobox({
                   >
                     <div>
                       <div style={{ fontWeight: isSelected ? 700 : 600, fontSize: '13.5px' }}>
-                        {cat.categoryName}
+                        {translate(cat.categoryName)}
                       </div>
                       {cat.description && (
                         <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '1px' }}>
-                          {cat.description}
+                          {translate(cat.description)}
                         </div>
                       )}
                     </div>
@@ -390,7 +392,7 @@ export function CropCategoryCombobox({
                             color: '#15803d',
                           }}
                         >
-                          Ngắn ngày
+                          {(lang === 'en' ? "Short season" : "Ngắn ngày")}
                         </span>
                       )}
                       {isSelected && (

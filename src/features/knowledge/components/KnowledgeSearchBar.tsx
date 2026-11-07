@@ -14,10 +14,10 @@ export function KnowledgeSearchBar({ value, onChange }: KnowledgeSearchBarProps)
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={lang === 'en' ? 'Search by title, description or keyword...' : 'Tìm kiếm theo tiêu đề, mô tả hoặc từ khoá...'}
-        aria-label="Tìm kiếm kiến thức VietGAP"
+        aria-label={(lang === 'en' ? "Search VietGAP knowledge" : "Tìm kiếm kiến thức VietGAP")}
       />
       {value ? (
-        <button type="button" className="search-clear" aria-label="Xoá tìm kiếm" onClick={() => onChange('')}>
+        <button type="button" className="search-clear" aria-label={(lang === 'en' ? "Clear search" : "Xoá tìm kiếm")} onClick={() => onChange('')}>
           ✕
         </button>
       ) : null}

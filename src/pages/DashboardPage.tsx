@@ -9,7 +9,7 @@ import { OwnerDashboard } from '../features/owner-dashboard/OwnerDashboard';
 import { useLanguage } from '../shared/i18n/LanguageContext';
 
 export function DashboardPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { user } = useAuth();
   const { selectedFarm, farms, loading, error, retry } = useFarmWorkspace();
   const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
@@ -35,23 +35,23 @@ export function DashboardPage() {
     </section>}
     {!isAdmin && <div className="workspace-status">
       {loading ? (
-        <p role="status">Đang tải các trang trại bạn tham gia…</p>
+        <p role="status">{(lang === 'en' ? "Loading your farms…" : "Đang tải các trang trại bạn tham gia…")}</p>
       ) : error ? (
         <div role="alert">
-          <p>Chưa tải được thông tin trang trại. Bạn vẫn có thể sử dụng các chức năng cá nhân.</p>
-          <button className="action-button" onClick={retry}>Thử lại</button>
+          <p>{(lang === 'en' ? "Unable to load farm information. Your personal features are still available." : "Chưa tải được thông tin trang trại. Bạn vẫn có thể sử dụng các chức năng cá nhân.")}</p>
+          <button className="action-button" onClick={retry}>{(lang === 'en' ? "Retry" : "Thử lại")}</button>
         </div>
       ) : selectedFarm ? (
-        <p><Icon name="plots" />Bạn đang làm việc tại <strong>{selectedFarm.farmName}</strong>. Quyền truy cập áp dụng cho trang trại này.</p>
+        <p><Icon name="plots" />{(lang === 'en' ? "You are working at " : "Bạn đang làm việc tại ")} <strong>{selectedFarm.farmName}</strong>{(lang === 'en' ? ". Access permissions apply to this farm." : ". Quyền truy cập áp dụng cho trang trại này.")}</p>
       ) : farms.length ? (
-        <p><Icon name="plots" />Bạn đang tham gia <strong>{farms.length} trang trại</strong>. Chọn trang trại ở thanh trên để mở chức năng được cấp quyền.</p>
+        <p><Icon name="plots" />{(lang === 'en' ? "You are a member of " : "Bạn đang tham gia ")} <strong>{farms.length} {(lang === 'en' ? " farm" : " trang trại")}</strong>{(lang === 'en' ? ". Select a farm in the top bar to access your permitted features." : ". Chọn trang trại ở thanh trên để mở chức năng được cấp quyền.")}</p>
       ) : (
-        <p><Icon name="lock" />Các chức năng canh tác sẽ mở khi bạn có tư cách thành viên đang hoạt động trong trang trại. Chủ trang trại được cấp quyền sau khi yêu cầu đăng ký được duyệt.</p>
+        <p><Icon name="lock" />{(lang === 'en' ? "Farming features become available when you are an active farm member. Farm owners gain access after registration approval." : "Các chức năng canh tác sẽ mở khi bạn có tư cách thành viên đang hoạt động trong trang trại. Chủ trang trại được cấp quyền sau khi yêu cầu đăng ký được duyệt.")}</p>
       )}
     </div>}
     <div className="personal-section-heading"><h2>{selectedFarm ? (lang === 'en' ? 'Farm Operations' : 'Công việc trong trang trại') : (lang === 'en' ? 'Your Tools & Services' : 'Tiện ích của bạn')}</h2><p>{selectedFarm ? (lang === 'en' ? 'Operations corresponding to your permissions in this farm.' : 'Các chức năng phù hợp với vai trò của bạn tại trang trại đang chọn.') : (lang === 'en' ? 'Quickly access features available for your personal account.' : 'Truy cập nhanh các chức năng dành cho tài khoản của bạn.')}</p></div>
     <div className="personal-shortcuts">{shortcuts.map((module) => <Link className={'personal-shortcut shortcut-' + module.key} to={'/' + module.path} key={module.key}>
-      <span className="shortcut-icon"><Icon name={module.icon} /></span><h3>{module.title}</h3><p>{module.description}</p><span className="shortcut-link">{lang === 'en' ? 'Open' : 'Mở'} <Icon name="arrow" /></span>
+      <span className="shortcut-icon"><Icon name={module.icon} /></span><h3>{translate(module.title)}</h3><p>{translate(module.description)}</p><span className="shortcut-link">{lang === 'en' ? 'Open' : 'Mở'} <Icon name="arrow" /></span>
     </Link>)}</div>
     {!selectedFarm && !isAdmin && <RegistrationGuide status={farms.some((farm) => farmRole(farm) === 'OWNER') ? 'APPROVED' : undefined} loading={loading} error={Boolean(error)} />}
   </section>;

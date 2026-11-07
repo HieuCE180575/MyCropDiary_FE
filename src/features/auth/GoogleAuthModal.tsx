@@ -1,4 +1,6 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useState, useEffect, type FormEvent } from 'react';
+
 import { authenticateWithGoogle, type GoogleAuthRequest } from './authApi';
 import type { AuthSession } from './authStorage';
 
@@ -45,6 +47,7 @@ const PRESET_GOOGLE_ACCOUNTS = [
 ];
 
 export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuthModalProps) {
+  const { t: translate } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -189,7 +192,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
               marginBottom: '16px',
             }}
           >
-            ⚠️ {error}
+            ⚠️ {translate(error)}
           </div>
         )}
 

@@ -16,7 +16,7 @@ function formatDate(iso: string, lang: 'en' | 'vi'): string {
 }
 
 export function KnowledgeDetailModal({ article, onClose }: KnowledgeDetailModalProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const id = article?.id;
   const load = useCallback((signal: AbortSignal) => id === undefined ? Promise.resolve(null) : fetchKnowledgeArticleById(id, signal), [id]);
   const { data, loading, error, retry } = useApiData(load);
@@ -24,7 +24,7 @@ export function KnowledgeDetailModal({ article, onClose }: KnowledgeDetailModalP
   return (
     <Modal open={article !== null} onClose={onClose} title={detail?.title ?? article?.title}>
       {loading ? <p role="status">{lang === 'en' ? 'Loading article...' : 'Đang tải bài viết...'}</p> : error ? (
-        <div role="alert"><p>{error}</p><button type="button" className="action-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></div>
+        <div role="alert"><p>{translate(error ?? '')}</p><button type="button" className="action-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></div>
       ) : detail ? (
         <>
           <div className="knowledge-card-meta">

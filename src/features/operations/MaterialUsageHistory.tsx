@@ -14,10 +14,10 @@ export function MaterialUsageHistory({ usages, busy, deletingId, onOpen, onDelet
   onOpen: (id: number, edit?: boolean) => void;
   onDelete: (id: number, name: string) => void;
 }) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   return <>
-    <p className="mu-scroll-hint"><Icon name="arrow" /> Cuộn ngang để xem đầy đủ thông tin và thao tác.</p>
-    <div className="mu-table-scroll" role="region" aria-label="Bảng lịch sử sử dụng vật tư, có thể cuộn ngang" tabIndex={0}>
+    <p className="mu-scroll-hint"><Icon name="arrow" /> {(lang === 'en' ? " Scroll horizontally to view all information and actions." : " Cuộn ngang để xem đầy đủ thông tin và thao tác.")}</p>
+    <div className="mu-table-scroll" role="region" aria-label={(lang === 'en' ? "Material usage history table, scrollable horizontally" : "Bảng lịch sử sử dụng vật tư, có thể cuộn ngang")} tabIndex={0}>
       <table className="mu-table">
         <thead><tr>
           <th scope="col">{lang === 'en' ? 'Material' : 'Vật tư'}</th><th scope="col">{lang === 'en' ? 'Date Used' : 'Ngày sử dụng'}</th>
@@ -38,11 +38,11 @@ export function MaterialUsageHistory({ usages, busy, deletingId, onOpen, onDelet
           <td className="mu-nowrap"><time dateTime={usage.usedAt}>{new Date(usage.usedAt).toLocaleDateString('vi-VN')}</time>
             <span className="mu-secondary">{new Date(usage.usedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
           </td>
-          <td className="mu-quantity">{usage.quantity.toLocaleString('vi-VN')} <span>{usage.unit}</span></td>
+          <td className="mu-quantity">{usage.quantity.toLocaleString('vi-VN')} <span>{translate(usage.unit)}</span></td>
           <td className="mu-application"><strong>{usage.dosage || (lang === 'en' ? 'No dosage' : 'Chưa có dữ liệu')}</strong><span className="mu-secondary">{usage.method || (lang === 'en' ? 'No method' : 'Chưa có phương pháp')}</span></td>
-          <td>{usage.safetyIntervalDays == null ? <span className="mu-secondary">Chưa có dữ liệu</span> : usage.safetyIntervalDays > 0 ?
-            <span className="mu-badge mu-badge-amber"><Icon name="warning" size={14} />{usage.safetyIntervalDays} ngày PHI</span> :
-            <span className="mu-badge mu-badge-green"><Icon name="check-circle" size={14} />An toàn (0 ngày)</span>}
+          <td>{usage.safetyIntervalDays == null ? <span className="mu-secondary">{(lang === 'en' ? "No data yet" : "Chưa có dữ liệu")}</span> : usage.safetyIntervalDays > 0 ?
+            <span className="mu-badge mu-badge-amber"><Icon name="warning" size={14} />{usage.safetyIntervalDays} {(lang === 'en' ? " PHI days" : " ngày PHI")}</span> :
+            <span className="mu-badge mu-badge-green"><Icon name="check-circle" size={14} />{(lang === 'en' ? "Safe (0 days)" : "An toàn (0 ngày)")}</span>}
           </td>
           <td className="mu-recorder">{usage.recorderFullName || (lang === 'en' ? 'Farm Staff' : 'Thành viên nông trại')}</td>
           <td className="mu-actions-cell" style={{ textAlign: 'right' }}>
@@ -51,34 +51,34 @@ export function MaterialUsageHistory({ usages, busy, deletingId, onOpen, onDelet
                 type="button"
                 className="table-icon-btn primary"
                 disabled={busy}
-                title="Xem chi tiết"
-                aria-label={`Chi tiết ${usage.materialName}`}
+                title={(lang === 'en' ? "View details" : "Xem chi tiết")}
+                aria-label={(lang === 'en' ? `Details ${usage.materialName}` : `Chi tiết ${usage.materialName}`)}
                 onClick={() => onOpen(usage.materialUsageId)}
               >
                 <Icon name="eye" size={16} />
-                <span className="mu-sr-only">Chi tiết</span>
+                <span className="mu-sr-only">{(lang === 'en' ? "Details" : "Chi tiết")}</span>
               </button>
               <button
                 type="button"
                 className="table-icon-btn edit"
                 disabled={busy}
-                title="Chỉnh sửa"
-                aria-label={`Chỉnh sửa ${usage.materialName}`}
+                title={(lang === 'en' ? "Edit" : "Chỉnh sửa")}
+                aria-label={(lang === 'en' ? `Edit ${usage.materialName}` : `Chỉnh sửa ${usage.materialName}`)}
                 onClick={() => onOpen(usage.materialUsageId, true)}
               >
                 <Icon name="edit" size={16} />
-                <span className="mu-sr-only">Chỉnh sửa</span>
+                <span className="mu-sr-only">{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</span>
               </button>
               <button
                 type="button"
                 className="table-icon-btn danger mu-delete"
                 disabled={busy}
-                title="Xóa"
-                aria-label={`Xóa ${usage.materialName}`}
+                title={(lang === 'en' ? "Delete" : "Xóa")}
+                aria-label={(lang === 'en' ? `Delete ${usage.materialName}` : `Xóa ${usage.materialName}`)}
                 onClick={() => onDelete(usage.materialUsageId, usage.materialName)}
               >
                 <Icon name="trash" size={16} />
-                <span className="mu-sr-only">{deletingId === usage.materialUsageId ? 'Đang xóa...' : 'Xóa'}</span>
+                <span className="mu-sr-only">{(lang === 'en' ? deletingId === usage.materialUsageId ? "Deleting..." : "Delete" : deletingId === usage.materialUsageId ? 'Đang xóa...' : 'Xóa')}</span>
               </button>
             </div>
           </td>

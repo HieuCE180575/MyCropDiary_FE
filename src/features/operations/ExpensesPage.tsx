@@ -41,7 +41,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string
 };
 
 export function ExpensesPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
 
@@ -300,8 +300,8 @@ export function ExpensesPage() {
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
           <span>
-            <strong>{notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: '}</strong>
-            {notification.text}
+            <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success: " : "⚠️ Notice: " : notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: ')}</strong>
+            {translate(notification.text)}
           </span>
           <button
             type="button"
@@ -368,11 +368,11 @@ export function ExpensesPage() {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              aria-label="Lọc theo danh mục chi phí"
+              aria-label={(lang === 'en' ? "Filter by expense category" : "Lọc theo danh mục chi phí")}
             >
               <option value="">{lang === 'en' ? 'All Categories' : 'Tất cả danh mục'}</option>
               {DEFAULT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>{translate(cat)}</option>
               ))}
             </select>
             <span className="select-arrow"><Icon name="chevron" size={16} /></span>
@@ -382,12 +382,12 @@ export function ExpensesPage() {
             <select
               value={selectedSeasonId ?? ''}
               onChange={(e) => setSelectedSeasonId(e.target.value ? Number(e.target.value) : undefined)}
-              aria-label="Lọc theo mùa vụ"
+              aria-label={(lang === 'en' ? "Filter by season" : "Lọc theo mùa vụ")}
             >
               <option value="">{lang === 'en' ? 'All Crop Seasons' : 'Tất cả mùa vụ'}</option>
               {seasons.map((s) => (
-                <option key={s.cropSeasonId} value={s.cropSeasonId}>{s.seasonName}</option>
-              ))}
+                  <option key={s.cropSeasonId} value={s.cropSeasonId}>{s.seasonName}</option>
+                ))}
             </select>
             <span className="select-arrow"><Icon name="chevron" size={16} /></span>
           </div>
@@ -404,7 +404,7 @@ export function ExpensesPage() {
             <button
               type="button"
               className="zone-clean-reload-btn"
-              title="Đặt lại bộ lọc"
+              title={(lang === 'en' ? "Reset filters" : "Đặt lại bộ lọc")}
               onClick={handleClearFilters}
             >
               <Icon name="refresh" size={16} />
@@ -418,7 +418,7 @@ export function ExpensesPage() {
             <thead>
               <tr style={{ background: '#f8fafc' }}>
                 <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
-                  <input type="checkbox" aria-label="Chọn tất cả" style={{ cursor: 'pointer' }} />
+                  <input type="checkbox" aria-label={(lang === 'en' ? "Select all" : "Chọn tất cả")} style={{ cursor: 'pointer' }} />
                 </th>
                 <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
                   {lang === 'en' ? 'EXPENSE DESCRIPTION' : 'DIỄN GIẢI KHOẢN CHI'}
@@ -459,7 +459,7 @@ export function ExpensesPage() {
                   return (
                     <tr key={item.expenseId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={`Chọn chi phí #${item.expenseId}`} style={{ cursor: 'pointer' }} />
+                        <input type="checkbox" aria-label={(lang === 'en' ? `Select expense #${item.expenseId}` : `Chọn chi phí #${item.expenseId}`)} style={{ cursor: 'pointer' }} />
                       </td>
                       <td style={{ padding: '14px 16px' }}>
                         <span
@@ -519,7 +519,7 @@ export function ExpensesPage() {
                             type="button"
                             className="table-icon-btn primary"
                             title={lang === 'en' ? 'View Details' : 'Xem chi tiết'}
-                            aria-label={`Xem chi tiết chi phí #${item.expenseId}`}
+                            aria-label={(lang === 'en' ? `View expense details #${item.expenseId}` : `Xem chi tiết chi phí #${item.expenseId}`)}
                             onClick={() => handleOpenDetails(item.expenseId)}
                           >
                             <Icon name="eye" size={15} />
@@ -528,7 +528,7 @@ export function ExpensesPage() {
                             type="button"
                             className="table-icon-btn edit"
                             title={lang === 'en' ? 'Update Expense' : 'Sửa chi phí'}
-                            aria-label={`Sửa chi phí #${item.expenseId}`}
+                            aria-label={(lang === 'en' ? `Edit expense #${item.expenseId}` : `Sửa chi phí #${item.expenseId}`)}
                             onClick={() => handleOpenUpdate(item)}
                           >
                             <Icon name="edit" size={15} />
@@ -537,7 +537,7 @@ export function ExpensesPage() {
                             type="button"
                             className="table-icon-btn danger"
                             title={lang === 'en' ? 'Delete Expense' : 'Xóa chi phí'}
-                            aria-label={`Xóa chi phí #${item.expenseId}`}
+                            aria-label={(lang === 'en' ? `Delete expense #${item.expenseId}` : `Xóa chi phí #${item.expenseId}`)}
                             onClick={() => handleOpenDelete(item)}
                           >
                             <Icon name="trash" size={15} />
@@ -729,7 +729,7 @@ export function ExpensesPage() {
               required
             >
               {DEFAULT_CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>{translate(cat)}</option>
               ))}
             </select>
           </div>
@@ -745,7 +745,7 @@ export function ExpensesPage() {
                 step="1000"
                 value={recordForm.amount || ''}
                 onChange={(e) => setRecordForm({ ...recordForm, amount: Number(e.target.value) })}
-                placeholder="vd: 15000000"
+                placeholder={(lang === 'en' ? "e.g. 15000000" : "vd: 15000000")}
                 style={{
                   width: '100%',
                   padding: '9px 12px',
@@ -796,8 +796,8 @@ export function ExpensesPage() {
             >
               <option value="">{lang === 'en' ? 'General farm expense (no season)' : 'Chi phí chung (không gán mùa vụ)'}</option>
               {seasons.map((s) => (
-                <option key={s.cropSeasonId} value={s.cropSeasonId}>{s.seasonName}</option>
-              ))}
+                  <option key={s.cropSeasonId} value={s.cropSeasonId}>{s.seasonName}</option>
+                ))}
             </select>
           </div>
 
@@ -830,15 +830,15 @@ export function ExpensesPage() {
               type="url"
               value={recordForm.receiptImageUrl}
               onChange={(e) => setRecordForm({ ...recordForm, receiptImageUrl: e.target.value })}
-              placeholder="https://images.unsplash.com/... hoặc link ảnh chứng từ"
+              placeholder={(lang === 'en' ? "https://images.unsplash.com/... or receipt image URL" : "https://images.unsplash.com/... hoặc link ảnh chứng từ")}
               style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-              }}
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
             />
           </div>
 
@@ -907,7 +907,7 @@ export function ExpensesPage() {
                 }}
               >
                 {DEFAULT_CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
+                  <option key={cat} value={cat}>{translate(cat)}</option>
                 ))}
               </select>
             </div>

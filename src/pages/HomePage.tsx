@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
 import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
 import { useApiData } from '../shared/hooks/useApiData';
-import { KNOWLEDGE_CATEGORY_LABEL } from '../features/knowledge/constants';
+import { getKnowledgeCategoryLabel } from '../features/knowledge/constants';
 import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
 import type { KnowledgeArticle } from '../features/knowledge/types';
 import { useLanguage } from '../shared/i18n/LanguageContext';
@@ -517,7 +517,7 @@ export function HomePage() {
           </div>
 
           {loading && <p role="status">{lang === 'en' ? 'Loading articles...' : 'Đang tải bài viết...'}</p>}
-          {error && <div role="alert"><p>{error}</p><button type="button" className="action-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></div>}
+          {error && <div role="alert"><p>{t(error)}</p><button type="button" className="action-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></div>}
           {!loading && !error && featuredArticles.length === 0 && <p>{lang === 'en' ? 'No articles published yet.' : 'Chưa có bài viết được xuất bản.'}</p>}
           <div className="knowledge-cards-grid">
             {featuredArticles.map((article) => {
@@ -526,7 +526,7 @@ export function HomePage() {
                   <div className="card-thumb-wrap">
                     {article.image && <img src={article.image} alt={article.title} className="card-thumb-img" loading="lazy" />}
                     <span className="card-category-badge">
-                      {article.category ? KNOWLEDGE_CATEGORY_LABEL[article.category] : (lang === 'en' ? 'Agricultural Knowledge' : 'Kiến thức nông nghiệp')}
+                      {article.category ? getKnowledgeCategoryLabel(article.category, lang) : (lang === 'en' ? 'Agricultural Knowledge' : 'Kiến thức nông nghiệp')}
                     </span>
                   </div>
 

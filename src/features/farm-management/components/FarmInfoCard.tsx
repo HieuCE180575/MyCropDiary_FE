@@ -1,3 +1,4 @@
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { FARM_STATUS_LABEL, FARM_STATUS_TONE } from '../constants';
 import { parseBoundaryCoordinates } from '../goongMapService';
@@ -13,6 +14,7 @@ function formatDateTime(iso: string): string {
 }
 
 export function FarmInfoCard({ farm }: FarmInfoCardProps) {
+  const { lang, t: translate } = useLanguage();
   const boundaryPoints = parseBoundaryCoordinates(farm.boundaryCoordinates);
 
   return (
@@ -27,28 +29,28 @@ export function FarmInfoCard({ farm }: FarmInfoCardProps) {
 
       <dl className="detail-list">
         <div>
-          <dt>Địa chỉ</dt>
+          <dt>{(lang === 'en' ? "Address" : "Địa chỉ")}</dt>
           <dd>{farm.address}</dd>
         </div>
         {farm.phoneNumber ? (
           <div>
-            <dt>Số điện thoại</dt>
+            <dt>{(lang === 'en' ? "Phone number" : "Số điện thoại")}</dt>
             <dd>{farm.phoneNumber}</dd>
           </div>
         ) : null}
         {farm.description ? (
           <div>
-            <dt>Mô tả</dt>
+            <dt>{(lang === 'en' ? "Description" : "Mô tả")}</dt>
             <dd>{farm.description}</dd>
           </div>
         ) : null}
         <div>
-          <dt>Ngày tạo</dt>
+          <dt>{(lang === 'en' ? "Created date" : "Ngày tạo")}</dt>
           <dd>{formatDateTime(farm.createdAt)}</dd>
         </div>
         {farm.updatedAt ? (
           <div>
-            <dt>Cập nhật lần cuối</dt>
+            <dt>{(lang === 'en' ? "Last updated" : "Cập nhật lần cuối")}</dt>
             <dd>{formatDateTime(farm.updatedAt)}</dd>
           </div>
         ) : null}

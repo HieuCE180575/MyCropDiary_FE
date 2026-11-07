@@ -1,3 +1,4 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useState, type FormEvent } from 'react';
 import { Icon } from '../../shared/components/Icon';
 import { changeUserPassword } from './authApi';
@@ -12,16 +13,17 @@ interface PasswordFieldProps {
 }
 
 function PasswordField({ name, label, value, onChange, current = false, disabled = false }: PasswordFieldProps) {
+  const { t: translate } = useLanguage();
   const [visible, setVisible] = useState(false);
   return (
     <label className="profile-password-field">
-      <span>{label}</span>
+      <span>{translate(label)}</span>
       <span className="profile-password-input">
         <Icon name="lock" />
         <input
           name={name}
           type={visible ? 'text' : 'password'}
-          placeholder={label}
+          placeholder={translate(label)}
           autoComplete={current ? 'current-password' : 'new-password'}
           minLength={current ? undefined : 8}
           required
@@ -50,6 +52,7 @@ export function ChangePasswordPanel({
   embedded?: boolean;
   onSuccess?: () => void;
 } = {}) {
+  const { t: translate } = useLanguage();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -115,7 +118,7 @@ export function ChangePasswordPanel({
           }}
         >
           <span>{status.type === 'success' ? '✓' : '⚠️'}</span>
-          <span>{status.message}</span>
+          <span>{translate(status.message)}</span>
         </div>
       )}
 

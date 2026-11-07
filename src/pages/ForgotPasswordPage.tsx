@@ -1,3 +1,4 @@
+import { useLanguage } from '../shared/i18n/LanguageContext';
 import { type FormEvent, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { forgotPassword, resetPassword } from '../features/auth/authApi';
@@ -37,6 +38,7 @@ function validateNewPassword(value: string): string {
 }
 
 export function ForgotPasswordPage() {
+  const { lang, t: translate } = useLanguage();
   const navigate = useNavigate();
   const [step, setStep] = useState<'email' | 'reset'>('email');
   const [email, setEmail] = useState('');
@@ -73,7 +75,7 @@ export function ForgotPasswordPage() {
       setEmail(email.trim());
       setOtp('');
       setStep('reset');
-      setNotice('If the email belongs to an activated account, an OTP code has been sent. Please also check your spam folder. (Nếu email...)');
+      setNotice((lang === 'en' ? "If the email belongs to an activated account, an OTP code has been sent. Please also check your spam folder." : 'If the email belongs to an activated account, an OTP code has been sent. Please also check your spam folder. (Nếu email...)'));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not send OTP code. Please try again.');
     } finally {
@@ -100,7 +102,7 @@ export function ForgotPasswordPage() {
       return;
     }
     if (password !== confirmation) {
-      setError('Password confirmation does not match (không khớp).');
+      setError((lang === 'en' ? "Password confirmation does not match." : 'Password confirmation does not match (không khớp).'));
       return;
     }
 
@@ -152,7 +154,7 @@ export function ForgotPasswordPage() {
                   <Icon name={item.icon} className="feature-icon" />
                 </div>
                 <div className="feature-body">
-                  <strong>{item.title}</strong>
+                  <strong>{translate(item.title)}</strong>
                   <p>{item.desc}</p>
                 </div>
               </article>
@@ -206,14 +208,14 @@ export function ForgotPasswordPage() {
           {error && (
             <div className="auth-error-banner" role="alert">
               <Icon name="warning" />
-              <span>{error}</span>
+              <span>{translate(error)}</span>
             </div>
           )}
 
           {notice && (
             <div className="auth-notice-banner" role="status">
               <Icon name="check-circle" />
-              <span>{notice}</span>
+              <span>{translate(notice)}</span>
             </div>
           )}
 
@@ -302,7 +304,7 @@ export function ForgotPasswordPage() {
                       type="button"
                       className="input-trailing-toggle"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                      aria-label={(lang === 'en' ? showPassword ? "Hide password" : "Show password" : showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu')}
                       tabIndex={-1}
                     >
                       <Icon name={showPassword ? 'eye-off' : 'eye'} />
@@ -311,7 +313,7 @@ export function ForgotPasswordPage() {
                   {touchedPassword && passwordRuleError && (
                     <small className="field-error" role="alert">
                       <Icon name="warning" className="field-error-icon" />
-                      <span>{passwordRuleError}</span>
+                      <span>{translate(passwordRuleError)}</span>
                     </small>
                   )}
 
@@ -414,7 +416,7 @@ export function ForgotPasswordPage() {
                       type="button"
                       className="input-trailing-toggle"
                       onClick={() => setShowConfirmation((prev) => !prev)}
-                      aria-label={showConfirmation ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận'}
+                      aria-label={(lang === 'en' ? showConfirmation ? "Hide password confirmation" : "Show password confirmation" : showConfirmation ? 'Ẩn mật khẩu xác nhận' : 'Hiện mật khẩu xác nhận')}
                       tabIndex={-1}
                     >
                       <Icon name={showConfirmation ? 'eye-off' : 'eye'} />
@@ -423,7 +425,7 @@ export function ForgotPasswordPage() {
                   {touchedConfirmation && confirmationRuleError && (
                     <small className="field-error" role="alert">
                       <Icon name="warning" className="field-error-icon" />
-                      <span>{confirmationRuleError}</span>
+                      <span>{translate(confirmationRuleError)}</span>
                     </small>
                   )}
                 </div>

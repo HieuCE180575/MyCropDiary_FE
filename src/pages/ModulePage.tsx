@@ -1,3 +1,4 @@
+import { useLanguage } from '../shared/i18n/LanguageContext';
 import type { ModuleDefinition } from '../shared/types/module';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../features/auth';
@@ -21,6 +22,7 @@ import { ReportsPage } from '../features/reports/ReportsPage';
 import { AIAssistantPage } from '../features/ai/AIAssistantPage';
 
 export function ModulePage({ module }: { module: ModuleDefinition }) {
+  const { lang, t: translate } = useLanguage();
   const { user } = useAuth();
   if (module.key === 'password') return <Navigate to="/profile" replace />;
 
@@ -47,14 +49,14 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'ai-feedback') return <AIAssistantPage initialTab="ai-feedback" />;
   if (module.key === 'ai-drafts') return <AIAssistantPage initialTab="ai-drafts" />;
 
-  const displayName = user?.fullName?.trim() || user?.email || 'Người dùng VietGAP';
+  const displayName = user?.fullName?.trim() || user?.email || (lang === 'en' ? "VietGAP user" : 'Người dùng VietGAP');
 
   return (
     <section className="profile-page-section">
       <div className="page-heading">
         <div>
-          <h1>Xin chào, {displayName}!</h1>
-          <p className="module-description">{module.description}</p>
+          <h1>{(lang === 'en' ? "Hello, " : "Xin chào, ")} {displayName}!</h1>
+          <p className="module-description">{translate(module.description)}</p>
         </div>
       </div>
       <div className="profile-container">
@@ -73,17 +75,17 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
                 <Icon name="user" />
               )}
             </span>
-            <span className="profile-hero-status-dot" title="Tài khoản trực tuyến"></span>
+            <span className="profile-hero-status-dot" title={(lang === 'en' ? "Account online" : "Tài khoản trực tuyến")}></span>
           </div>
           <div className="profile-hero-info">
             <div className="profile-hero-badges">
               <span className="profile-tag-pill">
-                <Icon name="leaf" /> Hồ sơ cá nhân
+                <Icon name="leaf" /> {(lang === 'en' ? " Personal profile" : " Hồ sơ cá nhân")}
               </span>
             </div>
             <h2 className="profile-hero-name">{displayName}</h2>
             <p className="profile-hero-email">
-              <Icon name="mail" /> {user?.email || 'Chưa cập nhật email'}
+              <Icon name="mail" /> {(lang === 'en' ? user?.email || "No email provided" : user?.email || 'Chưa cập nhật email')}
             </p>
           </div>
         </div>

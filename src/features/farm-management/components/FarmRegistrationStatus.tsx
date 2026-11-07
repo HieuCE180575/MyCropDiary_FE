@@ -26,7 +26,7 @@ export function FarmRegistrationStatus({
   onCancel,
   onStartNew,
 }: FarmRegistrationStatusProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const canCancel = registration.status === 'pending';
@@ -56,7 +56,7 @@ export function FarmRegistrationStatus({
           ['district', lang === 'en' ? 'District' : 'Quận / huyện'],
           ['ward', lang === 'en' ? 'Ward / Commune' : 'Phường / xã'],
         ] as const).map(([field, label]) => registration[field] ? (
-          <div key={field}><dt>{label}</dt><dd>{registration[field]}</dd></div>
+          <div key={field}><dt>{translate(label)}</dt><dd>{registration[field]}</dd></div>
         ) : null)}
         {registration.latitude != null && registration.longitude != null ? (
           <div>
@@ -114,7 +114,7 @@ export function FarmRegistrationStatus({
         />
       </div>
 
-      {cancelError ? <p className="form-error-banner">{cancelError}</p> : null}
+      {cancelError ? <p className="form-error-banner">{translate(cancelError)}</p> : null}
 
       {registration.status === 'pending' ? (
         <p className="status-note">

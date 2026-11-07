@@ -1,3 +1,4 @@
+import { useLanguage } from '../shared/i18n/LanguageContext';
 import { type FormEvent, useRef, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth, GoogleAuthModal } from '../features/auth';
@@ -105,6 +106,7 @@ const registerBenefits = [
 ];
 
 export function RegisterPage() {
+  const { t: translate } = useLanguage();
   const { isAuthenticated, setSession } = useAuth();
   const [step, setStep] = useState<'register' | 'verify'>('register');
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
@@ -242,7 +244,7 @@ export function RegisterPage() {
                   <Icon name={item.icon} className="feature-icon" />
                 </div>
                 <div className="feature-body">
-                  <strong>{item.title}</strong>
+                  <strong>{translate(item.title)}</strong>
                   <p>{item.desc}</p>
                 </div>
               </article>
@@ -294,14 +296,14 @@ export function RegisterPage() {
           {error && (
             <div className="auth-error-banner" role="alert">
               <Icon name="warning" />
-              <span>{error}</span>
+              <span>{translate(error)}</span>
             </div>
           )}
 
           {notice && (
             <div className="auth-notice-banner" role="status">
               <Icon name="check-circle" />
-              <span>{notice}</span>
+              <span>{translate(notice)}</span>
             </div>
           )}
 

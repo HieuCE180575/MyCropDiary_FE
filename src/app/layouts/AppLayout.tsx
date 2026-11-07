@@ -87,7 +87,7 @@ function getInitialTheme(): 'light' | 'dark' {
 
 function WorkspaceLayout() {
   const { signOut, user } = useAuth();
-  const { lang, t } = useLanguage();
+  const { lang, t, t: translate } = useLanguage();
   const { farms, selectedFarm, selectFarm } = useFarmWorkspace();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -168,7 +168,7 @@ function WorkspaceLayout() {
         window.location.reload();
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Lỗi phản hồi lời mời.');
+      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to respond to the invitation." : err instanceof Error ? err.message : 'Lỗi phản hồi lời mời.'));
     } finally {
       setRespondingInvId(null);
     }
@@ -245,7 +245,7 @@ function WorkspaceLayout() {
                   title={!sidebarOpen ? module.title : undefined}
                 >
                   <Icon name={module.icon} />
-                  {sidebarOpen && <span>{module.title}</span>}
+                  {sidebarOpen && <span>{translate(module.title)}</span>}
                 </NavLink>
               ))}
             <div className="nav-divider" />
@@ -283,7 +283,7 @@ function WorkspaceLayout() {
           <div className="topbar-left">
             {isAdmin && pathname.startsWith('/admin') ? (
               <div className="admin-header-titles">
-                <h1 className="admin-header-title">{currentAdminMeta.title}</h1>
+                <h1 className="admin-header-title">{translate(currentAdminMeta.title)}</h1>
                 <p className="admin-header-subtitle">{currentAdminMeta.subtitle}</p>
               </div>
             ) : farms.length > 0 ? (
@@ -411,7 +411,7 @@ function WorkspaceLayout() {
                                 {inv.farmName}
                               </strong>
                               <span style={{ fontSize: '12px', color: '#475569', display: 'block', marginTop: '2px' }}>
-                                {lang === 'en' ? 'Invitation to join:' : 'Lời mời tham gia:'} <strong>{inv.farmRole?.toLowerCase() === 'owner' ? 'Đồng sở hữu (Co-Owner)' : 'Nhân viên kỹ thuật (Staff)'}</strong>
+                                {lang === 'en' ? 'Invitation to join:' : 'Lời mời tham gia:'} <strong>{(lang === 'en' ? inv.farmRole?.toLowerCase() === 'owner' ? "Co-Owner" : "Technical Staff" : inv.farmRole?.toLowerCase() === 'owner' ? 'Đồng sở hữu (Co-Owner)' : 'Nhân viên kỹ thuật (Staff)')}</strong>
                               </span>
                               <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block' }}>
                                 {lang === 'en' ? 'Invited by:' : 'Người mời:'} {inv.ownerName}

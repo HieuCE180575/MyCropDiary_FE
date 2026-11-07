@@ -13,7 +13,7 @@ interface BlockConditionHistoryModalProps {
 }
 
 export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecord }: BlockConditionHistoryModalProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [conditions, setConditions] = useState<BlockConditionObservation[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
     setError(null);
     fetchBlockConditions(block.blockId)
       .then((data) => setConditions(data))
-      .catch((err) => setError(err instanceof Error ? err.message : 'Không thể tải lịch sử tình trạng.'))
+      .catch((err) => setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load condition history." : err instanceof Error ? err.message : 'Không thể tải lịch sử tình trạng.')))
       .finally(() => setLoading(false));
   }, [isOpen, block, attempt]);
 
@@ -60,13 +60,13 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
           {lang === 'en' ? 'Total monitoring records: ' : 'Tổng số bản ghi theo dõi: '}<strong>{conditions.length}</strong>
         </p>
         <button
-          type="button"
-          className="btn btn-primary-emerald btn-sm-action"
-          onClick={() => {
-            onClose();
-            onOpenRecord();
-          }}
-        >
+            type="button"
+            className="btn btn-primary-emerald btn-sm-action"
+            onClick={() => {
+              onClose();
+              onOpenRecord();
+            }}
+          >
           <Icon name="plus" /> {lang === 'en' ? 'New Record' : 'Ghi nhận mới'}
         </button>
       </div>
@@ -78,8 +78,8 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
         </div>
       ) : error ? (
         <div className="alert alert--error" role="alert">
-          <p>{error}</p>
-          <button type="button" className="action-button" onClick={() => setAttempt(value => value + 1)}>Thử lại</button>
+          <p>{translate(error)}</p>
+          <button type="button" className="action-button" onClick={() => setAttempt(value => value + 1)}>{(lang === 'en' ? "Retry" : "Thử lại")}</button>
         </div>
       ) : conditions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '12px' }}>
@@ -105,7 +105,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
             <div key={item.observationId} className="observation-item">
               <div className="obs-header">
                 <span className={`obs-type-badge ${getBadgeClass(item.conditionType)}`}>
-                  {item.conditionType}
+                  {translate(item.conditionType)}
                 </span>
                 <span className="obs-time">{formatDate(item.observedAt)}</span>
               </div>
@@ -113,16 +113,16 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
               {item.imageUrl && (
                 <img
                   src={item.imageUrl}
-                  alt="Ảnh thực tế"
+                  alt={(lang === 'en' ? "Field photo" : "Ảnh thực tế")}
                   className="obs-image-preview"
                   onClick={() => window.open(item.imageUrl || '', '_blank')}
-                  title="Nhấp để xem ảnh đầy đủ"
+                  title={(lang === 'en' ? "Click to view full image" : "Nhấp để xem ảnh đầy đủ")}
                 />
               )}
               <div className="obs-meta">
                 <span>
                   <Icon name="user" size={13} style={{ marginRight: '4px' }} />
-                  Người ghi nhận: <strong>{item.recorderFullName || 'Kỹ thuật viên'}</strong>
+                  {(lang === 'en' ? "Recorded by: " : "Người ghi nhận: ")} <strong>{(lang === 'en' ? item.recorderFullName || "Technician" : item.recorderFullName || 'Kỹ thuật viên')}</strong>
                 </span>
               </div>
             </div>
@@ -132,7 +132,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
         <button type="button" className="btn btn-secondary" onClick={onClose}>
-          Đóng
+          {(lang === 'en' ? "Close" : "Đóng")}
         </button>
       </div>
     </Modal>

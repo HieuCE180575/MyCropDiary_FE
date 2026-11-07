@@ -27,7 +27,7 @@ import { getFarmStaffList, type FarmStaffRecord } from '../staff/staffService';
 import '../../styles/tasks.css';
 
 export function TasksPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
   const { user } = useAuth();
@@ -158,7 +158,7 @@ export function TasksPage() {
     } catch (err) {
       if (!controller.signal.aborted && !silent) {
         setNotification({
-          text: err instanceof Error ? err.message : 'Không thể tải danh sách tasks.',
+          text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load tasks." : err instanceof Error ? err.message : 'Không thể tải danh sách tasks.'),
           type: 'error',
         });
       }
@@ -212,12 +212,12 @@ export function TasksPage() {
 
     const trimmedTaskName = formTaskName.trim();
     if (!trimmedTaskName) {
-      setTaskModalError('Vui lòng nhập tên tasks / nhiệm vụ.');
+      setTaskModalError((lang === 'en' ? "Enter a task name." : 'Vui lòng nhập tên tasks / nhiệm vụ.'));
       return;
     }
 
     if (formStartsAt && formDueAt && formDueAt < formStartsAt) {
-      setTaskModalError(`{lang === 'en' ? 'Due Date / Deadline' : 'Hạn hoàn thành'} (${formDueAt}) không thể trước thời điểm bắt đầu (${formStartsAt}).`);
+      setTaskModalError((lang === 'en' ? `Due date (${formDueAt}) cannot be before the start time (${formStartsAt}).` : `Hạn hoàn thành (${formDueAt}) không thể trước thời điểm bắt đầu (${formStartsAt}).`));
       return;
     }
 
@@ -231,7 +231,7 @@ export function TasksPage() {
         t.status !== 'cancelled'
     );
     if (isDuplicate) {
-      setTaskModalError(`Công việc "${trimmedTaskName}" đã tồn at và đang diễn ra trong phạm vi mùa vụ/plot đất này. Vui lòng kiểm tra lại để tránh giao việc trùng lặp.`);
+      setTaskModalError((lang === 'en' ? `Task "${trimmedTaskName}" already exists and is active in this season/block. Check to avoid duplicate tasks.` : `Công việc "${trimmedTaskName}" đã tồn at và đang diễn ra trong phạm vi mùa vụ/plot đất này. Vui lòng kiểm tra lại để tránh giao việc trùng lặp.`));
       return;
     }
 
@@ -256,10 +256,10 @@ export function TasksPage() {
     try {
       if (editingTask) {
         await updateFarmTask(editingTask.taskId, payload as UpdateFarmTaskReq);
-        setNotification({ text: 'Cập nhật tasks thành công!', type: 'success' });
+        setNotification({ text: (lang === 'en' ? "Task updated successfully!" : 'Cập nhật tasks thành công!'), type: 'success' });
       } else {
         await createFarmTask(farmId, payload);
-        setNotification({ text: 'Giao việc mới thành công!', type: 'success' });
+        setNotification({ text: (lang === 'en' ? "Task assigned successfully!" : 'Giao việc mới thành công!'), type: 'success' });
       }
       setIsCreateModalOpen(false);
       void loadTasks();
@@ -282,12 +282,12 @@ export function TasksPage() {
         prev.map((t) => (t.taskId === taskId ? { ...t, status: newStatus } : t))
       );
       setNotification({
-        text: `Đã chuyển tasks sang "${getStatusLabel(newStatus)}"`,
+        text: (lang === 'en' ? `Task status changed to "${getStatusLabel(newStatus)}"` : `Đã chuyển tasks sang "${getStatusLabel(newStatus)}"`),
         type: 'success',
       });
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể cập nhật trạng thái.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to update status." : err instanceof Error ? err.message : 'Không thể cập nhật trạng thái.'),
         type: 'error',
       });
     }
@@ -299,11 +299,11 @@ export function TasksPage() {
     try {
       await deleteFarmTask(deletingTask.taskId);
       setTasks((prev) => prev.filter((t) => t.taskId !== deletingTask.taskId));
-      setNotification({ text: 'Đã xóa tasks thành công!', type: 'success' });
+      setNotification({ text: (lang === 'en' ? "Task deleted successfully!" : 'Đã xóa tasks thành công!'), type: 'success' });
       setDeletingTask(null);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể xóa tasks.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete task." : err instanceof Error ? err.message : 'Không thể xóa tasks.'),
         type: 'error',
       });
     } finally {
@@ -364,7 +364,7 @@ export function TasksPage() {
     return (
       <article key={t.taskId} className="task-card">
         <div className="task-card-header">
-          <span className="task-type-pill">{t.taskType || 'Chăm sóc'}</span>
+          <span className="task-type-pill">{(lang === 'en' ? t.taskType || "Crop care" : t.taskType || 'Chăm sóc')}</span>
           {getPriorityBadge(t.priority)}
         </div>
 
@@ -377,7 +377,7 @@ export function TasksPage() {
             {t.seasonName && <span className="task-meta-tag">🌱 {t.seasonName}</span>}
             {(t.zoneName || t.blockName) && (
               <span className="task-meta-tag">
-                📍 {t.zoneName || 'Khu canh tác'}
+                📍 {(lang === 'en' ? t.zoneName || "Growing zone" : t.zoneName || 'Khu canh tác')}
                 {t.blockName ? ` / ${t.blockName}` : ''}
               </span>
             )}
@@ -443,7 +443,7 @@ export function TasksPage() {
             <button
               type="button"
               className="task-btn-action"
-              title="Xem chi tiết"
+              title={(lang === 'en' ? "View details" : "Xem chi tiết")}
               onClick={() => setSelectedTaskDetail(t)}
             >
               <Icon name="arrow" />
@@ -451,16 +451,16 @@ export function TasksPage() {
             <button
               type="button"
               className="task-btn-action"
-              title="Chỉnh sửa"
+              title={(lang === 'en' ? "Edit" : "Chỉnh sửa")}
               onClick={() => openEditModal(t)}
             >
-              Sửa
+              {(lang === 'en' ? "Edit" : "Sửa")}
             </button>
             <button
               type="button"
               className="task-btn-action"
               style={{ color: '#dc2626' }}
-              title="Xóa việc"
+              title={(lang === 'en' ? "Delete task" : "Xóa việc")}
               onClick={() => setDeletingTask(t)}
             >
               <Icon name="trash" />
@@ -480,7 +480,7 @@ export function TasksPage() {
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginBottom: '16px' }}
         >
-          <strong>{notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo'}:</strong> {notification.text}
+          <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success" : "⚠️ Notice" : notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo')}:</strong> {translate(notification.text)}
           <button
             type="button"
             onClick={() => setNotification(null)}
@@ -547,7 +547,7 @@ export function TasksPage() {
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-              aria-label="Lọc theo độ ưu tiên"
+              aria-label={(lang === 'en' ? "Filter by priority" : "Lọc theo độ ưu tiên")}
             >
               <option value="all">All Priorities</option>
               <option value="urgent">{lang === 'en' ? 'Urgent' : 'Khẩn cấp'}</option>
@@ -562,7 +562,7 @@ export function TasksPage() {
             <select
               value={seasonFilter}
               onChange={(e) => setSeasonFilter(e.target.value ? Number(e.target.value) : '')}
-              aria-label="Lọc theo mùa vụ"
+              aria-label={(lang === 'en' ? "Filter by season" : "Lọc theo mùa vụ")}
             >
               <option value="">All Seasons</option>
               {seasons.map((s) => (
@@ -578,7 +578,7 @@ export function TasksPage() {
             <select
               value={zoneFilter}
               onChange={(e) => setZoneFilter(e.target.value ? Number(e.target.value) : '')}
-              aria-label="Lọc theo zone vực"
+              aria-label={(lang === 'en' ? "Filter by zone" : "Lọc theo zone vực")}
             >
               <option value="">All Zones</option>
               {zones.map((z) => (
@@ -593,8 +593,8 @@ export function TasksPage() {
           <button
             type="button"
             className="zone-clean-reload-btn"
-            title="Tải lại và đặt lại bộ lọc"
-            aria-label="Tải lại và đặt lại bộ lọc"
+            title={(lang === 'en' ? "Reload and reset filters" : "Tải lại và đặt lại bộ lọc")}
+            aria-label={(lang === 'en' ? "Reload and reset filters" : "Tải lại và đặt lại bộ lọc")}
             onClick={() => {
               setKeyword('');
               setStatusFilter('all');
@@ -608,7 +608,7 @@ export function TasksPage() {
           </button>
 
           {/* View Switch */}
-          <div className="tasks-view-switch" role="group" aria-label="Chế độ hiển thị" style={{ marginLeft: 'auto' }}>
+          <div className="tasks-view-switch" role="group" aria-label={(lang === 'en' ? "View mode" : "Chế độ hiển thị")} style={{ marginLeft: 'auto' }}>
             <button
               type="button"
               className={`tasks-view-btn ${viewMode === 'TABLE' ? 'active' : ''}`}
@@ -743,7 +743,7 @@ export function TasksPage() {
           loading ? (
             <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
               <div className="empty-icon">⏳</div>
-              <h2>Đang tải danh sách tasks...</h2>
+              <h2>{(lang === 'en' ? "Loading tasks..." : "Đang tải danh sách tasks...")}</h2>
             </div>
           ) : tasks.length === 0 ? (
             <div className="panel empty-state" style={{ padding: '60px 20px', border: 'none', boxShadow: 'none' }}>
@@ -762,7 +762,7 @@ export function TasksPage() {
                 <Icon name="check-circle" size={32} />
               </div>
               <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px' }}>
-                Không tìm thấy tasks nào phù hợp
+                {(lang === 'en' ? "No matching tasks found" : "Không tìm thấy tasks nào phù hợp")}
               </h2>
               <p style={{ color: '#64748b', fontSize: '14.5px', maxWidth: '440px', margin: '0 auto 20px', lineHeight: 1.6 }}>
                 {lang === 'en' ? 'Assign tasks to technical staff to supervise VietGAP crop care progress.' : 'Giao việc và phân công nhân viên kỹ thuật để giám sát tiến độ chăm sóc cây trồng theo tiêu chuẩn VietGAP.'}
@@ -793,7 +793,7 @@ export function TasksPage() {
                   <thead>
                     <tr style={{ background: '#f8fafc' }}>
                       <th style={{ width: '38px', padding: '10px 8px', textAlign: 'center' }}>
-                        <input type="checkbox" aria-label="Chọn tất cả việc" style={{ cursor: 'pointer' }} />
+                        <input type="checkbox" aria-label={(lang === 'en' ? "Select all tasks" : "Chọn tất cả việc")} style={{ cursor: 'pointer' }} />
                       </th>
                       <th style={{ width: '23%', padding: '10px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
                         {lang === 'en' ? 'Task Name & Type' : 'Tên tasks & Phân loại'}
@@ -829,7 +829,7 @@ export function TasksPage() {
                       return (
                         <tr key={t.taskId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                           <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                            <input type="checkbox" aria-label={`Chọn ${t.taskName}`} style={{ cursor: 'pointer' }} />
+                            <input type="checkbox" aria-label={(lang === 'en' ? `Select ${t.taskName}` : `Chọn ${t.taskName}`)} style={{ cursor: 'pointer' }} />
                           </td>
 
                           <td style={{ padding: '10px 12px', overflow: 'hidden' }}>
@@ -862,7 +862,7 @@ export function TasksPage() {
                                   flexShrink: 0,
                                 }}
                               >
-                                {t.taskType || 'Chăm sóc'}
+                                {(lang === 'en' ? t.taskType || "Crop care" : t.taskType || 'Chăm sóc')}
                               </span>
                             </div>
                             {t.description && (
@@ -895,7 +895,7 @@ export function TasksPage() {
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                               }}
-                              title={t.seasonName ? `Mùa vụ: ${t.seasonName}` : ''}
+                              title={(lang === 'en' ? t.seasonName ? `Season: ${t.seasonName}` : "" : t.seasonName ? `Mùa vụ: ${t.seasonName}` : '')}
                             >
                               {t.seasonName ? `🌱 ${t.seasonName}` : '—'}
                             </div>
@@ -982,7 +982,7 @@ export function TasksPage() {
                               }`}
                             >
                               <span className="dot" />
-                              {getStatusLabel(t.status)}
+                              {translate(getStatusLabel(t.status))}
                             </span>
                           </td>
 
@@ -992,7 +992,7 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="btn-status-quick start"
-                                title="Start thực hiện tasks"
+                                title={(lang === 'en' ? "Start task" : "Start thực hiện tasks")}
                                 onClick={() => void handleQuickStatusChange(t.taskId, 'in_progress')}
                               >
                                 ▶ Start
@@ -1002,7 +1002,7 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="btn-status-quick done"
-                                title="Nghiệm thu hoàn thành"
+                                title={(lang === 'en' ? "Approve completion" : "Nghiệm thu hoàn thành")}
                                 onClick={() => void handleQuickStatusChange(t.taskId, 'completed')}
                               >
                                 ✓ Complete
@@ -1026,8 +1026,8 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="table-icon-btn primary"
-                                title="Xem chi tiết tasks"
-                                aria-label={`Chi tiết ${t.taskName}`}
+                                title={(lang === 'en' ? "View task details" : "Xem chi tiết tasks")}
+                                aria-label={(lang === 'en' ? `Details ${t.taskName}` : `Chi tiết ${t.taskName}`)}
                                 onClick={() => setSelectedTaskDetail(t)}
                               >
                                 <Icon name="eye" size={15} />
@@ -1035,8 +1035,8 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="table-icon-btn edit"
-                                title="Chỉnh sửa tasks"
-                                aria-label={`Chỉnh sửa ${t.taskName}`}
+                                title={(lang === 'en' ? "Edit task" : "Chỉnh sửa tasks")}
+                                aria-label={(lang === 'en' ? `Edit ${t.taskName}` : `Chỉnh sửa ${t.taskName}`)}
                                 onClick={() => openEditModal(t)}
                               >
                                 <Icon name="edit" size={15} />
@@ -1044,8 +1044,8 @@ export function TasksPage() {
                               <button
                                 type="button"
                                 className="table-icon-btn danger"
-                                title="Xóa tasks"
-                                aria-label={`Xóa ${t.taskName}`}
+                                title={(lang === 'en' ? "Delete task" : "Xóa tasks")}
+                                aria-label={(lang === 'en' ? `Delete ${t.taskName}` : `Xóa ${t.taskName}`)}
                                 onClick={() => setDeletingTask(t)}
                               >
                                 <Icon name="trash" size={15} />
@@ -1062,16 +1062,16 @@ export function TasksPage() {
               {/* Table Footer */}
               <div className="zone-table-footer">
                 <div>
-                  Hiển thị 1–{tasks.length} trong {totalTasks} tasks
+                  {(lang === 'en' ? "Showing 1–" : "Hiển thị 1–")}{tasks.length} {(lang === 'en' ? " of " : " trong ")} {totalTasks} tasks
                 </div>
                 <div className="zone-pagination-wrap">
-                  <button type="button" className="zone-page-btn" disabled aria-label="Trang trước">
+                  <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Previous page" : "Trang trước")}>
                     <Icon name="chevron-left" size={15} />
                   </button>
                   <button type="button" className="zone-page-btn active">
                     1
                   </button>
-                  <button type="button" className="zone-page-btn" disabled aria-label="Trang sau">
+                  <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Next page" : "Trang sau")}>
                     <Icon name="chevron-right" size={15} />
                   </button>
                 </div>
@@ -1094,7 +1094,7 @@ export function TasksPage() {
                 <div className="tasks-column-body">
                   {todoTasks.length === 0 ? (
                     <div className="tasks-column-empty">
-                      <span>Không có việc chờ thực hiện</span>
+                      <span>{(lang === 'en' ? "No tasks to do" : "Không có việc chờ thực hiện")}</span>
                     </div>
                   ) : (
                     todoTasks.map((t) => renderTaskCard(t))
@@ -1114,7 +1114,7 @@ export function TasksPage() {
                 <div className="tasks-column-body">
                   {inProgressTasks.length === 0 ? (
                     <div className="tasks-column-empty">
-                      <span>Chưa có việc đang làm</span>
+                      <span>{(lang === 'en' ? "No tasks in progress" : "Chưa có việc đang làm")}</span>
                     </div>
                   ) : (
                     inProgressTasks.map((t) => renderTaskCard(t))
@@ -1134,7 +1134,7 @@ export function TasksPage() {
                 <div className="tasks-column-body">
                   {completedTasks.length === 0 ? (
                     <div className="tasks-column-empty">
-                      <span>Chưa có việc hoàn thành</span>
+                      <span>{(lang === 'en' ? "No completed tasks" : "Chưa có việc hoàn thành")}</span>
                     </div>
                   ) : (
                     completedTasks.map((t) => renderTaskCard(t))
@@ -1157,62 +1157,62 @@ export function TasksPage() {
         <form onSubmit={handleSaveTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {taskModalError && (
             <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
-              {taskModalError}
+              {translate(taskModalError)}
             </p>
           )}
           <div className="task-form-grid">
             <div className="task-form-field task-field-full">
-              <label htmlFor="task-name">Tên tasks / Nhiệm vụ *</label>
+              <label htmlFor="task-name">{(lang === 'en' ? "Task name *" : "Tên tasks / Nhiệm vụ *")}</label>
               <input
                 id="task-name"
                 required
                 maxLength={160}
-                placeholder="Ví dụ: Pha chế dịch dinh dưỡng và kiểm tra hệ thống tưới nhỏ giọt"
+                placeholder={(lang === 'en' ? "Example: Prepare nutrient solution and check the drip irrigation system" : "Ví dụ: Pha chế dịch dinh dưỡng và kiểm tra hệ thống tưới nhỏ giọt")}
                 value={formTaskName}
                 onChange={(e) => setFormTaskName(e.target.value)}
               />
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-type">Phân loại tasks *</label>
+              <label htmlFor="task-type">{(lang === 'en' ? "Task type *" : "Phân loại tasks *")}</label>
               <select
                 id="task-type"
                 value={formTaskType}
                 onChange={(e) => setFormTaskType(e.target.value)}
               >
-                <option value="Làm đất">Làm đất &amp; Xử lý giá thể</option>
-                <option value="Gieo trồng">Gieo hạt &amp; Cấy cây con</option>
-                <option value="Bón phân & Tưới">Bón phân &amp; Tưới tiêu</option>
-                <option value="Growth Monitoring">Growth Monitoring &amp; Tỉa cành</option>
-                <option value="Plant Protection">Plant Protection &amp; Phun vi sinh</option>
-                <option value="Thu hoạch">Thu hoạch &amp; Đóng gói</option>
-                <option value="VietGAP Compliance">Giám sát &amp; VietGAP Compliance</option>
-                <option value="Khác">Công việc khác</option>
+                <option value="Làm đất">{(lang === 'en' ? "Soil Preparation & Substrate Treatment" : "Làm đất & Xử lý giá thể")}</option>
+                <option value="Gieo trồng">{(lang === 'en' ? "Seeding & Transplanting" : "Gieo hạt & Cấy cây con")}</option>
+                <option value="Bón phân & Tưới">{(lang === 'en' ? "Fertilization & Irrigation" : "Bón phân & Tưới tiêu")}</option>
+                <option value="Growth Monitoring">{(lang === 'en' ? "Growth Monitoring & Pruning" : "Growth Monitoring & Tỉa cành")}</option>
+                <option value="Plant Protection">{(lang === 'en' ? "Plant Protection & Biological Spraying" : "Plant Protection & Phun vi sinh")}</option>
+                <option value="Thu hoạch">{(lang === 'en' ? "Harvesting & Packing" : "Thu hoạch & Đóng gói")}</option>
+                <option value="VietGAP Compliance">{(lang === 'en' ? "Monitoring & VietGAP Compliance" : "Giám sát & VietGAP Compliance")}</option>
+                <option value="Khác">{(lang === 'en' ? "Other tasks" : "Công việc khác")}</option>
               </select>
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-priority">Mức độ ưu tiên *</label>
+              <label htmlFor="task-priority">{(lang === 'en' ? "Priority *" : "Mức độ ưu tiên *")}</label>
               <select
                 id="task-priority"
                 value={formPriority}
                 onChange={(e) => setFormPriority(e.target.value)}
               >
-                <option value="urgent">Urgent (Xử lý ngay)</option>
-                <option value="high">Ưu tiên cao</option>
-                <option value="normal">Bình thường</option>
-                <option value="low">Mức thấp</option>
+                <option value="urgent">{(lang === 'en' ? "Urgent (Immediate action)" : "Urgent (Xử lý ngay)")}</option>
+                <option value="high">{(lang === 'en' ? "High priority" : "Ưu tiên cao")}</option>
+                <option value="normal">{lang === 'en' ? 'Normal' : 'Bình thường'}</option>
+                <option value="low">{lang === 'en' ? 'Low' : 'Mức thấp'}</option>
               </select>
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-season">Mùa vụ canh tác liên kết</label>
+              <label htmlFor="task-season">{(lang === 'en' ? "Linked crop season" : "Mùa vụ canh tác liên kết")}</label>
               <select
                 id="task-season"
                 value={formSeasonId}
                 onChange={(e) => setFormSeasonId(e.target.value ? Number(e.target.value) : '')}
               >
-                <option value="">Không liên kết vụ cụ thể</option>
+                <option value="">{(lang === 'en' ? "No specific season" : "Không liên kết vụ cụ thể")}</option>
                 {seasons.map((s) => (
                   <option key={s.cropSeasonId} value={s.cropSeasonId}>
                     {s.seasonName}
@@ -1222,7 +1222,7 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-status">Trạng thái tasks</label>
+              <label htmlFor="task-status">{(lang === 'en' ? "Task status" : "Trạng thái tasks")}</label>
               <select
                 id="task-status"
                 value={formStatus}
@@ -1231,12 +1231,12 @@ export function TasksPage() {
                 <option value="planned">To Do</option>
                 <option value="in_progress">In Progress</option>
                 <option value="completed">Completed</option>
-                <option value="cancelled">Đã hủy</option>
+                <option value="cancelled">{(lang === 'en' ? 'Cancelled' : 'Đã hủy')}</option>
               </select>
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-zone">Khu vực sản xuất (Zone)</label>
+              <label htmlFor="task-zone">{(lang === 'en' ? "Production zone" : "Khu vực sản xuất (Zone)")}</label>
               <select
                 id="task-zone"
                 value={formZoneId}
@@ -1245,7 +1245,7 @@ export function TasksPage() {
                   setFormBlockId('');
                 }}
               >
-                <option value="">Chọn zone vực</option>
+                <option value="">{(lang === 'en' ? "Select zone" : "Chọn zone vực")}</option>
                 {zones.map((z) => (
                   <option key={z.zoneId} value={z.zoneId}>
                     {z.zoneName}
@@ -1256,10 +1256,10 @@ export function TasksPage() {
 
             <div className="task-form-field">
               <label htmlFor="task-block">
-                Lô đất canh tác (Block){' '}
+                {(lang === 'en' ? "Growing block" : "Lô đất canh tác (Block)")}{' '}
                 {seasonBlocks.length > 0 && (
                   <span style={{ color: '#059669', fontSize: '11.5px', fontWeight: 700 }}>
-                    (Thuộc mùa vụ: {seasonBlocks.length} plot)
+                    {(lang === 'en' ? "(Within season: " : "(Thuộc mùa vụ: ")} {seasonBlocks.length} plot)
                   </span>
                 )}
               </label>
@@ -1276,12 +1276,12 @@ export function TasksPage() {
                   }
                 }}
               >
-                <option value="">Chọn plot đất</option>
+                <option value="">{(lang === 'en' ? "Select block" : "Chọn plot đất")}</option>
                 {seasonBlocks.length > 0
                   ? seasonBlocks.map((sb) => (
                     <option key={sb.blockId} value={sb.blockId}>
                       🌱 {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} · {sb.plantedArea ?? sb.blockArea}{' '}
-                      {sb.areaUnit || 'm²'})
+                      {translate(sb.areaUnit || 'm²')})
                     </option>
                   ))
                   : blocks.map((b) => (
@@ -1303,7 +1303,7 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-due">Hạn hoàn thành (Deadline)</label>
+              <label htmlFor="task-due">{(lang === 'en' ? "Due date (Deadline)" : "Hạn hoàn thành (Deadline)")}</label>
               <input
                 id="task-due"
                 type="datetime-local"
@@ -1313,7 +1313,7 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field task-field-full">
-              <label>Phân công nhân sự thực hiện</label>
+              <label>{(lang === 'en' ? "Assign staff" : "Phân công nhân sự thực hiện")}</label>
               <div
                 style={{
                   maxHeight: '140px',
@@ -1329,7 +1329,7 @@ export function TasksPage() {
               >
                 {staffList.length === 0 ? (
                   <span style={{ color: '#94a3b8', fontSize: '13px' }}>
-                    Chưa có nhân sự trong trang trại. Hãy thêm nhân sự at mục &quot;Người lao động&quot;.
+                    {(lang === 'en' ? "The farm has no staff. Add staff under \"Labor & Staff\"." : "Chưa có nhân sự trong trang trại. Hãy thêm nhân sự at mục \"Người lao động\".")}
                   </span>
                 ) : (
                   staffList.map((s) => {
@@ -1357,7 +1357,7 @@ export function TasksPage() {
                           }}
                         />
                         <span>
-                          <strong>{s.fullName}</strong> ({s.roleLabel})
+                          <strong>{s.fullName}</strong> ({translate(s.roleLabel)})
                         </span>
                       </label>
                     );
@@ -1367,11 +1367,11 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field task-field-full">
-              <label htmlFor="task-desc">Mô tả kỹ thuật &amp; Hướng dẫn thực hiện</label>
+              <label htmlFor="task-desc">{(lang === 'en' ? "Technical Description & Instructions" : "Mô tả kỹ thuật & Hướng dẫn thực hiện")}</label>
               <textarea
                 id="task-desc"
                 rows={3}
-                placeholder="Ghi rõ quy trình kỹ thuật, liều lượng, dụng cụ bảo hộ hoặc yêu cầu VietGAP cần tuân thủ..."
+                placeholder={(lang === 'en' ? "Specify procedures, dosage, protective equipment, and VietGAP requirements..." : "Ghi rõ quy trình kỹ thuật, liều lượng, dụng cụ bảo hộ hoặc yêu cầu VietGAP cần tuân thủ...")}
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
               />
@@ -1385,7 +1385,7 @@ export function TasksPage() {
               disabled={submitting}
               onClick={() => setIsCreateModalOpen(false)}
             >
-              Hủy
+              {(lang === 'en' ? "Cancel" : "Hủy")}
             </button>
             <button type="submit" className="primary-button" disabled={submitting}>
               <Icon name={submitting ? 'loader' : 'save'} />
@@ -1400,10 +1400,10 @@ export function TasksPage() {
         <Modal
           open
           onClose={() => setSelectedTaskDetail(null)}
-          title={`Chi tiết tasks #${selectedTaskDetail.taskId}`}
+          title={(lang === 'en' ? `Task details #${selectedTaskDetail.taskId}` : `Chi tiết tasks #${selectedTaskDetail.taskId}`)}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="task-type-pill">{selectedTaskDetail.taskType || 'Chăm sóc'}</span>
+            <span className="task-type-pill">{(lang === 'en' ? selectedTaskDetail.taskType || "Crop care" : selectedTaskDetail.taskType || 'Chăm sóc')}</span>
             {getPriorityBadge(selectedTaskDetail.priority)}
           </div>
 
@@ -1412,11 +1412,11 @@ export function TasksPage() {
           </h2>
 
           <p style={{ margin: 0, color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>
-            {selectedTaskDetail.description || 'Không có mô tả chi tiết.'}
+            {(lang === 'en' ? selectedTaskDetail.description || "No detailed description." : selectedTaskDetail.description || 'Không có mô tả chi tiết.')}
           </p>
 
           <dl className="task-detail-grid">
-            <dt>Trạng thái hiện at:</dt>
+            <dt>{(lang === 'en' ? "Current status:" : "Trạng thái hiện at:")}</dt>
             <dd>
               <span
                 style={{
@@ -1438,16 +1438,16 @@ export function TasksPage() {
                   fontSize: '12.5px',
                 }}
               >
-                {getStatusLabel(selectedTaskDetail.status)}
+                {translate(getStatusLabel(selectedTaskDetail.status))}
               </span>
             </dd>
 
-            <dt>Mùa vụ canh tác:</dt>
-            <dd>{selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : 'Chưa liên kết mùa vụ'}</dd>
+            <dt>{(lang === 'en' ? "Crop season:" : "Mùa vụ canh tác:")}</dt>
+            <dd>{(lang === 'en' ? selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : "No linked season" : selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : 'Chưa liên kết mùa vụ')}</dd>
 
-            <dt>Khu vực &amp; Thửa đất:</dt>
+            <dt>{(lang === 'en' ? "Zone & Block:" : "Khu vực & Thửa đất:")}</dt>
             <dd>
-              {selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : 'Chưa gắn zone vực'}
+              {(lang === 'en' ? selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : "No zone assigned" : selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : 'Chưa gắn zone vực')}
               {selectedTaskDetail.blockName ? ` / ${selectedTaskDetail.blockName}` : ''}
             </dd>
 
@@ -1462,26 +1462,26 @@ export function TasksPage() {
                   ))}
                 </div>
               ) : (
-                'Unassigned nhân sự'
+                (lang === 'en' ? "No staff assigned" : 'Unassigned nhân sự')
               )}
             </dd>
 
-            <dt>Thời gian bắt đầu:</dt>
+            <dt>{(lang === 'en' ? "Start time:" : "Thời gian bắt đầu:")}</dt>
             <dd>
-              {selectedTaskDetail.startsAt
+              {(lang === 'en' ? selectedTaskDetail.startsAt ? new Date(selectedTaskDetail.startsAt).toLocaleString('vi-VN') : "Not set" : selectedTaskDetail.startsAt
                 ? new Date(selectedTaskDetail.startsAt).toLocaleString('vi-VN')
-                : 'Chưa đặt'}
+                : 'Chưa đặt')}
             </dd>
 
-            <dt>Hạn hoàn thành:</dt>
+            <dt>{(lang === 'en' ? "Due date:" : "Hạn hoàn thành:")}</dt>
             <dd>
-              {selectedTaskDetail.dueAt
+              {(lang === 'en' ? selectedTaskDetail.dueAt ? new Date(selectedTaskDetail.dueAt).toLocaleString('vi-VN') : "Not set" : selectedTaskDetail.dueAt
                 ? new Date(selectedTaskDetail.dueAt).toLocaleString('vi-VN')
-                : 'Chưa đặt'}
+                : 'Chưa đặt')}
             </dd>
 
-            <dt>Người giao việc:</dt>
-            <dd>{selectedTaskDetail.createdByFullName || 'Quản trị trang trại'}</dd>
+            <dt>{(lang === 'en' ? "Assigned by:" : "Người giao việc:")}</dt>
+            <dd>{(lang === 'en' ? selectedTaskDetail.createdByFullName || "Farm administrator" : selectedTaskDetail.createdByFullName || 'Quản trị trang trại')}</dd>
           </dl>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
@@ -1494,14 +1494,14 @@ export function TasksPage() {
                 openEditModal(cur);
               }}
             >
-              Chỉnh sửa
+              {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
             </button>
             <button
               type="button"
               className="primary-button"
               onClick={() => setSelectedTaskDetail(null)}
             >
-              Đóng
+              {(lang === 'en' ? "Close" : "Đóng")}
             </button>
           </div>
         </Modal>
@@ -1514,15 +1514,15 @@ export function TasksPage() {
           onClose={() => {
             if (!submitting) setDeletingTask(null);
           }}
-          title="Xác nhận xóa tasks"
+          title={(lang === 'en' ? "Confirm task deletion" : "Xác nhận xóa tasks")}
         >
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: '38px', marginBottom: '12px' }}>⚠️</div>
             <h3 style={{ margin: '0 0 8px', fontSize: '17px', color: '#0f172a' }}>
-              Xóa tasks &quot;{deletingTask.taskName}&quot;?
+              {(lang === 'en' ? "Delete task \"" : "Xóa tasks \"")}{deletingTask.taskName}&quot;?
             </h3>
             <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
-              Hành động này sẽ xóa tasks và các phân công lao động liên quan. Không thể hoàn tác.
+              {(lang === 'en' ? "This will delete the task and related staff assignments. This cannot be undone." : "Hành động này sẽ xóa tasks và các phân công lao động liên quan. Không thể hoàn tác.")}
             </p>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
@@ -1532,7 +1532,7 @@ export function TasksPage() {
               disabled={submitting}
               onClick={() => setDeletingTask(null)}
             >
-              Hủy
+              {(lang === 'en' ? "Cancel" : "Hủy")}
             </button>
             <button
               type="button"
@@ -1541,7 +1541,7 @@ export function TasksPage() {
               disabled={submitting}
               onClick={handleDeleteConfirm}
             >
-              {submitting ? 'Đang xóa...' : 'Xác nhận xóa'}
+              {(lang === 'en' ? submitting ? "Deleting..." : "Confirm deletion" : submitting ? 'Đang xóa...' : 'Xác nhận xóa')}
             </button>
           </div>
         </Modal>

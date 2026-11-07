@@ -1,3 +1,4 @@
+import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
@@ -6,6 +7,7 @@ import { getUserProfile, updateUserProfile, type UserProfile } from './authApi';
 import { ChangePasswordPanel } from './ChangePasswordPanel';
 
 export function UserProfilePanel() {
+  const { lang, t: translate } = useLanguage();
   const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -116,7 +118,7 @@ export function UserProfilePanel() {
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <span className="shortcut-icon"><Icon name="user" /></span>
             <div>
-              <h2>Account Information</h2><span className="sr-only">Thông tin tài khoản</span>
+              <h2>Account Information</h2><span className="sr-only">{(lang === 'en' ? "Account information" : "Thông tin tài khoản")}</span>
               <p className="profile-section-sub">Identity and login information of your account</p>
             </div>
           </div>
@@ -163,7 +165,7 @@ export function UserProfilePanel() {
             }}
           >
             <span>{message.type === 'success' ? '✓' : '⚠️'}</span>
-            <span>{message.text}</span>
+            <span>{translate(message.text)}</span>
           </div>
         )}
 

@@ -1,3 +1,4 @@
+import { useLanguage } from '../shared/i18n/LanguageContext';
 import { type FormEvent, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, GoogleAuthModal } from '../features/auth';
@@ -28,6 +29,7 @@ const loginBenefits = [
 ];
 
 export function LoginPage() {
+  const { t: translate } = useLanguage();
   const { isAuthenticated, user, setSession } = useAuth();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
@@ -98,7 +100,7 @@ export function LoginPage() {
                   <Icon name={item.icon} className="feature-icon" />
                 </div>
                 <div className="feature-body">
-                  <strong>{item.title}</strong>
+                  <strong>{translate(item.title)}</strong>
                   <p>{item.desc}</p>
                 </div>
               </article>
@@ -133,14 +135,14 @@ export function LoginPage() {
           {error && (
             <div className="auth-error-banner" role="alert">
               <Icon name="warning" />
-              <span>{error}</span>
+              <span>{translate(error)}</span>
             </div>
           )}
 
           {notice && (
             <div className="auth-notice-banner" role="status">
               <Icon name="check-circle" />
-              <span>{notice}</span>
+              <span>{translate(notice)}</span>
             </div>
           )}
 

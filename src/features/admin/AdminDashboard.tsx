@@ -10,7 +10,7 @@ import { useLanguage } from '../../shared/i18n/LanguageContext';
 type ChartMetric = 'activity' | 'cost' | 'compliance';
 
 export function AdminDashboard() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { user } = useAuth();
   const { state, registrationsLoading, registrationsError, reloadRegistrations } = useAdmin();
   const navigate = useNavigate();
@@ -103,10 +103,10 @@ export function AdminDashboard() {
 
   return (
     <div className="admin-dashboard-container">
-      <h1 className="sr-only">Tổng quan quản trị</h1>
+      <h1 className="sr-only">{(lang === 'en' ? "Administration overview" : "Tổng quan quản trị")}</h1>
 
       {/* ================= TOP METRIC RIBBON (4 PILLARS) ================= */}
-      <section className="admin-stat-row four-col" aria-label="Chỉ số hoạt động trọng yếu">
+      <section className="admin-stat-row four-col" aria-label={(lang === 'en' ? "Key activity metrics" : "Chỉ số hoạt động trọng yếu")}>
         {/* Card 1: Users & Accounts */}
         <div className="admin-dashboard-card stat-card">
           <div className="card-header-line">
@@ -114,9 +114,9 @@ export function AdminDashboard() {
               <Icon name="user" />
             </span>
             <div className="card-title-group">
-              <span className="card-label">Tổng người dùng</span>
+              <span className="card-label">{(lang === 'en' ? "Total users" : "Tổng người dùng")}</span>
             </div>
-            <Link to="/admin/users" className="card-action-icon" aria-label="Xem chi tiết tài khoản">
+            <Link to="/admin/users" className="card-action-icon" aria-label={(lang === 'en' ? "View account details" : "Xem chi tiết tài khoản")}>
               <Icon name="expand" />
             </Link>
           </div>
@@ -125,10 +125,10 @@ export function AdminDashboard() {
               <strong className="stat-number">{userCount.toLocaleString('vi-VN')}</strong>
               <div className="stat-trend positive">
                 <Icon name="trending-up" />
-                <span>+12.4% tháng này</span>
+                <span>{(lang === 'en' ? "+12.4% this month" : "+12.4% tháng này")}</span>
               </div>
               <small className="stat-note-subtle">
-                {lockedUsersCount ? `${lockedUsersCount} tài khoản khóa` : '100% hoạt động tốt'}
+                {(lang === 'en' ? lockedUsersCount ? `${lockedUsersCount} locked accounts` : "100% operational" : lockedUsersCount ? `${lockedUsersCount} tài khoản khóa` : '100% hoạt động tốt')}
               </small>
             </div>
             <div className="stat-mini-chart" aria-hidden="true">
@@ -149,9 +149,9 @@ export function AdminDashboard() {
               <Icon name="plots" />
             </span>
             <div className="card-title-group">
-              <span className="card-label">Hồ sơ chờ duyệt</span>
+              <span className="card-label">{(lang === 'en' ? "Pending registrations" : "Hồ sơ chờ duyệt")}</span>
             </div>
-            <Link to="/admin/registrations" className="card-action-icon" aria-label="Xem hồ sơ đăng ký">
+            <Link to="/admin/registrations" className="card-action-icon" aria-label={(lang === 'en' ? "View registrations" : "Xem hồ sơ đăng ký")}>
               <Icon name="expand" />
             </Link>
           </div>
@@ -160,10 +160,10 @@ export function AdminDashboard() {
               <strong className="stat-number">{pendingCount}</strong>
               <div className="stat-trend neutral">
                 <Icon name="history" />
-                <span>+8.2% tuần này</span>
+                <span>{(lang === 'en' ? "+8.2% this week" : "+8.2% tuần này")}</span>
               </div>
               <small className="stat-note-subtle">
-                {approvedRegistrations.length ? `${approvedRegistrations.length} trang trại đã cấp mã` : '42 trang trại vận hành'}
+                {(lang === 'en' ? approvedRegistrations.length ? `${approvedRegistrations.length} registered farms` : "42 active farms" : approvedRegistrations.length ? `${approvedRegistrations.length} trang trại đã cấp mã` : '42 trang trại vận hành')}
               </small>
             </div>
             <div className="stat-mini-chart" aria-hidden="true">
@@ -184,9 +184,9 @@ export function AdminDashboard() {
               <Icon name="leaf" />
             </span>
             <div className="card-title-group">
-              <span className="card-label">Mùa vụ canh tác</span>
+              <span className="card-label">{(lang === 'en' ? "Crop seasons" : "Mùa vụ canh tác")}</span>
             </div>
-            <Link to="/admin/crops" className="card-action-icon" aria-label="Xem danh mục cây trồng">
+            <Link to="/admin/crops" className="card-action-icon" aria-label={(lang === 'en' ? "View crop categories" : "Xem danh mục cây trồng")}>
               <Icon name="expand" />
             </Link>
           </div>
@@ -195,10 +195,10 @@ export function AdminDashboard() {
               <strong className="stat-number">{activeSeasonsCount}</strong>
               <div className="stat-trend positive">
                 <Icon name="sprout" />
-                <span>185.4 ha chuẩn hóa</span>
+                <span>{(lang === 'en' ? "185.4 ha standardized" : "185.4 ha chuẩn hóa")}</span>
               </div>
               <small className="stat-note-subtle">
-                {activeCropsCount} giống cây trồng VietGAP
+                {activeCropsCount} {(lang === 'en' ? " VietGAP crop varieties" : " giống cây trồng VietGAP")}
               </small>
             </div>
             <div className="stat-mini-chart" aria-hidden="true">
@@ -219,25 +219,25 @@ export function AdminDashboard() {
               <Icon name="award" />
             </span>
             <div className="card-title-group">
-              <span className="card-label">Chuẩn hóa VietGAP</span>
+              <span className="card-label">{(lang === 'en' ? "VietGAP compliance" : "Chuẩn hóa VietGAP")}</span>
             </div>
-            <Link to="/admin/statistics" className="card-action-icon" aria-label="Xem thống kê">
+            <Link to="/admin/statistics" className="card-action-icon" aria-label={(lang === 'en' ? "View statistics" : "Xem thống kê")}>
               <Icon name="expand" />
             </Link>
           </div>
           <div className="card-bottom-content goal-content">
             <div className="goal-metrics">
               <div className="goal-metric-col">
-                <small>Chỉ tiêu tháng</small>
-                <strong>150 hồ sơ</strong>
+                <small>{(lang === 'en' ? "Monthly target" : "Chỉ tiêu tháng")}</small>
+                <strong>{(lang === 'en' ? "150 registrations" : "150 hồ sơ")}</strong>
               </div>
               <div className="goal-metric-col">
-                <small>Đã đạt chuẩn</small>
-                <strong>118 hồ sơ</strong>
+                <small>{(lang === 'en' ? "Certified" : "Đã đạt chuẩn")}</small>
+                <strong>{(lang === 'en' ? "118 registrations" : "118 hồ sơ")}</strong>
               </div>
             </div>
             {/* Semicircle Gauge Progress (SVG Arc) */}
-            <div className="semi-gauge-wrapper" aria-label="Đạt 78% chỉ tiêu">
+            <div className="semi-gauge-wrapper" aria-label={(lang === 'en' ? "78% of target reached" : "Đạt 78% chỉ tiêu")}>
               <svg className="semi-gauge-svg" viewBox="0 0 120 70">
                 <path
                   d="M 15 65 A 45 45 0 0 1 105 65"
@@ -263,7 +263,7 @@ export function AdminDashboard() {
       </section>
 
       {/* ================= MIDDLE ROW: ADVANCED ANALYTICS & HEATMAP ================= */}
-      <section className="admin-charts-row" aria-label="Phân tích vận hành chuyên sâu">
+      <section className="admin-charts-row" aria-label={(lang === 'en' ? "Detailed operations analysis" : "Phân tích vận hành chuyên sâu")}>
         {/* Left: Multi-Metric Area Wave Chart */}
         <div className="admin-dashboard-card analytics-card">
           <div className="card-header-toolbar">
@@ -275,7 +275,7 @@ export function AdminDashboard() {
                   onClick={() => setChartMetric('activity')}
                 >
                   <Icon name="activity" />
-                  Nhật ký canh tác
+                  {(lang === 'en' ? "Farming diary" : "Nhật ký canh tác")}
                 </button>
                 <button
                   type="button"
@@ -283,7 +283,7 @@ export function AdminDashboard() {
                   onClick={() => setChartMetric('cost')}
                 >
                   <Icon name="money" />
-                  Chi phí sản xuất
+                  {(lang === 'en' ? "Production costs" : "Chi phí sản xuất")}
                 </button>
                 <button
                   type="button"
@@ -291,10 +291,10 @@ export function AdminDashboard() {
                   onClick={() => setChartMetric('compliance')}
                 >
                   <Icon name="check" />
-                  Chuẩn VietGAP
+                  {(lang === 'en' ? "VietGAP standards" : "Chuẩn VietGAP")}
                 </button>
               </div>
-              <p>Biểu đồ vận hành thời gian thực từ 144 nông hộ & hợp tác xã thành viên</p>
+              <p>{(lang === 'en' ? "Real-time operations charts from 144 member farms and cooperatives" : "Biểu đồ vận hành thời gian thực từ 144 nông hộ & hợp tác xã thành viên")}</p>
             </div>
 
             <div className="toolbar-controls">
@@ -304,21 +304,21 @@ export function AdminDashboard() {
                   className={timeRange === 'day' ? 'active' : ''}
                   onClick={() => setTimeRange('day')}
                 >
-                  Theo ngày
+                  {(lang === 'en' ? "Daily" : "Theo ngày")}
                 </button>
                 <button
                   type="button"
                   className={timeRange === 'week' ? 'active' : ''}
                   onClick={() => setTimeRange('week')}
                 >
-                  Theo tuần
+                  {(lang === 'en' ? "Weekly" : "Theo tuần")}
                 </button>
                 <button
                   type="button"
                   className={timeRange === 'month' ? 'active' : ''}
                   onClick={() => setTimeRange('month')}
                 >
-                  Theo tháng
+                  {(lang === 'en' ? "Monthly" : "Theo tháng")}
                 </button>
               </div>
               <span className="date-range-badge">
@@ -356,7 +356,7 @@ export function AdminDashboard() {
 
               {/* Y Axis Labels */}
               {chartData.yLabels.map((lbl, idx) => (
-                <text key={lbl} x="40" y={54 + idx * 50} className="chart-axis-label">
+                <text key={translate(lbl)} x="40" y={54 + idx * 50} className="chart-axis-label">
                   {lbl}
                 </text>
               ))}
@@ -414,8 +414,8 @@ export function AdminDashboard() {
                 <Icon name="check" />
               </span>
               <div>
-                <small>Tổng ghi chép tháng</small>
-                <strong>15.420 lượt</strong>
+                <small>{(lang === 'en' ? "Total monthly records" : "Tổng ghi chép tháng")}</small>
+                <strong>{(lang === 'en' ? "15,420 records" : "15.420 lượt")}</strong>
               </div>
             </div>
             <div className="chart-kpi-item">
@@ -423,8 +423,8 @@ export function AdminDashboard() {
                 <Icon name="shield" />
               </span>
               <div>
-                <small>Tuân thủ thời gian cách ly</small>
-                <strong>99.4% an toàn</strong>
+                <small>{(lang === 'en' ? "Pre-harvest interval compliance" : "Tuân thủ thời gian cách ly")}</small>
+                <strong>{(lang === 'en' ? "99.4% safe" : "99.4% an toàn")}</strong>
               </div>
             </div>
             <div className="chart-kpi-item">
@@ -432,7 +432,7 @@ export function AdminDashboard() {
                 <Icon name="money" />
               </span>
               <div>
-                <small>Chi phí bình quân/ha</small>
+                <small>{(lang === 'en' ? "Average cost/ha" : "Chi phí bình quân/ha")}</small>
                 <strong>14.500.000 ₫</strong>
               </div>
             </div>
@@ -443,16 +443,16 @@ export function AdminDashboard() {
         <div className="admin-dashboard-card heatmap-card">
           <div className="card-header-toolbar">
             <div className="toolbar-title-box">
-              <h2>Mật độ canh tác tuần</h2>
-              <p>Phân bố nhật ký theo nhóm cây trồng</p>
+              <h2>{(lang === 'en' ? "Weekly farming activity" : "Mật độ canh tác tuần")}</h2>
+              <p>{(lang === 'en' ? "Records by crop group" : "Phân bố nhật ký theo nhóm cây trồng")}</p>
             </div>
             <div className="toolbar-controls">
-              <span className="dropdown-pill">Tuần này</span>
+              <span className="dropdown-pill">{(lang === 'en' ? "This week" : "Tuần này")}</span>
               <button
                 type="button"
                 className="icon-action-btn"
-                title="Quản lý danh mục cây trồng"
-                aria-label="Quản lý danh mục cây trồng"
+                title={(lang === 'en' ? "Manage crop categories" : "Quản lý danh mục cây trồng")}
+                aria-label={(lang === 'en' ? "Manage crop categories" : "Quản lý danh mục cây trồng")}
                 onClick={() => navigate('/admin/crops')}
               >
                 <Icon name="expand" />
@@ -464,7 +464,7 @@ export function AdminDashboard() {
             <div className="heatmap-rows">
               {heatmapCategories.map((category, rowIdx) => (
                 <div key={category} className="heatmap-row">
-                  <span className="heatmap-row-label">{category}</span>
+                  <span className="heatmap-row-label">{translate(category)}</span>
                   <div className="heatmap-cells">
                     {heatmapDays.map((day, colIdx) => {
                       const level = heatmapGrid[rowIdx][colIdx];
@@ -472,7 +472,7 @@ export function AdminDashboard() {
                         <div
                           key={day}
                           className={`heatmap-cell level-${level}`}
-                          title={`${category} · ${day}: ${level === 3 ? 'Rất cao (≥ 45 lượt)' : level === 2 ? 'Cao (25–44 lượt)' : level === 1 ? 'Trung bình (10–24 lượt)' : 'Ít hoạt động (< 10 lượt)'}`}
+                          title={(lang === 'en' ? `${category} · ${day}: ${((level === 3 ? "Very high (≥ 45 records)" : level === 2 ? "High (25–44 records)" : level === 1 ? "Moderate (10–24 records)" : "Low activity (< 10 records)"))}` : `${category} · ${day}: ${level === 3 ? 'Rất cao (≥ 45 lượt)' : level === 2 ? 'Cao (25–44 lượt)' : level === 1 ? 'Trung bình (10–24 lượt)' : 'Ít hoạt động (< 10 lượt)'}`)}
                         />
                       );
                     })}
@@ -493,30 +493,30 @@ export function AdminDashboard() {
 
             {/* Heatmap Legend */}
             <div className="heatmap-legend-row">
-              <span className="legend-label">Mật độ:</span>
-              <span className="legend-chip"><i className="heatmap-cell level-0" /> Thấp</span>
-              <span className="legend-chip"><i className="heatmap-cell level-1" /> Vừa</span>
-              <span className="legend-chip"><i className="heatmap-cell level-2" /> Cao</span>
-              <span className="legend-chip"><i className="heatmap-cell level-3" /> Rất cao</span>
+              <span className="legend-label">{(lang === 'en' ? "Activity level:" : "Mật độ:")}</span>
+              <span className="legend-chip"><i className="heatmap-cell level-0" /> {(lang === 'en' ? " Low" : " Thấp")}</span>
+              <span className="legend-chip"><i className="heatmap-cell level-1" /> {(lang === 'en' ? " Moderate" : " Vừa")}</span>
+              <span className="legend-chip"><i className="heatmap-cell level-2" /> {(lang === 'en' ? " High" : " Cao")}</span>
+              <span className="legend-chip"><i className="heatmap-cell level-3" /> {(lang === 'en' ? " Very high" : " Rất cao")}</span>
             </div>
 
             {/* Crop Distribution Bar */}
             <div className="crop-distribution-section">
               <div className="crop-dist-header">
-                <small>Cơ cấu diện tích canh tác</small>
+                <small>{(lang === 'en' ? "Cultivated area breakdown" : "Cơ cấu diện tích canh tác")}</small>
                 <strong>185.4 ha</strong>
               </div>
               <div className="crop-stacked-bar">
-                <span className="bar-leafy" style={{ width: '42%' }} title="Rau ăn lá: 42%" />
-                <span className="bar-fruit" style={{ width: '28%' }} title="Cây ăn trái: 28%" />
-                <span className="bar-root" style={{ width: '18%' }} title="Củ quả: 18%" />
-                <span className="bar-other" style={{ width: '12%' }} title="Khác: 12%" />
+                <span className="bar-leafy" style={{ width: '42%' }} title={(lang === 'en' ? "Leafy vegetables: 42%" : "Rau ăn lá: 42%")} />
+                <span className="bar-fruit" style={{ width: '28%' }} title={(lang === 'en' ? "Fruit trees: 28%" : "Cây ăn trái: 28%")} />
+                <span className="bar-root" style={{ width: '18%' }} title={(lang === 'en' ? "Root crops: 18%" : "Củ quả: 18%")} />
+                <span className="bar-other" style={{ width: '12%' }} title={(lang === 'en' ? "Other: 12%" : "Khác: 12%")} />
               </div>
               <div className="crop-dist-legend">
-                <span><i className="dot leafy" />Rau (42%)</span>
-                <span><i className="dot fruit" />Cây trái (28%)</span>
-                <span><i className="dot root" />Củ (18%)</span>
-                <span><i className="dot other" />Khác (12%)</span>
+                <span><i className="dot leafy" />{(lang === 'en' ? "Vegetables (42%)" : "Rau (42%)")}</span>
+                <span><i className="dot fruit" />{(lang === 'en' ? "Fruit trees (28%)" : "Cây trái (28%)")}</span>
+                <span><i className="dot root" />{(lang === 'en' ? "Root crops (18%)" : "Củ (18%)")}</span>
+                <span><i className="dot other" />{(lang === 'en' ? "Other (12%)" : "Khác (12%)")}</span>
               </div>
             </div>
           </div>
@@ -524,22 +524,22 @@ export function AdminDashboard() {
       </section>
 
       {/* ================= OPERATIONAL STREAM: REGISTRATIONS & AUDIT TIMELINE ================= */}
-      <section className="admin-operations-row" aria-label="Tiến độ thẩm định và Nhật ký kiểm toán">
+      <section className="admin-operations-row" aria-label={(lang === 'en' ? "Review progress and audit logs" : "Tiến độ thẩm định và Nhật ký kiểm toán")}>
         {/* Left: Live Registration Queue Table */}
         <div className="admin-dashboard-card registration-queue-card">
           <div className="card-header-toolbar">
             <div className="toolbar-title-box">
-              <h2>Hồ sơ đăng ký trang trại mới</h2>
-              <p>Danh sách hồ sơ nộp gần nhất cần thẩm định điều kiện cơ sở</p>
+              <h2>{(lang === 'en' ? "New farm registrations" : "Hồ sơ đăng ký trang trại mới")}</h2>
+              <p>{(lang === 'en' ? "Recent applications awaiting farm eligibility review" : "Danh sách hồ sơ nộp gần nhất cần thẩm định điều kiện cơ sở")}</p>
             </div>
             <Link to="/admin/registrations" className="text-link">
-              Xem tất cả ({pendingCount}) <Icon name="arrow" />
+              {(lang === 'en' ? "View all (" : "Xem tất cả (")}{pendingCount}) <Icon name="arrow" />
             </Link>
           </div>
 
           <div className="admin-table-scroll">
             <table className="admin-table">
-              <caption className="sr-only">Hồ sơ đăng ký trang trại gần đây</caption>
+              <caption className="sr-only">{(lang === 'en' ? "Recent farm registrations" : "Hồ sơ đăng ký trang trại gần đây")}</caption>
               <thead>
                 <tr>
                   <th scope="col">{lang === 'en' ? 'Farm Name' : 'Tên trang trại'}</th>
@@ -554,12 +554,12 @@ export function AdminDashboard() {
                   <tr>
                     <td colSpan={5}>
                       {registrationsLoading ? (
-                        'Đang tải hồ sơ...'
+                        (lang === 'en' ? "Loading registrations..." : 'Đang tải hồ sơ...')
                       ) : (
                         <>
-                          <p role="alert">{registrationsError}</p>
+                          <p role="alert">{translate(registrationsError)}</p>
                           <button className="action-button" onClick={reloadRegistrations}>
-                            Thử lại
+                            {(lang === 'en' ? "Retry" : "Thử lại")}
                           </button>
                         </>
                       )}
@@ -568,7 +568,7 @@ export function AdminDashboard() {
                 )}
                 {!registrationsUnavailable && !state.registrations.length && (
                   <tr>
-                    <td colSpan={5}>Chưa có hồ sơ đăng ký mới nào.</td>
+                    <td colSpan={5}>{(lang === 'en' ? "No new farm registrations." : "Chưa có hồ sơ đăng ký mới nào.")}</td>
                   </tr>
                 )}
                 {state.registrations.slice(0, 4).map((item) => (
@@ -586,7 +586,7 @@ export function AdminDashboard() {
                       <span>{item.province || item.district || 'Hà Nội'}</span>
                     </td>
                     <td>
-                      <span>{displayValue('createdAt', item.createdAt)}</span>
+                      <span>{translate(displayValue('createdAt', item.createdAt))}</span>
                     </td>
                     <td>
                       <AdminBadge collection="registrations" status={item.status} />
@@ -597,7 +597,7 @@ export function AdminDashboard() {
                         className="table-action-pill"
                         onClick={() => navigate('/admin/registrations')}
                       >
-                        Xem xét
+                        {(lang === 'en' ? "Review" : "Xem xét")}
                       </button>
                     </td>
                   </tr>
@@ -611,11 +611,11 @@ export function AdminDashboard() {
         <div className="admin-dashboard-card audit-timeline-card">
           <div className="card-header-toolbar">
             <div className="toolbar-title-box">
-              <h2>Nhật ký kiểm toán hệ thống</h2>
-              <p>Truy vết thao tác của quản trị viên và hệ thống</p>
+              <h2>{(lang === 'en' ? "System audit logs" : "Nhật ký kiểm toán hệ thống")}</h2>
+              <p>{(lang === 'en' ? "Track administrator and system actions" : "Truy vết thao tác của quản trị viên và hệ thống")}</p>
             </div>
             <Link to="/admin/audit" className="text-link">
-              Toàn bộ nhật ký <Icon name="arrow" />
+              {(lang === 'en' ? "All logs " : "Toàn bộ nhật ký ")} <Icon name="arrow" />
             </Link>
           </div>
 
@@ -624,9 +624,9 @@ export function AdminDashboard() {
               <article key={item.id}>
                 <i />
                 <div>
-                  <strong>{item.name}</strong>
-                  <p>{item.actor} · Mã đối tượng: {item.resourceId}</p>
-                  <small>{displayValue('createdAt', item.createdAt)}</small>
+                  <strong>{translate(item.name)}</strong>
+                  <p>{translate(item.actor ?? "")} {(lang === 'en' ? " · Resource ID: " : " · Mã đối tượng: ")} {item.resourceId}</p>
+                  <small>{translate(displayValue('createdAt', item.createdAt))}</small>
                 </div>
               </article>
             ))}
@@ -636,34 +636,34 @@ export function AdminDashboard() {
           <div className="system-health-box">
             <div className="health-item">
               <span className="health-dot active" />
-              <span>Máy chủ API: <strong>99.98%</strong></span>
+              <span>{(lang === 'en' ? "API server: " : "Máy chủ API: ")} <strong>99.98%</strong></span>
             </div>
             <div className="health-item">
               <span className="health-dot active" />
-              <span>Dữ liệu VietGAP: <strong>Đồng bộ</strong></span>
+              <span>{(lang === 'en' ? "VietGAP data: " : "Dữ liệu VietGAP: ")} <strong>{(lang === 'en' ? "Synced" : "Đồng bộ")}</strong></span>
             </div>
             <div className="health-item">
               <span className="health-dot active" />
-              <span>AI Engine: <strong>Sẵn sàng</strong></span>
+              <span>AI Engine: <strong>{(lang === 'en' ? "Ready" : "Sẵn sàng")}</strong></span>
             </div>
           </div>
         </div>
       </section>
 
       {/* ================= BOTTOM ROW: 3 WIDGETS ================= */}
-      <section className="admin-bottom-row" aria-label="Ngân sách, Đánh giá và Cảnh báo">
+      <section className="admin-bottom-row" aria-label={(lang === 'en' ? "Budget, feedback and alerts" : "Ngân sách, Đánh giá và Cảnh báo")}>
         {/* Card 1: Budget & Resource Usage */}
         <div className="admin-dashboard-card bottom-card">
           <div className="card-header-toolbar">
             <div className="toolbar-title-box">
-              <h2>Phân bổ chi phí & vật tư</h2>
-              <p>Mức sử dụng ngân sách vụ Đông Xuân</p>
+              <h2>{(lang === 'en' ? "Cost and material allocation" : "Phân bổ chi phí & vật tư")}</h2>
+              <p>{(lang === 'en' ? "Winter–Spring season budget usage" : "Mức sử dụng ngân sách vụ Đông Xuân")}</p>
             </div>
             <button
               type="button"
               className="icon-action-btn"
-              title="Xem chi tiết thống kê"
-              aria-label="Xem chi tiết thống kê"
+              title={(lang === 'en' ? "View detailed statistics" : "Xem chi tiết thống kê")}
+              aria-label={(lang === 'en' ? "View detailed statistics" : "Xem chi tiết thống kê")}
               onClick={() => navigate('/admin/statistics')}
             >
               <Icon name="expand" />
@@ -673,7 +673,7 @@ export function AdminDashboard() {
           <div className="budget-progress-list">
             <div className="budget-item">
               <div className="budget-item-labels">
-                <span>Phân bón sinh học & chế phẩm hữu cơ</span>
+                <span>{(lang === 'en' ? "Biofertilizers and organic products" : "Phân bón sinh học & chế phẩm hữu cơ")}</span>
                 <strong>78.700.000 ₫ <small>/ 120.000.000 ₫ (65%)</small></strong>
               </div>
               <div className="budget-bar-track">
@@ -685,7 +685,7 @@ export function AdminDashboard() {
 
             <div className="budget-item">
               <div className="budget-item-labels">
-                <span>Hạt giống VietGAP & vật tư nhà kính</span>
+                <span>{(lang === 'en' ? "VietGAP seeds and greenhouse materials" : "Hạt giống VietGAP & vật tư nhà kính")}</span>
                 <strong>179.500.000 ₫ <small>/ 230.000.000 ₫ (78%)</small></strong>
               </div>
               <div className="budget-bar-track">
@@ -697,7 +697,7 @@ export function AdminDashboard() {
 
             <div className="budget-item">
               <div className="budget-item-labels">
-                <span>Kiểm định mẫu đất & nguồn nước</span>
+                <span>{(lang === 'en' ? "Soil and water testing" : "Kiểm định mẫu đất & nguồn nước")}</span>
                 <strong>26.400.000 ₫ <small>/ 50.000.000 ₫ (52%)</small></strong>
               </div>
               <div className="budget-bar-track">
@@ -712,7 +712,7 @@ export function AdminDashboard() {
                 <Icon name="leaf" />
               </span>
               <p>
-                Chi phí phân bón hữu cơ chiếm 65% ngân sách. Đề xuất luân chuyển nguồn vật tư sinh học tiết kiệm 18% trong tháng.
+                {(lang === 'en' ? "Organic fertilizers account for 65% of the budget. Consider switching biological input suppliers to save 18% this month." : "Chi phí phân bón hữu cơ chiếm 65% ngân sách. Đề xuất luân chuyển nguồn vật tư sinh học tiết kiệm 18% trong tháng.")}
               </p>
             </div>
           </div>
@@ -722,16 +722,16 @@ export function AdminDashboard() {
         <div className="admin-dashboard-card bottom-card">
           <div className="card-header-toolbar">
             <div className="toolbar-title-box">
-              <h2>Đánh giá & Phản hồi AI</h2>
-              <p>Điểm hài lòng 4.9/5.0 ★ từ 248 chủ nông trại</p>
+              <h2>{(lang === 'en' ? "AI ratings and feedback" : "Đánh giá & Phản hồi AI")}</h2>
+              <p>{(lang === 'en' ? "Satisfaction score: 4.9/5.0 ★ from 248 farm owners" : "Điểm hài lòng 4.9/5.0 ★ từ 248 chủ nông trại")}</p>
             </div>
             <div className="toolbar-controls">
-              <span className="dropdown-pill">Mới nhất</span>
+              <span className="dropdown-pill">{(lang === 'en' ? "Latest" : "Mới nhất")}</span>
               <button
                 type="button"
                 className="icon-action-btn"
-                title="Xem tất cả phản hồi"
-                aria-label="Xem tất cả phản hồi"
+                title={(lang === 'en' ? "View all feedback" : "Xem tất cả phản hồi")}
+                aria-label={(lang === 'en' ? "View all feedback" : "Xem tất cả phản hồi")}
                 onClick={() => navigate('/admin/feedback')}
               >
                 <Icon name="expand" />
@@ -744,15 +744,15 @@ export function AdminDashboard() {
               <div className="review-avatar">H</div>
               <div className="review-body">
                 <div className="review-header">
-                  <strong>Nguyễn Văn Hưng</strong>
-                  <div className="star-rating" aria-label="5 trên 5 sao">
+                  <strong>{"Nguyễn Văn Hưng"}</strong>
+                  <div className="star-rating" aria-label={(lang === 'en' ? "5 out of 5 stars" : "5 trên 5 sao")}>
                     ★★★★★
                   </div>
                 </div>
                 <p className="review-text">
-                  “Trợ lý AI trả lời rất chi tiết về liều lượng phân trùn quế và lịch bón thúc chuẩn VietGAP.”
+                  {(lang === 'en' ? "“The AI assistant gives detailed advice on vermicompost dosage and VietGAP fertilization schedules.”" : "“Trợ lý AI trả lời rất chi tiết về liều lượng phân trùn quế và lịch bón thúc chuẩn VietGAP.”")}
                 </p>
-                <span className="review-time">5 phút trước · HTX Mộc Châu</span>
+                <span className="review-time">{(lang === 'en' ? "5 minutes ago · Moc Chau Cooperative" : "5 phút trước · HTX Mộc Châu")}</span>
               </div>
             </div>
 
@@ -760,15 +760,15 @@ export function AdminDashboard() {
               <div className="review-avatar">M</div>
               <div className="review-body">
                 <div className="review-header">
-                  <strong>Trần Thị Mai</strong>
-                  <div className="star-rating" aria-label="5 trên 5 sao">
+                  <strong>{"Trần Thị Mai"}</strong>
+                  <div className="star-rating" aria-label={(lang === 'en' ? "5 out of 5 stars" : "5 trên 5 sao")}>
                     ★★★★★
                   </div>
                 </div>
                 <p className="review-text">
-                  “Quy trình kiểm tra dư lượng thuốc BVTV và cách ly cây trồng hướng dẫn rõ ràng, rất dễ thực hiện.”
+                  {(lang === 'en' ? "“The pesticide residue testing and pre-harvest interval instructions are clear and easy to follow.”" : "“Quy trình kiểm tra dư lượng thuốc BVTV và cách ly cây trồng hướng dẫn rõ ràng, rất dễ thực hiện.”")}
                 </p>
-                <span className="review-time">18 phút trước · Đà Lạt Farm</span>
+                <span className="review-time">{(lang === 'en' ? "18 minutes ago · Da Lat Farm" : "18 phút trước · Đà Lạt Farm")}</span>
               </div>
             </div>
           </div>
@@ -778,14 +778,14 @@ export function AdminDashboard() {
         <div className="admin-dashboard-card bottom-card alert-card">
           <div className="card-header-toolbar">
             <div className="toolbar-title-box">
-              <h2>Hồ sơ cần duyệt khẩn</h2>
-              <p>Hồ sơ VietGAP quá hạn thẩm định</p>
+              <h2>{(lang === 'en' ? "Urgent registrations" : "Hồ sơ cần duyệt khẩn")}</h2>
+              <p>{(lang === 'en' ? "Overdue VietGAP reviews" : "Hồ sơ VietGAP quá hạn thẩm định")}</p>
             </div>
             <button
               type="button"
               className="icon-action-btn"
-              title="Xem chi tiết"
-              aria-label="Xem chi tiết hồ sơ"
+              title={(lang === 'en' ? "View details" : "Xem chi tiết")}
+              aria-label={(lang === 'en' ? "View registration details" : "Xem chi tiết hồ sơ")}
               onClick={() => navigate('/admin/registrations')}
             >
               <Icon name="expand" />
@@ -798,13 +798,13 @@ export function AdminDashboard() {
                 <Icon name="plots" />
               </span>
               <div className="alert-item-info">
-                <strong>HTX Nông Nghiệp Ba Vì</strong>
-                <small>Mã đăng ký: DK-2026-089</small>
+                <strong>{"HTX Nông Nghiệp Ba Vì"}</strong>
+                <small>{(lang === 'en' ? "Registration ID: DK-2026-089" : "Mã đăng ký: DK-2026-089")}</small>
               </div>
             </div>
 
             <p className="alert-description">
-              Hồ sơ đăng ký bổ sung 5 vùng trồng rau hữu cơ và 2 kho vật tư bảo quản. Kèm 4 tài liệu kiểm định đất và nguồn nước đạt chuẩn.
+              {(lang === 'en' ? "Application to add 5 organic vegetable growing areas and 2 storage warehouses, with 4 compliant soil and water test reports." : "Hồ sơ đăng ký bổ sung 5 vùng trồng rau hữu cơ và 2 kho vật tư bảo quản. Kèm 4 tài liệu kiểm định đất và nguồn nước đạt chuẩn.")}
             </p>
 
             <button
@@ -813,42 +813,42 @@ export function AdminDashboard() {
               onClick={() => navigate('/admin/registrations')}
             >
               <Icon name="check" />
-              Thẩm định hồ sơ ngay
+              {(lang === 'en' ? "Review registration now" : "Thẩm định hồ sơ ngay")}
             </button>
           </div>
         </div>
       </section>
 
       {/* ================= COMMAND HUB: 6 CORE SHORTCUTS ================= */}
-      <section className="admin-quick-links" aria-label="Trung tâm phím tắt quản trị">
+      <section className="admin-quick-links" aria-label={(lang === 'en' ? "Administration shortcuts" : "Trung tâm phím tắt quản trị")}>
         <Link to="/admin/registrations">
           <Icon name="plots" />
-          <span>Duyệt đăng ký ({pendingCount})</span>
+          <span>{(lang === 'en' ? "Review registrations (" : "Duyệt đăng ký (")}{pendingCount})</span>
           <Icon name="arrow" />
         </Link>
         <Link to="/admin/crops">
           <Icon name="leaf" />
-          <span>Danh mục cây trồng ({activeCropsCount})</span>
+          <span>{(lang === 'en' ? "Crop categories (" : "Danh mục cây trồng (")}{activeCropsCount})</span>
           <Icon name="arrow" />
         </Link>
         <Link to="/admin/rules">
           <Icon name="check" />
-          <span>Quy tắc bảng kiểm ({state.rules.length})</span>
+          <span>{(lang === 'en' ? "Checklist rules (" : "Quy tắc bảng kiểm (")}{state.rules.length})</span>
           <Icon name="arrow" />
         </Link>
         <Link to="/admin/articles">
           <Icon name="book" />
-          <span>Bài viết kiến thức ({state.articles.length})</span>
+          <span>{(lang === 'en' ? "Knowledge articles (" : "Bài viết kiến thức (")}{state.articles.length})</span>
           <Icon name="arrow" />
         </Link>
         <Link to="/admin/users">
           <Icon name="user" />
-          <span>Quản lý tài khoản ({userCount})</span>
+          <span>{(lang === 'en' ? "Account management (" : "Quản lý tài khoản (")}{userCount})</span>
           <Icon name="arrow" />
         </Link>
         <Link to="/admin/statistics">
           <Icon name="report" />
-          <span>Thống kê & Báo cáo</span>
+          <span>{(lang === 'en' ? "Statistics and reports" : "Thống kê & Báo cáo")}</span>
           <Icon name="arrow" />
         </Link>
       </section>

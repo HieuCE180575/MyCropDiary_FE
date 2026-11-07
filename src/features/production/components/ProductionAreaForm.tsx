@@ -34,7 +34,7 @@ export function ProductionAreaForm({
   cancelHref,
   onSubmit,
 }: ProductionAreaFormProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [values, setValues] = useState<ProductionAreaFormValues>(initialValues ?? EMPTY_VALUES);
   const [errors, setErrors] = useState<ProductionAreaFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
@@ -66,17 +66,17 @@ export function ProductionAreaForm({
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link to="/production-zones">{lang === 'en' ? 'Production Zones' : 'Khu sản xuất'}</Link>
         <span>›</span>
-        <span>{breadcrumbLabel}</span>
+        <span>{translate(breadcrumbLabel)}</span>
       </nav>
 
       <form className="panel zone-form" onSubmit={handleSubmit} noValidate>
         <div className="panel-title">
           <div>
-            <h2>{title}</h2>
+            <h2>{translate(title)}</h2>
           </div>
         </div>
 
-        {submitError ? <p className="form-error-banner">{submitError}</p> : null}
+        {submitError ? <p className="form-error-banner">{translate(submitError)}</p> : null}
 
         <div className="zone-form-grid">
           <label className="form-field">
@@ -99,7 +99,7 @@ export function ProductionAreaForm({
               value={values.areaHectares}
               onChange={(event) => updateField('areaHectares', event.target.value)}
               onBlur={() => handleBlur('areaHectares')}
-              placeholder="VD: 5.5"
+              placeholder={(lang === 'en' ? "e.g. 5.5" : "VD: 5.5")}
             />
             {errors.areaHectares ? <small className="field-error">{errors.areaHectares}</small> : null}
           </label>

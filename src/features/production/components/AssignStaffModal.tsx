@@ -31,7 +31,7 @@ export function AssignStaffModal({
   onClose,
   onSuccess,
 }: AssignStaffModalProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [selectedZoneId, setSelectedZoneId] = useState<number>(zoneId);
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [currentAssignments, setCurrentAssignments] = useState<StaffZoneAssignment[]>([]);
@@ -96,14 +96,14 @@ export function AssignStaffModal({
       await unassignStaffFromZone(farmId, assignmentId);
       setCurrentAssignments((prev) => prev.filter((a) => a.assignmentId !== assignmentId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể thu hồi phân công nhân sự.');
+      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to revoke staff assignment." : err instanceof Error ? err.message : 'Không thể thu hồi phân công nhân sự.'));
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMemberId) {
-      setError('Vui lòng chọn nhân sự đủ điều kiện để phân công.');
+      setError((lang === 'en' ? "Select an eligible staff member to assign." : 'Vui lòng chọn nhân sự đủ điều kiện để phân công.'));
       return;
     }
 
@@ -112,7 +112,7 @@ export function AssignStaffModal({
     );
     if (alreadyAssigned) {
       const staffName = staffOptions.find((s) => s.memberId === selectedMemberId)?.fullName || 'Nhân sự này';
-      setError(`${staffName} đã và đang được phân công phụ trách phân khu "${resolvedZoneName}". Không thể phân công trùng lặp!`);
+      setError((lang === 'en' ? `${staffName} is already assigned to zone "${resolvedZoneName}". Duplicate assignments are not allowed!` : `${staffName} đã và đang được phân công phụ trách phân khu "${resolvedZoneName}". Không thể phân công trùng lặp!`));
       return;
     }
 
@@ -129,7 +129,7 @@ export function AssignStaffModal({
       onSuccess(assignment);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể phân công nhân sự vào khu vực này.');
+      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to assign staff to this zone." : err instanceof Error ? err.message : 'Không thể phân công nhân sự vào khu vực này.'));
     } finally {
       setLoading(false);
     }
@@ -143,13 +143,13 @@ export function AssignStaffModal({
             <span className="eyebrow">{lang === 'en' ? 'Staff Assignment' : 'Phân công quản lý'}</span>
             <h2>{lang === 'en' ? 'Assign Staff: ' : 'Phân công nhân sự: '}{resolvedZoneName}</h2>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng">
+          <button type="button" className="modal-close" onClick={onClose} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
             ✕
           </button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{error}</p> : null}
+          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
 
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
@@ -169,7 +169,7 @@ export function AssignStaffModal({
                 >
                   {availableZones.map((z) => (
                     <option key={z.zoneId} value={z.zoneId}>
-                      {z.zoneName} ({z.areaValue} {z.areaUnit})
+                      {z.zoneName} ({z.areaValue} {translate(z.areaUnit)})
                     </option>
                   ))}
                 </select>
@@ -196,10 +196,10 @@ export function AssignStaffModal({
                   <div key={asgn.assignmentId} className="file-list-item">
                     <div>
                       <strong style={{ color: '#0f172a', display: 'block', fontSize: '14px' }}>
-                        {asgn.staffName || `Nhân sự #${asgn.farmMemberId}`}
+                        {(lang === 'en' ? asgn.staffName || `Staff #${asgn.farmMemberId}` : asgn.staffName || `Nhân sự #${asgn.farmMemberId}`)}
                       </strong>
                       <small style={{ color: '#64748b' }}>
-                        {asgn.jobTitle || 'Nhân viên'} · Ngày nhận: {new Date(asgn.assignedAt).toLocaleDateString('vi-VN')}
+                        {(lang === 'en' ? asgn.jobTitle || "Staff" : asgn.jobTitle || 'Nhân viên')} {(lang === 'en' ? " · Assigned date: " : " · Ngày nhận: ")} {new Date(asgn.assignedAt).toLocaleDateString('vi-VN')}
                       </small>
                     </div>
                     <button
@@ -224,10 +224,10 @@ export function AssignStaffModal({
               <span className="structured-field-badge">{lang === 'en' ? 'Farm Staff' : 'Nhân sự trang trại'}</span>
             </div>
             {loadingStaff ? (
-              <div style={{ color: '#64748b', fontSize: '13.5px' }}>⏳ Đang tải danh sách nhân sự trang trại...</div>
+              <div style={{ color: '#64748b', fontSize: '13.5px' }}>{(lang === 'en' ? "⏳ Loading farm staff..." : "⏳ Đang tải danh sách nhân sự trang trại...")}</div>
             ) : staffOptions.length === 0 ? (
               <div style={{ color: '#d97706', fontSize: '13.5px' }}>
-                ⚠️ Trang trại chưa có nhân sự đang hoạt động. Vui lòng thêm tại mục Quản lý nhân sự.
+                {(lang === 'en' ? "⚠️ The farm has no active staff. Add staff under Staff Management." : "⚠️ Trang trại chưa có nhân sự đang hoạt động. Vui lòng thêm tại mục Quản lý nhân sự.")}
               </div>
             ) : (
               <div className="form-field" style={{ marginBottom: 0 }}>
@@ -238,7 +238,7 @@ export function AssignStaffModal({
                 >
                   {staffOptions.map((st) => (
                     <option key={st.memberId} value={st.memberId}>
-                      {st.fullName} — {st.jobTitle} ({st.email})
+                      {st.fullName} — {translate(st.jobTitle)} ({st.email})
                     </option>
                   ))}
                 </select>
@@ -252,7 +252,7 @@ export function AssignStaffModal({
                 <label htmlFor="assign-date-input" className="structured-field-label">
                   {lang === 'en' ? 'Assignment Start Date' : 'Ngày bắt đầu phụ trách'}
                 </label>
-                <span className="structured-field-badge">Ngày</span>
+                <span className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
@@ -270,7 +270,7 @@ export function AssignStaffModal({
                 <label htmlFor="assign-notes-input" className="structured-field-label">
                   {lang === 'en' ? 'Assignment Notes' : 'Ghi chú nhiệm vụ'}
                 </label>
-                <span className="structured-field-badge">{notes.length}/200 ký tự</span>
+                <span className="structured-field-badge">{notes.length}{(lang === 'en' ? "/200 characters" : "/200 ký tự")}</span>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input

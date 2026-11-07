@@ -27,7 +27,7 @@ export function RecordConditionModal({
   onClose,
   onSuccess,
 }: RecordConditionModalProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const [values, setValues] = useState<RecordConditionFormValues>({
     conditionType: CONDITION_TYPES[0],
     description: '',
@@ -55,11 +55,11 @@ export function RecordConditionModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!values.conditionType.trim()) {
-      setError('Vui lòng chọn phân loại điều kiện.');
+      setError((lang === 'en' ? "Select a condition type." : 'Vui lòng chọn phân loại điều kiện.'));
       return;
     }
     if (!values.description.trim()) {
-      setError('Vui lòng nhập nội dung ghi nhận điều kiện chi tiết.');
+      setError((lang === 'en' ? "Enter detailed condition notes." : 'Vui lòng nhập nội dung ghi nhận điều kiện chi tiết.'));
       return;
     }
 
@@ -78,7 +78,7 @@ export function RecordConditionModal({
       onSuccess(obs);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Không thể lưu hồ sơ điều kiện lô đất.');
+      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save block condition record." : err instanceof Error ? err.message : 'Không thể lưu hồ sơ điều kiện lô đất.'));
     } finally {
       setLoading(false);
     }
@@ -92,13 +92,13 @@ export function RecordConditionModal({
             <span className="eyebrow">{lang === 'en' ? 'Production Records' : 'Hồ sơ sản xuất'}</span>
             <h2>{lang === 'en' ? 'Record Condition: ' : 'Ghi nhận điều kiện: '}{block.blockName}</h2>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Đóng">
+          <button type="button" className="modal-close" onClick={onClose} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
             ✕
           </button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{error}</p> : null}
+          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
 
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
@@ -112,7 +112,7 @@ export function RecordConditionModal({
                 🌿 {block.blockName} {block.zoneName ? `· ${block.zoneName}` : ''}
               </span>
               <span>
-                {block.areaValue} {block.areaUnit}
+                {block.areaValue} {translate(block.areaUnit)}
               </span>
             </div>
           </div>
@@ -122,7 +122,7 @@ export function RecordConditionModal({
               <label htmlFor="cond-date-input" className="structured-field-label">
                 {lang === 'en' ? 'Observation Date & Time' : 'Thời gian ghi nhận'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">Bắt buộc</span>
+              <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
@@ -150,7 +150,7 @@ export function RecordConditionModal({
               >
                 {CONDITION_TYPES.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {translate(type)}
                   </option>
                 ))}
               </select>
@@ -162,7 +162,7 @@ export function RecordConditionModal({
               <label htmlFor="cond-desc-input" className="structured-field-label">
                 {lang === 'en' ? 'Condition Details & Notes' : 'Thông tin điều kiện và ghi chú'} <span style={{ color: '#dc2626' }}>*</span>
               </label>
-              <span className="structured-field-badge">{values.description.length}/1000 ký tự</span>
+              <span className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/1000 characters" : "/1000 ký tự")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <textarea
@@ -197,7 +197,7 @@ export function RecordConditionModal({
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
             <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
-              Hủy
+              {(lang === 'en' ? "Cancel" : "Hủy")}
             </button>
             <button type="submit" className="primary-button" disabled={loading}>
               {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Record' : 'Lưu ghi nhận')}

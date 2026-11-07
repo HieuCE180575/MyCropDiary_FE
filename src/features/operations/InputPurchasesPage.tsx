@@ -18,7 +18,7 @@ import {
 } from './procurementService';
 
 export function InputPurchasesPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
 
@@ -67,7 +67,7 @@ export function InputPurchasesPage() {
       setSuppliers(suppliersData);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể tải danh sách mua vật tư.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load material purchases." : err instanceof Error ? err.message : 'Không thể tải danh sách mua vật tư.'),
         type: 'error',
       });
     } finally {
@@ -94,7 +94,7 @@ export function InputPurchasesPage() {
       setPurchases(filtered);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Lỗi khi tìm kiếm phiếu mua vật tư.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to search material purchase records." : err instanceof Error ? err.message : 'Lỗi khi tìm kiếm phiếu mua vật tư.'),
         type: 'error',
       });
     } finally {
@@ -146,13 +146,13 @@ export function InputPurchasesPage() {
         setSelectedPurchase((prev) => (prev ? { ...prev, warehouseReceiptNo: updated.warehouseReceiptNo } : null));
       }
       setNotification({
-        text: `Đã liên kết phiếu nhập kho "${updated.warehouseReceiptNo}" thành công!`,
+        text: (lang === 'en' ? `Linked goods receipt "${updated.warehouseReceiptNo}" successfully!` : `Đã liên kết phiếu nhập kho "${updated.warehouseReceiptNo}" thành công!`),
         type: 'success',
       });
       setLinkingPurchase(null);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể liên kết phiếu nhập kho.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to link goods receipt." : err instanceof Error ? err.message : 'Không thể liên kết phiếu nhập kho.'),
         type: 'error',
       });
     } finally {
@@ -162,7 +162,7 @@ export function InputPurchasesPage() {
 
   const handleDelete = async (purchaseId: number, refNo: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (!window.confirm(`Xác nhận xóa phiếu mua vật tư ${refNo || '#' + purchaseId}? Thao tác này không thể hoàn tác.`)) return;
+    if (!window.confirm((lang === 'en' ? `Confirm deletion of material purchase ${refNo || '#' + purchaseId}? This cannot be undone.` : `Xác nhận xóa phiếu mua vật tư ${refNo || '#' + purchaseId}? Thao tác này không thể hoàn tác.`))) return;
     try {
       await deleteInputPurchase(purchaseId);
       setPurchases((prev) => prev.filter((p) => p.purchaseId !== purchaseId));
@@ -170,12 +170,12 @@ export function InputPurchasesPage() {
         setSelectedPurchase(null);
       }
       setNotification({
-        text: `Đã xóa phiếu mua vật tư #${purchaseId} thành công.`,
+        text: (lang === 'en' ? `Deleted material purchase #${purchaseId} successfully.` : `Đã xóa phiếu mua vật tư #${purchaseId} thành công.`),
         type: 'success',
       });
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể xóa phiếu mua vật tư (có thể vật tư đã được xuất sử dụng).',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete this purchase (materials may already have been used)." : err instanceof Error ? err.message : 'Không thể xóa phiếu mua vật tư (có thể vật tư đã được xuất sử dụng).'),
         type: 'error',
       });
     }
@@ -200,7 +200,7 @@ export function InputPurchasesPage() {
     e.preventDefault();
     if (!farmId) return;
     if (newItems.length === 0) {
-      alert('Vui lòng thêm ít nhất một mặt hàng vật tư.');
+      alert((lang === 'en' ? "Add at least one material item." : 'Vui lòng thêm ít nhất một mặt hàng vật tư.'));
       return;
     }
     setSubmittingCreate(true);
@@ -216,7 +216,7 @@ export function InputPurchasesPage() {
       const created = await recordInputPurchase(farmId, payload);
       setPurchases((prev) => [created, ...prev]);
       setNotification({
-        text: `Đã ghi nhận phiếu mua vật tư "${created.referenceNo || '#' + created.purchaseId}" thành công!`,
+        text: (lang === 'en' ? `Recorded material purchase "${created.referenceNo || '#' + created.purchaseId}" successfully!` : `Đã ghi nhận phiếu mua vật tư "${created.referenceNo || '#' + created.purchaseId}" thành công!`),
         type: 'success',
       });
       setIsCreateOpen(false);
@@ -228,7 +228,7 @@ export function InputPurchasesPage() {
       setNewItems([{ materialId: 1, quantity: 10, unitCost: 50000 }]);
     } catch (err) {
       setNotification({
-        text: err instanceof Error ? err.message : 'Không thể ghi nhận phiếu mua vật tư.',
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to record material purchase." : err instanceof Error ? err.message : 'Không thể ghi nhận phiếu mua vật tư.'),
         type: 'error',
       });
     } finally {
@@ -262,8 +262,8 @@ export function InputPurchasesPage() {
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
           <span>
-            <strong>{notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: '}</strong>
-            {notification.text}
+            <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success: " : "⚠️ Notice: " : notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: ')}</strong>
+            {translate(notification.text)}
           </span>
           <button
             type="button"
@@ -567,8 +567,8 @@ export function InputPurchasesPage() {
                 <span style={{ fontSize: '12.5px', color: '#64748b' }}>{lang === 'en' ? 'Total Amount:' : 'Tổng thanh toán:'}</span>
                 <div style={{ fontSize: '20px', fontWeight: 800, color: '#059669' }}>
                   {lang === 'en'
-                    ? `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('en-US')} ₫`
-                    : `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('vi-VN')} đ`}
+                          ? `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('en-US')} ₫`
+                          : `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('vi-VN')} đ`}
                 </div>
               </div>
             </div>
@@ -647,13 +647,13 @@ export function InputPurchasesPage() {
                             {item.materialType || (lang === 'en' ? 'Farm Input' : 'Vật tư canh tác')}
                           </td>
                           <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 600 }}>
-                            {item.quantity} {item.unit || ''}
+                            {item.quantity} {translate(item.unit || '')}
                           </td>
                           <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
-                            {(Number(item.unitCost) || 0).toLocaleString('vi-VN')} đ
+                            {(Number(item.unitCost) || 0).toLocaleString('vi-VN')} {(lang === 'en' ? " VND" : " đ")}
                           </td>
                           <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
-                            {(Number(item.lineTotal) || 0).toLocaleString('vi-VN')} đ
+                            {(Number(item.lineTotal) || 0).toLocaleString('vi-VN')} {(lang === 'en' ? " VND" : " đ")}
                           </td>
                         </tr>
                       ))
@@ -766,7 +766,7 @@ export function InputPurchasesPage() {
                   <option value="">{lang === 'en' ? '-- Select Supplier --' : '-- Chọn nhà cung cấp --'}</option>
                   {suppliers.map((s) => (
                     <option key={s.supplierId} value={s.supplierId}>
-                      {s.supplierName} ({s.phone || 'SĐT'})
+                      {s.supplierName} ({(lang === 'en' ? s.phone || "Phone" : s.phone || 'SĐT')})
                     </option>
                   ))}
                 </select>

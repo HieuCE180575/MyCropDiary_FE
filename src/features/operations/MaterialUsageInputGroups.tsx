@@ -182,7 +182,7 @@ export function DosageInput({
   materialType?: string;
   materialUnit?: string;
 }) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const isPesticideOrLiquid =
     materialType.toLowerCase().includes('bvtv') ||
     materialType.toLowerCase().includes('lỏng') ||
@@ -200,10 +200,10 @@ export function DosageInput({
   };
   return <div className="mu-compound-input mu-dose-input">
     <span className="mu-input-icon"><Icon name="flask" /></span>
-    <input id="usage-dosage" aria-label="Liều lượng" inputMode={parsed.unit === 'custom' ? 'text' : 'decimal'} maxLength={parsed.unit === 'custom' ? 100 : 99 - parsed.unit.length}
+    <input id="usage-dosage" aria-label={(lang === 'en' ? "Dosage" : "Liều lượng")} inputMode={parsed.unit === 'custom' ? 'text' : 'decimal'} maxLength={parsed.unit === 'custom' ? 100 : 99 - parsed.unit.length}
       placeholder={parsed.unit === 'custom' ? (lang === 'en' ? 'Enter dosage' : 'Nhập liều lượng') : (lang === 'en' ? 'e.g. 50' : 'Ví dụ: 50')} value={parsed.amount} onChange={event => update(event.target.value, parsed.unit)} />
-    <select aria-label="Đơn vị liều lượng" value={parsed.unit} onChange={event => update(parsed.amount, event.target.value)}>
-      {DOSAGE_UNITS.map(unit => <option key={unit} value={unit}>{unit}</option>)}
+    <select aria-label={(lang === 'en' ? "Dosage unit" : "Đơn vị liều lượng")} value={parsed.unit} onChange={event => update(parsed.amount, event.target.value)}>
+      {DOSAGE_UNITS.map(unit => <option key={unit} value={unit}>{translate(unit)}</option>)}
       <option value="custom">{lang === 'en' ? 'Custom input' : 'Nhập tự do'}</option>
     </select>
   </div>;
@@ -211,20 +211,21 @@ export function DosageInput({
 
 const METHODS = ['Bón gốc', 'Bón lót', 'Bón thúc', 'Phun lá', 'Phun sương', 'Tưới nhỏ giọt'];
 export function MethodInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const { lang, t: translate } = useLanguage();
   const [custom, setCustom] = useState(false);
   const isCustom = custom || Boolean(value && !METHODS.includes(value));
   return <>
     <div className="mu-icon-field"><Icon name="sprout" />
-      <select id="usage-method" aria-label="Phương pháp sử dụng" value={isCustom ? 'custom' : value} onChange={event => {
+      <select id="usage-method" aria-label={(lang === 'en' ? "Application method" : "Phương pháp sử dụng")} value={isCustom ? 'custom' : value} onChange={event => {
         const nextCustom = event.target.value === 'custom';
         setCustom(nextCustom);
         onChange(nextCustom ? '' : event.target.value);
       }}>
-        <option value="">Chọn phương pháp sử dụng</option>
-        {METHODS.map(method => <option key={method} value={method}>{method}</option>)}
-        <option value="custom">Phương pháp khác...</option>
+        <option value="">{(lang === 'en' ? "Select application method" : "Chọn phương pháp sử dụng")}</option>
+        {METHODS.map(method => <option key={method} value={method}>{translate(method)}</option>)}
+        <option value="custom">{(lang === 'en' ? "Other method..." : "Phương pháp khác...")}</option>
       </select>
     </div>
-    {isCustom && <input aria-label="Phương thức" maxLength={200} placeholder="Nhập phương pháp sử dụng" value={value} onChange={event => onChange(event.target.value)} />}
+    {isCustom && <input aria-label={(lang === 'en' ? "Method" : "Phương thức")} maxLength={200} placeholder={(lang === 'en' ? "Enter application method" : "Nhập phương pháp sử dụng")} value={value} onChange={event => onChange(event.target.value)} />}
   </>;
 }

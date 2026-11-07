@@ -18,7 +18,7 @@ import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
 
 export function WarehouseInventoryPage() {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const [activeSubTab, setActiveSubTab] = useState<'warehouses' | 'inventory'>('warehouses');
 
@@ -72,7 +72,7 @@ export function WarehouseInventoryPage() {
       setWarehouses(list);
     } catch (err) {
       setWarehouses([]);
-      showToast(err instanceof Error ? err.message : 'Không thể tải danh sách kho hàng.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load warehouses." : err instanceof Error ? err.message : 'Không thể tải danh sách kho hàng.'), 'error');
     } finally {
       setLoadingWarehouses(false);
     }
@@ -89,7 +89,7 @@ export function WarehouseInventoryPage() {
       setInventories(list);
     } catch (err) {
       setInventories([]);
-      showToast(err instanceof Error ? err.message : 'Không thể tải dữ liệu tồn kho.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load inventory." : err instanceof Error ? err.message : 'Không thể tải dữ liệu tồn kho.'), 'error');
     } finally {
       setLoadingInventories(false);
     }
@@ -129,10 +129,10 @@ export function WarehouseInventoryPage() {
       });
       setIsCreateWarehouseOpen(false);
       setCreateWarehouseForm({ warehouseName: '', address: '', imageUrl: '' });
-      showToast(`Đã thêm mới kho hàng "${createWarehouseForm.warehouseName.trim()}" thành công!`);
+      showToast((lang === 'en' ? `Warehouse added: "${createWarehouseForm.warehouseName.trim()}" successfully!` : `Đã thêm mới kho hàng "${createWarehouseForm.warehouseName.trim()}" thành công!`));
       void loadWarehouses();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể tạo kho hàng mới.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to create warehouse." : err instanceof Error ? err.message : 'Không thể tạo kho hàng mới.'), 'error');
     } finally {
       setCreatingWarehouse(false);
     }
@@ -159,24 +159,24 @@ export function WarehouseInventoryPage() {
       });
       const name = editWarehouseForm.warehouseName.trim();
       setEditingWarehouse(null);
-      showToast(`Đã cập nhật thông tin kho hàng "${name}" thành công!`);
+      showToast((lang === 'en' ? `Warehouse updated: "${name}" successfully!` : `Đã cập nhật thông tin kho hàng "${name}" thành công!`));
       void loadWarehouses();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể cập nhật kho hàng.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to update warehouse." : err instanceof Error ? err.message : 'Không thể cập nhật kho hàng.'), 'error');
     } finally {
       setUpdatingWarehouse(false);
     }
   };
 
   const handleDeleteWarehouse = async (warehouseId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa kho hàng này và các bản ghi tồn kho liên quan?')) return;
+    if (!window.confirm((lang === 'en' ? "Are you sure you want to delete this warehouse and its inventory records?" : 'Bạn có chắc chắn muốn xóa kho hàng này và các bản ghi tồn kho liên quan?'))) return;
     try {
       await deleteWarehouseApi(warehouseId);
       if (selectedWarehouse?.warehouseId === warehouseId) setSelectedWarehouse(null);
-      showToast('Đã xóa kho hàng thành công!');
+      showToast((lang === 'en' ? "Warehouse deleted successfully!" : 'Đã xóa kho hàng thành công!'));
       void loadWarehouses();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể xóa kho hàng.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete warehouse." : err instanceof Error ? err.message : 'Không thể xóa kho hàng.'), 'error');
     }
   };
 
@@ -204,10 +204,10 @@ export function WarehouseInventoryPage() {
       });
       setIsCreateInventoryOpen(false);
       setCreateInventoryForm({ warehouseId: 0, materialId: 0, quantityOnHand: 0, reorderLevel: 0 });
-      showToast('Đã thêm vật tư vào kho lưu trữ thành công!');
+      showToast((lang === 'en' ? "Material added to the warehouse successfully!" : 'Đã thêm vật tư vào kho lưu trữ thành công!'));
       void loadInventories();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể thêm vật tư vào kho.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to add material to warehouse." : err instanceof Error ? err.message : 'Không thể thêm vật tư vào kho.'), 'error');
     } finally {
       setCreatingInventory(false);
     }
@@ -223,23 +223,23 @@ export function WarehouseInventoryPage() {
         reorderLevel: Number(updateInventoryForm.reorderLevel),
       });
       setEditingInventory(null);
-      showToast(`Đã điều chỉnh tồn kho "${editingInventory.materialName}" thành công!`);
+      showToast((lang === 'en' ? `Inventory adjusted: "${editingInventory.materialName}" successfully!` : `Đã điều chỉnh tồn kho "${editingInventory.materialName}" thành công!`));
       void loadInventories();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể cập nhật tồn kho.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to update inventory." : err instanceof Error ? err.message : 'Không thể cập nhật tồn kho.'), 'error');
     } finally {
       setUpdatingInventory(false);
     }
   };
 
   const handleDeleteInventory = async (inventoryId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bản ghi tồn kho vật tư này?')) return;
+    if (!window.confirm((lang === 'en' ? "Are you sure you want to delete this inventory record?" : 'Bạn có chắc chắn muốn xóa bản ghi tồn kho vật tư này?'))) return;
     try {
       await deleteInventoryApi(inventoryId);
-      showToast('Đã xóa bản ghi tồn kho thành công!');
+      showToast((lang === 'en' ? "Inventory record deleted successfully!" : 'Đã xóa bản ghi tồn kho thành công!'));
       void loadInventories();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Không thể xóa bản ghi tồn kho.', 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete inventory record." : err instanceof Error ? err.message : 'Không thể xóa bản ghi tồn kho.'), 'error');
     }
   };
 
@@ -276,8 +276,8 @@ export function WarehouseInventoryPage() {
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
           <span>
-            <strong>{notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: '}</strong>
-            {notification.text}
+            <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success: " : "⚠️ Notice: " : notification.type === 'success' ? '✓ Thành công: ' : '⚠️ Thông báo: ')}</strong>
+            {translate(notification.text)}
           </span>
           <button
             type="button"
@@ -640,7 +640,7 @@ export function WarehouseInventoryPage() {
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <strong style={{ fontSize: '15px', color: '#0f172a', display: 'block' }}>{it.materialName}</strong>
-                          <span style={{ fontSize: '12.5px', color: '#64748b' }}>{lang === 'en' ? 'Unit:' : 'Đơn vị tính:'} {it.unit}</span>
+                          <span style={{ fontSize: '12.5px', color: '#64748b' }}>{lang === 'en' ? 'Unit:' : 'Đơn vị tính:'} {translate(it.unit)}</span>
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#475569' }}>
                           {it.materialType || (lang === 'en' ? 'Farm Input' : 'Vật tư nông nghiệp')}
@@ -650,11 +650,11 @@ export function WarehouseInventoryPage() {
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <strong style={{ fontSize: '15px', color: it.isLowStock ? '#dc2626' : '#059669' }}>
-                            {Number(it.quantityOnHand).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')} {it.unit}
+                            {Number(it.quantityOnHand).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')} {translate(it.unit)}
                           </strong>
                         </td>
                         <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#64748b' }}>
-                          {Number(it.reorderLevel).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')} {it.unit}
+                          {Number(it.reorderLevel).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')} {translate(it.unit)}
                         </td>
                         <td style={{ padding: '14px 16px' }}>
                           <span
@@ -981,7 +981,7 @@ export function WarehouseInventoryPage() {
                     <option value={0}>{lang === 'en' ? '-- Select Input Material --' : '-- Chọn vật tư canh tác --'}</option>
                     {availableMaterials.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.materialName} ({m.unit})
+                        {m.materialName} ({translate(m.unit)})
                       </option>
                     ))}
                   </select>
