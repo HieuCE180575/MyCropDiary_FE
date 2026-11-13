@@ -124,4 +124,32 @@ test('farms, zones and blocks expose ownership, parent farm/zone and support cre
   assert.equal(newBlockState.blocks[0].name, 'Lô A3 - Ớt chuông');
   assert.equal(newBlockState.blocks[0].ownerName, state.zones[0].ownerName);
   assert.equal(newBlockState.blocks[0].areaDisplay, '4500 m²');
+
+  assert.ok(state.compliance.length > 0, 'Compliance records must be populated');
+  assert.ok(state.compliance[0].ownerName, 'Compliance record must show farm owner');
+  assert.ok(state.compliance[0].checklistProgress, 'Compliance record must show VietGAP checklist progress');
+  assert.ok(state.compliance[0].phiStatus, 'Compliance record must show PHI safety status');
+  assert.ok(state.rules[0].clause, 'Checklist rules must display TCVN 11892-1:2017 clause');
+  assert.ok(state.crops[0].growthDays, 'Crop categories must display standard growth cycle');
+
+  const updatedComplianceState = applyAdminCommand(newBlockState, {
+    type: 'save',
+    collection: 'compliance',
+    id: state.compliance[0].id,
+    values: {
+      name: 'Vụ Đông Xuân 2026 - Xà lách Thủy canh (Đợt 2)',
+      cropName: 'Xà lách',
+      farmName: state.compliance[0].farmName,
+      zoneBlock: state.compliance[0].zoneBlock,
+      ownerName: state.compliance[0].ownerName,
+      assignedStaff: 'Kỹ sư Lê Văn Tùng',
+      checklistProgress: '100% (20/20 tiêu chí đạt)',
+      phiStatus: 'An toàn thu hoạch (100% đạt chuẩn)',
+      expectedYield: '4.800 kg',
+      traceabilityCode: 'LOT-DL-202611-01',
+      assessmentNote: 'Đã hoàn tất đánh giá nội bộ VietGAP.',
+    },
+  }, meta);
+  assert.equal(updatedComplianceState.compliance[0].name, 'Vụ Đông Xuân 2026 - Xà lách Thủy canh (Đợt 2)');
+  assert.equal(updatedComplianceState.compliance[0].checklistProgress, '100% (20/20 tiêu chí đạt)');
 });

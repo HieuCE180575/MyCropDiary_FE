@@ -6,7 +6,8 @@ import { FarmGoongMap } from '../farm-management/components/FarmGoongMap';
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useApiData } from '../../shared/hooks/useApiData';
 
 import { useAdmin } from './AdminProvider';
@@ -25,6 +26,14 @@ const ADMIN_COL_EN: Record<string, string> = {
   'Mã phân khu': 'Zone Code',
   'Tên lô đất': 'Block Name',
   'Mã lô đất': 'Block Code',
+  'Tên mùa vụ': 'Season Name',
+  'Mã mùa vụ': 'Season Code',
+  'Cây trồng': 'Crop',
+  'Phân khu & Lô đất': 'Zone & Block',
+  'Đạt chuẩn VietGAP': 'VietGAP Compliance',
+  'Cách ly an toàn (PHI)': 'Pre-Harvest Interval (PHI)',
+  'Chu kỳ sinh trưởng': 'Growth Cycle',
+  'Điều khoản TCVN': 'TCVN Clause',
   'Thuộc phân khu': 'Parent Zone',
   'Thuộc trang trại': 'Parent Farm',
   'Chủ sở hữu (Của ai)': 'Owner',
@@ -74,6 +83,7 @@ const EDITABLE_COLLECTIONS: EditableCollection[] = [
   'farms',
   'zones',
   'blocks',
+  'compliance',
   'users',
   'registrations',
   'crops',
@@ -85,25 +95,63 @@ function isEditableCollection(collection: Collection): collection is EditableCol
   return EDITABLE_COLLECTIONS.includes(collection as EditableCollection);
 }
 
-type DialogState = { mode: 'detail' | 'edit' | 'create'; id?: string } | { mode: 'action'; id: string; status: string };
+type DialogState =
+  | { mode: 'detail' | 'edit' | 'create'; id?: string; prefill?: Record<string, string> }
+  | { mode: 'action'; id: string; status: string };
 const initialFilters = { query: '', status: '', from: '', to: '', extra: '' };
 
 export function AdminCollectionPage({ collection }: { collection: Collection }) {
   const { lang, t: translate } = useLanguage();
   const { state, registrationsLoading, registrationsError, reloadRegistrations, usersLoading, usersError, reloadUsers } = useAdmin();
   const config = adminConfigs[collection];
-  const [filters, setFilters] = useState(initialFilters);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filters, setFilters] = useState(() => ({
+    ...initialFilters,
+    query: searchParams.get('query') ?? '',
+    extra: searchParams.get('extra') ?? '',
+    status: searchParams.get('status') ?? '',
+  }));
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [dialog, setDialog] = useState<DialogState | null>(null);
+
+  useEffect(() => {
+    const q = searchParams.get('query') ?? '';
+    const ex = searchParams.get('extra') ?? '';
+    const st = searchParams.get('status') ?? '';
+    const draftTitle = searchParams.get('draftTitle') ?? '';
+    const draftContent = searchParams.get('draftContent') ?? '';
+
+    if (q || ex || st) {
+      setFilters({
+        ...initialFilters,
+        query: q,
+        extra: ex,
+        status: st,
+      });
+      setPage(1);
+    }
+    if (collection === 'articles' && draftTitle) {
+      setDialog({
+        mode: 'create',
+        prefill: {
+          name: draftTitle,
+          category: 'VIETGAP',
+          source: 'TCVN 11892-1:2017 (Tiêu chuẩn VietGAP)',
+          content: draftContent,
+        },
+      });
+    }
+  }, [collection, searchParams]);
 
   const farmFilterOptions = useMemo(() => {
     const names = new Set<string>();
     for (const f of state.farms) if (f.name) names.add(f.name);
     for (const z of state.zones) if (z.farmName) names.add(z.farmName);
     for (const b of state.blocks) if (b.farmName) names.add(b.farmName);
+    for (const c of state.compliance) if (c.farmName) names.add(c.farmName);
     return Object.fromEntries([...names].map((n) => [n, n]));
-  }, [state.farms, state.zones, state.blocks]);
+  }, [state.farms, state.zones, state.blocks, state.compliance]);
 
   const extra =
     collection === 'users'
@@ -114,7 +162,7 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
           ? { key: 'group', label: 'Nhóm cây', options: { ...(collection === 'rules' ? { ALL: 'Tất cả nhóm cây' } : {}), ...cropGroups } }
           : collection === 'articles'
             ? { key: 'category', label: 'Chuyên mục', options: articleCategories }
-            : collection === 'zones' || collection === 'blocks'
+            : collection === 'zones' || collection === 'blocks' || collection === 'compliance'
               ? { key: 'farmName', label: 'Trang trại', options: farmFilterOptions }
               : null;
 
@@ -124,7 +172,30 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
   const currentPage = Math.min(page, pages);
   const rows = records.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const filter = (key: keyof typeof filters, value: string) => { setFilters(previous => ({ ...previous, [key]: value })); setPage(1); };
-  const reset = () => { setFilters(initialFilters); setPage(1); };
+  const reset = () => {
+    setFilters(initialFilters);
+    setPage(1);
+    if (searchParams.size > 0) setSearchParams({}, { replace: true });
+  };
+
+  const exportCsv = () => {
+    const headers = [...config.columns.map(c => c.label), 'Trạng thái'];
+    const escapeCell = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
+    const csvRows = [
+      headers.map(escapeCell).join(','),
+      ...records.map(r => [
+        ...config.columns.map(c => escapeCell(displayValue(c.key, r[c.key], lang))),
+        escapeCell(config.statuses[r.status] || r.status),
+      ].join(',')),
+    ];
+    const blob = new Blob(['\uFEFF' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mycropdiary-admin-${collection}-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (collection === 'registrations' && (registrationsLoading || registrationsError)) return <section className="admin-page">
     <AdminPageHeading title={translate(config.title)} description={translate(config.description)} />
@@ -138,10 +209,18 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
   const canRowEdit = Boolean(config.createLabel || config.allowEdit);
 
   return <section className="admin-page">
-    <AdminPageHeading title={translate(config.title)} description={translate(config.description)}>{config.createLabel && <Button variant="primary" onClick={() => setDialog({ mode: 'create' })}><Icon name="plus" />{translate(config.createLabel)}</Button>}</AdminPageHeading>
+    <AdminPageHeading title={translate(config.title)} description={translate(config.description)}>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <Button variant="secondary" onClick={exportCsv}>
+          <Icon name="report" />
+          {lang === 'en' ? 'Export CSV' : 'Xuất CSV'}
+        </Button>
+        {config.createLabel && <Button variant="primary" onClick={() => setDialog({ mode: 'create' })}><Icon name="plus" />{translate(config.createLabel)}</Button>}
+      </div>
+    </AdminPageHeading>
     <div className="admin-status-cards">{Object.entries(config.statuses).map(([status, label]) => <button key={status} className={filters.status === status ? 'selected' : ''} aria-pressed={filters.status === status} onClick={() => filter('status', filters.status === status ? '' : status)}><span>{translate(label)}</span><strong>{state[collection].filter(item => item.status === status).length}</strong></button>)}</div>
     <section className="admin-panel" aria-label={(lang === 'en' ? `List ${translate(config.singular)}` : `Danh sách ${translate(config.singular)}`)}>
-      <div className="admin-list-heading"><h2>{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}<span>{records.length}</span></h2>{(collection === 'registrations' || collection === 'farms' || collection === 'zones' || collection === 'blocks') ? <Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : collection === 'users' ? <Button variant="secondary" onClick={reloadUsers}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : <span className="admin-subtle">{(lang === 'en' ? "System data" : "Dữ liệu hệ thống")}</span>}</div>
+      <div className="admin-list-heading"><h2>{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}<span>{records.length}</span></h2>{(collection === 'registrations' || collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'compliance') ? <Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : collection === 'users' ? <Button variant="secondary" onClick={reloadUsers}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : <span className="admin-subtle">{(lang === 'en' ? "System data" : "Dữ liệu hệ thống")}</span>}</div>
       <div className="admin-filters">
         <label className="admin-search"><Icon name="search" /><input className="ui-input" aria-label={(lang === 'en' ? `Search ${translate(config.singular)}` : `Tìm kiếm ${translate(config.singular)}`)} placeholder={lang === 'en' ? 'Search by name, owner, farm, staff, or code...' : 'Tìm theo tên, chủ sở hữu, trang trại, nhân sự hoặc mã…'} value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
         <label><span>{lang === 'en' ? 'Status' : 'Trạng thái'}</span><select className="ui-select" value={filters.status} onChange={(event) => filter('status', event.target.value)}><option value="">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>{Object.entries(config.statuses).map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}</select></label>
@@ -171,7 +250,8 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
   }, [collection, dialog.mode, dialog.id, loadDetail]);
   const { data, loading, error: detailError, retry } = useApiData(load);
   const record = needsDetail ? data : state[collection].find(item => item.id === dialog.id);
-  const [values, setValues] = useState<Record<string, string>>(record ?? {});
+  const initialFormValues = dialog.mode !== 'action' && dialog.prefill ? { ...record, ...dialog.prefill } : (record ?? {});
+  const [values, setValues] = useState<Record<string, string>>(initialFormValues);
   const [reason, setReason] = useState('');
   const [reply, setReply] = useState(record?.reply ?? '');
   const [feedbackStatus, setFeedbackStatus] = useState(record?.status ?? 'OPEN');
@@ -213,18 +293,18 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
       : collection === 'users'
         ? (dialog.status === 'LOCKED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản')
         : config.statuses[dialog.status];
-    const danger = ['REJECTED', 'LOCKED', 'INACTIVE', 'ARCHIVED'].includes(dialog.status);
+    const danger = ['REJECTED', 'LOCKED', 'INACTIVE', 'ARCHIVED', 'CANCELLED'].includes(dialog.status);
     return <AdminModal title={translate(label)} close={() => { if (!submitting) close(); }}><form onSubmit={(event) => {
       event.preventDefault();
       if (collection === 'registrations') {
         submit({ type: 'review', collection, id: record.id, status: dialog.status as 'APPROVED' | 'REJECTED', reason });
-      } else if (['farms', 'zones', 'blocks', 'users', 'crops', 'rules', 'articles'].includes(collection)) {
+      } else if (['farms', 'zones', 'blocks', 'compliance', 'users', 'crops', 'rules', 'articles'].includes(collection)) {
         submit({ type: 'status', collection: collection as StatusCollection, id: record.id, status: dialog.status });
       }
     }}><div className="admin-modal-body"><p>{(lang === 'en' ? "Do you want to " : "Bạn muốn ")} <strong>{translate(label).toLocaleLowerCase('vi-VN')}</strong> {(lang === 'en' ? " for " : " đối với ")} <strong>{record.name}</strong>?</p>
       {collection === 'registrations' && !reject && <p className="admin-inline-note">{(lang === 'en' ? "Approving a registration activates the farm and grants the applicant farm owner access. The farm and owner permissions are created after approval succeeds." : "Theo quy trình chính thức, duyệt hồ sơ sẽ kích hoạt trang trại và cấp quyền chủ trang trại cho người đăng ký. Trang trại và quyền chủ trang trại được tạo trên hệ thống sau khi duyệt thành công.")}</p>}
       {collection === 'users' && <p className="admin-inline-note">{(lang === 'en' ? "Locking an account blocks sign-in; unlocking restores normal access." : "Khóa tài khoản sẽ chặn quyền đăng nhập vào hệ thống; mở khóa sẽ cho phép tài khoản tiếp tục hoạt động bình thường.")}</p>}
-      {(collection === 'crops' || collection === 'rules' || collection === 'farms' || collection === 'zones' || collection === 'blocks') && <p className="admin-inline-note">{(lang === 'en' ? "Historical data referencing " : "Dữ liệu lịch sử đã tham chiếu đến ")} {translate(config.singular)} {(lang === 'en' ? " is preserved." : " này được giữ nguyên.")}</p>}
+      {(collection === 'crops' || collection === 'rules' || collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'compliance') && <p className="admin-inline-note">{(lang === 'en' ? "Historical data referencing " : "Dữ liệu lịch sử đã tham chiếu đến ")} {translate(config.singular)} {(lang === 'en' ? " is preserved." : " này được giữ nguyên.")}</p>}
       {reject && <AdminField field={{ key: 'reason', label: 'Lý do từ chối', type: 'textarea', required: true, maxLength: 1000 }} value={reason} onChange={setReason} />}
       {error && <p role="alert" className="admin-form-error">{translate(error)}</p>}
     </div><div className="admin-modal-footer"><Button variant="secondary" type="button" onClick={close} disabled={submitting}>{(lang === 'en' ? "Back" : "Quay lại")}</Button><Button variant={danger ? 'danger' : 'primary'} type="submit" loading={submitting}>{(lang === 'en' ? submitting ? "Processing..." : `Confirm ${translate(label).toLocaleLowerCase('vi-VN')}` : submitting ? 'Đang xử lý...' : `Xác nhận ${translate(label).toLocaleLowerCase('vi-VN')}`)}</Button></div></form></AdminModal>;
@@ -242,7 +322,98 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
 
   return <AdminModal title={(lang === 'en' ? `Details ${translate(config.singular)}` : `Chi tiết ${translate(config.singular)}`)} close={close} wide><div className="admin-modal-body">
     <div className="admin-detail-title"><span className="shortcut-icon"><Icon name={config.icon} /></span><div><span className="admin-subtle">{record.code || record.id}</span><h3>{record.name}</h3><AdminBadge collection={collection} status={record.status} /></div></div>
-    <dl className="admin-details">{details.map(field => <div key={field.key} className={field.type === 'textarea' || ['question', 'answer', 'comment', 'reply', 'description', 'reason', 'source', 'blocksSummary', 'zoneSummary', 'staffSummary', 'farmsSummary', 'zonesSummary'].includes(field.key) ? 'full' : ''}><dt>{translate(field.label)}</dt><dd>{field.key === 'document' && /^https?:\/\//i.test(record[field.key] ?? '') ? <a href={record[field.key]} target="_blank" rel="noreferrer">{(lang === 'en' ? "Open document" : "Mở tài liệu")}</a> : displayValue(field.key, record[field.key], lang)}</dd></div>)}</dl>
+    <dl className="admin-details">{details.map(field => <div key={field.key} className={field.type === 'textarea' || ['question', 'answer', 'comment', 'reply', 'description', 'reason', 'source', 'blocksSummary', 'zoneSummary', 'staffSummary', 'farmsSummary', 'zonesSummary', 'assessmentNote'].includes(field.key) ? 'full' : ''}><dt>{translate(field.label)}</dt><dd>{field.key === 'document' && /^https?:\/\//i.test(record[field.key] ?? '') ? <a href={record[field.key]} target="_blank" rel="noreferrer">{(lang === 'en' ? "Open document" : "Mở tài liệu")}</a> : displayValue(field.key, record[field.key], lang)}</dd></div>)}</dl>
+    {(collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'compliance' || collection === 'users' || collection === 'feedback') && (
+      <div className="admin-cross-links" style={{ marginTop: '14px', padding: '12px 14px', borderRadius: '10px', background: 'var(--color-subtle, #f8fafc)', border: '1px solid var(--color-border, #e2e8f0)', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+        <strong style={{ fontSize: '0.84rem', marginRight: '6px' }}>{lang === 'en' ? 'Quick Links:' : 'Liên kết nghiệp vụ nhanh:'}</strong>
+        {collection === 'farms' && (
+          <>
+            <Link to={`/admin/zones?extra=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View Farm Zones' : 'Xem Phân khu (Zone) của trang trại'}
+            </Link>
+            <Link to={`/admin/blocks?extra=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View Farm Blocks' : 'Xem Lô đất (Block) của trang trại'}
+            </Link>
+            <Link to={`/admin/compliance?extra=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View Seasons & VietGAP' : 'Xem Mùa vụ & VietGAP'}
+            </Link>
+            {record.ownerName && (
+              <Link to={`/admin/users?query=${encodeURIComponent(record.ownerName)}`} onClick={close} className="table-action-pill">
+                {lang === 'en' ? 'View Owner Account' : `Tài khoản chủ sở hữu (${record.ownerName})`}
+              </Link>
+            )}
+          </>
+        )}
+        {collection === 'zones' && (
+          <>
+            <Link to={`/admin/blocks?query=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View Blocks in Zone' : 'Xem các Lô đất thuộc phân khu'}
+            </Link>
+            {record.farmName && (
+              <Link to={`/admin/farms?query=${encodeURIComponent(record.farmName)}`} onClick={close} className="table-action-pill">
+                {lang === 'en' ? 'View Parent Farm' : `Xem Trang trại (${record.farmName})`}
+              </Link>
+            )}
+            <Link to={`/admin/compliance?query=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View Zone Seasons' : 'Xem Mùa vụ trong phân khu'}
+            </Link>
+            {record.ownerName && (
+              <Link to={`/admin/users?query=${encodeURIComponent(record.ownerName)}`} onClick={close} className="table-action-pill">
+                {lang === 'en' ? 'View Owner Account' : `Chủ sở hữu (${record.ownerName})`}
+              </Link>
+            )}
+          </>
+        )}
+        {collection === 'blocks' && (
+          <>
+            {record.zoneName && (
+              <Link to={`/admin/zones?query=${encodeURIComponent(record.zoneName)}`} onClick={close} className="table-action-pill">
+                {lang === 'en' ? 'View Parent Zone' : `Xem Phân khu (${record.zoneName})`}
+              </Link>
+            )}
+            {record.farmName && (
+              <Link to={`/admin/farms?query=${encodeURIComponent(record.farmName)}`} onClick={close} className="table-action-pill">
+                {lang === 'en' ? 'View Parent Farm' : `Xem Trang trại (${record.farmName})`}
+              </Link>
+            )}
+            <Link to={`/admin/compliance?query=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View Seasons on Block' : 'Xem Mùa vụ trên lô đất'}
+            </Link>
+          </>
+        )}
+        {collection === 'compliance' && (
+          <>
+            {record.farmName && (
+              <Link to={`/admin/farms?query=${encodeURIComponent(record.farmName)}`} onClick={close} className="table-action-pill">
+                {lang === 'en' ? 'View Farm' : `Xem Trang trại (${record.farmName})`}
+              </Link>
+            )}
+            <Link to="/admin/rules" onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'VietGAP Checklist Rules' : 'Xem Quy tắc bảng kiểm VietGAP'}
+            </Link>
+          </>
+        )}
+        {collection === 'users' && (
+          <>
+            <Link to={`/admin/farms?query=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View User Farms' : 'Xem Trang trại của tài khoản'}
+            </Link>
+            <Link to={`/admin/zones?query=${encodeURIComponent(record.name)}`} onClick={close} className="table-action-pill">
+              {lang === 'en' ? 'View Assigned Zones' : 'Xem Phân khu phụ trách'}
+            </Link>
+          </>
+        )}
+        {collection === 'feedback' && (
+          <Link
+            to={`/admin/articles?draftTitle=${encodeURIComponent(record.question || record.name)}&draftContent=${encodeURIComponent(`Câu hỏi thực tế từ nông hộ:\n${record.question || record.name}\n\nHướng dẫn chuẩn VietGAP (TCVN 11892-1:2017):\n${record.answer || ''}`)}`}
+            onClick={close}
+            className="table-action-pill"
+          >
+            {lang === 'en' ? 'Draft Knowledge Article from this Question' : 'Biên soạn bài viết kiến thức từ câu hỏi này'}
+          </Link>
+        )}
+      </div>
+    )}
     {(collection === 'registrations' || collection === 'farms') && (
       <div style={{ marginTop: '16px' }}>
         <FarmGoongMap
@@ -281,6 +452,20 @@ function RecordActions({ collection, record, change }: { collection: Collection;
       {record.role === 'ADMIN'
         ? <span className="admin-subtle">{(lang === 'en' ? "Administrator accounts are protected in this preview." : "Tài khoản quản trị được bảo vệ trong bản xem trước.")}</span>
         : <Button variant={record.status === 'ACTIVE' ? 'danger' : 'primary'} onClick={() => action(record.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE')}>{(lang === 'en' ? record.status === 'ACTIVE' ? "Lock account" : "Unlock account" : record.status === 'ACTIVE' ? 'Khóa tài khoản' : 'Mở khóa tài khoản')}</Button>}
+    </>;
+  }
+  if (collection === 'compliance') {
+    return <>
+      <Button variant="secondary" onClick={() => change({ mode: 'edit', id: record.id })}>{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>
+      {record.status !== 'NEEDS_REVIEW' && (
+        <Button variant="danger" onClick={() => action('NEEDS_REVIEW')}>{(lang === 'en' ? "Flag for VietGAP review" : "Cần rà soát VietGAP")}</Button>
+      )}
+      {record.status !== 'HARVESTED' && (
+        <Button variant="primary" onClick={() => action('HARVESTED')}>{(lang === 'en' ? "Mark Harvested" : "Đã thu hoạch")}</Button>
+      )}
+      {record.status !== 'ACTIVE' && (
+        <Button variant="primary" onClick={() => action('ACTIVE')}>{(lang === 'en' ? "Mark Growing" : "Đang canh tác")}</Button>
+      )}
     </>;
   }
   if (collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'crops' || collection === 'rules') {

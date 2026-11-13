@@ -67,6 +67,35 @@ function enrichSpatialRecord(collection: EditableCollection, record: AdminRecord
       soilType: record.soilType || 'Chưa phân loại',
     };
   }
+  if (collection === 'compliance') {
+    const code = record.code || `MV-2026-00${state.compliance.length + 1}`;
+    const matchedFarm = state.farms.find(f => f.name.toLowerCase() === (record.farmName || '').toLowerCase());
+    return {
+      ...record,
+      code,
+      ownerName: record.ownerName || matchedFarm?.ownerName || 'Chưa xác định',
+      ownerEmail: record.ownerEmail || matchedFarm?.ownerEmail || 'Chưa cập nhật',
+      ownerPhone: record.ownerPhone || matchedFarm?.ownerPhone || 'Chưa cập nhật',
+      assignedStaff: record.assignedStaff || matchedFarm?.staffSummary || 'Chưa phân công nhân sự',
+      checklistProgress: record.checklistProgress || '95% (19/20 tiêu chí đạt)',
+      phiStatus: record.phiStatus || 'An toàn thu hoạch (Đã qua cách ly PHI)',
+      expectedYield: record.expectedYield || '4.000 kg',
+      traceabilityCode: record.traceabilityCode || `LOT-VG-2026-00${state.compliance.length + 1}`,
+      assessmentNote: record.assessmentNote || 'Đạt chuẩn đánh giá nội bộ theo TCVN 11892-1:2017.',
+    };
+  }
+  if (collection === 'crops') {
+    return {
+      ...record,
+      growthDays: record.growthDays || '35–45 ngày',
+    };
+  }
+  if (collection === 'rules') {
+    return {
+      ...record,
+      clause: record.clause || 'TCVN 11892-1:2017',
+    };
+  }
   return record;
 }
 
@@ -99,7 +128,7 @@ export function applyAdminCommand(state: AdminState, command: AdminCommand, meta
       if (existing.status === command.status) throw new Error('Bản ghi đã ở trạng thái này.');
       if (command.collection === 'users' && existing.role === 'ADMIN') throw new Error('Không thể khóa tài khoản quản trị trong bản xem trước.');
       next = { ...existing, status: command.status, updatedAt: meta.now };
-      if (command.collection !== 'users' && command.collection !== 'farms' && command.collection !== 'zones' && command.collection !== 'blocks') {
+      if (command.collection !== 'users' && command.collection !== 'farms' && command.collection !== 'zones' && command.collection !== 'blocks' && command.collection !== 'compliance') {
         validateRecord(state, command.collection, next);
       }
       action = command.collection === 'users' ? `${command.status === 'LOCKED' ? 'Khóa' : 'Mở khóa'} tài khoản` : `${config.statuses[command.status]} ${config.singular}`;

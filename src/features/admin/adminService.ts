@@ -153,6 +153,28 @@ export interface AdminBlockDirectoryItem {
   assignedStaff: string;
 }
 
+export interface AdminComplianceDirectoryItem {
+  id: number;
+  seasonId: number;
+  seasonCode: string;
+  seasonName: string;
+  cropName: string;
+  farmId?: number | null;
+  farmCode: string;
+  farmName: string;
+  zoneBlock: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone: string;
+  assignedStaff: string;
+  checklistProgress: string;
+  phiStatus: string;
+  expectedYield: string;
+  traceabilityCode: string;
+  assessmentNote: string;
+  status: string;
+}
+
 export async function fetchAdminStatistics(signal?: AbortSignal): Promise<AdminStatisticsData> {
   const res = await apiRequest<ApiResponse<AdminStatisticsData>>('/admin/statistics/overview', { signal });
   return res.data;
@@ -216,6 +238,30 @@ export async function updateAdminBlock(
   payload: Record<string, unknown>,
 ): Promise<AdminBlockDirectoryItem> {
   const res = await apiRequest<ApiResponse<AdminBlockDirectoryItem>>(`/admin/blocks/${id}`, {
+    method: 'PUT',
+    data: payload,
+  });
+  return res.data;
+}
+
+export async function fetchAdminCompliance(signal?: AbortSignal): Promise<AdminComplianceDirectoryItem[]> {
+  const res = await apiRequest<ApiResponse<AdminComplianceDirectoryItem[]>>('/admin/compliance', { signal });
+  return res.data || [];
+}
+
+export async function createAdminCompliance(payload: Record<string, unknown>): Promise<AdminComplianceDirectoryItem> {
+  const res = await apiRequest<ApiResponse<AdminComplianceDirectoryItem>>('/admin/compliance', {
+    method: 'POST',
+    data: payload,
+  });
+  return res.data;
+}
+
+export async function updateAdminCompliance(
+  id: number | string,
+  payload: Record<string, unknown>,
+): Promise<AdminComplianceDirectoryItem> {
+  const res = await apiRequest<ApiResponse<AdminComplianceDirectoryItem>>(`/admin/compliance/${id}`, {
     method: 'PUT',
     data: payload,
   });

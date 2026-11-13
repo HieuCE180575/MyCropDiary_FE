@@ -3,6 +3,7 @@ export type Collection =
   | 'farms'
   | 'zones'
   | 'blocks'
+  | 'compliance'
   | 'users'
   | 'crops'
   | 'rules'
@@ -31,8 +32,8 @@ export interface SeasonSummary {
 
 export type AdminState = Record<Collection, AdminRecord[]> & { seasons: SeasonSummary[] };
 
-export type EditableCollection = 'farms' | 'zones' | 'blocks' | 'users' | 'registrations' | 'crops' | 'rules' | 'articles';
-export type StatusCollection = 'farms' | 'zones' | 'blocks' | 'users' | 'crops' | 'rules' | 'articles';
+export type EditableCollection = 'farms' | 'zones' | 'blocks' | 'compliance' | 'users' | 'registrations' | 'crops' | 'rules' | 'articles';
+export type StatusCollection = 'farms' | 'zones' | 'blocks' | 'compliance' | 'users' | 'crops' | 'rules' | 'articles';
 
 export interface Field {
   key: string;

@@ -845,6 +845,11 @@ export function AdminDashboard() {
           <span>{(lang === 'en' ? "Manage blocks (" : "Quản lý lô đất (")}{state.blocks.length})</span>
           <Icon name="arrow" />
         </Link>
+        <Link to="/admin/compliance">
+          <Icon name="check" />
+          <span>{(lang === 'en' ? "Season & VietGAP oversight (" : "Giám sát mùa vụ & VietGAP (")}{state.compliance.length})</span>
+          <Icon name="arrow" />
+        </Link>
         <Link to="/admin/crops">
           <Icon name="leaf" />
           <span>{(lang === 'en' ? "Crop categories (" : "Danh mục cây trồng (")}{activeCropsCount})</span>

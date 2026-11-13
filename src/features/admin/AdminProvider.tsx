@@ -26,6 +26,9 @@ import {
   fetchAdminBlocks,
   createAdminBlock,
   updateAdminBlock,
+  fetchAdminCompliance,
+  createAdminCompliance,
+  updateAdminCompliance,
   type AdminAIFeedbackItem,
   type AdminCropCategoryItem,
   type AdminChecklistRuleItem,
@@ -33,6 +36,7 @@ import {
   type AdminFarmDirectoryItem,
   type AdminZoneDirectoryItem,
   type AdminBlockDirectoryItem,
+  type AdminComplianceDirectoryItem,
 } from './adminService';
 import { useAuth } from '../auth';
 import { createAdminDemo } from './adminDemo';
@@ -167,6 +171,31 @@ function blockToRecord(item: AdminBlockDirectoryItem): AdminRecord {
   };
 }
 
+function complianceToRecord(item: AdminComplianceDirectoryItem): AdminRecord {
+  const rawStatus = (item.status || 'ACTIVE').toUpperCase();
+  return {
+    id: String(item.seasonId ?? item.id),
+    code: item.seasonCode || `MV-2026-00${item.seasonId ?? item.id}`,
+    name: item.seasonName,
+    status: rawStatus,
+    createdAt: new Date().toISOString(),
+    cropName: item.cropName || 'Cây trồng VietGAP',
+    farmId: item.farmId != null ? String(item.farmId) : '',
+    farmCode: item.farmCode || '—',
+    farmName: item.farmName || 'Chưa gắn trang trại',
+    zoneBlock: item.zoneBlock || 'Phân khu chính · Lô 01',
+    ownerName: item.ownerName || 'Chưa xác định',
+    ownerEmail: item.ownerEmail || '—',
+    ownerPhone: item.ownerPhone || '—',
+    assignedStaff: item.assignedStaff || 'Chưa phân công nhân sự',
+    checklistProgress: item.checklistProgress || '95% (19/20 tiêu chí đạt)',
+    phiStatus: item.phiStatus || 'An toàn thu hoạch (Đã qua cách ly PHI)',
+    expectedYield: item.expectedYield || '4.500 kg',
+    traceabilityCode: item.traceabilityCode || `LOT-VG-2026-00${item.seasonId ?? item.id}`,
+    assessmentNote: item.assessmentNote || 'Đạt chuẩn đánh giá nội bộ theo TCVN 11892-1:2017.',
+  };
+}
+
 function feedbackToRecord(item: AdminAIFeedbackItem): AdminRecord {
   const lastReply = item.replies && item.replies.length > 0 ? item.replies[item.replies.length - 1].replyText : '';
   return {
@@ -292,9 +321,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     };
   }, [user?.userId, revision]);
 
-  // Load Farms, Zones, Blocks, Crops, Rules, Articles, Feedback from Backend
+  // Load Farms, Zones, Blocks, Compliance, Crops, Rules, Articles, Feedback from Backend
   useEffect(() => {
-    if (user?.systemRole?.toUpperCase() !== 'ADMIN' || user?.userId === 900) return;
+    if (user?.systemRole?.toUpperCase() !== 'ADMIN' || user?.userId === 900 || typeof user?.userId !== 'number') return;
     const controller = new AbortController();
 
     fetchAdminFarms(controller.signal)
@@ -317,6 +346,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       .then((blocks) => {
         if (!controller.signal.aborted && Array.isArray(blocks) && blocks.length > 0) {
           setState((prev) => ({ ...prev, blocks: blocks.map(blockToRecord) }));
+        }
+      })
+      .catch(() => {});
+
+    fetchAdminCompliance(controller.signal)
+      .then((seasons) => {
+        if (!controller.signal.aborted && Array.isArray(seasons) && seasons.length > 0) {
+          setState((prev) => ({ ...prev, compliance: seasons.map(complianceToRecord) }));
         }
       })
       .catch(() => {});
@@ -358,7 +395,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
   // Silent background realtime sync for Admin (no loading spinner, no table wipe)
   useRealtimeSync(() => {
-    if (user?.systemRole?.toUpperCase() !== 'ADMIN' || user?.userId === 900) return;
+    if (user?.systemRole?.toUpperCase() !== 'ADMIN' || user?.userId === 900 || typeof user?.userId !== 'number') return;
     silentAbortRef.current?.abort();
     const controller = new AbortController();
     silentAbortRef.current = controller;
@@ -401,6 +438,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       .then((blocks) => {
         if (!controller.signal.aborted && Array.isArray(blocks) && blocks.length > 0) {
           setState((prev) => ({ ...prev, blocks: blocks.map(blockToRecord) }));
+        }
+      })
+      .catch(() => {});
+
+    fetchAdminCompliance(controller.signal)
+      .then((seasons) => {
+        if (!controller.signal.aborted && Array.isArray(seasons) && seasons.length > 0) {
+          setState((prev) => ({ ...prev, compliance: seasons.map(complianceToRecord) }));
         }
       })
       .catch(() => {});
@@ -597,6 +642,37 @@ export function AdminProvider({ children }: { children: ReactNode }) {
               blocks: [created, ...previous.blocks],
             }));
             showNotice('Đã thêm lô đất mới thành công.');
+            return;
+          }
+        } catch {
+          // Fallback to local
+        }
+      }
+
+      if (command.type === 'save' && command.collection === 'compliance') {
+        try {
+          const payload = {
+            seasonName: command.values.name,
+            cropName: command.values.cropName,
+            farmName: command.values.farmName,
+            assessmentNote: command.values.assessmentNote,
+          };
+          if (command.id && /^\d+$/.test(command.id)) {
+            const updated = complianceToRecord(await updateAdminCompliance(command.id, payload));
+            setState((previous) => ({
+              ...previous,
+              compliance: previous.compliance.map((record) => (record.id === updated.id ? updated : record)),
+            }));
+            showNotice('Đã cập nhật hồ sơ mùa vụ & VietGAP thành công.');
+            return;
+          }
+          if (!command.id) {
+            const created = complianceToRecord(await createAdminCompliance(payload));
+            setState((previous) => ({
+              ...previous,
+              compliance: [created, ...previous.compliance],
+            }));
+            showNotice('Đã thêm hồ sơ mùa vụ & VietGAP thành công.');
             return;
           }
         } catch {

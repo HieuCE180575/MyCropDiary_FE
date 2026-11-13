@@ -293,6 +293,16 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "access": "admin"
   },
   {
+    "key": "admin-compliance",
+    "path": "admin/compliance",
+    "title": "Season & VietGAP Oversight",
+    "ucRange": "UC-27–29, UC-42, UC-45.4",
+    "icon": "check",
+    "description": "Monitor crop seasons, VietGAP checklist compliance, PHI safety intervals, and harvest traceability across farms.",
+    "group": "admin",
+    "access": "admin"
+  },
+  {
     "key": "admin-users",
     "path": "admin/users",
     "title": "User Accounts",
