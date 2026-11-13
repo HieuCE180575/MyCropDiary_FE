@@ -353,10 +353,20 @@ export function StaffManagementPage() {
   const openEditModal = (staff: FarmStaffRecord) => {
     setEditingStaff(staff);
     setEditRole(staff.farmRole === 'OWNER' ? 'OWNER' : 'STAFF');
-    const isGenericRole = ['chủ trang trại', 'nhân viên kỹ thuật', 'thành viên trang trại'].includes(
-      (staff.roleLabel || '').trim().toLowerCase()
-    );
-    setEditJobTitle(isGenericRole ? '' : staff.roleLabel);
+    const labelToCheck = (staff.jobTitle || staff.roleLabel || '').trim().toLowerCase();
+    const isGenericRole = [
+      'owner',
+      'farm owner',
+      'co-owner',
+      'staff',
+      'technical staff',
+      'chủ trang trại',
+      'đồng chủ trang trại',
+      'nhân viên kỹ thuật',
+      'thành viên trang trại',
+      'kỹ sư nông nghiệp',
+    ].includes(labelToCheck);
+    setEditJobTitle(isGenericRole ? '' : (staff.jobTitle || staff.roleLabel || ''));
     setEditStatus(staff.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE');
   };
 
@@ -1263,6 +1273,7 @@ export function StaffManagementPage() {
         onClose={() => setIsAddStaffOpen(false)}
         title={lang === 'en' ? 'Add Staff to Farm' : 'Thêm nhân viên vào trang trại'}
         headerIcon={<Icon name="users" size={20} />}
+        style={{ width: 'min(540px, 100%)' }}
       >
         <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--color-muted)', lineHeight: 1.5 }}>
           {(lang === 'en' ? "Enter an existing MyCropDiary user's email to grant farm access." : "Nhập email của người dùng đã có tài khoản trên MyCropDiary để cấp quyền làm việc tại trang trại.")}
@@ -1297,7 +1308,7 @@ export function StaffManagementPage() {
               <label htmlFor="add-staff-role" className="structured-field-label">
                 {(lang === 'en' ? "Farm role " : "Vai trò trong trang trại ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <label htmlFor="add-staff-role" className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Phân quyền")}</label>
+              <span className="structured-field-badge">{(lang === 'en' ? "Role" : "Vai trò")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <select className="ui-select"
@@ -1305,8 +1316,8 @@ export function StaffManagementPage() {
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
-                <option value="STAFF">{(lang === 'en' ? "Technical Staff (STAFF)" : "Nhân viên kỹ thuật (STAFF)")}</option>
-                <option value="OWNER">{(lang === 'en' ? "Co-Owner (OWNER)" : "Đồng chủ trang trại (OWNER)")}</option>
+                <option value="STAFF">{(lang === 'en' ? "Technical Staff" : "Nhân viên kỹ thuật")}</option>
+                <option value="OWNER">{(lang === 'en' ? "Co-Owner" : "Đồng chủ trang trại")}</option>
               </select>
             </div>
           </div>
@@ -1316,7 +1327,7 @@ export function StaffManagementPage() {
               <label htmlFor="add-staff-job-title" className="structured-field-label">
                 {(lang === 'en' ? "Professional title" : "Chức danh chuyên môn")}
               </label>
-              <label htmlFor="add-staff-job-title" className="structured-field-badge">{translate("Showing")}</label>
+              <span className="structured-field-badge">{jobTitle.length}/100 {(lang === 'en' ? "chars" : "ký tự")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input className="ui-input"
@@ -1345,20 +1356,51 @@ export function StaffManagementPage() {
       <Modal
         open={Boolean(editingStaff)}
         onClose={() => setEditingStaff(null)}
-        title={(lang === 'en' ? `Edit staff: ${editingStaff?.fullName || ''}` : `Chỉnh sửa nhân viên: ${editingStaff?.fullName || ''}`)}
+        title={(lang === 'en' ? "Edit Staff Member" : "Chỉnh sửa nhân viên")}
         headerIcon={<Icon name="edit" size={20} />}
+        style={{ width: 'min(540px, 100%)' }}
       >
         <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--color-muted)' }}>
-          {(lang === 'en' ? "Update the member's role, professional title, or employment status." : "Cập nhật vai trò, chức danh chuyên môn hoặc trạng thái làm việc của thành viên.")}
+          {(lang === 'en' ? "Update the member's farm role, professional title, or employment status." : "Cập nhật vai trò, chức danh chuyên môn hoặc trạng thái làm việc của thành viên.")}
         </p>
         <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+
+          {/* Member Overview Card - Consistent with ZoneModal and AssignStaffModal */}
+          <div
+            className="structured-field-card"
+            style={{
+              background: 'var(--color-success-bg)',
+              borderColor: 'var(--color-border)',
+              marginBottom: 0,
+            }}
+          >
+            <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+              <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
+                {(lang === 'en' ? "Staff Member" : "Thông tin thành viên")}
+              </span>
+              <span className="structured-field-badge">
+                {editingStaff?.farmRole === 'OWNER'
+                  ? (lang === 'en' ? 'Farm Owner' : 'Chủ trang trại')
+                  : (lang === 'en' ? 'Technical Staff' : 'Nhân viên kỹ thuật')}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+              <strong style={{ color: 'var(--color-primary-text)', fontSize: '15px' }}>
+                👤 {editingStaff?.fullName}
+              </strong>
+              <small style={{ color: 'var(--color-primary-text)', fontWeight: 600 }}>
+                {editingStaff?.email} {editingStaff?.phoneNumber ? `· ${editingStaff.phoneNumber}` : ''}
+              </small>
+            </div>
+          </div>
+
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="edit-staff-role" className="structured-field-label">
                 {(lang === 'en' ? "Farm role " : "Vai trò trong trang trại ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <label htmlFor="edit-staff-role" className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Quyền hạn")}</label>
+              <span className="structured-field-badge">{(lang === 'en' ? "Role" : "Vai trò")}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <select className="ui-select"
@@ -1366,8 +1408,8 @@ export function StaffManagementPage() {
                 value={editRole}
                 onChange={(e) => setEditRole(e.target.value as 'OWNER' | 'STAFF')}
               >
-                <option value="STAFF">{(lang === 'en' ? "Technical Staff (STAFF)" : "Nhân viên kỹ thuật (STAFF)")}</option>
-                <option value="OWNER">{(lang === 'en' ? "Co-Owner (OWNER)" : "Đồng chủ trang trại (OWNER)")}</option>
+                <option value="STAFF">{(lang === 'en' ? "Technical Staff" : "Nhân viên kỹ thuật")}</option>
+                <option value="OWNER">{(lang === 'en' ? "Co-Owner" : "Đồng chủ trang trại")}</option>
               </select>
             </div>
           </div>
@@ -1377,7 +1419,9 @@ export function StaffManagementPage() {
               <label htmlFor="edit-staff-job-title" className="structured-field-label">
                 {(lang === 'en' ? "Professional title" : "Chức danh chuyên môn")}
               </label>
-              <label htmlFor="edit-staff-job-title" className="structured-field-badge">{(lang === 'en' ? "Custom" : "Tùy chỉnh")}</label>
+              <span className="structured-field-badge">
+                {editJobTitle.length}/100 {(lang === 'en' ? "chars" : "ký tự")}
+              </span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input className="ui-input"
@@ -1394,9 +1438,9 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="edit-staff-status" className="structured-field-label">
-                {(lang === 'en' ? "Employment status" : "Trạng thái làm việc")}
+                {(lang === 'en' ? "Employment status" : "Trạng thái làm việc")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <label htmlFor="edit-staff-status" className="structured-field-badge">{lang === 'en' ? 'Status' : 'Trạng thái'}</label>
+              <span className="structured-field-badge">{lang === 'en' ? 'Status' : 'Trạng thái'}</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <select className="ui-select"
@@ -1404,8 +1448,8 @@ export function StaffManagementPage() {
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
               >
-                <option value="ACTIVE">{translate("Active (ACTIVE)")}</option>
-                <option value="INACTIVE">{(lang === 'en' ? "Suspended (INACTIVE)" : "Tạm ngưng (INACTIVE)")}</option>
+                <option value="ACTIVE">{(lang === 'en' ? "Active" : "Đang hoạt động")}</option>
+                <option value="INACTIVE">{(lang === 'en' ? "Suspended" : "Tạm ngưng hoạt động")}</option>
               </select>
             </div>
           </div>
@@ -1427,6 +1471,7 @@ export function StaffManagementPage() {
         onClose={() => setIsAssignOpen(false)}
         title={(lang === 'en' ? "Assign staff to a zone" : "Phân công staff phụ trách phân khu")}
         headerIcon={<Icon name="plots" size={20} />}
+        style={{ width: 'min(580px, 100%)' }}
       >
         <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--color-muted)' }}>
           {(lang === 'en' ? "Assign an engineer or technical staff member to supervise and maintain VietGAP farming records for the production zone." : "Chỉ định kỹ sư hoặc nhân viên kỹ thuật chịu trách nhiệm giám sát và ghi chép nhật ký canh tác theo chuẩn VietGAP cho phân khu sản xuất.")}
