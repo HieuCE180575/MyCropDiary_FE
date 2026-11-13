@@ -78,3 +78,50 @@ test('Vietnamese search, status, role and date filters compose correctly and inv
   assert.equal(filterRecords(state.users, { ...filters, status: 'LOCKED' }).length, 0);
   assert.equal(filterRecords(state.users, { ...filters, from: '2026-05-01' }).length, 0);
 });
+
+test('farms, zones and blocks expose ownership, parent farm/zone and support creating and editing', () => {
+  const state = createAdminDemo();
+  assert.ok(state.farms.length > 0);
+  assert.ok(state.zones.length > 0);
+  assert.ok(state.blocks.length > 0);
+  assert.ok(state.zones[0].ownerName, 'Zone must display who owns it');
+  assert.ok(state.zones[0].farmName, 'Zone must display which farm it belongs to');
+  assert.ok(state.zones[0].assignedStaff, 'Zone must display assigned staff');
+
+  const updatedZoneState = applyAdminCommand(state, {
+    type: 'save',
+    collection: 'zones',
+    id: state.zones[0].id,
+    values: {
+      name: 'Phân khu Nhà màng A (Mở rộng)',
+      farmName: state.zones[0].farmName,
+      ownerName: state.zones[0].ownerName,
+      assignedStaff: 'Kỹ sư Lê Văn Tùng',
+      areaValue: '15000',
+      areaUnit: 'm2',
+      description: 'Đã nâng cấp hệ thống tưới nhỏ giọt.',
+    },
+  }, meta);
+  assert.equal(updatedZoneState.zones[0].name, 'Phân khu Nhà màng A (Mở rộng)');
+  assert.equal(updatedZoneState.zones[0].areaDisplay, '15000 m²');
+  assert.equal(updatedZoneState.zones[0].assignedStaff, 'Kỹ sư Lê Văn Tùng');
+
+  const newBlockState = applyAdminCommand(updatedZoneState, {
+    type: 'save',
+    collection: 'blocks',
+    values: {
+      name: 'Lô A3 - Ớt chuông',
+      zoneName: 'Phân khu Nhà màng A (Mở rộng)',
+      farmName: state.zones[0].farmName,
+      ownerName: state.zones[0].ownerName,
+      assignedStaff: 'Kỹ sư Lê Văn Tùng',
+      areaValue: '4500',
+      areaUnit: 'm2',
+      soilType: 'Đất thịt pha cát',
+      description: 'Lô ớt chuông VietGAP.',
+    },
+  }, { ...meta, id: 'LO-099' });
+  assert.equal(newBlockState.blocks[0].name, 'Lô A3 - Ớt chuông');
+  assert.equal(newBlockState.blocks[0].ownerName, state.zones[0].ownerName);
+  assert.equal(newBlockState.blocks[0].areaDisplay, '4500 m²');
+});

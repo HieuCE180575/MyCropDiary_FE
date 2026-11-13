@@ -4,27 +4,45 @@ import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 import { useState, useEffect } from 'react';
 import { useAdmin } from './AdminProvider';
+import { useAuth } from '../auth';
 
 import { fetchAdminStatistics, type AdminStatisticsData } from './adminService';
 
-const types = { overview: 'Tổng quan hệ thống', users: 'Tài khoản', seasons: 'Mùa vụ', registrations: 'Hồ sơ trang trại', feedback: 'Phản hồi AI' };
+const types = {
+  overview: 'Tổng quan hệ thống',
+  users: 'Tài khoản',
+  seasons: 'Mùa vụ',
+  costs: 'Chi phí',
+  registrations: 'Hồ sơ trang trại',
+  feedback: 'Phản hồi AI',
+};
 type StatisticType = keyof typeof types;
 
 export function AdminStatistics() {
   const { lang, t: translate } = useLanguage();
   const number = (value: number) => formatNumber(value, lang);
   const { state } = useAdmin();
+  const { user } = useAuth();
   const [type, setType] = useState<StatisticType>('overview');
+  const [fromMonth, setFromMonth] = useState('2026-04');
+  const [toMonth, setToMonth] = useState('2026-09');
   const [statsData, setStatsData] = useState<AdminStatisticsData | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
+    if (user?.userId === 900) return;
     setLoadingStats(true);
     fetchAdminStatistics()
       .then((data) => setStatsData(data))
       .catch(() => setStatsData(null))
       .finally(() => setLoadingStats(false));
-  }, []);
+  }, [user?.userId]);
+
+  const invalidMonthRange = Boolean(fromMonth && toMonth && fromMonth > toMonth);
+  const filteredSeasons = invalidMonthRange
+    ? []
+    : state.seasons.filter((s) => (!fromMonth || s.month >= fromMonth) && (!toMonth || s.month <= toMonth));
+  const totalSeasonCost = filteredSeasons.reduce((acc, s) => acc + s.cost, 0);
 
   const totalUsers = statsData?.accounts?.totalUsers ?? state.users.length;
   const activeUsers = statsData?.accounts?.activeUsers ?? state.users.filter((u) => u.status === 'ACTIVE').length;
@@ -35,8 +53,10 @@ export function AdminStatistics() {
   const approvedReg = statsData?.registrations?.approvedRegistrations ?? state.registrations.filter((r) => r.status === 'APPROVED').length;
   const rejectedReg = statsData?.registrations?.rejectedRegistrations ?? state.registrations.filter((r) => r.status === 'REJECTED').length;
 
-  const totalFarms = statsData?.farms?.totalFarms ?? 25;
-  const activeFarms = statsData?.farms?.activeFarms ?? 22;
+  const totalFarms = statsData?.farms?.totalFarms ?? (state.farms.length || 25);
+  const activeFarms = statsData?.farms?.activeFarms ?? (state.farms.filter((f) => f.status === 'ACTIVE').length || 22);
+  const totalZones = state.zones.length;
+  const totalBlocks = state.blocks.length;
 
   const totalSeasons = statsData?.seasons?.totalSeasons ?? 48;
   const activeSeasons = statsData?.seasons?.activeSeasons ?? 18;
@@ -51,7 +71,7 @@ export function AdminStatistics() {
     <section className="admin-page">
       <AdminPageHeading
         title={(lang === 'en' ? "System statistics" : "Thống kê hệ thống")}
-        description={(lang === 'en' ? "Monitor users, farm registrations, crop seasons, and AI feedback quality." : "Theo dõi toàn diện số liệu về người dùng, hồ sơ đăng ký trang trại, mùa vụ canh tác và chất lượng phản hồi AI.")}
+        description={(lang === 'en' ? "Monitor users, farm registrations, farms, zones, blocks, crop seasons, and AI feedback quality." : "Theo dõi toàn diện số liệu về người dùng, hồ sơ đăng ký, trang trại, phân khu, lô đất, mùa vụ canh tác và chất lượng phản hồi AI.")}
       />
 
       <div className="admin-stat-tabs" role="group" aria-label={(lang === 'en' ? "Statistics group" : "Nhóm thống kê")}>
@@ -67,6 +87,29 @@ export function AdminStatistics() {
           </button>
         ))}
       </div>
+
+      <div className="admin-stat-filters admin-filters">
+        <label>
+          <span>{(lang === 'en' ? "From month" : "Từ tháng")}</span>
+          <input className="ui-input" type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} />
+        </label>
+        <label>
+          <span>{(lang === 'en' ? "To month" : "Đến tháng")}</span>
+          <input className="ui-input" type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} />
+        </label>
+      </div>
+
+      {invalidMonthRange && (
+        <p className="admin-form-error" role="alert">
+          {(lang === 'en' ? "Start month must not be after end month." : "Tháng bắt đầu không được sau tháng kết thúc.")}
+        </p>
+      )}
+
+      {!invalidMonthRange && filteredSeasons.length === 0 && (
+        <p role="status" className="admin-subtle">
+          {(lang === 'en' ? "No data available for this period." : "Chưa có số liệu trong khoảng thời gian này.")}
+        </p>
+      )}
 
       {loadingStats && (
         <div style={{ padding: '16px', color: '#64748b' }}>
@@ -93,9 +136,9 @@ export function AdminStatistics() {
           </article>
           <article className="admin-summary-card">
             <div>
-              <span>{(lang === 'en' ? "Farms" : "Trang trại nông nghiệp")}</span>
+              <span>{(lang === 'en' ? "Farms, Zones & Blocks" : "Trang trại · Phân khu · Lô đất")}</span>
               <strong className="admin-stat-value">{number(totalFarms)}</strong>
-              <p>{number(activeFarms)} {(lang === 'en' ? " active farms" : " trang trại đang canh tác")}</p>
+              <p>{number(activeFarms)} {(lang === 'en' ? " active · " : " trang trại · ")} {number(totalZones)} {(lang === 'en' ? " zones · " : " phân khu · ")} {number(totalBlocks)} {(lang === 'en' ? " blocks" : " lô đất")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
@@ -137,6 +180,19 @@ export function AdminStatistics() {
               <span>{(lang === 'en' ? "Access locked" : "Đã khóa truy cập")}</span>
               <strong className="admin-stat-value" style={{ color: '#dc2626' }}>{number(lockedUsers)}</strong>
               <p>{(lang === 'en' ? "Accounts temporarily locked for security" : "Tài khoản bị tạm khóa bảo mật")}</p>
+            </div>
+          </article>
+        </div>
+      )}
+
+      {/* Costs Statistics */}
+      {type === 'costs' && (
+        <div className="admin-summary-grid">
+          <article className="admin-summary-card">
+            <div>
+              <span>{(lang === 'en' ? "Total season costs" : "Tổng chi phí")}</span>
+              <strong className="admin-stat-value">{number(totalSeasonCost)} ₫</strong>
+              <p>{number(filteredSeasons.length)} {(lang === 'en' ? " recorded months" : " tháng ghi nhận")}</p>
             </div>
           </article>
         </div>
