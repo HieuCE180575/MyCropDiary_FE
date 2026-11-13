@@ -1,12 +1,18 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { EmptyState } from '../shared/components/EmptyState';
+import { Button } from '../shared/components/Button';
 import { Pagination } from '../shared/components/Pagination';
-import { useDebounce } from '../shared/hooks/useDebounce';
-import { useApiData } from '../shared/hooks/useApiData';
 import { KnowledgeSearchBar } from '../features/knowledge/components/KnowledgeSearchBar';
 import { KnowledgeFilterBar } from '../features/knowledge/components/KnowledgeFilterBar';
 import { KnowledgeList } from '../features/knowledge/components/KnowledgeList';
 import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
 import { KnowledgeDynamicBanner } from '../features/knowledge/components/KnowledgeDynamicBanner';
+
+
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { useDebounce } from '../shared/hooks/useDebounce';
+import { useApiData } from '../shared/hooks/useApiData';
+
 import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
 import { KNOWLEDGE_PAGE_SIZE } from '../features/knowledge/constants';
 import { useLanguage } from '../shared/i18n/LanguageContext';
@@ -81,12 +87,7 @@ export function KnowledgePage() {
           </div>
 
           {error ? (
-            <div className="panel empty-state" role="alert">
-              <div className="empty-icon">⚠️</div>
-              <h2>{lang === 'en' ? 'An error occurred' : 'Đã có lỗi xảy ra'}</h2>
-              <p>{translate(error)}</p>
-              <button type="button" className="primary-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button>
-            </div>
+            <EmptyState role="alert" className="panel" title={<>{lang === 'en' ? 'An error occurred' : 'Đã có lỗi xảy ra'}</>} description={<>{translate(error)}</>} icon={<>⚠️</>} action={<><Button type="button" variant="primary" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</Button></>} />
           ) : (
             <>
               {resultSummary && !loading ? <p className="knowledge-result-summary">{translate(resultSummary)}</p> : null}

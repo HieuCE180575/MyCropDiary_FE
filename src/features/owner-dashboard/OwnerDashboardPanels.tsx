@@ -1,12 +1,16 @@
-import { useState, type ReactNode } from 'react';
-import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { StatusBadge } from '../../shared/components/StatusBadge';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../shared/components/Icon';
+import { formatNumber as uiFormatNumber, formatDate as uiFormatDate } from '../../shared/format/formatters';
+import { useState, type ReactNode } from 'react';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
+
+
 import { formatArea, formatDate, relativeTime, timeProgress, type CropArea, type DashboardSeason, type RecentRecord, type makeDashboardDemo } from './dashboardModel';
 
 export function DemoTag() {
-  const { lang } = useLanguage();
-  return <span className="owner-demo-tag" title={lang === 'en' ? 'Illustrative sample data, not persisted' : 'Dữ liệu minh họa, không được lưu vào hệ thống'}>Sample Data</span>;
+  const { lang, t: translate } = useLanguage();
+  return <span className="owner-demo-tag" title={lang === 'en' ? 'Illustrative sample data, not persisted' : 'Dữ liệu minh họa, không được lưu vào hệ thống'}>{translate("Sample Data")}</span>;
 }
 
 export function DashboardPanel({ title, to, demo, children, className = '', linkLabel }: {
@@ -39,7 +43,7 @@ export function SeasonProgressPanel({ seasons, demo }: { seasons: DashboardSeaso
       const illustration = crop.includes('dưa') ? 'melon' : crop.includes('rau') ? 'lettuce' : 'generic';
       return <Link to="/crop-seasons" className="owner-season-row" key={season.cropSeasonId}>
         <span className={'owner-crop-thumb owner-crop-' + illustration} role="img" aria-label={(lang === 'en' ? "Illustration " + (season.cropCategoryName || "crop") : 'Ảnh minh họa ' + (season.cropCategoryName || 'cây trồng'))}>{illustration === 'generic' && <Icon name="sprout" size={30} />}</span>
-        <div className="owner-season-body"><div className="owner-season-title"><h3>{season.seasonName}</h3><span className={'owner-season-status status-' + status}>{statuses[status] ?? season.seasonStatus}</span></div>
+        <div className="owner-season-body"><div className="owner-season-title"><h3>{season.seasonName}</h3><StatusBadge tone={status === 'active' ? 'success' : status === 'paused' ? 'warning' : 'neutral'} label={statuses[status] ?? season.seasonStatus} /></div>
           <p><Icon name="calendar" size={13} /><span>{formatDate(season.startDate, lang)} – {formatDate(season.endDate, lang)}</span></p>
           <div className="owner-progress-row">{progress === null ? <span className="owner-missing">{(lang === 'en' ? "Not enough date information to calculate progress" : "Chưa đủ ngày để tính tiến độ")}</span> : <>
             <div className="owner-progress-track" role="progressbar" aria-label={(lang === 'en' ? "Progress over time: " + season.seasonName : 'Tiến độ theo thời gian: ' + season.seasonName)} aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: progress + '%' }} /></div><span>{progress}%</span>
@@ -58,17 +62,17 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
   const categories = crops.length > 4 ? [...crops.slice(0, 3), { name: lang === 'en' ? 'Other' : 'Khác', areaM2: crops.slice(3).reduce((sum, crop) => sum + crop.areaM2, 0) }] : crops;
   const total = categories.reduce((sum, crop) => sum + crop.areaM2, 0);
   const showArea = (area: number) => total >= 10000
-    ? `${(area / 10000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha` : formatArea(area);
+    ? `${uiFormatNumber((area / 10000), lang, { maximumFractionDigits: 2 })} ha` : formatArea(area, lang);
   const circumference = 2 * Math.PI * 66;
   let offset = 0;
   const selected = hovered === null ? null : categories[hovered];
   return <section className="owner-panel owner-crop-panel">
-    <div className="owner-panel-heading"><div><h2>Area by Crop Type</h2>{demo && <DemoTag />}</div>
-      <select aria-label={(lang === 'en' ? "Crop area display mode" : "Cách hiển thị diện tích cây trồng")} value={mode} onChange={event => setMode(event.target.value)}><option value="area">By Area</option><option value="percent">By Percentage</option></select>
+    <div className="owner-panel-heading"><div><h2>{translate("Area by Crop Type")}</h2>{demo && <DemoTag />}</div>
+      <select className="ui-select" aria-label={(lang === 'en' ? "Crop area display mode" : "Cách hiển thị diện tích cây trồng")} value={mode} onChange={event => setMode(event.target.value)}><option value="area">{translate("By Area")}</option><option value="percent">{translate("By Percentage")}</option></select>
     </div>
     <div className="owner-chart-layout">
       <div className="owner-donut">
-        <svg viewBox="0 0 160 160" role="img" aria-label={(lang === 'en' ? "Area by crop type, total " + formatArea(total) : 'Diện tích theo loại cây trồng, tổng ' + formatArea(total))}>
+        <svg viewBox="0 0 160 160" role="img" aria-label={(lang === 'en' ? "Area by crop type, total " + formatArea(total, lang) : 'Diện tích theo loại cây trồng, tổng ' + formatArea(total, lang))}>
           {categories.map((crop, index) => {
             const length = total ? crop.areaM2 / total * circumference : 0;
             const start = offset; offset += length;
@@ -95,7 +99,7 @@ export function UpcomingTasksPanel({ tasks }: { tasks: Demo['tasks'] }) {
   return <DashboardPanel title={lang === 'en' ? 'Upcoming Tasks' : 'Công việc sắp tới'} to="/tasks" demo>
     <div className="owner-task-list">{tasks.map(task => {
       const date = new Date(task.date + 'T00:00:00');
-      return <Link to="/tasks" key={task.name} className="owner-task-row"><span className="owner-task-date"><strong>{date.getDate().toString().padStart(2, '0')}</strong><span>{lang === 'en' ? date.toLocaleDateString('en-US', { month: 'short' }) : 'Th' + (date.getMonth() + 1)}</span></span><span className={'owner-small-icon icon-' + task.icon}><Icon name={task.icon} /></span><span className="owner-task-info"><strong>{translate(task.name)}</strong><span>{translate(task.detail)}</span></span></Link>;
+      return <Link to="/tasks" key={task.name} className="owner-task-row"><span className="owner-task-date"><strong>{date.getDate().toString().padStart(2, '0')}</strong><span>{lang === 'en' ? uiFormatDate(date, lang, { month: 'short' }) : 'Th' + (date.getMonth() + 1)}</span></span><span className={'owner-small-icon icon-' + task.icon}><Icon name={task.icon} /></span><span className="owner-task-info"><strong>{translate(task.name)}</strong><span>{translate(task.detail)}</span></span></Link>;
     })}</div>
   </DashboardPanel>;
 }
@@ -103,10 +107,10 @@ export function UpcomingTasksPanel({ tasks }: { tasks: Demo['tasks'] }) {
 export function EnvironmentPanel() {
   const { lang, t: translate } = useLanguage();
   const measurements = [
-    { name: lang === 'en' ? 'Temperature' : 'Nhiệt độ', value: '28,5', unit: '°C', change: '+1,2°C', icon: 'thermometer', tone: 'red' },
+    { name: lang === 'en' ? 'Temperature' : 'Nhiệt độ', value: uiFormatNumber(28.5, lang), unit: '°C', change: '+' + uiFormatNumber(1.2, lang) + '°C', icon: 'thermometer', tone: 'red' },
     { name: lang === 'en' ? 'Humidity' : 'Độ ẩm', value: '75', unit: '%', change: '+5%', icon: 'drop', tone: 'blue' },
-    { name: lang === 'en' ? 'Light' : 'Ánh sáng', value: '12.400', unit: 'lux', change: '+8%', icon: 'sun', tone: 'amber' },
-    { name: lang === 'en' ? 'Soil pH' : 'Độ pH đất', value: '6,5', unit: '', change: '— 0', icon: 'flask', tone: 'brown' },
+    { name: lang === 'en' ? 'Light' : 'Ánh sáng', value: uiFormatNumber(12400, lang), unit: 'lux', change: '+8%', icon: 'sun', tone: 'amber' },
+    { name: lang === 'en' ? 'Soil pH' : 'Độ pH đất', value: uiFormatNumber(6.5, lang), unit: '', change: '— 0', icon: 'flask', tone: 'brown' },
   ];
   return <DashboardPanel title={lang === 'en' ? 'Environment & Field Conditions' : 'Điều kiện & môi trường'} demo className="owner-environment-panel" to="/environment" linkLabel="View Details">
     <div className="owner-environment-grid">{measurements.map(measurement => <div className={'owner-measurement tone-' + measurement.tone} key={measurement.name}>

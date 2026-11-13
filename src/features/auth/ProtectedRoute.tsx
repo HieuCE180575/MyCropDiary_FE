@@ -1,4 +1,5 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 
 export function ProtectedRoute() {

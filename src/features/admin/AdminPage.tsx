@@ -1,6 +1,7 @@
 import { AdminCollectionPage } from './AdminCollectionPage';
 import { AdminDashboard } from './AdminDashboard';
 import { AdminStatistics } from './AdminStatistics';
+
 import { collectionFromPath } from './adminModel';
 
 export function AdminPage({ moduleKey }: { moduleKey: string }) {

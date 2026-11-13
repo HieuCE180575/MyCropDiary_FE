@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { translations, Language, TranslationKey } from './translations';
+import { type Language, type TranslationKey } from './translations';
+import { translateMessage, type TranslationMessage } from './translate';
 
 interface LanguageContextType {
   lang: Language;
   setLang: (lang: Language) => void;
   toggleLang: () => void;
-  t: (key: TranslationKey | string, fallback?: string) => string;
+  t: (key: TranslationKey | TranslationMessage, fallback?: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -66,12 +67,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [lang]);
 
   const t = useMemo(() => {
-    return (key: TranslationKey | string, fallback?: string): string => {
-      const dict = translations[lang] as Record<string, string>;
-      if (dict && dict[key]) {
-        return dict[key];
-      }
-      return fallback !== undefined ? fallback : key;
+    return (key: TranslationKey | TranslationMessage, fallback?: string): string => {
+      return translateMessage(key, lang, fallback);
     };
   }, [lang]);
 
@@ -96,9 +93,8 @@ export function useLanguage(): LanguageContextType {
       lang: fallbackLang,
       setLang: () => {},
       toggleLang: () => {},
-      t: (key: string, fallback?: string) => {
-        const dict = translations[fallbackLang] as Record<string, string>;
-        return dict?.[key] || fallback || key;
+      t: (key: TranslationMessage, fallback?: string) => {
+        return translateMessage(key, fallbackLang, fallback);
       },
     };
   }

@@ -1,9 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { message, type TranslationMessage } from "../../../shared/i18n/translate";
+import { Button } from '../../../shared/components/Button';
+import { Icon } from '../../../shared/components/Icon';
+import { Modal } from '../../../shared/components/Modal';
+import { FarmGoongMap } from '../../farm-management/components/FarmGoongMap';
+
+import { useEffect, useState, useRef } from 'react';
 import type { Block, BlockFormValues, Zone } from '../types';
 import { createBlock, updateBlock } from '../zoneBlockService';
-import { FarmGoongMap } from '../../farm-management/components/FarmGoongMap';
-import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { AlertCircle } from 'lucide-react';
+
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface BlockModalProps {
   isOpen: boolean;
@@ -13,7 +19,6 @@ interface BlockModalProps {
   availableZones?: Zone[];
   lockZone?: boolean;
   initialBlock?: Block | null;
-  blocks?: Block[];
   onClose: () => void;
   onSuccess: (savedBlock: Block) => void;
 }
@@ -26,7 +31,6 @@ export function BlockModal({
   availableZones = [],
   lockZone = false,
   initialBlock,
-  blocks = [],
   onClose,
   onSuccess,
 }: BlockModalProps) {
@@ -45,20 +49,13 @@ export function BlockModal({
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<{
-    blockName?: string;
-    areaValue?: string;
-  }>({});
-
+  const [error, setError] = useState<TranslationMessage | null>(null);
   const blockNameRef = useRef<HTMLInputElement>(null);
   const areaValueRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedZoneId(
-        initialBlock?.zoneId || zoneId || availableZones[0]?.zoneId || 1
-      );
-
+      setSelectedZoneId(initialBlock?.zoneId || zoneId || availableZones[0]?.zoneId || 1);
       if (mode === 'edit' && initialBlock) {
         setValues({
           blockName: initialBlock.blockName || '',
@@ -67,12 +64,8 @@ export function BlockModal({
           soilType: initialBlock.soilType || '',
           description: initialBlock.description || '',
           imageUrl: initialBlock.imageUrl || '',
-          latitude: initialBlock.latitude != null
-            ? String(initialBlock.latitude)
-            : '',
-          longitude: initialBlock.longitude != null
-            ? String(initialBlock.longitude)
-            : '',
+          latitude: initialBlock.latitude != null ? String(initialBlock.latitude) : '',
+          longitude: initialBlock.longitude != null ? String(initialBlock.longitude) : '',
           status: initialBlock.status || 'AVAILABLE',
         });
       } else {
@@ -88,10 +81,9 @@ export function BlockModal({
           status: 'AVAILABLE',
         });
       }
-
-      setError({});
+      setError(null);
     }
-  }, [isOpen, mode, initialBlock, zoneId]);
+  }, [isOpen, mode, initialBlock, zoneId, availableZones]);
 
   if (!isOpen) return null;
 
@@ -107,116 +99,46 @@ export function BlockModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const trimmedBlockName = values.blockName.trim().toLowerCase();
+    const trimmedBlockName = values.blockName.trim();
     if (!trimmedBlockName) {
-      setError(prev => ({ ...prev, blockName: lang === 'en' ? "Enter a production block name." : 'Vui lòng nhập tên Lô sản xuất (Block Name).' }));
-      blockNameRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      setError((lang === 'en' ? "Enter a production block name." : 'Vui lòng nhập tên lô sản xuất.'));
+      blockNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       blockNameRef.current?.focus();
       return;
     }
-
-    const targetZoneBlocks = blocks.filter(
-      (block) => block.zoneId === selectedZoneId
-    );
-    console.log('name', trimmedBlockName);
-    console.log('targetZoneBlocks', targetZoneBlocks);
-    const isDuplicate = targetZoneBlocks.some(
-      (block) =>
-        block.blockName.trim().toLowerCase() === trimmedBlockName &&
-        (mode === 'create' || block.blockId !== initialBlock?.blockId)
-    );
-
-    if (isDuplicate) {
-      setError((prev) => ({
-        ...prev,
-        blockName: lang === 'en'
-          ? 'A Block with this name already exists in this Zone.'
-          : 'Tên Block này đã tồn tại trong Zone.',
-      }));
-      blockNameRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-      blockNameRef.current?.focus();
-      return;
-    }
-
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError(prev => ({ ...prev, areaValue: lang === 'en' ? "Block area must be a valid positive number (> 0)." : 'Diện tích lô sản xuất (Area) phải là số dương hợp lệ (> 0).' }));
-      areaValueRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
+      setError((lang === 'en' ? "Block area must be greater than 0." : 'Diện tích lô sản xuất phải lớn hơn 0.'));
+      areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       areaValueRef.current?.focus();
       return;
     }
 
-    const otherBlocksArea = targetZoneBlocks
-      .filter(
-        (block) =>
-          mode === 'create' || block.blockId !== initialBlock?.blockId
-      )
-      .reduce((total, block) => {
-        const areaInM2 =
-          block.areaUnit === 'ha'
-            ? block.areaValue * 10000
-            : block.areaValue;
-
-        return total + areaInM2;
-      }, 0);
-
-    const newBlockAreaM2 =
-      values.areaUnit === 'ha'
-        ? areaNum * 10000
-        : areaNum;
-
-    const targetZone = availableZones.find(
-      (zone) => zone.zoneId === selectedZoneId
-    );
-
-    if (!targetZone) {
-      return;
+    const targetZone = availableZones.find((z) => z.zoneId === selectedZoneId);
+    if (targetZone?.blocks && targetZone.blocks.length > 0) {
+      const isDuplicate = targetZone.blocks.some(
+        (b) =>
+          b.blockName.trim().toLowerCase() === trimmedBlockName.toLowerCase() &&
+          (mode === 'create' || b.blockId !== initialBlock?.blockId)
+      );
+      if (isDuplicate) {
+        setError((message("Block name \"{value1}\" already exists in zone \"{value2}\". Choose another name.", { value1: trimmedBlockName, value2: targetZone.zoneName })));
+        blockNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        blockNameRef.current?.focus();
+        return;
+      }
     }
-
-    const zoneAreaM2 = targetZone
-      ? targetZone.areaUnit === 'ha'
-        ? targetZone.areaValue * 10000
-        : targetZone.areaValue
-      : 0;
-
-    if (otherBlocksArea + newBlockAreaM2 > zoneAreaM2) {
-      const remainingAreaM2 = zoneAreaM2 - otherBlocksArea;
-
-      const displayRemainingArea =
-        values.areaUnit === 'ha'
-          ? remainingAreaM2 / 10000
-          : remainingAreaM2;
-
-      const displayUnit = values.areaUnit === 'ha' ? 'ha' : 'm²';
-
-      setError((prev) => ({
-        ...prev,
-        areaValue: lang === 'en'
-          ? `The Block area cannot exceed the remaining available area (${displayRemainingArea.toFixed(2)} ${displayUnit}).`
-          : `Diện tích Block không được vượt quá diện tích còn lại (${displayRemainingArea.toFixed(2)} ${displayUnit}).`,
-      }));
-
-      areaValueRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-
+    if (targetZone && targetZone.areaValue && areaNum > targetZone.areaValue) {
+      setError(
+        (lang === 'en' ? `Block area (${areaNum} ${values.areaUnit}) must not exceed the zone area ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).` : `Diện tích Block (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`)
+      );
+      areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       areaValueRef.current?.focus();
       return;
     }
 
     setLoading(true);
-    setError({});
+    setError(null);
 
     try {
       let saved: Block;
@@ -229,15 +151,14 @@ export function BlockModal({
       onSuccess(saved);
       onClose();
     } catch (err) {
-      setError(prev => ({ ...prev, areaValue: lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Block information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Block.' }));
+      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Block information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin lô sản xuất.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card" style={{ width: 'min(760px, 100%)', maxHeight: '92vh' }}>
+    <Modal open customLayout onClose={onClose} style={{ width: 'min(760px, 100%)', maxHeight: '92vh' }}>
         <div className="modal-header">
           <div>
             <span className="eyebrow">
@@ -245,13 +166,11 @@ export function BlockModal({
             </span>
             <h2>{mode === 'create' ? (lang === 'en' ? 'Create New Production Block' : 'Tạo lô sản xuất mới') : (lang === 'en' ? 'Update Production Block' : 'Cập nhật lô sản xuất')}</h2>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          <button type="button" className="modal-close" onClick={onClose} aria-label={translate("Close")}><Icon name="close" /></button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {Object.keys(error).length > 0 && (
+          {error && (
             <div style={{
               padding: '12px 16px',
               borderRadius: '8px',
@@ -261,31 +180,26 @@ export function BlockModal({
               fontSize: '13px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              marginBottom: '12px'
             }}>
               <AlertCircle size={18} />
-              <span>
-                {mode === 'create'
-                  ? (lang === 'en'
-                    ? 'Please correct the errors before adding.'
-                    : 'Vui lòng sửa các lỗi trước khi thêm.')
-                  : (lang === 'en'
-                    ? 'Please correct the errors before saving changes.'
-                    : 'Vui lòng sửa các lỗi trước khi lưu thay đổi.')}
-              </span>
+              <span>{typeof error === 'string' ? error : translate(error)}</span>
             </div>
           )}
+
+          {/* Parent Zone Field */}
           <div
             className="structured-field-card"
             style={{
-              background: isZoneLocked ? '#ecfdf5' : '#f8fafc',
-              borderColor: isZoneLocked ? '#a7f3d0' : '#e2e8f0',
+              background: isZoneLocked ? 'var(--color-success-bg)' : 'var(--color-page)',
+              borderColor: isZoneLocked ? 'var(--color-border)' : 'var(--color-border)',
               marginBottom: 0,
             }}
           >
-            <div className="structured-field-header" style={{ borderBottomColor: isZoneLocked ? '#a7f3d0' : '#cbd5e1' }}>
+            <div className="structured-field-header" style={{ borderBottomColor: isZoneLocked ? 'var(--color-border)' : 'var(--color-input-border)' }}>
               <label htmlFor="block-zone-select" className="structured-field-label">
-                {lang === 'en' ? 'Parent Zone' : 'Khu vực quản lý trực thuộc'} <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Parent Zone' : 'Khu vực quản lý trực thuộc'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
               <span className="structured-field-badge">
                 {isZoneLocked ? (lang === 'en' ? 'Fixed Zone' : 'Cố định khu vực') : (lang === 'en' ? 'Select Zone' : 'Chọn khu vực')}
@@ -293,14 +207,14 @@ export function BlockModal({
             </div>
             {isZoneLocked ? (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                <strong style={{ color: '#047857', fontSize: '15px' }}>🗺️ {resolvedZoneName}</strong>
-                <small style={{ color: '#065f46', fontWeight: 600 }}>
+                <strong style={{ color: 'var(--color-primary-text)', fontSize: '15px' }}>🗺️ {resolvedZoneName}</strong>
+                <small style={{ color: 'var(--color-primary-text)', fontWeight: 600 }}>
                   {mode === 'edit' ? (lang === 'en' ? 'Block zone cannot be changed during edit' : 'Không chuyển lô sang khu vực khác khi chỉnh sửa') : (lang === 'en' ? 'Auto-filled based on current zone' : 'Tự động điền theo khu vực hiện tại')}
                 </small>
               </div>
             ) : (
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select
+                <select className="ui-select"
                   id="block-zone-select"
                   value={selectedZoneId}
                   onChange={(e) => setSelectedZoneId(Number(e.target.value))}
@@ -319,45 +233,21 @@ export function BlockModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="block-name-input" className="structured-field-label">
-                {lang === 'en' ? 'Block Name' : 'Tên lô sản xuất'} <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Block Name' : 'Tên lô sản xuất'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{values.blockName.length}/100 {lang === 'en' ? 'chars · Required' : 'ký tự · Bắt buộc'}</span>
+              <label htmlFor="block-name-input" className="structured-field-badge">{values.blockName.length}/100 {lang === 'en' ? 'chars · Required' : 'ký tự · Bắt buộc'}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 ref={blockNameRef}
                 id="block-name-input"
                 type="text"
                 maxLength={100}
                 placeholder={lang === 'en' ? 'e.g. Block B01 - Cabbage cultivation block' : 'VD: Lô B01 - Lô sản xuất rau cải'}
                 value={values.blockName}
-                onChange={(e) => {
-                  const value = e.target.value
-                  setValues(p => ({ ...p, blockName: value }));
-
-                  setError(prev => {
-                    const updated = { ...prev };
-                    if (!value.trim()) {
-                      updated.blockName = lang === 'en'
-                        ? 'Please enter a block name.'
-                        : 'Vui lòng nhập tên lô sản xuất.';
-                    } else {
-                      delete updated.blockName;
-                    }
-                    return updated;
-                  });
-                }}
+                onChange={(e) => setValues({ ...values, blockName: e.target.value })}
                 required
               />
-              {error.blockName && (
-                <p style={{
-                  color: '#dc2626',
-                  fontSize: '12px',
-                  margin: '5px 0 0'
-                }}>
-                  {error.blockName}
-                </p>
-              )}
             </div>
           </div>
 
@@ -366,12 +256,12 @@ export function BlockModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="block-area-input" className="structured-field-label">
-                  {lang === 'en' ? 'Block Area' : 'Diện tích lô sản xuất'} <span style={{ color: '#dc2626' }}>*</span>
+                  {lang === 'en' ? 'Block Area' : 'Diện tích lô sản xuất'} <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
-                <span className="structured-field-badge">&gt; 0</span>
+                <label htmlFor="block-area-input" className="structured-field-badge">&gt; 0</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <input
+                <input className="ui-input"
                   ref={areaValueRef}
                   id="block-area-input"
                   type="number"
@@ -379,47 +269,19 @@ export function BlockModal({
                   min="0.01"
                   placeholder={(lang === 'en' ? "e.g. 500" : "VD: 500")}
                   value={values.areaValue}
-                  onChange={(e) => {
-                    const newValue = e.target.value;
-                    const newAreaNum = parseFloat(newValue);
-
-                    setValues(p => ({ ...p, areaValue: newValue }));
-
-                    setError(prev => {
-                      const updated = { ...prev };
-
-                      if (!newValue || isNaN(newAreaNum) || newAreaNum <= 0) {
-                        updated.areaValue = lang === 'en'
-                          ? 'Block area must be a valid positive number (> 0).'
-                          : 'Diện tích lô sản xuất phải là số dương hợp lệ (> 0).';
-                      } else {
-                        delete updated.areaValue;
-                      }
-
-                      return updated;
-                    });
-                  }}
+                  onChange={(e) => setValues({ ...values, areaValue: e.target.value })}
                   required
                 />
-                {error && (
-                  <p style={{
-                    color: '#dc2626',
-                    fontSize: '12px',
-                    margin: '5px 0 0'
-                  }}>
-                    {error.areaValue}
-                  </p>
-                )}
               </div>
             </div>
 
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="block-unit-select" className="structured-field-label">{lang === 'en' ? 'Area Unit' : 'Đơn vị diện tích'}</label>
-                <span className="structured-field-badge">{lang === 'en' ? 'Unit' : 'Đơn vị'}</span>
+                <label htmlFor="block-unit-select" className="structured-field-badge">{lang === 'en' ? 'Unit' : 'Đơn vị'}</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select
+                <select className="ui-select"
                   id="block-unit-select"
                   value={values.areaUnit}
                   onChange={(e) => setValues({ ...values, areaUnit: e.target.value })}
@@ -437,10 +299,10 @@ export function BlockModal({
               <label htmlFor="block-soil-input" className="structured-field-label">
                 {lang === 'en' ? 'Soil Type & Substrate' : 'Loại đất & nền thổ nhưỡng'}
               </label>
-              <span className="structured-field-badge">{values.soilType.length}{(lang === 'en' ? "/120 characters" : "/120 ký tự")}</span>
+              <label htmlFor="block-soil-input" className="structured-field-badge">{values.soilType.length}{(lang === 'en' ? "/120 characters" : "/120 ký tự")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="block-soil-input"
                 type="text"
                 maxLength={120}
@@ -461,8 +323,8 @@ export function BlockModal({
             </div>
             <div className="farm-registration-location-fields" style={{ gap: '12px', marginBottom: '12px' }}>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <span>Latitude</span>
-                <input
+                <label htmlFor="block-lat-input">{translate("Latitude")}</label>
+                <input className="ui-input"
                   id="block-lat-input"
                   type="number"
                   step="0.000001"
@@ -472,8 +334,8 @@ export function BlockModal({
                 />
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <span>Longitude</span>
-                <input
+                <label htmlFor="block-lng-input">{translate("Longitude")}</label>
+                <input className="ui-input"
                   id="block-lng-input"
                   type="number"
                   step="0.000001"
@@ -506,10 +368,10 @@ export function BlockModal({
               <label htmlFor="block-desc-input" className="structured-field-label">
                 {lang === 'en' ? 'Block Description' : 'Mô tả lô sản xuất'}
               </label>
-              <span className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+              <label htmlFor="block-desc-input" className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <textarea
+              <textarea className="ui-textarea"
                 id="block-desc-input"
                 rows={3}
                 maxLength={500}
@@ -521,15 +383,12 @@ export function BlockModal({
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
-              Cancel
-            </button>
-            <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : mode === 'create' ? (lang === 'en' ? 'Create Block' : 'Tạo Block') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
-            </button>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{translate("Cancel")}</Button>
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : mode === 'create' ? (lang === 'en' ? 'Create Block' : 'Tạo lô sản xuất') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 }

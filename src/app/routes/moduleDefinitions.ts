@@ -13,6 +13,16 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "description": "Submit farm registration request; view details, track status, update or cancel pending request."
   },
   {
+    "key": "farm",
+    "path": "farm",
+    "title": "Farm Information",
+    "ucRange": "UC-13",
+    "group": "farm",
+    "access": "farm",
+    "icon": "home",
+    "description": "View active farm information. Farm owners can update farm details."
+  },
+  {
     "key": "knowledge",
     "path": "knowledge",
     "title": "Agricultural Knowledge",
@@ -53,6 +63,16 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "description": "Submit, edit, and review feedback; report inaccurate or unsuitable AI responses."
   },
   {
+    "key": "ai-drafts",
+    "path": "ai-drafts",
+    "title": "AI Farming Drafts",
+    "ucRange": "UC-32",
+    "group": "ai",
+    "access": "farm",
+    "icon": "bot",
+    "description": "Generate, review, confirm, or discard AI-assisted cultivation drafts."
+  },
+  {
     "key": "profile",
     "path": "profile",
     "title": "User Profile",
@@ -73,24 +93,14 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "description": "Verify current password and set a new password for your account."
   },
   {
-    "key": "farm",
-    "path": "farm",
-    "title": "Farm Information",
-    "ucRange": "UC-13",
-    "group": "farm",
-    "access": "farm",
-    "icon": "home",
-    "description": "View active farm information. Farm owners can update farm details."
-  },
-  {
-    "key": "workers",
-    "path": "workers",
-    "title": "Labor & Staff",
-    "ucRange": "UC-14–15",
+    "key": "members",
+    "path": "members",
+    "title": "Staff & Assignments",
+    "ucRange": "UC-14–15, UC-33–34",
     "group": "farm",
     "access": "farm",
     "icon": "user",
-    "description": "Manage worker profiles and role assignments within the farm."
+    "description": "Manage farm members, worker profiles, and technical staff assigned to production areas."
   },
   {
     "key": "production",
@@ -101,16 +111,6 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "access": "farm",
     "icon": "plots",
     "description": "View zones and manage blocks. Farm owners can create and delete zones."
-  },
-  {
-    "key": "environment",
-    "path": "environment",
-    "title": "Conditions & Environment",
-    "ucRange": "UC-18–21",
-    "group": "production",
-    "access": "farm",
-    "icon": "drop",
-    "description": "Record block conditions; manage soil, water assessments, and environmental risks."
   },
   {
     "key": "seasons",
@@ -163,16 +163,6 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "description": "Record harvest batches and view origin traceability reports."
   },
   {
-    "key": "training",
-    "path": "training",
-    "title": "Training",
-    "ucRange": "UC-27",
-    "group": "compliance",
-    "access": "farm",
-    "icon": "book",
-    "description": "Record and update internal training sessions and worker certifications."
-  },
-  {
     "key": "checklists",
     "path": "checklists",
     "title": "VietGAP Checklists",
@@ -193,6 +183,26 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "description": "Create and review internal farm inspection and audit reports."
   },
   {
+    "key": "environment",
+    "path": "environment",
+    "title": "Conditions & Environment",
+    "ucRange": "UC-18–21",
+    "group": "production",
+    "access": "farm",
+    "icon": "drop",
+    "description": "Record block conditions; manage soil, water assessments, and environmental risks."
+  },
+  {
+    "key": "training",
+    "path": "training",
+    "title": "Training",
+    "ucRange": "UC-27",
+    "group": "compliance",
+    "access": "farm",
+    "icon": "book",
+    "description": "Record and update internal training sessions and worker certifications."
+  },
+  {
     "key": "reports",
     "path": "reports",
     "title": "Production Reports",
@@ -201,26 +211,6 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "access": "farm",
     "icon": "report",
     "description": "View production analytics and seasonal summaries. Export reports."
-  },
-  {
-    "key": "ai-drafts",
-    "path": "ai-drafts",
-    "title": "AI Farming Drafts",
-    "ucRange": "UC-32",
-    "group": "ai",
-    "access": "farm",
-    "icon": "bot",
-    "description": "Generate, review, confirm, or discard AI-assisted cultivation drafts."
-  },
-  {
-    "key": "members",
-    "path": "members",
-    "title": "Staff & Assignments",
-    "ucRange": "UC-33–34",
-    "group": "farm",
-    "access": "owner",
-    "icon": "user",
-    "description": "Manage farm members and technical staff assigned to production areas."
   },
   {
     "key": "suppliers",

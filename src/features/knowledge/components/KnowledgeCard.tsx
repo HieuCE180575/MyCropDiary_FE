@@ -1,3 +1,4 @@
+import { formatDate as uiFormatDate, formatNumber as uiFormatNumber } from '../../../shared/format/formatters';
 import { getKnowledgeCategoryLabel } from '../constants';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import type { KnowledgeArticle } from '../types';
@@ -8,7 +9,7 @@ interface KnowledgeCardProps {
 }
 
 function formatDate(iso: string, lang: 'en' | 'vi'): string {
-  return new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return uiFormatDate(iso, lang, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export function KnowledgeCard({ article, onOpen }: KnowledgeCardProps) {
@@ -26,7 +27,7 @@ export function KnowledgeCard({ article, onOpen }: KnowledgeCardProps) {
       <div className="knowledge-card-meta">
         <span>📅 {formatDate(article.publishedAt, lang)}</span>
         <span>⏱ {article.readTimeMinutes} {lang === 'en' ? 'min read' : 'phút đọc'}</span>
-        <span>👁 {article.viewCount.toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')}</span>
+        <span>👁 {uiFormatNumber(article.viewCount, lang)}</span>
       </div>
       <button type="button" className="knowledge-card-link" onClick={() => onOpen(article)}>
         {lang === 'en' ? 'Read more ›' : 'Đọc thêm ›'}

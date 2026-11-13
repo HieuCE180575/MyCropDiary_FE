@@ -8,8 +8,8 @@ export function KnowledgeSearchBar({ value, onChange }: KnowledgeSearchBarProps)
   const { lang } = useLanguage();
   return (
     <div className="search-input">
-      <span className="search-icon" aria-hidden="true">🔍</span>
-      <input
+      <label htmlFor="knowledge-search-bar-control-1" className="search-icon" aria-hidden="true">🔍</label>
+      <input id="knowledge-search-bar-control-1" className="ui-input"
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}

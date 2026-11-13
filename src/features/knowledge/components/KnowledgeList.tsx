@@ -1,5 +1,7 @@
+import { Button } from '../../../shared/components/Button';
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { KnowledgeCard } from './KnowledgeCard';
+
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import type { KnowledgeArticle } from '../types';
 
@@ -31,7 +33,7 @@ export function KnowledgeList({ articles, loading, hasActiveFilters, onOpen, onR
   if (articles.length === 0) {
     return (
       <EmptyState
-        icon="📖"
+        icon="book"
         title={lang === 'en' ? 'No matching knowledge found' : 'Không tìm thấy kiến thức phù hợp'}
         description={
           hasActiveFilters
@@ -40,9 +42,9 @@ export function KnowledgeList({ articles, loading, hasActiveFilters, onOpen, onR
         }
         action={
           hasActiveFilters ? (
-            <button type="button" className="primary-button" onClick={onResetFilters}>
+            <Button type="button" variant="primary" onClick={onResetFilters}>
               {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
-            </button>
+            </Button>
           ) : undefined
         }
       />

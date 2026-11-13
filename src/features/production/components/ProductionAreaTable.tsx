@@ -1,6 +1,9 @@
-import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
+import { formatDate, formatNumber } from '../../../shared/format/formatters';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
+
+
 import { PRODUCTION_AREA_STATUS_LABEL, PRODUCTION_AREA_STATUS_TONE } from '../constants';
 import type { ProductionArea, ProductionAreaSortField, SortDirection } from '../types';
 
@@ -22,13 +25,6 @@ const COLUMNS: { field: ProductionAreaSortField | null; label: string }[] = [
   { field: 'createdAt', label: 'Ngày tạo' },
 ];
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
-
-function formatArea(hectares: number): string {
-  return `${hectares.toLocaleString('vi-VN', { maximumFractionDigits: 4 })} ha`;
-}
 
 export function ProductionAreaTable({
 
@@ -42,12 +38,12 @@ export function ProductionAreaTable({
 }: ProductionAreaTableProps) {
   const { lang, t: translate } = useLanguage();
   return (
-    <div className="zone-table-wrap">
-      <table className="data-table">
+    <div className="zone-table-wrap ui-table-scroll" tabIndex={0}>
+      <table className="ui-data-table">
         <thead>
           <tr>
             {COLUMNS.map((col) => (
-              <th key={lang === 'en' ? ({ 'Tên khu sản xuất': 'Production Area Name', 'Diện tích': 'Area', 'Vị trí': 'Location', 'Trạng thái': 'Status', 'Ngày tạo': 'Created Date' }[col.label] || col.label) : col.label}>
+              <th scope="col" aria-sort={col.field === sortField ? (sortDirection === 'asc' ? 'ascending' : 'descending') : undefined} key={lang === 'en' ? ({ 'Tên khu sản xuất': 'Production Area Name', 'Diện tích': 'Area', 'Vị trí': 'Location', 'Trạng thái': 'Status', 'Ngày tạo': 'Created Date' }[col.label] || col.label) : col.label}>
                 {col.field ? (
                   <button
                     type="button"
@@ -60,11 +56,11 @@ export function ProductionAreaTable({
                     </span>
                   </button>
                 ) : (
-                  col.label
+                  translate(col.label)
                 )}
               </th>
             ))}
-            <th>{lang === 'en' ? 'Actions' : 'Hành động'}</th>
+            <th scope="col">{lang === 'en' ? 'Actions' : 'Hành động'}</th>
           </tr>
         </thead>
         <tbody>
@@ -83,7 +79,7 @@ export function ProductionAreaTable({
                     {area.areaName || area.zoneName}
                   </Link>
                 </td>
-                <td>{formatArea(area.areaHectares ?? (area.areaUnit === 'ha' ? area.areaValue : (area.areaValue || 0) / 10000))}</td>
+                <td>{formatNumber(area.areaHectares ?? (area.areaUnit === 'ha' ? area.areaValue : (area.areaValue || 0) / 10000), lang, { maximumFractionDigits: 4 })} ha</td>
                 <td>{area.locationDescription ?? area.description ?? '—'}</td>
                 <td>
                   <StatusBadge
@@ -91,13 +87,13 @@ export function ProductionAreaTable({
                     tone={PRODUCTION_AREA_STATUS_TONE[area.status === 'archived' ? 'archived' : 'active']}
                   />
                 </td>
-                <td>{formatDate(area.createdAt)}</td>
+                <td>{formatDate(area.createdAt, lang)}</td>
                 <td>
                   <div className="table-actions">
                     <Link
                       to={`/production-areas/${area.productionAreaId}`}
                       className="icon-button"
-                      aria-label={`Xem ${area.areaName}`}
+                      aria-label={translate("View") + " " + (area.areaName)}
                       title={(lang === 'en' ? "View details" : "Xem chi tiết")}
                     >
                       👁

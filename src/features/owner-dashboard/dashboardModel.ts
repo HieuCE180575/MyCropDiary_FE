@@ -1,3 +1,4 @@
+import { formatNumber, formatDate as displayDate } from '../../shared/format/formatters';
 export interface DashboardSeason {
   cropSeasonId: number;
   farmId: number;
@@ -53,15 +54,15 @@ export function aggregateCropAreas(seasons: DashboardSeason[], allocations: Seas
   return [...totals].map(([name, areaM2]) => ({ name, areaM2 })).filter(crop => crop.areaM2 > 0).sort((a, b) => b.areaM2 - a.areaM2);
 }
 
-export function formatArea(areaM2: number): string {
-  return areaM2 >= 10000 ? `${(areaM2 / 10000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} ha`
-    : `${areaM2.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} m²`;
+export function formatArea(areaM2: number, lang: 'vi' | 'en' = 'vi'): string {
+  return areaM2 >= 10000 ? `${formatNumber(areaM2 / 10000, lang, { maximumFractionDigits: 2 })} ha`
+    : `${formatNumber(areaM2, lang, { maximumFractionDigits: 1 })} m²`;
 }
 
 export function formatDate(value: string | null, lang: 'vi' | 'en' = 'vi') {
   if (!value) return lang === 'en' ? 'Not updated' : 'Chưa cập nhật';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? (lang === 'en' ? 'Not updated' : 'Chưa cập nhật') : date.toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN');
+  return Number.isNaN(date.getTime()) ? (lang === 'en' ? 'Not updated' : 'Chưa cập nhật') : displayDate(value, lang);
 }
 
 export function relativeTime(value: string, language: 'vi' | 'en' = 'vi') {

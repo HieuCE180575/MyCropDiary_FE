@@ -1,7 +1,10 @@
+import { EmptyState } from '../../shared/components/EmptyState';
+import { ProductionAreaForm } from '../../features/production/components/ProductionAreaForm';
+
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ProductionAreaForm } from '../../features/production/components/ProductionAreaForm';
+
 import { createProductionArea, fetchProductionAreaById, updateProductionArea } from '../../features/production/productionAreaService';
 import type { ProductionArea, ProductionAreaFormValues } from '../../features/production/types';
 
@@ -69,10 +72,7 @@ export function ZoneFormPage({ mode }: ProductionFormPageProps) {
   if (mode === 'edit' && loading) {
     return (
       <section>
-        <div className="panel empty-state">
-          <div className="empty-icon">⏳</div>
-          <h2>{(lang === 'en' ? "Loading production zone information..." : "Đang tải thông tin phân khu sản xuất...")}</h2>
-        </div>
+        <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading production zone information..." : "Đang tải thông tin phân khu sản xuất...")}</>} icon={<>⏳</>} />
       </section>
     );
   }
@@ -80,10 +80,7 @@ export function ZoneFormPage({ mode }: ProductionFormPageProps) {
   if (mode === 'edit' && (loadError || !productionArea)) {
     return (
       <section>
-        <div className="panel empty-state">
-          <div className="empty-icon">⚠️</div>
-          <h2>{(lang === 'en' ? loadError ?? "Production zone not found." : loadError ?? 'Không tìm thấy phân khu sản xuất.')}</h2>
-        </div>
+        <EmptyState  className="panel" title={<>{(lang === 'en' ? loadError ?? "Production zone not found." : loadError ?? 'Không tìm thấy phân khu sản xuất.')}</>} icon={<>⚠️</>} />
       </section>
     );
   }
@@ -91,7 +88,7 @@ export function ZoneFormPage({ mode }: ProductionFormPageProps) {
   return (
     <section>
       <ProductionAreaForm
-        title={(lang === 'en' ? mode === 'edit' ? "Edit production zone" : "Add production zone" : mode === 'edit' ? 'Chỉnh sửa phân khu (Zone)' : 'Thêm phân khu mới (Zone)')}
+        title={(lang === 'en' ? mode === 'edit' ? "Edit production zone" : "Add production zone" : mode === 'edit' ? 'Chỉnh sửa khu vực' : 'Thêm khu vực mới')}
         breadcrumbLabel={(lang === 'en' ? mode === 'edit' && productionArea ? `Edit` : "Add zone" : mode === 'edit' && productionArea ? `Chỉnh sửa` : 'Thêm phân khu')}
         initialValues={mode === 'edit' && productionArea ? productionAreaToFormValues(productionArea) : undefined}
         submitting={submitting}
@@ -103,6 +100,3 @@ export function ZoneFormPage({ mode }: ProductionFormPageProps) {
     </section>
   );
 }
-
-export const ProductionAreaFormPage = ZoneFormPage;
-

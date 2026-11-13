@@ -1,5 +1,6 @@
-import { useLanguage } from '../shared/i18n/LanguageContext';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '../shared/i18n/LanguageContext';
+
 
 export function NotFoundPage() {
   const { lang } = useLanguage();

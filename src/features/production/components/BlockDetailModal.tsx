@@ -1,6 +1,9 @@
-import { useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/components/Modal';
+import { formatNumber as uiFormatNumber, formatDateTime as uiFormatDateTime } from '../../../shared/format/formatters';
+import { useCallback } from 'react';
+
+
 import { useApiData } from '../../../shared/hooks/useApiData';
 import { fetchBlockById } from '../zoneBlockService';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
@@ -13,17 +16,17 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
     ['Mã lô đất', block.blockId],
     ['Tên lô đất', block.blockName],
     ['Phân khu', block.zoneName ?? `#${block.zoneId}`],
-    ['Diện tích', `${block.areaValue.toLocaleString('vi-VN')} ${block.areaUnit}`],
+    ['Diện tích', `${uiFormatNumber(block.areaValue, lang)} ${block.areaUnit}`],
     ['Loại đất', block.soilType],
-    ['Trạng thái', block.status],
+    ['Trạng thái', translate(block.status)],
     ['Vĩ độ', block.latitude],
     ['Kinh độ', block.longitude],
-    ['Ngày tạo', block.createdAt ? new Date(block.createdAt).toLocaleString('vi-VN') : null],
+    ['Ngày tạo', block.createdAt ? uiFormatDateTime(block.createdAt, lang) : null],
     ['Mô tả', block.description],
   ] : [];
 
   return (
-    <Modal open onClose={onClose} title={lang === 'en' ? 'Block Details' : 'Chi tiết lô đất (Block Summary)'}>
+    <Modal open onClose={onClose} title={lang === 'en' ? 'Block Details' : 'Chi tiết lô sản xuất'}>
       {loading ? <p role="status">{lang === 'en' ? 'Loading block details...' : 'Đang tải chi tiết lô đất...'}</p> : error ? (
         <>
           <p role="alert">{translate(error)}</p>
@@ -38,30 +41,28 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
                 className="block-detail-row"
                 key={String(label)}
                 style={{
-                  background: '#f8faf9',
-                  border: '1px solid #d4e2d9',
+                  background: 'var(--color-page)',
+                  border: '1px solid var(--color-border)',
                   borderRadius: '10px',
                   padding: '10px 12px',
                 }}
               >
-                <dt className="block-detail-label" style={{ fontSize: '0.76rem', fontWeight: 700, color: '#527062', textTransform: 'uppercase', marginBottom: '4px' }}>
+                <dt className="block-detail-label" style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--color-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
                   {translate(String(label ?? ''))}
                 </dt>
-                <dd className="block-detail-value" style={{ margin: 0, fontWeight: 600, color: '#1e293b', fontSize: '0.93rem' }}>
+                <dd className="block-detail-value" style={{ margin: 0, fontWeight: 600, color: 'var(--color-text)', fontSize: '0.93rem' }}>
                   {value ?? (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </dd>
               </div>
             ))}
           </dl>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--color-border)' }}>
             <Link
               to={`/zones/${block.zoneId}/blocks/${block.blockId}`}
               className="btn-primary"
               onClick={onClose}
               style={{ textDecoration: 'none' }}
-            >
-              Open Full Block Details →
-            </Link>
+            >{translate("Open Full Block Details →")}</Link>
           </div>
         </div>
       )}

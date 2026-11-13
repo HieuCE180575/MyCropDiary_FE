@@ -1,27 +1,34 @@
-import { useEffect, useState, useRef } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../features/auth';
+import { Link, Outlet } from 'react-router-dom';
+import { SidebarNavigation } from './SidebarNavigation';
 import { Icon } from '../../shared/components/Icon';
+import { FarmWorkspaceProvider } from '../../features/farm-management/FarmWorkspace';
+import { AdminProvider, AdminNotice } from '../../features/admin/AdminProvider';
+import { PublicFooter } from '../../shared/components/PublicFooter';
+import { LanguageSwitch } from '../../shared/components/LanguageSwitch';
+
+import { useEffect, useState, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../features/auth';
+
 import { moduleDefinitions } from '../routes/moduleDefinitions';
 import { canAccessModule, farmRole } from '../../features/auth/accessPolicy';
 import { fetchMyFarmInvitations, respondFarmInvitation, type FarmInvitation } from '../../features/staff/staffService';
+
+import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
+
+
+import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { NotificationPopover } from './NotificationPopover';
 import {
   fetchMyNotifications,
   markNotificationAsRead,
   markAllNotificationsAsRead,
   type NotificationItem,
 } from '../../features/notifications/notificationService';
-import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
-import { FarmWorkspaceProvider, useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
-import { AdminProvider, AdminNotice } from '../../features/admin/AdminProvider';
-import { PublicFooter } from '../../shared/components/PublicFooter';
-import { useLanguage } from '../../shared/i18n/LanguageContext';
-import { LanguageSwitch } from '../../shared/components/LanguageSwitch';
-import { NotificationPopover } from './NotificationPopover';
+
 
 export function AppLayout() {
-
-
   const { user } = useAuth();
   const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
   return (
@@ -89,7 +96,6 @@ function getInitialTheme(): 'light' | 'dark' {
 }
 
 function WorkspaceLayout() {
-
   const { signOut, user } = useAuth();
   const { lang, t, t: translate } = useLanguage();
   const { farms, selectedFarm, selectFarm } = useFarmWorkspace();
@@ -97,7 +103,6 @@ function WorkspaceLayout() {
   const { pathname } = useLocation();
 
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
-
 
   useEffect(() => {
     try {
@@ -118,17 +123,16 @@ function WorkspaceLayout() {
     document.body.scrollTop = 0;
   }, [pathname]);
 
-  const isZoneRoute = /^\/zones(?:\/|$)/.test(pathname);
   const navigation = moduleDefinitions.filter((module) => canAccessModule(module, user?.systemRole, selectedFarm));
-  const displayName = user?.fullName?.trim() || user?.email || 'Administrator';
+  const displayName = user?.fullName?.trim() || user?.email || translate('Administrator');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const notificationWrapRef = useRef<HTMLDivElement>(null);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
-
 
   const loadNotifications = async (silent = false) => {
     if (!silent) setLoadingNotifications(true);
@@ -143,13 +147,14 @@ function WorkspaceLayout() {
     }
   };
 
-  // Initial load + refresh whenever the popover opens
   useEffect(() => {
-    void loadNotifications(!notificationsOpen);
+    if (user && user?.systemRole?.toUpperCase() !== 'ADMIN') {
+      void loadNotifications(!notificationsOpen);
+    }
   }, [notificationsOpen, user?.userId]);
 
-  // Keep the badge fresh while the page is open
   useEffect(() => {
+    if (!user || user?.systemRole?.toUpperCase() === 'ADMIN') return;
     const refresh = () => void loadNotifications(true);
     const timer = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
@@ -159,29 +164,18 @@ function WorkspaceLayout() {
     };
   }, [user?.userId]);
 
-  useRealtimeSync(() => {
-    void loadInvitations();
-    void loadNotifications(true);
-  });
-  
   const handleNotificationClick = async (notification: NotificationItem) => {
     try {
       if (!notification.isRead) {
         const updated = await markNotificationAsRead(notification.id);
-
         if (updated) {
-          setNotifications(prev =>
-            prev.map(item =>
-              item.id === notification.id ? updated : item
-            )
+          setNotifications((prev) =>
+            prev.map((item) => (item.id === notification.id ? updated : item))
           );
-
-          setUnreadCount(prev => Math.max(0, prev - 1));
+          setUnreadCount((prev) => Math.max(0, prev - 1));
         }
       }
-
       setNotificationsOpen(false);
-
       if (notification.actionUrl) {
         navigate(notification.actionUrl);
       }
@@ -193,11 +187,7 @@ function WorkspaceLayout() {
   const handleMarkAllAsRead = async () => {
     try {
       await markAllNotificationsAsRead();
-
-      setNotifications(prev =>
-        prev.map(item => ({ ...item, isRead: true }))
-      );
-
+      setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
       setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
@@ -209,14 +199,17 @@ function WorkspaceLayout() {
       if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
         setAccountMenuOpen(false);
       }
+      if (notificationWrapRef.current && !notificationWrapRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
     }
-    if (accountMenuOpen) {
+    if (accountMenuOpen || notificationsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [accountMenuOpen]);
+  }, [accountMenuOpen, notificationsOpen]);
 
   useEffect(() => {
     setAccountMenuOpen(false);
@@ -224,8 +217,10 @@ function WorkspaceLayout() {
   }, [pathname]);
   const [invitations, setInvitations] = useState<FarmInvitation[]>([]);
   const [respondingInvId, setRespondingInvId] = useState<number | null>(null);
+  const [invitationError, setInvitationError] = useState<string | null>(null);
 
   const totalUnread = invitations.length + unreadCount;
+
   const loadInvitations = async () => {
     if (!user || user?.systemRole?.toUpperCase() === 'ADMIN') return;
     try {
@@ -242,9 +237,11 @@ function WorkspaceLayout() {
 
   useRealtimeSync(() => {
     void loadInvitations();
+    void loadNotifications(true);
   });
 
   const handleRespondInvitation = async (inv: FarmInvitation, action: 'approve' | 'reject') => {
+    setInvitationError(null);
     setRespondingInvId(inv.memberId);
     try {
       await respondFarmInvitation(inv.memberId, action);
@@ -253,13 +250,25 @@ function WorkspaceLayout() {
         window.location.reload();
       }
     } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to respond to the invitation." : err instanceof Error ? err.message : 'Lỗi phản hồi lời mời.'));
+      setInvitationError((lang === 'en' ? err instanceof Error ? err.message : "Unable to respond to the invitation." : err instanceof Error ? err.message : 'Lỗi phản hồi lời mời.'));
     } finally {
       setRespondingInvId(null);
     }
   };
 
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === 'undefined' || !window.matchMedia?.('(max-width: 768px)').matches);
+
+  useEffect(() => {
+    const media = window.matchMedia?.('(max-width: 768px)');
+    if (!media) return;
+    const onResize = () => setSidebarOpen(!media.matches);
+    media.addEventListener('change', onResize);
+    return () => media.removeEventListener('change', onResize);
+  }, []);
+
+  useEffect(() => {
+    if (window.matchMedia?.('(max-width: 768px)').matches) setSidebarOpen(false);
+  }, [pathname]);
   const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
   const currentFarmRole = farmRole(selectedFarm);
   const activeRoleKey = isAdmin ? 'ADMIN' : currentFarmRole === 'OWNER' ? 'OWNER' : currentFarmRole === 'STAFF' ? 'STAFF' : 'USER';
@@ -270,8 +279,9 @@ function WorkspaceLayout() {
 
   return (
     <div className={`app-shell${isAdmin ? ' admin-shell' : ''}${sidebarOpen ? '' : ' sidebar-collapsed'} ${theme === 'dark' ? 'dark' : 'light'}`}>
+      {sidebarOpen && <button className="sidebar-backdrop" type="button" aria-label={lang === 'en' ? 'Close navigation' : 'Đóng menu'} onClick={() => setSidebarOpen(false)} />}
       <aside className="sidebar">
-        <Link className="brand" to="/" aria-label="MyCropDiary" title="Back to Home">
+        <Link className="brand" to="/" aria-label="MyCropDiary" title={translate('Back to Home')}>
           <span className="brand-icon-box">
             <Icon name="leaf" />
           </span>
@@ -279,12 +289,12 @@ function WorkspaceLayout() {
             <strong hidden={!sidebarOpen}>MyCropDiary</strong>
             <span className="brand-admin-tag">
               {activeRoleKey === 'ADMIN'
-                ? 'Admin'
+                ? translate('Admin')
                 : activeRoleKey === 'OWNER'
-                  ? 'Farm Owner'
+                  ? translate('Farm Owner')
                   : activeRoleKey === 'STAFF'
-                    ? 'Staff'
-                    : 'Personal'}
+                    ? translate('Staff')
+                    : translate('Personal')}
             </span>
           </span>
         </Link>
@@ -294,11 +304,11 @@ function WorkspaceLayout() {
           onClick={() => setSidebarOpen((open) => !open)}
           aria-controls="workspace-sidebar"
           aria-expanded={sidebarOpen}
-          aria-label={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
-          title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-label={translate(sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar')}
+          title={translate(sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar')}
         >
           <Icon name={sidebarOpen ? 'chevron-left' : 'chevron-right'} />
-          {sidebarOpen && <span>Collapse</span>}
+          {sidebarOpen && <span>{translate('Collapse')}</span>}
         </button>
 
         <div className="sidebar-content" id="workspace-sidebar" hidden={!sidebarOpen}>
@@ -306,57 +316,23 @@ function WorkspaceLayout() {
             <div className="sidebar-role-indicator">
               <span className={`badge-role ${activeRoleKey.toLowerCase()}`}>
                 {activeRoleKey === 'ADMIN'
-                  ? 'Administrator'
+                  ? translate('Administrator')
                   : activeRoleKey === 'OWNER'
-                    ? 'Farm Owner'
+                    ? translate('Farm Owner')
                     : activeRoleKey === 'STAFF'
-                      ? 'Technical Staff'
-                      : 'Personal User'}
+                      ? translate('Technical Staff')
+                      : translate('Personal User')}
               </span>
             </div>
           )}
-          {sidebarOpen && <p className="sidebar-nav-caption">MENU</p>}
-          <nav className="nav-list" aria-label="Primary navigation">
-            <NavLink to={isAdmin ? '/admin' : '/dashboard'} end title={!sidebarOpen ? 'Dashboard' : undefined}>
-              <Icon name="home" />
-              {sidebarOpen && <span>Dashboard</span>}
-            </NavLink>
-            {navigation
-              .filter((module) => module.group !== 'account' && (!isAdmin || (module.group === 'admin' && module.key !== 'admin')))
-              .map((module) => (
-                <NavLink
-                  key={module.key}
-                  to={module.key === 'production' && isZoneRoute ? '/zones' : '/' + module.path}
-                  title={!sidebarOpen ? module.title : undefined}
-                >
-                  <Icon name={module.icon} />
-                  {sidebarOpen && <span>{translate(module.title)}</span>}
-                </NavLink>
-              ))}
-            <div className="nav-divider" />
-            {navigation
-              .filter((module) => module.group === 'account' && module.key !== 'password')
-              .map((module) => (
-                <NavLink
-                  key={module.key}
-                  to={'/' + module.path}
-                  title={!sidebarOpen ? (module.key === 'profile' ? 'Profile' : module.title) : undefined}
-                >
-                  <Icon name={module.icon} />
-                  {sidebarOpen && <span>{module.key === 'profile' ? 'Profile' : module.title}</span>}
-                </NavLink>
-              ))}
-            <button className="sidebar-logout" type="button" onClick={signOut} title={!sidebarOpen ? 'Sign Out' : undefined}>
-              <Icon name="logout" />
-              {sidebarOpen && <span>Sign Out</span>}
-            </button>
-          </nav>
+          {sidebarOpen && <p className="sidebar-nav-caption">{translate('MENU')}</p>}
+          <SidebarNavigation navigation={navigation} isAdmin={isAdmin} sidebarOpen={sidebarOpen} signOut={signOut} />
           {sidebarOpen && user?.systemRole?.toUpperCase() === 'USER' && !selectedFarm && (
             <div className="season-card">
-              <strong><Icon name="leaf" />Your Farm</strong>
-              <p>Submit farm registration request and track approval progress.</p>
-              <Link to="/farm-registration">
-                Register Farm <Icon name="arrow" />
+              <strong><Icon name="leaf" />{translate('Your Farm')}</strong>
+              <p>{translate('Submit farm registration request and track approval progress.')}</p>
+              <Link to="/farm?tab=register">
+                {translate('Farm Management')} <Icon name="arrow" />
               </Link>
             </div>
           )}
@@ -366,33 +342,35 @@ function WorkspaceLayout() {
       <div className="main-area">
         <header className="topbar">
           <div className="topbar-left">
+            <button type="button" className="mobile-sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded={sidebarOpen}
+              aria-label={lang === 'en' ? 'Open navigation' : 'Mở menu'} onClick={() => setSidebarOpen(open => !open)}><Icon name="menu" /></button>
             {isAdmin && pathname.startsWith('/admin') ? (
               <div className="admin-header-titles">
                 <h1 className="admin-header-title">{translate(currentAdminMeta.title)}</h1>
-                <p className="admin-header-subtitle">{currentAdminMeta.subtitle}</p>
+                <p className="admin-header-subtitle">{translate(currentAdminMeta.subtitle)}</p>
               </div>
             ) : farms.length > 0 ? (
               <label className="workspace-switcher">
-                <span>Workspace</span>
-                <select
-                  aria-label="Select workspace"
+                <span>{translate('Workspace')}</span>
+                <select className="ui-select"
+                  aria-label={translate('Select workspace')}
                   value={selectedFarm?.id ?? ''}
                   onChange={(event) => {
                     selectFarm(event.target.value ? Number(event.target.value) : null);
                     navigate('/dashboard');
                   }}
                 >
-                  <option value="">Personal</option>
+                  <option value="">{translate('Personal')}</option>
                   {farms.map((farm) => (
                     <option key={farm.id} value={farm.id}>
-                      {farm.farmName} · {farmRole(farm) === 'OWNER' ? 'Farm Owner' : 'Staff'}
+                      {farm.farmName} · {farmRole(farm) === 'OWNER' ? translate('Farm Owner') : translate('Staff')}
                     </option>
                   ))}
                 </select>
               </label>
             ) : (
               <span className="workspace-label">
-                {isAdmin ? 'System Administration' : 'Personal Workspace'}
+                {isAdmin ? translate('System Administration') : translate('Personal Workspace')}
               </span>
             )}
           </div>
@@ -406,8 +384,8 @@ function WorkspaceLayout() {
               type="button"
               className={`theme-toggle-switch ${theme}`}
               onClick={() => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'))}
-              aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+              aria-label={theme === 'light' ? t("Switch to dark mode") : t("Switch to light mode")}
+              title={theme === 'light' ? t("Switch to dark mode") : t("Switch to light mode")}
             >
               <span className="theme-toggle-track">
                 <span className="theme-icon sun"><Icon name="sun" /></span>
@@ -417,10 +395,10 @@ function WorkspaceLayout() {
             </button>
 
             {/* Notifications */}
-            <div className="notification-wrap">
+            <div className="notification-wrap" ref={notificationWrapRef}>
               <button
                 className="icon-button notification-btn"
-                aria-label="Notifications"
+                aria-label={translate('Notifications')}
                 aria-expanded={notificationsOpen}
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 style={{ position: 'relative' }}
@@ -428,7 +406,7 @@ function WorkspaceLayout() {
                 <Icon name="bell" />
                 {totalUnread > 0 && (
                   <span className="notification-badge">
-                    {totalUnread > 99 ? '99+' : totalUnread}
+                    {totalUnread}
                   </span>
                 )}
               </button>
@@ -440,12 +418,14 @@ function WorkspaceLayout() {
                   loading={loadingNotifications}
                   invitations={invitations}
                   respondingInvId={respondingInvId}
+                  invitationError={invitationError}
                   onMarkAllAsRead={handleMarkAllAsRead}
                   onNotificationClick={handleNotificationClick}
                   onRespond={handleRespondInvitation}
                 />
               )}
             </div>
+
             {/* Profile Avatar / Dropdown Menu */}
             <div className="account-menu" ref={accountMenuRef} style={{ position: 'relative' }}>
               <button
@@ -453,7 +433,7 @@ function WorkspaceLayout() {
                 className="account-profile"
                 onClick={() => setAccountMenuOpen((prev) => !prev)}
                 title={lang === 'en' ? 'Account & Settings' : 'Tài khoản & Thiết lập'}
-                aria-label="User Profile Menu"
+                aria-label={t("User Profile Menu")}
                 aria-expanded={accountMenuOpen}
               >
                 <span className="avatar" style={user?.avatarUrl ? { padding: 0, overflow: 'hidden' } : undefined}>
@@ -471,15 +451,15 @@ function WorkspaceLayout() {
                   <strong title={displayName}>{displayName}</strong>
                   <small className="account-sub-label">
                     {isAdmin
-                      ? 'Admin'
+                      ? translate('Admin')
                       : currentFarmRole === 'OWNER'
-                        ? 'Farm Owner'
+                        ? translate('Farm Owner')
                         : currentFarmRole === 'STAFF'
-                          ? 'Staff'
-                          : 'Personal'}
+                          ? translate('Staff')
+                          : translate('Personal')}
                   </small>
                 </div>
-                <Icon name={accountMenuOpen ? 'chevron-up' : 'chevron-down'} size={14} style={{ color: '#64748b', marginLeft: '4px' }} />
+                <Icon name="chevron" size={14} style={{ color: 'var(--color-muted)', marginLeft: '4px', transform: accountMenuOpen ? 'rotate(180deg)' : undefined }} />
               </button>
 
               {accountMenuOpen && (
@@ -490,17 +470,17 @@ function WorkspaceLayout() {
                     top: 'calc(100% + 8px)',
                     right: 0,
                     minWidth: '240px',
-                    background: '#ffffff',
+                    background: 'var(--color-surface)',
                     borderRadius: '16px',
                     boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08)',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--color-border)',
                     padding: '8px',
                     zIndex: 1000,
                   }}
                 >
-                  <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid #f1f5f9', marginBottom: '6px' }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: '#0f172a' }}>{displayName}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ padding: '8px 12px 10px', borderBottom: '1px solid var(--color-subtle)', marginBottom: '6px' }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: 'var(--color-text)' }}>{displayName}</p>
+                    <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--color-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {user?.email || ''}
                     </p>
                     <span
@@ -509,8 +489,8 @@ function WorkspaceLayout() {
                         marginTop: '6px',
                         fontSize: '11px',
                         fontWeight: 600,
-                        color: '#047857',
-                        background: '#d1fae5',
+                        color: 'var(--color-primary-text)',
+                        background: 'var(--color-success-bg)',
                         padding: '2px 8px',
                         borderRadius: '12px',
                       }}
@@ -518,16 +498,16 @@ function WorkspaceLayout() {
                       {isAdmin
                         ? t('role.admin', 'System Administrator')
                         : currentFarmRole === 'OWNER'
-                          ? t('role.owner', 'Farm Owner')
+                          ? t('role.owner', translate('Farm Owner'))
                           : currentFarmRole === 'STAFF'
                             ? t('role.staff', 'Farm Staff')
-                            : t('role.personal', 'Personal')}
+                            : t('role.personal', translate('Personal'))}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <LanguageSwitch variant="menu-item" />
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+                    <div style={{ height: '1px', background: 'var(--color-subtle)', margin: '4px 0' }} />
                     <button
                       type="button"
                       className="dropdown-item"
@@ -547,13 +527,13 @@ function WorkspaceLayout() {
                         cursor: 'pointer',
                         fontSize: '13.5px',
                         fontWeight: 500,
-                        color: '#334155',
+                        color: 'var(--color-body)',
                         textAlign: 'left',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-page)')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <Icon name="user" size={17} style={{ color: '#059669' }} />
+                      <Icon name="user" size={17} style={{ color: 'var(--color-primary-text)' }} />
                       <span>{t('nav.profile', 'Profile')}</span>
                     </button>
 
@@ -576,21 +556,21 @@ function WorkspaceLayout() {
                         cursor: 'pointer',
                         fontSize: '13.5px',
                         fontWeight: 500,
-                        color: '#334155',
+                        color: 'var(--color-body)',
                         textAlign: 'left',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-page)')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <Icon name="lock" size={17} style={{ color: '#64748b' }} />
+                      <Icon name="lock" size={17} style={{ color: 'var(--color-muted)' }} />
                       <span>{t('nav.changePassword', 'Change Password')}</span>
                     </button>
 
-                    <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }} />
+                    <div style={{ height: '1px', background: 'var(--color-subtle)', margin: '4px 0' }} />
 
                     <button
                       type="button"
-                      className="dropdown-item"
+                      className="dropdown-item logout-action"
                       onClick={() => {
                         setAccountMenuOpen(false);
                         signOut();
@@ -602,7 +582,6 @@ function WorkspaceLayout() {
                         gap: '10px',
                         padding: '10px 12px',
                         borderRadius: '10px',
-                        background: 'transparent',
                         border: 'none',
                         cursor: 'pointer',
                         fontSize: '13.5px',
@@ -610,10 +589,8 @@ function WorkspaceLayout() {
                         color: '#dc2626',
                         textAlign: 'left',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
-                      <Icon name="log-out" size={17} style={{ color: '#dc2626' }} />
+                      <Icon name="logout" size={17} style={{ color: '#dc2626' }} />
                       <span>{t('nav.signOut', 'Sign Out')}</span>
                     </button>
                   </div>
@@ -628,7 +605,7 @@ function WorkspaceLayout() {
           <Outlet />
         </main>
         {!isAdmin && <PublicFooter />}
-      </div >
-    </div >
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,9 @@
+import { Button } from '../../../shared/components/Button';
+import { Link } from 'react-router-dom';
+
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+
 import { hasProductionAreaFormErrors, validateProductionAreaForm } from '../validation';
 import type { ProductionAreaFormErrors, ProductionAreaFormValues } from '../types';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
@@ -63,8 +66,8 @@ export function ProductionAreaForm({
 
   return (
     <>
-      <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link to="/production-zones">{lang === 'en' ? 'Production Zones' : 'Khu sản xuất'}</Link>
+      <nav className="breadcrumb" aria-label={translate("Breadcrumb")}>
+        <Link to="/zones">{lang === 'en' ? 'Production Zones' : 'Khu sản xuất'}</Link>
         <span>›</span>
         <span>{translate(breadcrumbLabel)}</span>
       </nav>
@@ -79,9 +82,9 @@ export function ProductionAreaForm({
         {submitError ? <p className="form-error-banner">{translate(submitError)}</p> : null}
 
         <div className="zone-form-grid">
-          <label className="form-field">
+          <label className="form-field structured-field-card">
             <span>{lang === 'en' ? 'Production Area Name *' : 'Tên khu sản xuất *'}</span>
-            <input
+            <input className="ui-input"
               type="text"
               value={values.areaName}
               onChange={(event) => updateField('areaName', event.target.value)}
@@ -91,9 +94,9 @@ export function ProductionAreaForm({
             {errors.areaName ? <small className="field-error">{errors.areaName}</small> : null}
           </label>
 
-          <label className="form-field">
+          <label className="form-field structured-field-card">
             <span>{lang === 'en' ? 'Area (ha) *' : 'Diện tích (ha) *'}</span>
-            <input
+            <input className="ui-input"
               type="text"
               inputMode="decimal"
               value={values.areaHectares}
@@ -105,9 +108,9 @@ export function ProductionAreaForm({
           </label>
         </div>
 
-        <label className="form-field">
+        <label className="form-field structured-field-card">
           <span>{lang === 'en' ? 'Location / Description' : 'Vị trí / Mô tả'}</span>
-          <textarea
+          <textarea className="ui-textarea"
             rows={3}
             value={values.locationDescription}
             onChange={(event) => updateField('locationDescription', event.target.value)}
@@ -118,12 +121,12 @@ export function ProductionAreaForm({
         </label>
 
         <div className="form-actions">
-          <Link to={cancelHref} className="ghost-button">
+          <Link to={cancelHref} className="ui-button ui-button--secondary">
             {lang === 'en' ? 'Cancel' : 'Huỷ'}
           </Link>
-          <button type="submit" className="primary-button" disabled={submitting}>
+          <Button type="submit" variant="primary" loading={submitting}>
             {submitting ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : submitLabel}
-          </button>
+          </Button>
         </div>
       </form>
     </>

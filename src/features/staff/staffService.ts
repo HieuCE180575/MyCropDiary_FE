@@ -28,6 +28,7 @@ export interface FarmStaffRecord {
   membershipStatus: string;
   farmRole: string;
   roleLabel: string;
+  jobTitle?: string;
   joinedAt: string;
   activeAssignmentCount: number;
 }
@@ -54,6 +55,7 @@ function mapDtoToStaffRecord(dto: BackendFarmMemberResp): FarmStaffRecord {
     membershipStatus: dto.status || 'active',
     farmRole: rawRole.toUpperCase(),
     roleLabel,
+    jobTitle: dto.jobTitle?.trim() || undefined,
     joinedAt: dto.joinedAt || new Date().toISOString(),
     activeAssignmentCount: dto.activeAssignmentCount ?? 0,
   };

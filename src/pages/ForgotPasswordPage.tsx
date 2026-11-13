@@ -1,8 +1,10 @@
+import { Link } from 'react-router-dom';
+import { Icon } from '../shared/components/Icon';
 import { useLanguage } from '../shared/i18n/LanguageContext';
 import { type FormEvent, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { forgotPassword, resetPassword } from '../features/auth/authApi';
-import { Icon } from '../shared/components/Icon';
+
 
 const recoveryBenefits = [
   {
@@ -31,7 +33,7 @@ function validateNewPassword(value: string): string {
   if (!value || !value.trim()) return 'Password cannot contain only whitespace.';
   if (value.length < 8) return 'Password must have at least 8 characters.';
   if (value.length > 100) return 'Password cannot exceed 100 characters.';
-  if (!/[A-Z]/.test(value)) return 'Password must contain at least 1 uppercase letter (in hoa).';
+  if (!/[A-Z]/.test(value)) return 'Password must contain at least 1 uppercase letter.';
   if (!/[a-z]/.test(value)) return 'Password must contain at least 1 lowercase letter.';
   if (!/[^a-zA-Z0-9]/.test(value)) return 'Password must contain at least 1 special character.';
   return '';
@@ -57,7 +59,7 @@ export function ForgotPasswordPage() {
   const confirmationRuleError = !confirmation
     ? 'Please re-enter your new password.'
     : confirmation !== password
-      ? 'Password confirmation does not match (không khớp).'
+      ? 'Password confirmation does not match.'
       : '';
 
   const hasMinLength = password.length >= 8 && password.length <= 100;
@@ -75,7 +77,7 @@ export function ForgotPasswordPage() {
       setEmail(email.trim());
       setOtp('');
       setStep('reset');
-      setNotice((lang === 'en' ? "If the email belongs to an activated account, an OTP code has been sent. Please also check your spam folder." : 'If the email belongs to an activated account, an OTP code has been sent. Please also check your spam folder. (Nếu email...)'));
+      setNotice('If the email belongs to an activated account, an OTP code has been sent. Please also check your spam folder.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not send OTP code. Please try again.');
     } finally {
@@ -102,7 +104,7 @@ export function ForgotPasswordPage() {
       return;
     }
     if (password !== confirmation) {
-      setError((lang === 'en' ? "Password confirmation does not match." : 'Password confirmation does not match (không khớp).'));
+      setError('Password confirmation does not match.');
       return;
     }
 
@@ -133,18 +135,13 @@ export function ForgotPasswordPage() {
         <div className="showcase-inner">
           <div className="showcase-badge">
             <Icon name="shield" />
-            <span>Account Security &amp; VietGAP Data</span>
+            <span>{translate("Account Security & VietGAP Data")}</span>
           </div>
 
           <div className="showcase-content">
-            <h1 id="forgot-showcase-title">
-              Recover Access to<br />
-              <span className="gradient-text">MyCropDiary Account</span><br />
-              Safely &amp; Quickly.
-            </h1>
-            <p className="showcase-desc">
-              Two-factor email OTP verification allows you to set a new password in minutes while keeping your farm data completely confidential.
-            </p>
+            <h1 id="forgot-showcase-title">{translate("Recover Access to")}<br />
+              <span className="gradient-text">{translate("MyCropDiary Account")}</span><br />{translate("Safely & Quickly.")}</h1>
+            <p className="showcase-desc">{translate("Two-factor email OTP verification allows you to set a new password in minutes while keeping your farm data completely confidential.")}</p>
           </div>
 
           <div className="feature-grid">
@@ -163,13 +160,13 @@ export function ForgotPasswordPage() {
 
           <div className="showcase-highlight-card">
             <div className="highlight-stat">
-              <span className="stat-number">6-Digit OTP</span>
-              <span className="stat-label">Instant email verification</span>
+              <span className="stat-number">{translate('6-Digit OTP')}</span>
+              <span className="stat-label">{translate("Instant email verification")}</span>
             </div>
             <div className="highlight-divider" />
             <div className="highlight-stat">
               <span className="stat-number">100%</span>
-              <span className="stat-label">Farm data secured</span>
+              <span className="stat-label">{translate("Farm data secured")}</span>
             </div>
           </div>
         </div>
@@ -179,15 +176,15 @@ export function ForgotPasswordPage() {
       <section className="auth-panel" aria-labelledby="forgot-password-title">
         <div className="auth-card">
           {/* Step Indicator */}
-          <div className="step-indicator-bar" aria-label="Password recovery steps">
+          <div className="step-indicator-bar" aria-label={translate("Password recovery steps")}>
             <div className={`step-item ${step === 'email' ? 'is-current' : 'is-done'}`}>
               <span className="step-badge">{step === 'reset' ? <Icon name="check" /> : '1'}</span>
-              <span className="step-label">Confirm Email</span>
+              <span className="step-label">{translate("Confirm Email")}</span>
             </div>
             <div className="step-connector" />
             <div className={`step-item ${step === 'reset' ? 'is-current' : ''}`}>
               <span className="step-badge">2</span>
-              <span className="step-label">Set New Password</span>
+              <span className="step-label">{translate("Set New Password")}</span>
             </div>
           </div>
 
@@ -196,12 +193,12 @@ export function ForgotPasswordPage() {
               <Icon name={step === 'email' ? 'lock' : 'shield'} />
             </div>
             <h2 id="forgot-password-title">
-              {step === 'email' ? 'Forgot Password' : 'Set New Password'}
+              {step === 'email' ? translate("Forgot Password") : translate("Set New Password")}
             </h2>
             <p>
               {step === 'email'
-                ? 'Enter your account email to receive an OTP code to reset your password.'
-                : `Enter the OTP code sent to ${email} and set a secure new password.`}
+                ? translate("Enter your account email to receive an OTP code to reset your password.")
+                : lang === 'en' ? `Enter the OTP code sent to ${email} and set a secure new password.` : `Nhập mã OTP đã gửi đến ${email} và đặt mật khẩu mới an toàn.`}
             </p>
           </div>
 
@@ -221,13 +218,12 @@ export function ForgotPasswordPage() {
 
           <form className="auth-form" onSubmit={submit}>
             {step === 'email' ? (
-              <div className="form-group">
-                <label htmlFor="recovery-email">
-                  Email Address <span className="required-star">*</span>
+              <div className="form-group structured-field-card">
+                <label htmlFor="recovery-email">{translate("Email Address")}{' '}<span className="required-star">*</span>
                 </label>
                 <div className="input-with-icon">
-                  <span className="input-lead-icon"><Icon name="mail" /></span>
-                  <input
+                  <span className="input-lead-icon" aria-hidden="true"><Icon name="mail" /></span>
+                  <input className="ui-input"
                     id="recovery-email"
                     name="email"
                     type="email"
@@ -247,12 +243,11 @@ export function ForgotPasswordPage() {
               </div>
             ) : (
               <>
-                <div className="form-group">
-                  <label htmlFor="recovery-otp">
-                    OTP Verification Code <span className="required-star">*</span>
+                <div className="form-group structured-field-card">
+                  <label htmlFor="recovery-otp">{translate("OTP Verification Code")}{' '}<span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon"><Icon name="shield" /></span>
+                    <span className="input-lead-icon" aria-hidden="true"><Icon name="shield" /></span>
                     <input
                       id="recovery-otp"
                       name="otp"
@@ -263,7 +258,7 @@ export function ForgotPasswordPage() {
                       required
                       pattern="[0-9]{6}"
                       maxLength={6}
-                      placeholder="Enter 6-digit code"
+                      placeholder={translate("Enter 6-digit code")}
                       disabled={pending}
                       value={otp}
                       onChange={(event) => {
@@ -274,12 +269,11 @@ export function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="recovery-password">
-                    New Password <span className="required-star">*</span>
+                <div className="form-group structured-field-card">
+                  <label htmlFor="recovery-password">{translate("New Password")}{' '}<span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon"><Icon name="lock" /></span>
+                    <span className="input-lead-icon" aria-hidden="true"><Icon name="lock" /></span>
                     <input
                       id="recovery-password"
                       name="newPassword"
@@ -288,7 +282,7 @@ export function ForgotPasswordPage() {
                       required
                       minLength={8}
                       maxLength={100}
-                      placeholder="From 8 to 100 characters"
+                      placeholder={translate("From 8 to 100 characters")}
                       disabled={pending}
                       value={password}
                       onChange={(event) => {
@@ -297,7 +291,7 @@ export function ForgotPasswordPage() {
                         if (error) setError('');
                       }}
                       onBlur={() => setTouchedPassword(true)}
-                      className={touchedPassword && passwordRuleError ? 'is-invalid' : undefined}
+                      className={(((touchedPassword && passwordRuleError ? 'is-invalid' : undefined)) ?? '') + ' ui-input'}
                       aria-invalid={Boolean(touchedPassword && passwordRuleError)}
                     />
                     <button
@@ -323,8 +317,8 @@ export function ForgotPasswordPage() {
                     style={{
                       marginTop: '8px',
                       padding: '10px 12px',
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      background: 'var(--color-page)',
+                      border: '1px solid var(--color-border)',
                       borderRadius: '8px',
                       fontSize: '12px',
                       display: 'flex',
@@ -332,12 +326,10 @@ export function ForgotPasswordPage() {
                       gap: '4px',
                     }}
                   >
-                    <span style={{ fontWeight: 650, color: '#334155', marginBottom: '2px' }}>
-                      Security Requirements:
-                    </span>
+                    <span style={{ fontWeight: 650, color: 'var(--color-body)', marginBottom: '2px' }}>{translate("Security Requirements:")}</span>
                     <span
                       style={{
-                        color: hasMinLength ? '#16a34a' : '#64748b',
+                        color: hasMinLength ? 'var(--color-success)' : 'var(--color-muted)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -345,35 +337,31 @@ export function ForgotPasswordPage() {
                       }}
                     >
                       <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />
-                      8 to 100 characters
+                      {translate('8 to 100 characters')}
                     </span>
                     <span
                       style={{
-                        color: hasUpperCase ? '#16a34a' : '#64748b',
+                        color: hasUpperCase ? 'var(--color-success)' : 'var(--color-muted)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         fontWeight: hasUpperCase ? 600 : 400,
                       }}
                     >
-                      <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />
-                      At least 1 uppercase letter (A-Z)
-                    </span>
+                      <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />{translate("At least 1 uppercase letter (A-Z)")}</span>
                     <span
                       style={{
-                        color: hasLowerCase ? '#16a34a' : '#64748b',
+                        color: hasLowerCase ? 'var(--color-success)' : 'var(--color-muted)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         fontWeight: hasLowerCase ? 600 : 400,
                       }}
                     >
-                      <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />
-                      At least 1 lowercase letter (a-z)
-                    </span>
+                      <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />{translate("At least 1 lowercase letter (a-z)")}</span>
                     <span
                       style={{
-                        color: hasSpecialChar ? '#16a34a' : '#64748b',
+                        color: hasSpecialChar ? 'var(--color-success)' : 'var(--color-muted)',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
@@ -381,17 +369,16 @@ export function ForgotPasswordPage() {
                       }}
                     >
                       <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />
-                      At least 1 special character (!@#$%^&*...)
+                      {translate('At least 1 special character (!@#$%^&*...)')}
                     </span>
                   </div>
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="recovery-confirmation">
-                    Confirm New Password <span className="required-star">*</span>
+                <div className="form-group structured-field-card">
+                  <label htmlFor="recovery-confirmation">{translate("Confirm New Password")}{' '}<span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon"><Icon name="lock" /></span>
+                    <span className="input-lead-icon" aria-hidden="true"><Icon name="lock" /></span>
                     <input
                       id="recovery-confirmation"
                       name="confirmPassword"
@@ -400,7 +387,7 @@ export function ForgotPasswordPage() {
                       required
                       minLength={8}
                       maxLength={100}
-                      placeholder="Re-enter your new password"
+                      placeholder={translate("Re-enter your new password")}
                       disabled={pending}
                       value={confirmation}
                       onChange={(event) => {
@@ -409,7 +396,7 @@ export function ForgotPasswordPage() {
                         if (error) setError('');
                       }}
                       onBlur={() => setTouchedConfirmation(true)}
-                      className={touchedConfirmation && confirmationRuleError ? 'is-invalid' : undefined}
+                      className={(((touchedConfirmation && confirmationRuleError ? 'is-invalid' : undefined)) ?? '') + ' ui-input'}
                       aria-invalid={Boolean(touchedConfirmation && confirmationRuleError)}
                     />
                     <button
@@ -437,14 +424,12 @@ export function ForgotPasswordPage() {
                 name={pending ? 'loader' : step === 'email' ? 'mail' : 'check'}
                 className={pending ? 'icon-spin' : undefined}
               />
-              <span>{pending ? 'Processing…' : step === 'email' ? 'Send OTP Code' : 'Reset Password'}</span>
+              <span>{pending ? translate("Processing…") : step === 'email' ? translate("Send OTP Code") : translate("Reset Password")}</span>
             </button>
 
             {step === 'reset' && (
               <div className="auth-verify-actions">
-                <button className="btn-link-action" type="button" disabled={pending} onClick={sendCode}>
-                  Resend OTP Code
-                </button>
+                <button className="btn-link-action" type="button" disabled={pending} onClick={sendCode}>{translate("Resend OTP Code")}</button>
                 <button
                   className="btn-link-subtle"
                   type="button"
@@ -459,16 +444,12 @@ export function ForgotPasswordPage() {
                     setTouchedPassword(false);
                     setTouchedConfirmation(false);
                   }}
-                >
-                  Change Email
-                </button>
+                >{translate("Change Email")}</button>
               </div>
             )}
 
-            <p className="auth-switch-prompt">
-              Remembered your password?{' '}
-              <Link className="auth-switch-link" to="/login">
-                Back to sign in <Icon name="arrow" />
+            <p className="auth-switch-prompt">{translate("Remembered your password?")}{' '}
+              <Link className="auth-switch-link" to="/login">{translate("Back to sign in")}{' '}<Icon name="arrow" />
               </Link>
             </p>
           </form>

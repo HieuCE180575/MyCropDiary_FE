@@ -1,5 +1,9 @@
-import { useCallback } from 'react';
+import { Button } from '../../../shared/components/Button';
 import { Modal } from '../../../shared/components/Modal';
+import { formatDate as uiFormatDate, formatNumber as uiFormatNumber } from '../../../shared/format/formatters';
+
+import { useCallback } from 'react';
+
 import { useApiData } from '../../../shared/hooks/useApiData';
 import { getKnowledgeCategoryLabel } from '../constants';
 import { fetchKnowledgeArticleById } from '../knowledgeService';
@@ -12,7 +16,7 @@ interface KnowledgeDetailModalProps {
 }
 
 function formatDate(iso: string, lang: 'en' | 'vi'): string {
-  return new Date(iso).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return uiFormatDate(iso, lang, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export function KnowledgeDetailModal({ article, onClose }: KnowledgeDetailModalProps) {
@@ -24,7 +28,7 @@ export function KnowledgeDetailModal({ article, onClose }: KnowledgeDetailModalP
   return (
     <Modal open={article !== null} onClose={onClose} title={detail?.title ?? article?.title}>
       {loading ? <p role="status">{lang === 'en' ? 'Loading article...' : 'Đang tải bài viết...'}</p> : error ? (
-        <div role="alert"><p>{translate(error ?? '')}</p><button type="button" className="action-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></div>
+        <div role="alert"><p>{translate(error ?? '')}</p><Button type="button" variant="secondary" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</Button></div>
       ) : detail ? (
         <>
           <div className="knowledge-card-meta">
@@ -33,7 +37,7 @@ export function KnowledgeDetailModal({ article, onClose }: KnowledgeDetailModalP
             </span>
             <span>📅 {formatDate(detail.publishedAt, lang)}</span>
             <span>⏱ {detail.readTimeMinutes} {lang === 'en' ? 'min read' : 'phút đọc'}</span>
-            <span>👁 {detail.viewCount.toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')}</span>
+            <span>👁 {uiFormatNumber(detail.viewCount, lang)}</span>
           </div>
           <p style={{ whiteSpace: 'pre-wrap' }}>{detail.content}</p>
           <div className="knowledge-tag-row">

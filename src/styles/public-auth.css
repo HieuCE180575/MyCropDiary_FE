@@ -10,7 +10,7 @@
   flex-direction: column;
   background: #f8fafc;
   color: #1e293b;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .public-content {
@@ -248,14 +248,6 @@
 }
 
 /* Mobile drawer */
-
-.public-mobile-drawer {
-  display: none;
-  border-top: 1px solid rgba(22, 101, 52, 0.12);
-  background: #ffffff;
-  padding: 16px 24px 24px;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
-}
 
 .mobile-drawer-inner {
   display: flex;
@@ -704,7 +696,6 @@
 .input-lead-icon {
   position: absolute;
   left: 14px;
-  color: #94a3b8;
   pointer-events: none;
   display: flex;
   align-items: center;
@@ -714,21 +705,8 @@
 .input-with-icon input {
   width: 100%;
   min-width: 0;
-  height: 46px;
   padding: 10px 14px 10px 42px;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  background: #ffffff;
-  color: #0f172a;
-  font-size: 14px;
-  font-family: inherit;
   transition: all 0.18s ease;
-}
-
-.input-with-icon input:focus {
-  outline: none;
-  border-color: #16a34a;
-  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
 }
 
 .input-with-icon input.is-invalid {
@@ -738,6 +716,11 @@
 }
 
 .input-trailing-toggle {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--color-muted);
   position: absolute;
   right: 10px;
   display: flex;
@@ -745,17 +728,14 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: 0;
-  background: transparent;
-  color: #64748b;
   cursor: pointer;
-  border-radius: 6px;
   transition: color 0.15s, background-color 0.15s;
 }
 
-.input-trailing-toggle:hover {
-  color: #1e293b;
-  background: #f1f5f9;
+.input-trailing-toggle:focus-visible {
+  outline: 2px solid var(--color-field-focus);
+  outline-offset: 2px;
+  border-radius: 50%;
 }
 
 /* Field errors and hints */
@@ -1184,7 +1164,7 @@
 .banner-mesh-bg {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(rgba(34, 197, 94, 0.12) 1px, transparent 1px),
     radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 32px 32px, 16px 16px;
@@ -1278,7 +1258,8 @@
 }
 
 @keyframes pulseDot {
-  0%, 100% { transform: scale(1); opacity: 1; }
+  0%,
+100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.5); opacity: 0.5; }
 }
 
@@ -1769,7 +1750,7 @@
   }
 
   .banner-btn-primary,
-  .banner-btn-secondary {
+.banner-btn-secondary {
     justify-content: center;
   }
 
@@ -1804,16 +1785,12 @@
 
 @media (max-width: 768px) {
   .public-nav-desktop,
-  .auth-btn-group {
+.auth-btn-group {
     display: none;
   }
 
   .mobile-menu-toggle {
     display: flex;
-  }
-
-  .public-mobile-drawer {
-    display: block;
   }
 
   .feature-grid {

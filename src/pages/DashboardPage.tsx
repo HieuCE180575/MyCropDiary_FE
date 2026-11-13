@@ -1,11 +1,15 @@
+import { PageHeading } from '../shared/components/PageHeading';
+import { Button } from '../shared/components/Button';
 import { Link, Navigate } from 'react-router-dom';
+import { RegistrationGuide } from '../features/farm-management/RegistrationGuide';
+import { Icon } from '../shared/components/Icon';
+import { OwnerDashboard } from '../features/owner-dashboard/OwnerDashboard';
+
 import { useAuth } from '../features/auth';
 import { canAccessModule, farmRole } from '../features/auth/accessPolicy';
 import { useFarmWorkspace } from '../features/farm-management/FarmWorkspace';
 import { moduleDefinitions } from '../app/routes/moduleDefinitions';
-import { RegistrationGuide } from '../features/farm-management/RegistrationGuide';
-import { Icon } from '../shared/components/Icon';
-import { OwnerDashboard } from '../features/owner-dashboard/OwnerDashboard';
+
 import { useLanguage } from '../shared/i18n/LanguageContext';
 
 export function DashboardPage() {
@@ -20,17 +24,11 @@ export function DashboardPage() {
     canAccessModule(module, user?.systemRole, selectedFarm)
     && (selectedFarm ? module.access === 'farm' || module.access === 'owner' : module.key !== 'password'));
   return <section className="personal-dashboard">
-    <div className="dashboard-heading">
-      <div><p className="welcome-kicker">{selectedFarm ? (lang === 'en' ? 'Farm Workspace' : 'Không gian trang trại') : isAdmin ? (lang === 'en' ? 'System Administration' : 'Quản trị hệ thống') : (lang === 'en' ? 'Your Personal Workspace' : 'Không gian cá nhân của bạn')}</p>
-        <h1>{selectedFarm ? selectedFarm.farmName : (lang === 'en' ? `Welcome, ${name}!` : `Xin chào, ${name}!`)} <Icon name="hand" className="wave" /></h1>
-        <p>{selectedFarm ? (lang === 'en' ? `Your role: ${farmRole(selectedFarm) === 'OWNER' ? 'Farm Owner' : 'Farm Staff'}. Select a feature below to get started.` : `Vai trò của bạn: ${farmRole(selectedFarm) === 'OWNER' ? 'Chủ trang trại' : 'Nhân viên trang trại'}. Chọn chức năng để bắt đầu.`) : isAdmin ? (lang === 'en' ? 'Manage accounts, review registration requests, and shared resources.' : 'Quản lý tài khoản, xét duyệt yêu cầu và nội dung dùng chung.') : (lang === 'en' ? 'Explore VietGAP knowledge, consult the AI assistant, and prepare for your farm.' : 'Tìm hiểu kiến thức, hỏi trợ lý AI và chuẩn bị cho trang trại của bạn.')}</p>
-      </div>
-      {!selectedFarm && !isAdmin && <Link className="action-button solid" to="/farm-registration"><Icon name="plus" />{lang === 'en' ? 'Register Farm' : 'Đăng ký trang trại'}</Link>}
-    </div>
+    <PageHeading   title={<>{selectedFarm ? selectedFarm.farmName : (lang === 'en' ? `Welcome, ${name}!` : `Xin chào, ${name}!`)} <Icon name="hand" className="wave" /></>} description={<>{selectedFarm ? (lang === 'en' ? `Your role: ${farmRole(selectedFarm) === 'OWNER' ? 'Farm Owner' : 'Farm Staff'}. Select a feature below to get started.` : `Vai trò của bạn: ${farmRole(selectedFarm) === 'OWNER' ? 'Chủ trang trại' : 'Nhân viên trang trại'}. Chọn chức năng để bắt đầu.`) : isAdmin ? (lang === 'en' ? 'Manage accounts, review registration requests, and shared resources.' : 'Quản lý tài khoản, xét duyệt yêu cầu và nội dung dùng chung.') : (lang === 'en' ? 'Explore VietGAP knowledge, consult the AI assistant, and prepare for your farm.' : 'Tìm hiểu kiến thức, hỏi trợ lý AI và chuẩn bị cho trang trại của bạn.')}</>} leading={<><p className="welcome-kicker">{selectedFarm ? (lang === 'en' ? 'Farm Workspace' : 'Không gian trang trại') : isAdmin ? (lang === 'en' ? 'System Administration' : 'Quản trị hệ thống') : (lang === 'en' ? 'Your Personal Workspace' : 'Không gian cá nhân của bạn')}</p></>}>{!selectedFarm && !isAdmin && <Link className="ui-button ui-button--primary" to="/farm-registration"><Icon name="plus" />{lang === 'en' ? 'Register Farm' : 'Đăng ký trang trại'}</Link>}</PageHeading>
     {!selectedFarm && !isAdmin && <section className="personal-welcome" aria-labelledby="personal-welcome-title">
       <div className="welcome-illustration"><Icon name="leaf" /></div>
       <div><span className="personal-kicker">{lang === 'en' ? 'START HERE' : 'BẮT ĐẦU TỪ ĐÂY'}</span><h2 id="personal-welcome-title">{lang === 'en' ? 'Your Companion on the Farming Journey' : 'Đồng hành cùng bạn trên hành trình canh tác'}</h2><p>{lang === 'en' ? 'Explore VietGAP agricultural standards, chat with the AI assistant, and submit farm registration directly from your personal space.' : 'Bạn có thể tìm hiểu kiến thức VietGAP, trò chuyện với trợ lý AI và gửi yêu cầu đăng ký trang trại ngay trong không gian cá nhân.'}</p>
-        <div className="welcome-links"><Link className="action-button solid" to="/ai"><Icon name="bot" />{lang === 'en' ? 'Ask AI Assistant' : 'Hỏi trợ lý AI'}</Link><Link className="action-button" to="/knowledge">{lang === 'en' ? 'Explore Knowledge' : 'Khám phá kiến thức'}<Icon name="arrow" /></Link></div>
+        <div className="welcome-links"><Link className="ui-button ui-button--primary" to="/ai"><Icon name="bot" />{lang === 'en' ? 'Ask AI Assistant' : 'Hỏi trợ lý AI'}</Link><Link className="ui-button ui-button--secondary" to="/knowledge">{lang === 'en' ? 'Explore Knowledge' : 'Khám phá kiến thức'}<Icon name="arrow" /></Link></div>
       </div>
     </section>}
     {!isAdmin && <div className="workspace-status">
@@ -39,7 +37,7 @@ export function DashboardPage() {
       ) : error ? (
         <div role="alert">
           <p>{(lang === 'en' ? "Unable to load farm information. Your personal features are still available." : "Chưa tải được thông tin trang trại. Bạn vẫn có thể sử dụng các chức năng cá nhân.")}</p>
-          <button className="action-button" onClick={retry}>{(lang === 'en' ? "Retry" : "Thử lại")}</button>
+          <Button variant="secondary" onClick={retry}>{(lang === 'en' ? "Retry" : "Thử lại")}</Button>
         </div>
       ) : selectedFarm ? (
         <p><Icon name="plots" />{(lang === 'en' ? "You are working at " : "Bạn đang làm việc tại ")} <strong>{selectedFarm.farmName}</strong>{(lang === 'en' ? ". Access permissions apply to this farm." : ". Quyền truy cập áp dụng cho trang trại này.")}</p>

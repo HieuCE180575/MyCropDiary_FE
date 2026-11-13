@@ -1,5 +1,6 @@
-import { useLanguage } from '../i18n/LanguageContext';
+import { Button } from './Button';
 import { Modal } from './Modal';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -27,20 +28,19 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const { t: translate } = useLanguage();
   return (
-    <Modal open={open} onClose={onClose} title={translate(title)}>
+    <Modal open={open} onClose={() => { if (!loading) onClose(); }} title={translate(title)}>
       {description ? <p>{translate(description)}</p> : null}
       <div className="confirm-dialog-actions">
-        <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
+        <Button onClick={onClose} disabled={loading}>
           {translate(cancelLabel)}
-        </button>
-        <button
-          type="button"
-          className={tone === 'danger' ? 'danger-button' : 'primary-button'}
+        </Button>
+        <Button
+          variant={tone === 'danger' ? 'danger' : 'primary'}
           onClick={onConfirm}
-          disabled={loading}
+          loading={loading}
         >
-          {loading ? 'Processing...' : confirmLabel}
-        </button>
+          {translate(loading ? 'Processing...' : confirmLabel)}
+        </Button>
       </div>
     </Modal>
   );

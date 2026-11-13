@@ -1,7 +1,19 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+import { LoadError } from '../../shared/components/LoadError';
+import { PageHeading } from '../../shared/components/PageHeading';
+import { Button } from '../../shared/components/Button';
+import { TablePagination } from '../../shared/components/TablePagination';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
+
+
+import { formatDate } from '../../shared/format/formatters';
+import { usePagination } from '../../shared/hooks/usePagination';
+
+import { formatCurrency as currency } from '../../shared/format/formatters';
+import { useEffect, useState } from 'react';
+import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+
+
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { fetchCropSeasonsByFarm, type CropSeasonResp } from './cropSeasonService';
 import {
@@ -30,17 +42,17 @@ const DEFAULT_CATEGORIES = [
 ];
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  'Materials & Fertilizers': { bg: '#ecfdf5', text: '#059669', border: '#a7f3d0' },
-  'Labor': { bg: '#eff6ff', text: '#2563eb', border: '#bfdbfe' },
-  'Utilities & Power': { bg: '#fffbeb', text: '#d97706', border: '#fde68a' },
-  'Machinery & Fuel': { bg: '#f5f3ff', text: '#7c3aed', border: '#ddd6fe' },
-  'Pest Control': { bg: '#fef2f2', text: '#dc2626', border: '#fecaca' },
-  'Packaging': { bg: '#fdf2f8', text: '#db2777', border: '#fbcfe8' },
-  'Irrigation & Water': { bg: '#f0fdfa', text: '#0d9488', border: '#99f6e4' },
-  'Other': { bg: '#f8fafc', text: '#475569', border: '#e2e8f0' },
+  'Materials & Fertilizers': { bg: 'var(--color-success-bg)', text: 'var(--color-primary-text)', border: 'var(--color-border)' },
+  'Labor': { bg: 'var(--color-info-bg)', text: 'var(--color-info)', border: 'var(--color-border)' },
+  'Utilities & Power': { bg: 'var(--color-warning-bg)', text: 'var(--color-warning)', border: 'var(--color-border)' },
+  'Machinery & Fuel': { bg: 'var(--color-accent-bg)', text: 'var(--color-accent)', border: 'var(--color-border)' },
+  'Pest Control': { bg: 'var(--color-danger-bg)', text: 'var(--color-danger)', border: 'var(--color-border)' },
+  'Packaging': { bg: 'var(--color-rose-bg)', text: 'var(--color-rose)', border: 'var(--color-border)' },
+  'Irrigation & Water': { bg: 'var(--color-teal-bg)', text: 'var(--color-teal)', border: 'var(--color-border)' },
+  'Other': { bg: 'var(--color-page)', text: 'var(--color-body)', border: 'var(--color-border)' },
 };
 
-export function ExpensesPage() {
+export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
   const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
@@ -50,6 +62,7 @@ export function ExpensesPage() {
   const [seasons, setSeasons] = useState<CropSeasonResp[]>([]);
   const [summary, setSummary] = useState<ExpenseSummaryResp | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Filter & Search states
@@ -58,11 +71,11 @@ export function ExpensesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const [showSummaryDetails, setShowSummaryDetails] = useState(false);
+
 
   // View Details Modal
   const [selectedExpense, setSelectedExpense] = useState<ExpenseItem | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+
 
   // Record Expense Modal
   const [isRecordOpen, setIsRecordOpen] = useState(false);
@@ -93,6 +106,8 @@ export function ExpensesPage() {
   const [submittingDelete, setSubmittingDelete] = useState(false);
 
   // Load Seasons
+  useEffect(() => { if (isRecordOpen || editingExpense || deletingExpense) setNotification(null); }, [isRecordOpen, editingExpense?.expenseId, deletingExpense?.expenseId]);
+
   useEffect(() => {
     if (!farmId) return;
     fetchCropSeasonsByFarm(farmId)
@@ -104,6 +119,7 @@ export function ExpensesPage() {
   const loadData = async (paramsOverride?: ExpenseFilterParams) => {
     if (!farmId) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const activeParams: ExpenseFilterParams = paramsOverride ?? {
         cropSeasonId: selectedSeasonId,
@@ -125,10 +141,7 @@ export function ExpensesPage() {
       setExpenses(expenseList);
       setSummary(summaryData);
     } catch (err) {
-      setNotification({
-        text: err instanceof Error ? err.message : (lang === 'en' ? 'Unable to load expenses.' : 'Không thể tải danh sách chi phí.'),
-        type: 'error',
-      });
+      setLoadError(err instanceof Error ? err.message : (lang === 'en' ? 'Unable to load expenses.' : 'Không thể tải danh sách chi phí.'));
     } finally {
       setLoading(false);
     }
@@ -158,9 +171,9 @@ export function ExpensesPage() {
     });
   };
 
-  // View Details 
+  // View Details
   const handleOpenDetails = async (expenseId: number) => {
-    setLoadingDetail(true);
+
     try {
       const detail = await fetchExpenseDetails(expenseId);
       setSelectedExpense(detail);
@@ -168,11 +181,11 @@ export function ExpensesPage() {
       const fallback = expenses.find((e) => e.expenseId === expenseId) || null;
       setSelectedExpense(fallback);
     } finally {
-      setLoadingDetail(false);
+
     }
   };
 
-  // Record Expense 
+  // Record Expense
   const handleOpenRecord = () => {
     setRecordForm({
       expenseCategory: 'Materials & Fertilizers',
@@ -218,7 +231,7 @@ export function ExpensesPage() {
     }
   };
 
-  // Update Expense 
+  // Update Expense
   const handleOpenUpdate = (item: ExpenseItem) => {
     setEditingExpense(item);
     setUpdateForm({
@@ -260,7 +273,7 @@ export function ExpensesPage() {
     }
   };
 
-  // Delete Eligible Expense 
+  // Delete Eligible Expense
   const handleOpenDelete = (item: ExpenseItem) => {
     setDeletingExpense(item);
   };
@@ -286,10 +299,8 @@ export function ExpensesPage() {
     }
   };
 
-  const formatCurrency = (val?: number) => {
-    if (val == null) return '0 ₫';
-    return `${Number(val).toLocaleString('vi-VN')} ₫`;
-  };
+  const formatCurrency = (val?: number) => currency(val ?? 0, lang);
+  const pagination = usePagination(expenses, JSON.stringify([farmId, keyword, selectedSeasonId, selectedCategory, startDate, endDate]));
 
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
@@ -314,49 +325,32 @@ export function ExpensesPage() {
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+      <PageHeading level={embedded ? 2 : 1}   title={<>
             {lang === 'en' ? 'Farm Expenses' : 'Chi phí sản xuất'}
-          </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+          </>} description={<>
             {lang === 'en'
               ? `${expenses.length} expense records · Total: ${formatCurrency(summary?.totalExpenseAmount)}`
               : `${expenses.length} khoản chi phí · Tổng: ${formatCurrency(summary?.totalExpenseAmount)} tại ${selectedFarm?.farmName || 'trang trại'}`}
-          </p>
-        </div>
-
-        <div>
-          <button
+          </>}><div>
+          <Button
             type="button"
-            className="primary-button"
+            variant="primary"
             onClick={handleOpenRecord}
-            style={{
-              padding: '10px 18px',
-              fontSize: '14px',
-              fontWeight: 700,
-              borderRadius: '10px',
-              background: '#059669',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-            }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
             <Icon name="plus" size={17} /> {lang === 'en' ? 'Record Expense' : 'Ghi nhận chi phí'}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </div></PageHeading>
 
       {/* Main Unified Clean Card Container matching Mockup */}
       <div className="zone-clean-card">
         {/* Filter Bar */}
         <form onSubmit={handleSearch} className="zone-clean-filter-bar">
           <div className="zone-clean-search" style={{ flex: '1 1 220px' }}>
-            <span className="search-icon">
+            <span className="search-icon" aria-hidden="true">
               <Icon name="search" size={17} />
             </span>
-            <input
+            <input aria-label={lang === 'en' ? 'Search description, category...' : 'Tìm theo diễn giải, danh mục chi phí...'} id="expenses-page-control-9" className="ui-input"
               type="search"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
@@ -365,7 +359,7 @@ export function ExpensesPage() {
           </div>
 
           <div className="zone-clean-select-wrap">
-            <select
+            <select className="ui-select"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               aria-label={(lang === 'en' ? "Filter by expense category" : "Lọc theo danh mục chi phí")}
@@ -375,11 +369,11 @@ export function ExpensesPage() {
                 <option key={cat} value={cat}>{translate(cat)}</option>
               ))}
             </select>
-            <span className="select-arrow"><Icon name="chevron" size={16} /></span>
+            <span className="select-arrow" aria-hidden="true"><Icon name="chevron" size={16} /></span>
           </div>
 
           <div className="zone-clean-select-wrap">
-            <select
+            <select id="expenses-page-control-10" className="ui-select"
               value={selectedSeasonId ?? ''}
               onChange={(e) => setSelectedSeasonId(e.target.value ? Number(e.target.value) : undefined)}
               aria-label={(lang === 'en' ? "Filter by season" : "Lọc theo mùa vụ")}
@@ -392,13 +386,13 @@ export function ExpensesPage() {
             <span className="select-arrow"><Icon name="chevron" size={16} /></span>
           </div>
 
-          <button
+          <Button
             type="submit"
-            className="action-button solid"
-            style={{ height: '42px', padding: '0 16px', borderRadius: '10px' }}
+            variant="primary"
+
           >
             {lang === 'en' ? 'Filter' : 'Lọc'}
-          </button>
+          </Button>
 
           {(keyword || selectedCategory || selectedSeasonId !== undefined || startDate || endDate) && (
             <button
@@ -413,77 +407,79 @@ export function ExpensesPage() {
         </form>
 
         {/* Table Wrap */}
-        <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-          <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+        <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
+          <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr style={{ background: '#f8fafc' }}>
-                <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+              <tr style={{ background: 'var(--color-page)' }}>
+                <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
                   <input type="checkbox" aria-label={(lang === 'en' ? "Select all" : "Chọn tất cả")} style={{ cursor: 'pointer' }} />
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'EXPENSE DESCRIPTION' : 'DIỄN GIẢI KHOẢN CHI'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'CATEGORY' : 'DANH MỤC'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'SEASON / TASK' : 'MÙA VỤ / CÔNG VIỆC'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'DATE' : 'NGÀY CHI'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'right' }}>
+                <th scope="col" style={{ textAlign: 'right' }}>
                   {lang === 'en' ? 'AMOUNT' : 'SỐ TIỀN'}
                 </th>
-                <th style={{ width: '140px', padding: '14px 16px', textAlign: 'right' }}>
-                  &nbsp;
+                <th scope="col" style={{ width: '140px', textAlign: 'right' }}>
+                  {lang === 'en' ? 'Actions' : 'Thao tác'}
                 </th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'Loading expenses data...' : 'Đang tải dữ liệu chi phí sản xuất...'}
                   </td>
                 </tr>
+              ) : loadError ? (
+                <tr><td colSpan={7}><LoadError message={loadError} onRetry={() => { void loadData(); }} /></td></tr>
               ) : expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'No expense records found.' : 'Không tìm thấy khoản chi phí nào phù hợp.'}
                   </td>
                 </tr>
               ) : (
-                expenses.map((item) => {
+                pagination.items.map((item) => {
                   const styleColors = CATEGORY_COLORS[item.expenseCategory] || CATEGORY_COLORS['Other'];
                   return (
-                    <tr key={item.expenseId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                    <tr key={item.expenseId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ textAlign: 'center' }}>
                         <input type="checkbox" aria-label={(lang === 'en' ? `Select expense #${item.expenseId}` : `Chọn chi phí #${item.expenseId}`)} style={{ cursor: 'pointer' }} />
                       </td>
-                      <td style={{ padding: '14px 16px' }}>
+                      <td>
                         <span
                           onClick={() => handleOpenDetails(item.expenseId)}
                           style={{
                             fontWeight: 750,
                             fontSize: '15px',
-                            color: '#0f172a',
+                            color: 'var(--color-text)',
                             cursor: 'pointer',
                             display: 'block',
                             transition: 'color 0.15s ease',
                           }}
-                          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
-                          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                          onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--color-primary-text)')}
+                          onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                         >
                           {item.description || (lang === 'en' ? 'No description' : 'Không có ghi chú')}
                         </span>
                         {item.recordedByName && (
-                          <span style={{ fontSize: '12.5px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+                          <span style={{ fontSize: '12.5px', color: 'var(--color-muted)', display: 'block', marginTop: '3px' }}>
                             {lang === 'en' ? 'Recorded by:' : 'Ghi nhận bởi:'} {item.recordedByName}
                           </span>
                         )}
                       </td>
-                      <td style={{ padding: '14px 16px' }}>
+                      <td>
                         <span
                           style={{
                             display: 'inline-block',
@@ -496,24 +492,24 @@ export function ExpensesPage() {
                             border: `1px solid ${styleColors.border}`,
                           }}
                         >
-                          {item.expenseCategory}
+                          {translate(item.expenseCategory)}
                         </span>
                       </td>
-                      <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px' }}>
+                      <td style={{ color: 'var(--color-body)', fontSize: '13.5px' }}>
                         <div>{item.seasonName || (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}</div>
                         {item.taskTitle && (
-                          <div style={{ fontSize: '11.5px', color: '#2563eb', marginTop: '2px' }}>
+                          <div style={{ fontSize: '11.5px', color: 'var(--color-info)', marginTop: '2px' }}>
                             ✓ {item.taskTitle}
                           </div>
                         )}
                       </td>
-                      <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#64748b', whiteSpace: 'nowrap' }}>
-                        {item.expenseDate}
+                      <td style={{ fontSize: '13.5px', color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
+                        {formatDate(item.expenseDate, lang)}
                       </td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', fontWeight: 700, color: '#0f172a', fontSize: '14.5px' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text)', fontSize: '14.5px' }}>
                         {formatCurrency(item.amount)}
                       </td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                      <td style={{ textAlign: 'right' }}>
                         <div className="table-action-btns zone-card-actions">
                           <button
                             type="button"
@@ -553,18 +549,7 @@ export function ExpensesPage() {
         </div>
 
         {/* Footer */}
-        <div className="zone-table-footer">
-          <span>
-            {lang === 'en'
-              ? `Showing 1–${expenses.length} of ${expenses.length} expense items`
-              : `Hiển thị 1–${expenses.length} trong ${expenses.length} khoản chi phí`}
-          </span>
-          <div className="zone-pagination-wrap">
-            <button type="button" className="zone-page-btn" disabled>&lt;</button>
-            <button type="button" className="zone-page-btn active">1</button>
-            <button type="button" className="zone-page-btn" disabled>&gt;</button>
-          </div>
-        </div>
+        <TablePagination {...pagination} disabled={loading} />
       </div>
 
       {/* ========================================================= */}
@@ -580,20 +565,20 @@ export function ExpensesPage() {
             {/* Amount Banner */}
             <div
               style={{
-                backgroundColor: '#f8fafc',
+                backgroundColor: 'var(--color-page)',
                 padding: '16px 20px',
                 borderRadius: '10px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--color-border)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
               }}
             >
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
                   {lang === 'en' ? 'Expense Amount' : 'Số tiền chi'}
                 </span>
-                <div style={{ fontSize: '26px', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
+                <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-text)', marginTop: '2px' }}>
                   {formatCurrency(selectedExpense.amount)}
                 </div>
               </div>
@@ -603,39 +588,39 @@ export function ExpensesPage() {
                   borderRadius: '999px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  backgroundColor: CATEGORY_COLORS[selectedExpense.expenseCategory]?.bg || '#f1f5f9',
-                  color: CATEGORY_COLORS[selectedExpense.expenseCategory]?.text || '#334155',
-                  border: `1px solid ${CATEGORY_COLORS[selectedExpense.expenseCategory]?.border || '#e2e8f0'}`,
+                  backgroundColor: CATEGORY_COLORS[selectedExpense.expenseCategory]?.bg || 'var(--color-subtle)',
+                  color: CATEGORY_COLORS[selectedExpense.expenseCategory]?.text || 'var(--color-body)',
+                  border: `1px solid ${CATEGORY_COLORS[selectedExpense.expenseCategory]?.border || 'var(--color-border)'}`,
                 }}
               >
-                {selectedExpense.expenseCategory}
+                {translate(selectedExpense.expenseCategory)}
               </span>
             </div>
 
             {/* Field Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>{lang === 'en' ? 'Expense Date' : 'Ngày chi tiêu'}:</span>
-                <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>{selectedExpense.expenseDate}</div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Expense Date' : 'Ngày chi tiêu'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>{formatDate(selectedExpense.expenseDate, lang)}</div>
               </div>
 
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>{lang === 'en' ? 'Crop Season' : 'Mùa vụ canh tác'}:</span>
-                <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Crop Season' : 'Mùa vụ canh tác'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
                   {selectedExpense.seasonName || (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}
                 </div>
               </div>
 
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>{lang === 'en' ? 'Associated Task' : 'Công việc liên quan'}:</span>
-                <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Associated Task' : 'Công việc liên quan'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
                   {selectedExpense.taskTitle || (lang === 'en' ? 'None' : 'Không có')}
                 </div>
               </div>
 
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}:</span>
-                <div style={{ fontWeight: 600, color: '#0f172a', marginTop: '2px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
                   {selectedExpense.recordedByName || (lang === 'en' ? 'System Member' : 'Thành viên trang trại')}
                 </div>
               </div>
@@ -643,14 +628,14 @@ export function ExpensesPage() {
 
             {/* Description */}
             <div>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>{lang === 'en' ? 'Description & Notes' : 'Diễn giải / Ghi chú'}:</span>
+              <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Description & Notes' : 'Diễn giải / Ghi chú'}:</span>
               <div
                 style={{
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--color-page)',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  border: '1px solid #f1f5f9',
-                  color: '#334155',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-body)',
                   marginTop: '4px',
                   fontSize: '13px',
                   lineHeight: '1.5',
@@ -663,16 +648,16 @@ export function ExpensesPage() {
             {/* Receipt Image Preview */}
             {selectedExpense.receiptImageUrl && (
               <div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>{lang === 'en' ? 'Receipt / Invoice Photo' : 'Ảnh hóa đơn / Chứng từ thanh toán'}:</span>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Receipt / Invoice Photo' : 'Ảnh hóa đơn / Chứng từ thanh toán'}:</span>
                 <div style={{ marginTop: '6px', textAlign: 'center' }}>
                   <img
                     src={selectedExpense.receiptImageUrl}
-                    alt="Receipt"
+                    alt={translate("Receipt")}
                     style={{
                       maxWidth: '100%',
                       maxHeight: '300px',
                       borderRadius: '8px',
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid var(--color-border)',
                       objectFit: 'contain',
                     }}
                   />
@@ -681,22 +666,13 @@ export function ExpensesPage() {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-              <button
+              <Button variant="secondary"
                 type="button"
                 onClick={() => setSelectedExpense(null)}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#334155',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                }}
+
               >
                 {lang === 'en' ? 'Close' : 'Đóng'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -711,24 +687,15 @@ export function ExpensesPage() {
         title={lang === 'en' ? 'Record Production Expense' : 'Ghi nhận chi phí sản xuất mới'}
       >
         <form onSubmit={handleSubmitRecord} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <div className="structured-field-header">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                {lang === 'en' ? 'Expense Category ' : 'Danh mục chi phí '} <span style={{ color: '#dc2626' }}>*</span>
-              </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
-            </div>
-            <select
+          {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+          <div className="structured-field-card">
+            <label htmlFor="expenses-page-field-1">
+              {lang === 'en' ? 'Expense Category *' : 'Danh mục chi phí *'}
+            </label>
+            <select id="expenses-page-field-1" className="ui-select"
               value={recordForm.expenseCategory}
               onChange={(e) => setRecordForm({ ...recordForm, expenseCategory: e.target.value })}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-              }}
+              style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
               required
             >
               {DEFAULT_CATEGORIES.map((cat) => (
@@ -738,73 +705,43 @@ export function ExpensesPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-            <div>
-              <div className="structured-field-header">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  {lang === 'en' ? 'Amount (VND)' : 'Số tiền (VND)'} <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
-              </div>
-              <input
+            <div className="structured-field-card">
+              <label htmlFor="expenses-page-control-1">
+                {lang === 'en' ? 'Amount (VND) *' : 'Số tiền (VND) *'}
+              </label>
+              <input id="expenses-page-control-1" className="ui-input"
                 type="number"
                 min="0"
                 step="1000"
                 value={recordForm.amount || ''}
                 onChange={(e) => setRecordForm({ ...recordForm, amount: Number(e.target.value) })}
                 placeholder={(lang === 'en' ? "e.g. 15000000" : "vd: 15000000")}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  outline: 'none',
-                }}
+                style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
                 required
               />
             </div>
 
-            <div>
-              <div className="structured-field-header">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  {lang === 'en' ? 'Expense Date' : 'Ngày chi'} <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
-              </div>
-              <input
+            <div className="structured-field-card">
+              <label htmlFor="expenses-page-control-2">
+                {lang === 'en' ? 'Expense Date' : 'Ngày chi'}
+              </label>
+              <input id="expenses-page-control-2" className="ui-input"
                 type="date"
                 value={recordForm.expenseDate}
                 onChange={(e) => setRecordForm({ ...recordForm, expenseDate: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  outline: 'none',
-                }}
+                style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
               />
             </div>
           </div>
 
-          <div>
-            <div className="structured-field-header">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                {lang === 'en' ? 'Associated Crop Season' : 'Mùa vụ áp dụng'}
-              </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
-            </div>
-            <select
+          <div className="structured-field-card">
+            <label htmlFor="expenses-page-field-2">
+              {lang === 'en' ? 'Associated Crop Season (optional)' : 'Mùa vụ áp dụng (tùy chọn)'}
+            </label>
+            <select id="expenses-page-field-2" className="ui-select"
               value={recordForm.cropSeasonId ?? ''}
               onChange={(e) => setRecordForm({ ...recordForm, cropSeasonId: e.target.value ? Number(e.target.value) : undefined })}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-              }}
+              style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
             >
               <option value="">{lang === 'en' ? 'General farm expense (no season)' : 'Chi phí chung (không gán mùa vụ)'}</option>
               {seasons.map((s) => (
@@ -813,87 +750,48 @@ export function ExpensesPage() {
             </select>
           </div>
 
-          <div>
-            <div className="structured-field-header">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                {lang === 'en' ? 'Description' : 'Diễn giải nội dung chi'}
-              </label>
-              <span className="structured-field-badge">{recordForm.description?.length}{(lang === 'en' ? "/1500 characters" : "/120 ký tự")}</span>
-            </div>
-            <textarea
+          <div className="structured-field-card">
+            <label htmlFor="expenses-page-control-3">
+              {lang === 'en' ? 'Description' : 'Diễn giải nội dung chi'}
+            </label>
+            <textarea id="expenses-page-control-3" className="ui-textarea"
               rows={3}
               value={recordForm.description}
               onChange={(e) => setRecordForm({ ...recordForm, description: e.target.value })}
               placeholder={lang === 'en' ? 'Describe expense details, supplier, invoice no...' : 'Mô tả chi tiết khoản chi, nhà cung cấp, số hóa đơn...'}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-                resize: 'vertical',
-              }}
+              style={{ width: '100%', padding: '9px 12px', outline: 'none', resize: 'vertical' }}
             />
           </div>
 
-          <div>
-            <div className="structured-field-header">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh hóa đơn / chứng từ'}
-              </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
-            </div>
-            <input
+          <div className="structured-field-card">
+            <label htmlFor="expenses-page-control-4">
+              {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh hóa đơn / chứng từ'}
+            </label>
+            <input id="expenses-page-control-4" className="ui-input"
               type="url"
               value={recordForm.receiptImageUrl}
               onChange={(e) => setRecordForm({ ...recordForm, receiptImageUrl: e.target.value })}
               placeholder={(lang === 'en' ? "https://images.unsplash.com/... or receipt image URL" : "https://images.unsplash.com/... hoặc link ảnh chứng từ")}
-              style={{
-                width: '100%',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                fontSize: '13px',
-                outline: 'none',
-              }}
+              style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
             />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <button
+            <Button variant="secondary"
               type="button"
               disabled={submittingRecord}
               onClick={() => setIsRecordOpen(false)}
-              style={{
-                padding: '9px 18px',
-                borderRadius: '8px',
-                border: '1px solid #cbd5e1',
-                backgroundColor: '#ffffff',
-                color: '#334155',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
+
             >
               {lang === 'en' ? 'Cancel' : 'Hủy'}
-            </button>
-            <button
+            </Button>
+            <Button variant="primary"
               type="submit"
-              disabled={submittingRecord}
-              style={{
-                padding: '9px 20px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: '#10b981',
-                color: '#ffffff',
-                fontWeight: 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
+              loading={submittingRecord}
+
             >
               {submittingRecord ? (lang === 'en' ? 'Recording...' : 'Đang lưu...') : (lang === 'en' ? 'Save Expense' : 'Lưu khoản chi')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -908,24 +806,15 @@ export function ExpensesPage() {
       >
         {editingExpense && (
           <form onSubmit={handleSubmitUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <div className="structured-field-header">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  {lang === 'en' ? 'Expense Category ' : 'Danh mục chi phí '} <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
-              </div>
-              <select
+          {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            <div className="structured-field-card">
+              <label htmlFor="expenses-page-field-3">
+                {lang === 'en' ? 'Expense Category' : 'Danh mục chi phí'}
+              </label>
+              <select id="expenses-page-field-3" className="ui-select"
                 value={updateForm.expenseCategory}
                 onChange={(e) => setUpdateForm({ ...updateForm, expenseCategory: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  outline: 'none',
-                }}
+                style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
               >
                 {DEFAULT_CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>{translate(cat)}</option>
@@ -934,71 +823,41 @@ export function ExpensesPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-              <div>
-                <div className="structured-field-header">
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    {lang === 'en' ? 'Amount (VND)' : 'Số tiền (VND)'} <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
-                </div>
-                <input
+              <div className="structured-field-card">
+                <label htmlFor="expenses-page-control-5">
+                  {lang === 'en' ? 'Amount (VND)' : 'Số tiền (VND)'}
+                </label>
+                <input id="expenses-page-control-5" className="ui-input"
                   type="number"
                   min="0"
                   step="1000"
                   value={updateForm.amount ?? ''}
                   onChange={(e) => setUpdateForm({ ...updateForm, amount: Number(e.target.value) })}
-                  style={{
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    outline: 'none',
-                  }}
+                  style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
                 />
               </div>
 
-              <div>
-                <div className="structured-field-header">
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    {lang === 'en' ? 'Expense Date' : 'Ngày chi'} <span style={{ color: '#dc2626' }}>*</span>
-                  </label>
-                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
-                </div>
-                <input
+              <div className="structured-field-card">
+                <label htmlFor="expenses-page-control-6">
+                  {lang === 'en' ? 'Expense Date' : 'Ngày chi'}
+                </label>
+                <input id="expenses-page-control-6" className="ui-input"
                   type="date"
                   value={updateForm.expenseDate}
                   onChange={(e) => setUpdateForm({ ...updateForm, expenseDate: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    outline: 'none',
-                  }}
+                  style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
                 />
               </div>
             </div>
 
-            <div>
-              <div className="structured-field-header">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  {lang === 'en' ? 'Associated Crop Season' : 'Mùa vụ áp dụng'}
-                </label>
-                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
-              </div>
-              <select
+            <div className="structured-field-card">
+              <label htmlFor="expenses-page-field-4">
+                {lang === 'en' ? 'Associated Crop Season' : 'Mùa vụ áp dụng'}
+              </label>
+              <select id="expenses-page-field-4" className="ui-select"
                 value={updateForm.cropSeasonId ?? ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, cropSeasonId: e.target.value ? Number(e.target.value) : undefined })}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  outline: 'none',
-                }}
+                style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
               >
                 <option value="">{lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại'}</option>
                 {seasons.map((s) => (
@@ -1007,86 +866,47 @@ export function ExpensesPage() {
               </select>
             </div>
 
-            <div>
-              <div className="structured-field-header">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  {lang === 'en' ? 'Description' : 'Diễn giải nội dung chi'}
-                </label>
-                <span className="structured-field-badge">{recordForm.description?.length}{(lang === 'en' ? "/1500 characters" : "/120 ký tự")}</span>
-              </div>
-              <textarea
+            <div className="structured-field-card">
+              <label htmlFor="expenses-page-control-7">
+                {lang === 'en' ? 'Description' : 'Diễn giải nội dung'}
+              </label>
+              <textarea id="expenses-page-control-7" className="ui-textarea"
                 rows={3}
                 value={updateForm.description}
                 onChange={(e) => setUpdateForm({ ...updateForm, description: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  outline: 'none',
-                  resize: 'vertical',
-                }}
+                style={{ width: '100%', padding: '9px 12px', outline: 'none', resize: 'vertical' }}
               />
             </div>
 
-            <div>
-              <div className="structured-field-header">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh hóa đơn / chứng từ'}
-                </label>
-                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
-              </div>
-              <input
+            <div className="structured-field-card">
+              <label htmlFor="expenses-page-control-8">
+                {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh chứng từ / hóa đơn'}
+              </label>
+              <input id="expenses-page-control-8" className="ui-input"
                 type="url"
                 placeholder={(lang === 'en' ? "https://images.unsplash.com/... or receipt image URL" : "https://images.unsplash.com/... hoặc link ảnh chứng từ")}
                 value={updateForm.receiptImageUrl}
                 onChange={(e) => setUpdateForm({ ...updateForm, receiptImageUrl: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  fontSize: '13px',
-                  outline: 'none',
-                }}
+                style={{ width: '100%', padding: '9px 12px', outline: 'none' }}
               />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-              <button
+              <Button variant="secondary"
                 type="button"
                 disabled={submittingUpdate}
                 onClick={() => setEditingExpense(null)}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#334155',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                }}
+
               >
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
-              </button>
-              <button
+              </Button>
+              <Button variant="primary"
                 type="submit"
-                disabled={submittingUpdate}
-                style={{
-                  padding: '9px 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#2563eb',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                }}
+                loading={submittingUpdate}
+
               >
                 {submittingUpdate ? (lang === 'en' ? 'Updating...' : 'Đang cập nhật...') : (lang === 'en' ? 'Save Changes' : 'Cập nhật')}
-              </button>
+              </Button>
             </div>
           </form>
         )}
@@ -1102,13 +922,14 @@ export function ExpensesPage() {
       >
         {deletingExpense && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div
               style={{
-                backgroundColor: '#fff1f2',
-                color: '#9f1239',
+                backgroundColor: 'var(--color-danger-bg)',
+                color: 'var(--color-danger)',
                 padding: '14px 16px',
                 borderRadius: '8px',
-                border: '1px solid #fecdd3',
+                border: '1px solid var(--color-border)',
                 fontSize: '13px',
                 lineHeight: '1.5',
               }}
@@ -1120,66 +941,48 @@ export function ExpensesPage() {
 
             <div
               style={{
-                backgroundColor: '#f8fafc',
+                backgroundColor: 'var(--color-page)',
                 padding: '14px 16px',
                 borderRadius: '8px',
-                border: '1px solid #e2e8f0',
+                border: '1px solid var(--color-border)',
                 fontSize: '13px',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#64748b' }}>{lang === 'en' ? 'Category:' : 'Danh mục:'}</span>
-                <span style={{ fontWeight: 600, color: '#0f172a' }}>{deletingExpense.expenseCategory}</span>
+                <span style={{ color: 'var(--color-muted)' }}>{lang === 'en' ? 'Category:' : 'Danh mục:'}</span>
+                <span style={{ fontWeight: 600, color: 'var(--color-text)' }}>{translate(deletingExpense.expenseCategory)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#64748b' }}>{lang === 'en' ? 'Amount:' : 'Số tiền:'}</span>
-                <span style={{ fontWeight: 700, color: '#dc2626' }}>{formatCurrency(deletingExpense.amount)}</span>
+                <span style={{ color: 'var(--color-muted)' }}>{lang === 'en' ? 'Amount:' : 'Số tiền:'}</span>
+                <span style={{ fontWeight: 700, color: 'var(--color-danger)' }}>{formatCurrency(deletingExpense.amount)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ color: '#64748b' }}>{lang === 'en' ? 'Date:' : 'Ngày chi:'}</span>
-                <span style={{ color: '#0f172a' }}>{deletingExpense.expenseDate}</span>
+                <span style={{ color: 'var(--color-muted)' }}>{lang === 'en' ? 'Date:' : 'Ngày chi:'}</span>
+                <span style={{ color: 'var(--color-text)' }}>{formatDate(deletingExpense.expenseDate, lang)}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: '#64748b' }}>{lang === 'en' ? 'Description:' : 'Nội dung:'}</span>
-                <span style={{ color: '#0f172a', fontWeight: 500 }}>{deletingExpense.description || '—'}</span>
+                <span style={{ color: 'var(--color-muted)' }}>{lang === 'en' ? 'Description:' : 'Nội dung:'}</span>
+                <span style={{ color: 'var(--color-text)', fontWeight: 500 }}>{deletingExpense.description || '—'}</span>
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button
+              <Button variant="secondary"
                 type="button"
                 disabled={submittingDelete}
                 onClick={() => setDeletingExpense(null)}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  backgroundColor: '#ffffff',
-                  color: '#334155',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                }}
+
               >
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
-              </button>
-              <button
+              </Button>
+              <Button variant="danger"
                 type="button"
-                disabled={submittingDelete}
+                loading={submittingDelete}
                 onClick={handleConfirmDelete}
-                style={{
-                  padding: '9px 20px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#dc2626',
-                  color: '#ffffff',
-                  fontWeight: 600,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                }}
+
               >
                 {submittingDelete ? (lang === 'en' ? 'Deleting...' : 'Đang xóa...') : (lang === 'en' ? 'Confirm Delete' : 'Xác nhận xóa')}
-              </button>
+              </Button>
             </div>
           </div>
         )}

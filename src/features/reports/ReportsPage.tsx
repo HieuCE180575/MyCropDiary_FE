@@ -1,11 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+import { TabList, tabPanelProps } from '../../shared/components/TabList';
+import { PageHeading } from '../../shared/components/PageHeading';
+import { Button } from '../../shared/components/Button';
 import { Icon } from '../../shared/components/Icon';
-import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { InputPurchasesPage } from '../operations/InputPurchasesPage';
 import { SuppliersPage } from '../operations/SuppliersPage';
 import { ExpensesPage } from '../operations/ExpensesPage';
 import { WarehouseInventoryPage } from '../inventory/WarehouseInventoryPage';
+
+
+import { formatNumber as displayNumber, formatCurrency as displayCurrency } from '../../shared/format/formatters';
+import { useState, useEffect } from 'react';
+import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+
+import { useLanguage } from '../../shared/i18n/LanguageContext';
+
 import {
   fetchFarmReportSummaryApi,
   fetchCropSeasonReportApi,
@@ -72,118 +80,32 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
 
   return (
     <section className="reports-page">
-      <div className="page-heading">
-        <div>
-          <h1>{(lang === 'en' ? "Production Reports & Financial Management" : "Báo cáo sản xuất & Quản trị tài chính")}</h1>
-          <p className="page-subtitle">
+      <PageHeading   title={<>{(lang === 'en' ? "Production Reports & Financial Management" : "Báo cáo sản xuất & Quản trị tài chính")}</>} description={<>
             {(lang === 'en' ? "Summarize farming data, input costs, inventory, and material suppliers for farm " : "Tổng hợp dữ liệu canh tác, hạch toán chi phí đầu vào, quản trị kho và theo dõi nhà cung cấp vật tư trang trại ")} {selectedFarm?.farmName || ''}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button type="button" className="action-button" onClick={() => window.print()}>
+          </>}><div style={{ display: 'flex', gap: '10px' }}>
+          <Button type="button" variant="secondary" onClick={() => window.print()}>
             {(lang === 'en' ? "📊 Export PDF / Print" : "📊 Xuất báo cáo PDF / In ấn")}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </div></PageHeading>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #e2e8f0', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('reports')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'reports' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'reports' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "📈 Seasonal production reports" : "📈 Báo cáo sản xuất mùa vụ")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('warehouses')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'warehouses' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'warehouses' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "🏢 Warehouses & Material inventory" : "🏢 Kho hàng & Tồn kho vật tư")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('expenses')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'expenses' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'expenses' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "💰 Production costs" : "💰 Chi phí sản xuất")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('purchases')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'purchases' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'purchases' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "🧾 Material purchase invoices" : "🧾 Hóa đơn mua vật tư")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('suppliers')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'suppliers' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'suppliers' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "🏭 Supplier directory" : "🏭 Danh bạ nhà cung cấp")}
-        </button>
-      </div>
+      <TabList idPrefix="reports" label={lang === 'en' ? 'Report sections' : 'Các mục báo cáo'}
+        value={activeTab} onChange={setActiveTab} items={[
+          { value: 'reports', label: <>{(lang === 'en' ? "📈 Seasonal production reports" : "📈 Báo cáo sản xuất mùa vụ")}</> },
+          { value: 'warehouses', label: <>{(lang === 'en' ? "🏢 Warehouses & Material inventory" : "🏢 Kho hàng & Tồn kho vật tư")}</> },
+          { value: 'expenses', label: <>{(lang === 'en' ? "💰 Production costs" : "💰 Chi phí sản xuất")}</> },
+          { value: 'purchases', label: <>{(lang === 'en' ? "🧾 Material purchase invoices" : "🧾 Hóa đơn mua vật tư")}</> },
+          { value: 'suppliers', label: <>{(lang === 'en' ? "🏭 Supplier directory" : "🏭 Danh bạ nhà cung cấp")}</> },
+        ]} />
 
       {activeTab === 'reports' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div {...tabPanelProps('reports', 'reports')} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Season Selector Filter */}
           <div className="panel" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontWeight: 650, color: '#334155', fontSize: '14px' }}>{(lang === 'en' ? "Select report season:" : "Chọn vụ mùa thống kê:")}</span>
-              <select
-                className="input-select"
-                style={{ minWidth: '240px', padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              <label htmlFor="reports-page-control-1" style={{ fontWeight: 650, color: 'var(--color-body)', fontSize: '14px' }}>{(lang === 'en' ? "Select report season:" : "Chọn vụ mùa thống kê:")}</label>
+              <select id="reports-page-control-1"
+                className="input-select ui-select"
+                style={{ minWidth: '240px', padding: '6px 12px' }}
                 value={selectedSeasonId}
                 onChange={(e) => void handleSelectSeason(e.target.value)}
               >
@@ -196,19 +118,19 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
               </select>
             </div>
             {selectedFarm?.id && (
-              <button
+              <Button
                 type="button"
-                className="action-button"
-                style={{ fontSize: '13px', padding: '6px 14px' }}
+                variant="secondary"
+
                 onClick={() => void loadFarmReport(selectedFarm.id)}
               >
-                <Icon name="refresh-cw" /> {(lang === 'en' ? " Refresh data" : " Làm mới dữ liệu")}
-              </button>
+                <Icon name="refresh" /> {(lang === 'en' ? " Refresh data" : " Làm mới dữ liệu")}
+              </Button>
             )}
           </div>
 
           {loadingReport || loadingSeasonReport ? (
-            <div className="panel" style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+            <div className="panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
               <p>{(lang === 'en' ? "Compiling production reports..." : "Đang tổng hợp báo cáo sản xuất...")}</p>
             </div>
           ) : (
@@ -216,60 +138,60 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
               {/* Top KPI Metrics Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
                 <div className="panel" style={{ padding: '20px' }}>
-                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "TOTAL HARVEST YIELD" : "TỔNG SẢN LƯỢNG THU HOẠCH")}</span>
-                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: '#059669', fontWeight: 800 }}>
-                    {currentYield.toLocaleString('vi-VN')} {translate(currentUnit)}
+                  <span style={{ fontSize: '13px', color: 'var(--color-muted)', fontWeight: 600 }}>{(lang === 'en' ? "TOTAL HARVEST YIELD" : "TỔNG SẢN LƯỢNG THU HOẠCH")}</span>
+                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: 'var(--color-primary-text)', fontWeight: 800 }}>
+                    {displayNumber(currentYield, lang)} {translate(currentUnit)}
                   </h2>
-                  <small style={{ color: '#10b981' }}>
+                  <small style={{ color: 'var(--color-success)' }}>
                     {(lang === 'en' ? selectedSeasonId !== 'ALL' && seasonReport ? `Harvest count: ${seasonReport.harvestCount}` : `Grade 1 rate: ${farmReport?.gradeOnePercentage ?? 0}% (${farmReport?.totalHarvestBatches ?? 0} batches)` : selectedSeasonId !== 'ALL' && seasonReport
                       ? `Số đợt thu hoạch: ${seasonReport.harvestCount}`
                       : `Tỷ lệ loại 1: ${farmReport?.gradeOnePercentage ?? 0}% (${farmReport?.totalHarvestBatches ?? 0} đợt)`)}
                   </small>
                 </div>
                 <div className="panel" style={{ padding: '20px' }}>
-                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "TOTAL EXPENSES" : "TỔNG CHI PHÍ ĐÃ CHI")}</span>
-                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: '#b45309', fontWeight: 800 }}>
-                    {currentExpense.toLocaleString('vi-VN')} {(lang === 'en' ? " VND" : " đ")}
+                  <span style={{ fontSize: '13px', color: 'var(--color-muted)', fontWeight: 600 }}>{(lang === 'en' ? "TOTAL EXPENSES" : "TỔNG CHI PHÍ ĐÃ CHI")}</span>
+                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: 'var(--color-warning)', fontWeight: 800 }}>
+                    {displayCurrency(currentExpense, lang)}
                   </h2>
-                  <small style={{ color: '#64748b' }}>
-                    {(lang === 'en' ? selectedSeasonId !== 'ALL' && seasonReport ? `${seasonReport.activityCount} farming diary entries` : `Material invoices: ${(farmReport?.totalPurchasesAmount ?? 0).toLocaleString('vi-VN')} VND` : selectedSeasonId !== 'ALL' && seasonReport
+                  <small style={{ color: 'var(--color-muted)' }}>
+                    {(lang === 'en' ? selectedSeasonId !== 'ALL' && seasonReport ? `${seasonReport.activityCount} farming diary entries` : `Material invoices: ${displayCurrency(farmReport?.totalPurchasesAmount ?? 0, lang)}` : selectedSeasonId !== 'ALL' && seasonReport
                       ? `${seasonReport.activityCount} nhật ký canh tác`
-                      : `Hóa đơn vật tư: ${(farmReport?.totalPurchasesAmount ?? 0).toLocaleString('vi-VN')} đ`)}
+                      : `Hóa đơn vật tư: ${displayCurrency(farmReport?.totalPurchasesAmount ?? 0, lang)}`)}
                   </small>
                 </div>
                 <div className="panel" style={{ padding: '20px' }}>
-                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "ESTIMATED REVENUE" : "ƯỚC TÍNH DOANH THU")}</span>
-                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: '#0284c7', fontWeight: 800 }}>
-                    {(farmReport?.estimatedRevenue ?? 0).toLocaleString('vi-VN')} {(lang === 'en' ? " VND" : " đ")}
+                  <span style={{ fontSize: '13px', color: 'var(--color-muted)', fontWeight: 600 }}>{(lang === 'en' ? "ESTIMATED REVENUE" : "ƯỚC TÍNH DOANH THU")}</span>
+                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: 'var(--color-info)', fontWeight: 800 }}>
+                    {displayCurrency(farmReport?.estimatedRevenue ?? 0, lang)}
                   </h2>
-                  <small style={{ color: '#0284c7' }}>{(lang === 'en' ? "Based on yield and grade" : "Dựa trên năng suất và phân loại")}</small>
+                  <small style={{ color: 'var(--color-info)' }}>{(lang === 'en' ? "Based on yield and grade" : "Dựa trên năng suất và phân loại")}</small>
                 </div>
                 <div className="panel" style={{ padding: '20px' }}>
-                  <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>{(lang === 'en' ? "PROJECTED NET PROFIT" : "LỢI NHUẬN RÒNG DỰ KIẾN")}</span>
-                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: '#10b981', fontWeight: 800 }}>
-                    {(farmReport?.estimatedProfit ?? 0).toLocaleString('vi-VN')} {(lang === 'en' ? " VND" : " đ")}
+                  <span style={{ fontSize: '13px', color: 'var(--color-muted)', fontWeight: 600 }}>{(lang === 'en' ? "PROJECTED NET PROFIT" : "LỢI NHUẬN RÒNG DỰ KIẾN")}</span>
+                  <h2 style={{ margin: '8px 0 0', fontSize: '26px', color: 'var(--color-success)', fontWeight: 800 }}>
+                    {displayCurrency(farmReport?.estimatedProfit ?? 0, lang)}
                   </h2>
-                  <small style={{ color: '#10b981' }}>{(lang === 'en' ? "Profit margin: " : "Biên lợi nhuận: ")} {farmReport?.profitMarginPercent ?? 0}%</small>
+                  <small style={{ color: 'var(--color-success)' }}>{(lang === 'en' ? "Profit margin: " : "Biên lợi nhuận: ")} {farmReport?.profitMarginPercent ?? 0}%</small>
                 </div>
               </div>
 
               {/* Expense Breakdown */}
               <div className="panel" style={{ padding: '24px' }}>
-                <h3 style={{ margin: '0 0 16px', fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "Production cost breakdown" : "Tỷ trọng chi phí sản xuất")}</h3>
+                <h3 style={{ margin: '0 0 16px', fontSize: '18px', color: 'var(--color-text)' }}>{(lang === 'en' ? "Production cost breakdown" : "Tỷ trọng chi phí sản xuất")}</h3>
                 {currentBreakdown.length === 0 ? (
-                  <p style={{ color: '#64748b', fontSize: '14px' }}>{(lang === 'en' ? "No expenses have been recorded." : "Chưa có phát sinh chi phí nào được ghi nhận.")}</p>
+                  <p style={{ color: 'var(--color-muted)', fontSize: '14px' }}>{(lang === 'en' ? "No expenses have been recorded." : "Chưa có phát sinh chi phí nào được ghi nhận.")}</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {currentBreakdown.map((item) => (
                       <div key={item.category}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: 600, color: '#334155' }}>{item.category}</span>
-                          <span style={{ fontWeight: 700, color: item.color || '#10b981' }}>
-                            {item.amount.toLocaleString('vi-VN')} {(lang === 'en' ? " VND (" : " đ (")}{item.percentage}%)
+                          <span style={{ fontWeight: 600, color: 'var(--color-body)' }}>{item.category}</span>
+                          <span style={{ fontWeight: 700, color: 'var(--color-text)' }}>
+                            {displayNumber(item.amount, lang)} {(lang === 'en' ? " VND (" : " đ (")}{item.percentage}%)
                           </span>
                         </div>
-                        <div style={{ height: '8px', background: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${item.percentage}%`, height: '100%', background: item.color || '#10b981', borderRadius: '4px' }} />
+                        <div style={{ height: '8px', background: 'var(--color-subtle)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${item.percentage}%`, height: '100%', background: item.color || 'var(--color-success)', borderRadius: '4px' }} />
                         </div>
                       </div>
                     ))}
@@ -280,47 +202,47 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
               {/* Crop Seasons Overview Table */}
               {selectedSeasonId === 'ALL' && farmReport?.seasonSummaries && farmReport.seasonSummaries.length > 0 && (
                 <div className="panel" style={{ padding: '24px' }}>
-                  <h3 style={{ margin: '0 0 16px', fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "Crop season list" : "Danh sách mùa vụ canh tác")}</h3>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <h3 style={{ margin: '0 0 16px', fontSize: '18px', color: 'var(--color-text)' }}>{(lang === 'en' ? "Crop season list" : "Danh sách mùa vụ canh tác")}</h3>
+                  <div className="ui-table-scroll" tabIndex={0}>
+                    <table className="ui-data-table">
                       <thead>
-                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                          <th style={{ padding: '10px 14px' }}>{(lang === 'en' ? "Season name" : "Tên mùa vụ")}</th>
-                          <th style={{ padding: '10px 14px' }}>{(lang === 'en' ? "Crop type" : "Loại cây trồng")}</th>
-                          <th style={{ padding: '10px 14px' }}>{(lang === 'en' ? "Yield" : "Sản lượng")}</th>
-                          <th style={{ padding: '10px 14px' }}>{(lang === 'en' ? "Expenses" : "Chi phí")}</th>
-                          <th style={{ padding: '10px 14px' }}>{(lang === 'en' ? "Status" : "Trạng thái")}</th>
-                          <th style={{ padding: '10px 14px', textAlign: 'center' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
+                        <tr>
+                          <th scope="col">{(lang === 'en' ? "Season name" : "Tên mùa vụ")}</th>
+                          <th scope="col">{(lang === 'en' ? "Crop type" : "Loại cây trồng")}</th>
+                          <th scope="col">{(lang === 'en' ? "Yield" : "Sản lượng")}</th>
+                          <th scope="col">{(lang === 'en' ? "Expenses" : "Chi phí")}</th>
+                          <th scope="col">{(lang === 'en' ? "Status" : "Trạng thái")}</th>
+                          <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {farmReport.seasonSummaries.map((s) => (
-                          <tr key={s.cropSeasonId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 14px', fontWeight: 600, color: '#1e293b' }}>{s.seasonName}</td>
-                            <td style={{ padding: '10px 14px', color: '#64748b' }}>{s.cropCategoryName || 'N/A'}</td>
-                            <td style={{ padding: '10px 14px', color: '#059669', fontWeight: 650 }}>{s.harvestYield.toLocaleString('vi-VN')} kg</td>
-                            <td style={{ padding: '10px 14px', color: '#b45309', fontWeight: 650 }}>{s.totalExpense.toLocaleString('vi-VN')} {(lang === 'en' ? " VND" : " đ")}</td>
-                            <td style={{ padding: '10px 14px' }}>
+                          <tr key={s.cropSeasonId}>
+                            <td style={{ fontWeight: 600, color: 'var(--color-text)' }}>{s.seasonName}</td>
+                            <td style={{ color: 'var(--color-muted)' }}>{s.cropCategoryName || 'N/A'}</td>
+                            <td style={{ color: 'var(--color-primary-text)', fontWeight: 650 }}>{displayNumber(s.harvestYield, lang)} kg</td>
+                            <td style={{ color: 'var(--color-warning)', fontWeight: 650 }}>{displayCurrency(s.totalExpense, lang)}</td>
+                            <td>
                               <span style={{
                                 padding: '3px 8px',
                                 borderRadius: '4px',
                                 fontSize: '12px',
                                 fontWeight: 600,
-                                background: s.status === 'ACTIVE' || s.status === 'IN_PROGRESS' ? '#ecfdf5' : '#f1f5f9',
-                                color: s.status === 'ACTIVE' || s.status === 'IN_PROGRESS' ? '#059669' : '#64748b'
+                                background: s.status === 'ACTIVE' || s.status === 'IN_PROGRESS' ? 'var(--color-success-bg)' : 'var(--color-subtle)',
+                                color: s.status === 'ACTIVE' || s.status === 'IN_PROGRESS' ? 'var(--color-primary-text)' : 'var(--color-muted)'
                               }}>
                                 {s.status}
                               </span>
                             </td>
-                            <td style={{ padding: '10px 14px', textAlign: 'center' }}>
-                              <button
+                            <td style={{ textAlign: 'center' }}>
+                              <Button
                                 type="button"
-                                className="action-button"
-                                style={{ fontSize: '12px', padding: '4px 10px' }}
+                                variant="secondary"
+
                                 onClick={() => void handleSelectSeason(String(s.cropSeasonId))}
                               >
                                 {(lang === 'en' ? "View season details" : "Xem chi tiết vụ")}
-                              </button>
+                              </Button>
                             </td>
                           </tr>
                         ))}
@@ -334,13 +256,13 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
         </div>
       )}
 
-      {activeTab === 'warehouses' && <WarehouseInventoryPage />}
+      {activeTab === 'warehouses' && <div {...tabPanelProps('reports', 'warehouses')}><WarehouseInventoryPage embedded /></div>}
 
-      {activeTab === 'expenses' && <ExpensesPage />}
+      {activeTab === 'expenses' && <div {...tabPanelProps('reports', 'expenses')}><ExpensesPage embedded /></div>}
 
-      {activeTab === 'purchases' && <InputPurchasesPage />}
+      {activeTab === 'purchases' && <div {...tabPanelProps('reports', 'purchases')}><InputPurchasesPage embedded /></div>}
 
-      {activeTab === 'suppliers' && <SuppliersPage />}
+      {activeTab === 'suppliers' && <div {...tabPanelProps('reports', 'suppliers')}><SuppliersPage embedded /></div>}
     </section>
   );
 }

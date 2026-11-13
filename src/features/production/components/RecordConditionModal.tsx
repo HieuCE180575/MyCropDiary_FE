@@ -1,3 +1,7 @@
+import { Button } from '../../../shared/components/Button';
+import { Icon } from '../../../shared/components/Icon';
+import { Modal } from '../../../shared/components/Modal';
+
 import { useState, useEffect, useRef } from 'react';
 import type { Block, BlockConditionObservation, RecordConditionFormValues } from '../types';
 import { recordBlockCondition } from '../zoneBlockService';
@@ -93,16 +97,13 @@ export function RecordConditionModal({
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+    <Modal open customLayout onClose={onClose} style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
             <span className="eyebrow">{lang === 'en' ? 'Production Records' : 'Hồ sơ sản xuất'}</span>
             <h2>{lang === 'en' ? 'Record Condition: ' : 'Ghi nhận điều kiện: '}{block.blockName}</h2>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
-            ✕
-          </button>
+          <button type="button" className="modal-close" onClick={onClose} aria-label={(lang === 'en' ? "Close" : "Đóng")}><Icon name="close" /></button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
@@ -125,14 +126,14 @@ export function RecordConditionModal({
             </div>
           )}
 
-          <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-            <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-              <span className="structured-field-label" style={{ color: '#065f46' }}>
+          <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+            <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+              <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
                 {lang === 'en' ? 'Target Block' : 'Lô sản xuất mục tiêu'}
               </span>
               <span className="structured-field-badge">{lang === 'en' ? 'Auto-selected' : 'Tự động chọn'}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, color: '#047857' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, color: 'var(--color-primary-text)' }}>
               <span>
                 🌿 {block.blockName} {block.zoneName ? `· ${block.zoneName}` : ''}
               </span>
@@ -145,12 +146,12 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="cond-date-input" className="structured-field-label">
-                {lang === 'en' ? 'Observation Date & Time' : 'Thời gian ghi nhận'} <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Observation Date & Time' : 'Thời gian ghi nhận'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              <label htmlFor="cond-date-input" className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="cond-date-input"
                 type="datetime-local"
                 value={values.observedAt}
@@ -163,12 +164,12 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="cond-type-select" className="structured-field-label">
-                {lang === 'en' ? 'Condition Type' : 'Phân loại tình trạng điều kiện'} <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Condition Type' : 'Phân loại tình trạng điều kiện'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{lang === 'en' ? 'VietGAP Standard' : 'Tiêu chuẩn VietGAP'}</span>
+              <label htmlFor="cond-type-select" className="structured-field-badge">{lang === 'en' ? 'VietGAP Standard' : 'Tiêu chuẩn VietGAP'}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <select
+              <select className="ui-select"
                 id="cond-type-select"
                 value={values.conditionType}
                 onChange={(e) => setValues({ ...values, conditionType: e.target.value })}
@@ -185,12 +186,12 @@ export function RecordConditionModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="cond-desc-input" className="structured-field-label">
-                {lang === 'en' ? 'Condition Details & Notes' : 'Thông tin điều kiện và ghi chú'} <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Condition Details & Notes' : 'Thông tin điều kiện và ghi chú'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/1000 characters" : "/1000 ký tự")}</span>
+              <label htmlFor="cond-desc-input" className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/1000 characters" : "/1000 ký tự")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <textarea
+              <textarea className="ui-textarea"
                 id="cond-desc-input"
                 rows={4}
                 maxLength={1000}
@@ -235,10 +236,10 @@ export function RecordConditionModal({
               <label htmlFor="cond-img-input" className="structured-field-label">
                 {lang === 'en' ? 'Evidence Image URL' : 'Đường dẫn hình ảnh minh chứng'}
               </label>
-              <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              <label htmlFor="cond-img-input" className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="cond-img-input"
                 type="url"
                 placeholder="https://..."
@@ -249,15 +250,14 @@ export function RecordConditionModal({
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
-            </button>
-            <button type="submit" className="primary-button" disabled={loading}>
+            </Button>
+            <Button type="submit" variant="primary" disabled={loading}>
               {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Record' : 'Lưu ghi nhận')}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 }

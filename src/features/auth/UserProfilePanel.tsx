@@ -1,13 +1,20 @@
-import { useLanguage } from '../../shared/i18n/LanguageContext';
-import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
+import { StatusBadge } from '../../shared/components/StatusBadge';
+import { Button } from '../../shared/components/Button';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
-import { useAuth } from './AuthProvider';
-import { getUserProfile, updateUserProfile, type UserProfile } from './authApi';
 import { ChangePasswordPanel } from './ChangePasswordPanel';
 
+
+import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
+
+
+import { useAuth } from './AuthProvider';
+import { getUserProfile, updateUserProfile, type UserProfile } from './authApi';
+
+
 export function UserProfilePanel() {
-  const { lang, t: translate } = useLanguage();
+  const { t: translate } = useLanguage();
   const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -113,37 +120,37 @@ export function UserProfilePanel() {
 
   return (
     <>
-      <section className="panel profile-details" aria-label="Personal Information" style={{ width: '100%' }}>
+      <section className="panel profile-details" aria-label={translate("Personal Information")} style={{ width: '100%' }}>
         <div className="profile-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <span className="shortcut-icon"><Icon name="user" /></span>
             <div>
-              <h2>Account Information</h2><span className="sr-only">{(lang === 'en' ? "Account information" : "Thông tin tài khoản")}</span>
-              <p className="profile-section-sub">Identity and login information of your account</p>
+              <h2>{translate("Account Information")}</h2>
+              <p className="profile-section-sub">{translate("Identity and login information of your account")}</p>
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             {!isEditing && (
               <>
-                <button
+                <Button
                   type="button"
-                  className="profile-icon-btn"
+                  variant="secondary" size="compact" className="ui-icon-button"
                   onClick={() => setIsChangePasswordOpen(true)}
-                  title="Change Password"
-                  aria-label="Change Password"
+                  title={translate("Change Password")}
+                  aria-label={translate("Change Password")}
                 >
                   <Icon name="lock" size={17} />
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="profile-icon-btn primary"
+                  variant="primary" size="compact" className="ui-icon-button"
                   onClick={() => { setIsEditing(true); setMessage(null); }}
-                  title="Edit Profile"
-                  aria-label="Edit Profile"
+                  title={translate("Edit Profile")}
+                  aria-label={translate("Edit Profile")}
                 >
                   <Icon name="edit" size={17} />
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -155,9 +162,9 @@ export function UserProfilePanel() {
               margin: '14px 0',
               padding: '10px 14px',
               borderRadius: '8px',
-              background: message.type === 'success' ? '#ecfdf5' : '#fef2f2',
-              border: `1px solid ${message.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-              color: message.type === 'success' ? '#065f46' : '#991b1b',
+              background: message.type === 'success' ? "var(--color-success-bg)" : "var(--color-danger-bg)",
+              border: `1px solid ${message.type === 'success' ? "var(--color-border)" : "var(--color-border)"}`,
+              color: message.type === 'success' ? "var(--color-success)" : "var(--color-danger)",
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
@@ -170,14 +177,12 @@ export function UserProfilePanel() {
         )}
 
         {loading ? (
-          <p style={{ color: '#64748b', padding: '16px 0' }}>Loading profile information...</p>
+          <p style={{ color: "var(--color-muted)", padding: '16px 0' }}>{translate("Loading profile information...")}</p>
         ) : isEditing ? (
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
             {/* Avatar */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '8px' }}>
-                Profile Avatar
-              </label>
+            <div className="structured-field-card">
+              <label>{translate("Profile Avatar")}</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px' }}>
                 <div
                   style={{
@@ -185,8 +190,8 @@ export function UserProfilePanel() {
                     height: '64px',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    border: '2px solid #10b981',
-                    background: '#f1f5f9',
+                    border: "2px solid var(--color-primary-text)",
+                    background: "var(--color-subtle)",
                     display: 'grid',
                     placeItems: 'center',
                     flexShrink: 0,
@@ -195,7 +200,7 @@ export function UserProfilePanel() {
                   {currentAvatar ? (
                     <img
                       src={currentAvatar}
-                      alt="Avatar preview"
+                      alt={translate("Avatar preview")}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                     />
@@ -206,15 +211,14 @@ export function UserProfilePanel() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button
+                    <Button
                       type="button"
-                      className="action-button"
+                      variant="secondary"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={saving}
-                      style={{ fontSize: '12.5px', padding: '6px 12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <Icon name="camera" size={15} /> Upload Photo
-                    </button>
+                      <Icon name="camera" size={15} />{translate("Upload Photo")}</Button>
                     {avatarUrl && (
                       <button
                         type="button"
@@ -223,20 +227,16 @@ export function UserProfilePanel() {
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#dc2626',
+                          color: "var(--color-danger)",
                           fontSize: '12.5px',
                           cursor: 'pointer',
                           padding: '4px 8px',
                         }}
-                      >
-                        ✕ Remove Photo
-                      </button>
+                      >{translate("✕ Remove Photo")}</button>
                     )}
                   </div>
-                  <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                    JPG, PNG format or paste direct image link (max 2MB)
-                  </span>
-                  <input
+                  <label htmlFor="user-profile-panel-control-1" style={{ fontSize: '11.5px', color: "var(--color-muted)" }}>{translate("JPG, PNG format or paste direct image link (max 2MB)")}</label>
+                  <input id="user-profile-panel-control-1"
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
@@ -246,116 +246,109 @@ export function UserProfilePanel() {
                 </div>
               </div>
 
-              <input
+              <input aria-label={translate("https://example.com/photo.jpg or direct image URL...")} className="ui-input"
                 type="text"
                 value={avatarUrl}
                 onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder="https://example.com/photo.jpg or direct image URL..."
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                placeholder={translate("https://example.com/photo.jpg or direct image URL...")}
+                style={{ width: '100%', padding: '9px 12px' }}
                 disabled={saving}
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Full Name *
-              </label>
-              <input
+            <div className="structured-field-card">
+              <label htmlFor="user-profile-panel-field-1">{translate("Full Name *")}</label>
+              <input id="user-profile-panel-field-1" className="ui-input"
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="John Doe"
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                placeholder={translate("John Doe")}
+                style={{ width: '100%', padding: '9px 12px' }}
                 disabled={saving}
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Login Email (Cannot be changed)
-              </label>
-              <input
+            <div className="structured-field-card">
+              <label htmlFor="user-profile-panel-field-2">{translate("Login Email (Cannot be changed)")}</label>
+              <input id="user-profile-panel-field-2" className="ui-input"
                 type="email"
                 readOnly
                 disabled
                 value={profile?.email || user?.email || ''}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f8fafc', color: '#64748b' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Phone Number
-              </label>
-              <input
+            <div className="structured-field-card">
+              <label htmlFor="user-profile-panel-field-3">{translate("Phone Number")}</label>
+              <input id="user-profile-panel-field-3" className="ui-input"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+84 912 345 678"
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '9px 12px' }}
                 disabled={saving}
               />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
-              <button
+              <Button
                 type="button"
-                className="action-button"
+                variant="secondary"
                 onClick={handleCancel}
                 disabled={saving}
-                style={{ height: '40px', padding: '0 18px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
               >
-                <Icon name="x" size={16} /> Cancel
-              </button>
-              <button
+                <Icon name="close" size={16} />{translate("Cancel")}</Button>
+              <Button
                 type="submit"
-                className="primary-button"
-                disabled={saving}
-                style={{ height: '40px', padding: '0 20px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
+                variant="primary"
+                loading={saving}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
               >
-                <Icon name="save" size={16} /> {saving ? 'Saving...' : 'Save Profile'}
-              </button>
+                <Icon name="save" size={16} /> {saving ? translate("Saving...") : translate("Save Profile")}
+              </Button>
             </div>
           </form>
         ) : (
           <dl>
-            <dt>Profile Avatar</dt>
+            <dt>{translate("Profile Avatar")}</dt>
             <dd>
               {currentAvatar ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <img
                     src={currentAvatar}
-                    alt={profile?.fullName || 'Avatar'}
+                    alt={profile?.fullName || translate("Avatar")}
                     style={{
                       width: '44px',
                       height: '44px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '1.5px solid #cbd5e1',
+                      border: "1.5px solid var(--color-input-border)",
                     }}
                     onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
                   />
-                  <span style={{ fontSize: '13px', color: '#64748b', wordBreak: 'break-all' }}>
-                    {currentAvatar.startsWith('data:') ? 'Custom profile photo (Uploaded)' : currentAvatar}
+                  <span style={{ fontSize: '13px', color: "var(--color-muted)", wordBreak: 'break-all' }}>
+                    {currentAvatar.startsWith('data:') ? translate("Custom profile photo (Uploaded)") : currentAvatar}
                   </span>
                 </div>
               ) : (
-                <span style={{ color: '#94a3b8', fontStyle: 'italic', fontSize: '13px' }}>No avatar uploaded</span>
+                <span style={{ color: "var(--color-muted)", fontStyle: 'italic', fontSize: '13px' }}>{translate("No avatar uploaded")}</span>
               )}
             </dd>
 
-            <dt>Full Name</dt>
-            <dd style={{ fontWeight: 600, color: '#0f172a' }}>{profile?.fullName || user?.fullName || 'Not specified'}</dd>
+            <dt>{translate("Full Name")}</dt>
+            <dd style={{ fontWeight: 600, color: "var(--color-text)" }}>{profile?.fullName || user?.fullName || translate("Not specified")}</dd>
 
             <dt>Email</dt>
-            <dd>{profile?.email || user?.email || 'Not specified'}</dd>
+            <dd>{profile?.email || user?.email || translate("Not specified")}</dd>
 
-            <dt>Phone Number</dt>
-            <dd>{profile?.phone || 'Not specified'}</dd>
+            <dt>{translate("Phone Number")}</dt>
+            <dd>{profile?.phone || translate("Not specified")}</dd>
 
-            <dt>Status</dt>
-            <dd><span className="status-badge status-badge--success">Active</span></dd>
+            <dt>{translate("Status")}</dt>
+            <dd><StatusBadge   tone="success" label={<>{translate("Active")}</>} /></dd>
           </dl>
         )}
       </section>
@@ -364,7 +357,7 @@ export function UserProfilePanel() {
       <Modal
         open={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
-        title="Change Password"
+        title={translate("Change Password")}
         headerIcon={<Icon name="lock" />}
       >
         <ChangePasswordPanel

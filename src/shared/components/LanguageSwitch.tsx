@@ -25,7 +25,7 @@ export function LanguageSwitch({ className = '', variant = 'header' }: LanguageS
           background: 'transparent',
           borderRadius: '8px',
           cursor: 'pointer',
-          color: '#334155',
+          color: 'var(--color-body)',
           fontSize: '13px',
           textAlign: 'left',
         }}
@@ -38,8 +38,8 @@ export function LanguageSwitch({ className = '', variant = 'header' }: LanguageS
           style={{
             fontSize: '11px',
             fontWeight: 700,
-            background: '#d1fae5',
-            color: '#065f46',
+            background: 'var(--color-success-bg)',
+            color: 'var(--color-primary-text)',
             padding: '2px 6px',
             borderRadius: '4px',
           }}
@@ -55,7 +55,7 @@ export function LanguageSwitch({ className = '', variant = 'header' }: LanguageS
       type="button"
       className={`header-translate-btn ${className}`}
       onClick={toggleLang}
-      title={lang === 'en' ? 'Switch to Vietnamese (Chuyển sang Tiếng Việt)' : 'Switch to English (Chuyển sang Tiếng Anh)'}
+      title={lang === 'en' ? 'Switch to Vietnamese' : 'Chuyển sang tiếng Anh'}
       aria-label={lang === 'en' ? 'Switch to Vietnamese' : 'Chuyển sang Tiếng Anh'}
       style={{
         display: 'inline-flex',
@@ -64,9 +64,9 @@ export function LanguageSwitch({ className = '', variant = 'header' }: LanguageS
         height: '36px',
         padding: '0 12px',
         borderRadius: '20px',
-        border: '1px solid #cbd5e1',
-        backgroundColor: '#ffffff',
-        color: '#1e293b',
+        border: '1px solid var(--color-input-border)',
+        backgroundColor: 'var(--color-surface)',
+        color: 'var(--color-text)',
         fontSize: '13px',
         fontWeight: 650,
         cursor: 'pointer',
@@ -77,21 +77,21 @@ export function LanguageSwitch({ className = '', variant = 'header' }: LanguageS
         boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#10b981';
-        e.currentTarget.style.backgroundColor = '#f0fdf4';
-        e.currentTarget.style.color = '#047857';
+        e.currentTarget.style.borderColor = 'var(--color-primary-text)';
+        e.currentTarget.style.backgroundColor = 'var(--color-success-bg)';
+        e.currentTarget.style.color = 'var(--color-primary-text)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = '#cbd5e1';
-        e.currentTarget.style.backgroundColor = '#ffffff';
-        e.currentTarget.style.color = '#1e293b';
+        e.currentTarget.style.borderColor = 'var(--color-input-border)';
+        e.currentTarget.style.backgroundColor = 'var(--color-surface)';
+        e.currentTarget.style.color = 'var(--color-text)';
       }}
     >
       <span style={{ fontSize: '15px' }} aria-hidden="true">🌐</span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-        <span style={{ color: lang === 'en' ? '#059669' : '#94a3b8', fontWeight: lang === 'en' ? 800 : 500 }}>EN</span>
-        <span style={{ color: '#cbd5e1', fontSize: '11px' }}>|</span>
-        <span style={{ color: lang === 'vi' ? '#059669' : '#94a3b8', fontWeight: lang === 'vi' ? 800 : 500 }}>VI</span>
+        <span style={{ color: lang === 'en' ? 'var(--color-primary-text)' : 'var(--color-muted)', fontWeight: lang === 'en' ? 800 : 500 }}>EN</span>
+        <span style={{ color: 'var(--color-input-border)', fontSize: '11px' }}>|</span>
+        <span style={{ color: lang === 'vi' ? 'var(--color-primary-text)' : 'var(--color-muted)', fontWeight: lang === 'vi' ? 800 : 500 }}>VI</span>
       </span>
     </button>
   );

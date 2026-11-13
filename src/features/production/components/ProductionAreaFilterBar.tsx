@@ -19,8 +19,8 @@ export function ProductionAreaFilterBar({
   return (
     <div className="list-filter-bar">
       <div className="search-input">
-        <span className="search-icon" aria-hidden="true">🔍</span>
-        <input
+        <label htmlFor="production-area-filter-bar-control-1" className="search-icon" aria-hidden="true">🔍</label>
+        <input id="production-area-filter-bar-control-1" className="ui-input"
           type="search"
           value={searchValue}
           onChange={(event) => onSearchChange(event.target.value)}
@@ -36,7 +36,7 @@ export function ProductionAreaFilterBar({
 
       <label className="status-select">
         <span className="sr-only">{(lang === 'en' ? "Status" : "Trạng thái")}</span>
-        <select value={status} onChange={(event) => onStatusChange(event.target.value as ProductionAreaStatus | 'all')}>
+        <select className="ui-select" value={status} onChange={(event) => onStatusChange(event.target.value as ProductionAreaStatus | 'all')}>
           {PRODUCTION_AREA_STATUS_FILTER_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {translate(option.label)}

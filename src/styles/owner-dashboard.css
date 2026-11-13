@@ -1,15 +1,15 @@
 /* Owner dashboard only. Existing navigation and other role dashboards are retained. */
 .owner-dashboard {
-  --owner-bg: #f5faf7;
-  --owner-surface: #fff;
-  --owner-text: #10231d;
-  --owner-muted: #64748b;
-  --owner-border: #e2e8f0;
-  --owner-green: #00875a;
-  --owner-mint: #e8f8ef;
-  --owner-blue: #0666ed;
-  --owner-blue-bg: #e8f2ff;
-  --owner-amber: #ed9b12;
+  --owner-bg: var(--color-page);
+  --owner-surface: var(--color-surface);
+  --owner-text: var(--color-text);
+  --owner-muted: var(--color-muted);
+  --owner-border: var(--color-border);
+  --owner-green: var(--color-primary-text);
+  --owner-mint: var(--color-primary-soft);
+  --owner-blue: var(--color-info);
+  --owner-blue-bg: var(--color-info-bg);
+  --owner-amber: var(--color-warning);
   --owner-chart-0: #00875a;
   --owner-chart-1: #8ddba3;
   --owner-chart-2: #ffbe32;
@@ -23,21 +23,11 @@
   font-size: 14px;
   line-height: 1.5;
 }
-[data-theme="dark"] .owner-dashboard {
-  --owner-bg: #0c211a;
-  --owner-surface: #142e25;
-  --owner-text: #e7f3ec;
-  --owner-muted: #a4b8af;
-  --owner-border: #2a463a;
-  --owner-green: #7edba8;
-  --owner-mint: #214334;
-  --owner-blue: #94c2ff;
-  --owner-blue-bg: #1e3b52;
-  --owner-amber: #f3c56c;
-}
 .app-shell:has(.owner-dashboard) .main-area { min-width: 0; }
 .app-shell:has(.owner-dashboard) .page-content { padding: 0; min-width: 0; width: 100%; max-width: none; margin: 0; }
-.owner-dashboard *, .owner-dashboard *::before, .owner-dashboard *::after { box-sizing: border-box; }
+.owner-dashboard *,
+.owner-dashboard *::before,
+.owner-dashboard *::after { box-sizing: border-box; }
 .owner-dashboard > :not(.owner-hero) { margin-inline: 22px; min-width: 0; }
 .owner-dashboard a { color: inherit; text-decoration: none; }
 .owner-dashboard :is(button, select, a):focus-visible { outline: 2px solid var(--owner-green); outline-offset: 4px; }
@@ -76,22 +66,20 @@
 .owner-season-list { padding: 0 18px; }
 .owner-season-row { display: flex; gap: 13px; align-items: center; padding: 12px 0; border-top: 1px solid var(--owner-border); }
 .owner-crop-thumb { display: grid; place-items: center; width: 72px; height: 74px; border-radius: 10px; flex: 0 0 auto; background-color: var(--owner-mint); color: var(--owner-green); }
-.owner-crop-melon, .owner-crop-lettuce { background-image: url('/images/owner-dashboard/crop-thumbnails.png'); background-size: 200% 100%; }
+.owner-crop-melon,
+.owner-crop-lettuce { background-image: url('/images/owner-dashboard/crop-thumbnails.png'); background-size: 200% 100%; }
 .owner-crop-melon { background-position: left center; }
 .owner-crop-lettuce { background-position: right center; }
 .owner-season-body { flex: 1; min-width: 0; }
 .owner-season-title { display: flex; gap: 10px; justify-content: space-between; align-items: center; }
 .owner-season-title h3 { font-size: 15px; font-weight: 700; line-height: 1.45; color: var(--owner-text); margin: 0; overflow-wrap: anywhere; }
-.owner-season-status { display: inline-block; color: var(--owner-green); background: var(--owner-mint); padding: 7px 11px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
-.owner-season-status.status-planned { background: var(--owner-blue-bg); color: var(--owner-blue); }
-.owner-season-status.status-paused { background: #fff5e2; color: #93611e; }
 .owner-season-body p { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--owner-muted); margin: 5px 0 8px; }
 .owner-progress-row { display: flex; align-items: center; gap: 10px; font-size: 11px; font-variant-numeric: tabular-nums; }
 .owner-progress-track { background: var(--owner-border); height: 6px; flex: 1; border-radius: 99px; overflow: hidden; }
 .owner-progress-track span { display: block; background: #00875a; border-radius: inherit; height: 100%; transition: width .25s; }
 .owner-panel-footnote { margin: 2px 18px 12px; color: var(--owner-muted); font-size: 11px; }
 .owner-missing { color: var(--owner-muted); }
-.owner-panel-heading select { background: var(--owner-surface); color: var(--owner-text); border: 1px solid var(--owner-border); border-radius: 9px; padding: 8px; font: inherit; font-size: 11px; flex: 0 0 auto; max-width: 135px; }
+.owner-panel-heading select { padding: 8px; font: inherit; flex: 0 0 auto; max-width: 135px; }
 .owner-chart-layout { display: flex; align-items: center; gap: 20px; padding: 6px 22px 24px; min-height: 210px; }
 .owner-donut { position: relative; width: 170px; flex: 0 0 170px; aspect-ratio: 1; }
 .owner-donut svg { width: 100%; height: 100%; display: block; }
@@ -114,11 +102,15 @@
 .owner-task-date > span { font-size: 11px; color: var(--owner-muted); }
 .owner-small-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; color: var(--owner-green); background: var(--owner-mint); flex: 0 0 auto; }
 .owner-small-icon.icon-bug { color: #d52e34; background: #fff0f1; }
-.owner-small-icon.icon-drop, .owner-small-icon.icon-file-text { color: var(--owner-blue); background: var(--owner-blue-bg); }
+.owner-small-icon.icon-drop,
+.owner-small-icon.icon-file-text { color: var(--owner-blue); background: var(--owner-blue-bg); }
 .owner-small-icon.icon-edit { color: #db7a13; background: #fff0de; }
-.owner-task-info, .owner-recent-body { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
-.owner-task-info strong, .owner-recent-body strong { font-size: 13px; font-weight: 650; color: var(--owner-text); line-height: 1.4; }
-.owner-task-info > span, .owner-recent-body > span { font-size: 11px; color: var(--owner-muted); overflow-wrap: anywhere; line-height: 1.5; }
+.owner-task-info,
+.owner-recent-body { display: flex; flex-direction: column; min-width: 0; gap: 4px; }
+.owner-task-info strong,
+.owner-recent-body strong { font-size: 13px; font-weight: 650; color: var(--owner-text); line-height: 1.4; }
+.owner-task-info > span,
+.owner-recent-body > span { font-size: 11px; color: var(--owner-muted); overflow-wrap: anywhere; line-height: 1.5; }
 .owner-environment-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; padding: 10px 16px 16px; }
 .owner-measurement { display: flex; align-items: flex-start; gap: 9px; padding: 10px; min-height: 98px; border: 1px solid var(--owner-border); border-radius: 11px; }
 .owner-measurement > .ui-icon { flex: 0 0 auto; margin-top: 7px; }
@@ -148,8 +140,10 @@
 .owner-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 @keyframes owner-pulse { 50% { opacity: .45; } }
 [data-theme="dark"] .owner-hero { background-image: linear-gradient(90deg,#173a2f,#173a2ff2 40%,#173a2f70),url('/images/owner-dashboard/farm-banner.png'); }
-[data-theme="dark"] .owner-hero h1, [data-theme="dark"] .owner-meta-item strong { color: #e9f9ef; }
-[data-theme="dark"] .owner-hero-description, [data-theme="dark"] .owner-meta-item div > span:first-child { color: #c3dfcc; }
+[data-theme="dark"] .owner-hero h1,
+[data-theme="dark"] .owner-meta-item strong { color: #e9f9ef; }
+[data-theme="dark"] .owner-hero-description,
+[data-theme="dark"] .owner-meta-item div > span:first-child { color: #c3dfcc; }
 [data-theme="dark"] .owner-meta-item { background: #0b291c80; }
 [data-theme="dark"] .owner-role-badge { background: #204e3b; color: #9eebba; }
 [data-theme="dark"] .owner-edit-link { background: #214b3a; color: #b1f0c9 !important; border-color: #3f6853; }
@@ -179,10 +173,12 @@
   .owner-chart-layout { min-height: 215px; justify-content: center; }
   .owner-chart-legend { flex: 0 1 290px; }
   .owner-donut { width: 165px; flex-basis: 165px; }
-  .owner-chart-legend button, .owner-chart-legend strong { font-size: 12px; }
+  .owner-chart-legend button,
+.owner-chart-legend strong { font-size: 12px; }
 }
 @media (max-width: 700px) {
-  .app-shell:has(.owner-dashboard), .app-shell.sidebar-collapsed:has(.owner-dashboard) { grid-template-columns: minmax(0,1fr); }
+  .app-shell:has(.owner-dashboard),
+.app-shell.sidebar-collapsed:has(.owner-dashboard) { grid-template-columns: minmax(0,1fr); }
   .app-shell:has(.owner-dashboard) .sidebar { position: static; height: auto; min-width: 0; padding: 14px 16px; grid-template-columns: minmax(0,1fr) auto; grid-template-rows: auto auto; justify-items: stretch; overflow: hidden; }
   .app-shell:has(.owner-dashboard) .sidebar > .brand { grid-column: 1; grid-row: 1; padding-bottom: 0; }
   .app-shell:has(.owner-dashboard) .sidebar > .sidebar-collapse-btn { grid-column: 2; grid-row: 1; }
@@ -206,10 +202,10 @@
   .owner-bottom-grid { grid-template-columns: minmax(0,1fr); }
   .owner-bottom-grid > .owner-panel:last-child { grid-column: auto; }
   .owner-recent-list { display: block; }
-  .owner-panel-heading h2, .owner-bottom-grid .owner-panel-heading h2 { font-size: 15px; }
+  .owner-panel-heading h2,
+.owner-bottom-grid .owner-panel-heading h2 { font-size: 15px; }
   .owner-panel-heading { padding-inline: 16px; }
   .owner-season-title { flex-wrap: wrap; gap: 5px; }
-  .owner-season-status { padding: 3px 8px; font-size: 11px; }
   .owner-crop-thumb { width: 58px; height: 70px; }
   .owner-season-body p { font-size: 11px; }
   .owner-data-notice { flex-wrap: wrap; }
@@ -227,10 +223,13 @@
   .owner-donut { flex-basis: auto; width: 170px; }
   .owner-panel-heading { flex-wrap: wrap; }
   .owner-panel-heading > a { margin-left: auto; }
-  .owner-task-info strong, .owner-recent-body strong { font-size: 12px; }
+  .owner-task-info strong,
+.owner-recent-body strong { font-size: 12px; }
   .owner-panel-footnote { font-size: 11px; }
   .owner-dashboard-loading { grid-template-columns: minmax(0,1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .owner-dashboard *, .owner-dashboard *::before, .owner-dashboard *::after { animation: none; transition: none; }
+  .owner-dashboard *,
+.owner-dashboard *::before,
+.owner-dashboard *::after { animation: none; transition: none; }
 }

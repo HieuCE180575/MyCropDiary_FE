@@ -1,6 +1,8 @@
+import { Icon } from '../../shared/components/Icon';
 import { useState } from 'react';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
-import { Icon } from '../../shared/components/Icon';
+
+import { materialTypeLabel, materialUnitLabel } from './materialUsageLabels';
 
 export const MATERIAL_UNITS = [
   'bao',
@@ -86,7 +88,7 @@ export function getMaterialUnitOptions(currentUnit: string, lang: 'en' | 'vi' = 
     label: activeMap[unit] || unit,
   }));
   if (currentUnit && !options.some(option => option.value === currentUnit)) {
-    options.unshift({ value: currentUnit, label: activeMap[currentUnit] || currentUnit });
+    options.unshift({ value: currentUnit, label: activeMap[currentUnit] || materialUnitLabel(currentUnit, lang) });
   }
   return options;
 }
@@ -117,8 +119,8 @@ export const MATERIAL_FORMS = [
 export const AREA_UNITS = ['m²', 'sào', 'ha'];
 
 export function defaultMaterialForm(materialType?: string | null, unit?: string | null): string {
-  const type = (materialType ?? '').toLocaleLowerCase('vi-VN');
-  const u = (unit ?? '').toLocaleLowerCase('vi-VN');
+  const type = materialTypeLabel(materialType ?? '', 'vi').toLocaleLowerCase('vi-VN');
+  const u = materialUnitLabel(unit ?? '', 'vi').toLocaleLowerCase('vi-VN');
   if (u.includes('bao')) {
     if (type.includes('hữu cơ') || type.includes('sinh học')) return 'Dạng hữu cơ vi sinh';
     if (type.includes('hòa tan') || type.includes('bột')) return 'Dạng bột';
@@ -156,6 +158,7 @@ export const DOSAGE_UNITS = [
   'chai/phuy (200L)',
   'lít/ha',
   'ml/bình (20L)',
+  'ml/16 lít nước',
   'ml/lít',
   'kg/gốc',
   'g/gốc',
@@ -164,21 +167,41 @@ export const DOSAGE_UNITS = [
   'g/bình',
   '%',
 ];
+
+// Editable starter values by material category, not product-label recommendations.
+export function suggestMaterialDosage(materialType: string, materialUnit: string): string {
+  const type = materialType.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const unit = materialUnit.trim().toLowerCase();
+  if (/bvtv|pest|insect|fungic|thuoc|che pham|biological|bio.?control/.test(type)) {
+    return /^(kg|g)$/.test(unit) ? '20 g/bình' : '20 ml/bình (20L)';
+  }
+  if (/long|liquid/.test(type) || /^(l|lit|lít|ml|bottle|chai|can|jug)(\b|\s|$)/u.test(unit)) return '20 ml/bình (20L)';
+  if (/giong|seed/.test(type)) return '1 kg/ha';
+  if (/^(bao|bag)(\b|\s|$)/u.test(unit)) return '50 bao/ha';
+  if (unit === 'tấn' || unit === 'ton') return '1 tấn/ha';
+  if (unit === 'g') return '10 g/m²';
+  if (unit === 'kg' || /phan bon|fertiliz|organic|compost|cai tao dat|soil/.test(type)) return '100 kg/ha';
+  return '';
+}
 function readDosage(value: string) {
   // Preserve legacy free text; only split a recognized numeric dose and suffix.
   const match = value.trim().match(/^(\d+(?:[.,]\d*)?|[.,]\d*)\s*(.+)$/u);
-  const unit = match && DOSAGE_UNITS.find(option => option === match[2].replace(/\s/g, ''));
+  const unit = match && DOSAGE_UNITS.find(option => option.replace(/\s/g, '') === match[2].replace(/\s/g, ''));
   return unit && match ? { amount: match[1], unit } : { amount: value, unit: 'custom' };
 }
 
 export function DosageInput({
   value,
   onChange,
+  required = false,
+  error,
   materialType = '',
   materialUnit = '',
 }: {
   value: string;
   onChange: (value: string) => void;
+  required?: boolean;
+  error?: string;
   materialType?: string;
   materialUnit?: string;
 }) {
@@ -199,10 +222,10 @@ export function DosageInput({
     onChange(!amount.trim() ? '' : unit === 'custom' ? amount : `${amount} ${unit}`);
   };
   return <div className="mu-compound-input mu-dose-input">
-    <span className="mu-input-icon"><Icon name="flask" /></span>
-    <input id="usage-dosage" aria-label={(lang === 'en' ? "Dosage" : "Liều lượng")} inputMode={parsed.unit === 'custom' ? 'text' : 'decimal'} maxLength={parsed.unit === 'custom' ? 100 : 99 - parsed.unit.length}
+    <span className="mu-input-icon" aria-hidden="true"><Icon name="flask" /></span>
+    <input className="ui-input" id="usage-dosage" required={required} aria-invalid={Boolean(error)} aria-describedby={error ? 'usage-dosage-error' : undefined} aria-label={(lang === 'en' ? "Dosage" : "Liều lượng")} inputMode={parsed.unit === 'custom' ? 'text' : 'decimal'} maxLength={parsed.unit === 'custom' ? 100 : 99 - parsed.unit.length}
       placeholder={parsed.unit === 'custom' ? (lang === 'en' ? 'Enter dosage' : 'Nhập liều lượng') : (lang === 'en' ? 'e.g. 50' : 'Ví dụ: 50')} value={parsed.amount} onChange={event => update(event.target.value, parsed.unit)} />
-    <select aria-label={(lang === 'en' ? "Dosage unit" : "Đơn vị liều lượng")} value={parsed.unit} onChange={event => update(parsed.amount, event.target.value)}>
+    <select className="ui-select" aria-label={(lang === 'en' ? "Dosage unit" : "Đơn vị liều lượng")} value={parsed.unit} onChange={event => update(parsed.amount, event.target.value)}>
       {DOSAGE_UNITS.map(unit => <option key={unit} value={unit}>{translate(unit)}</option>)}
       <option value="custom">{lang === 'en' ? 'Custom input' : 'Nhập tự do'}</option>
     </select>
@@ -210,13 +233,13 @@ export function DosageInput({
 }
 
 const METHODS = ['Bón gốc', 'Bón lót', 'Bón thúc', 'Phun lá', 'Phun sương', 'Tưới nhỏ giọt'];
-export function MethodInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+export function MethodInput({ value, onChange, error }: { value: string; onChange: (value: string) => void; error?: string }) {
   const { lang, t: translate } = useLanguage();
   const [custom, setCustom] = useState(false);
   const isCustom = custom || Boolean(value && !METHODS.includes(value));
   return <>
     <div className="mu-icon-field"><Icon name="sprout" />
-      <select id="usage-method" aria-label={(lang === 'en' ? "Application method" : "Phương pháp sử dụng")} value={isCustom ? 'custom' : value} onChange={event => {
+      <select className="ui-select" id="usage-method" aria-invalid={Boolean(error)} aria-describedby={error ? 'usage-method-error' : undefined} aria-label={(lang === 'en' ? "Application method" : "Phương pháp sử dụng")} value={isCustom ? 'custom' : value} onChange={event => {
         const nextCustom = event.target.value === 'custom';
         setCustom(nextCustom);
         onChange(nextCustom ? '' : event.target.value);
@@ -226,6 +249,6 @@ export function MethodInput({ value, onChange }: { value: string; onChange: (val
         <option value="custom">{(lang === 'en' ? "Other method..." : "Phương pháp khác...")}</option>
       </select>
     </div>
-    {isCustom && <input aria-label={(lang === 'en' ? "Method" : "Phương thức")} maxLength={200} placeholder={(lang === 'en' ? "Enter application method" : "Nhập phương pháp sử dụng")} value={value} onChange={event => onChange(event.target.value)} />}
+    {isCustom && <input className="ui-input" id="usage-method-custom" aria-invalid={Boolean(error)} aria-describedby={error ? 'usage-method-error' : undefined} aria-label={(lang === 'en' ? "Method" : "Phương thức")} maxLength={200} placeholder={(lang === 'en' ? "Enter application method" : "Nhập phương pháp sử dụng")} value={value} onChange={event => onChange(event.target.value)} />}
   </>;
 }

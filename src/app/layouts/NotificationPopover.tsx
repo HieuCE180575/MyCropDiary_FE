@@ -10,6 +10,7 @@ type Props = {
   loading: boolean;
   invitations: FarmInvitation[];
   respondingInvId: number | null;
+  invitationError?: string | null;
   onMarkAllAsRead: () => void;
   onNotificationClick: (n: NotificationItem) => void;
   onRespond: (inv: FarmInvitation, action: 'approve' | 'reject') => void;
@@ -22,6 +23,7 @@ export function NotificationPopover({
   loading,
   invitations,
   respondingInvId,
+  invitationError,
   onMarkAllAsRead,
   onNotificationClick,
   onRespond,
@@ -41,6 +43,11 @@ export function NotificationPopover({
       </div>
 
       <div className="notif-body">
+        {invitationError && (
+          <p role="alert" className="form-error-banner" style={{ margin: '0 0 10px' }}>
+            {invitationError}
+          </p>
+        )}
         {invitations.length > 0 && (
           <section className="notif-section">
             <p className="notif-section-title">

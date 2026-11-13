@@ -10,9 +10,10 @@ interface FarmingActivityPickerProps {
   value: number | '';
   onChange: (id: number | '') => void;
   disabled?: boolean;
+  errors?: Record<string, string>;
 }
 
-export function FarmingActivityPicker({ farmId, value, onChange, disabled }: FarmingActivityPickerProps) {
+export function FarmingActivityPicker({ farmId, value, onChange, disabled, errors = {} }: FarmingActivityPickerProps) {
   const { lang, t: translate } = useLanguage();
   const [seasons, setSeasons] = useState<CropSeasonOption[]>([]);
   const [seasonId, setSeasonId] = useState<number | ''>('');
@@ -55,9 +56,9 @@ export function FarmingActivityPicker({ farmId, value, onChange, disabled }: Far
 
   return (
     <>
-      <div className="mu-field">
-      <label htmlFor="usage-season">{(lang === 'en' ? "Season *" : "Mùa vụ *")}</label>
-      <select id="usage-season" required value={seasonId} disabled={disabled || seasonsLoading || Boolean(seasonsError)} onChange={event => {
+      <div className="mu-field structured-field-card">
+      <label htmlFor="usage-season">{lang === 'en' ? 'Season' : 'Mùa vụ'} <span className="mu-required">*</span></label>
+      <select className="ui-select" id="usage-season" required aria-invalid={Boolean(errors['usage-season'])} aria-describedby={errors['usage-season'] ? 'usage-season-error' : undefined} value={seasonId} disabled={disabled || seasonsLoading || Boolean(seasonsError)} onChange={event => {
         setSeasonId(event.target.value ? Number(event.target.value) : '');
         onChange('');
         setActivities([]);
@@ -67,18 +68,20 @@ export function FarmingActivityPicker({ farmId, value, onChange, disabled }: Far
         <option value="">{(lang === 'en' ? seasonsLoading ? "Loading seasons..." : "Select season" : seasonsLoading ? 'Đang tải mùa vụ...' : 'Chọn mùa vụ')}</option>
         {seasons.map(season => <option key={season.cropSeasonId} value={season.cropSeasonId}>{season.seasonName}</option>)}
       </select>
+      {errors['usage-season'] && <p id="usage-season-error" role="alert" className="mu-field-error">{translate(errors['usage-season'])}</p>}
       {seasonsError && <div role="alert">{translate(seasonsError)} <button type="button" disabled={disabled} onClick={() => setSeasonsAttempt(attempt => attempt + 1)}>{(lang === 'en' ? "Reload seasons" : "Tải lại mùa vụ")}</button></div>}
       {!seasonsLoading && !seasonsError && seasons.length === 0 && <p role="status">{(lang === 'en' ? "No seasons are available for material usage. Create or open a season first." : "Trang trại chưa có mùa vụ có thể ghi nhận vật tư. Hãy tạo hoặc mở mùa vụ trước.")}</p>}
       </div>
-      <div className="mu-field">
-      <label htmlFor="usage-activity">{(lang === 'en' ? "Farming activity *" : "Hoạt động canh tác *")}</label>
-      <select id="usage-activity" required value={value} disabled={disabled || !seasonId || activitiesLoading || Boolean(activitiesError)} onChange={event => {
+      <div className="mu-field structured-field-card">
+      <label htmlFor="usage-activity">{lang === 'en' ? 'Farming activity' : 'Hoạt động canh tác'} <span className="mu-required">*</span></label>
+      <select className="ui-select" id="usage-activity" required aria-invalid={Boolean(errors['usage-activity'])} aria-describedby={errors['usage-activity'] ? 'usage-activity-error' : undefined} value={value} disabled={disabled || !seasonId || activitiesLoading || Boolean(activitiesError)} onChange={event => {
         const id = Number(event.target.value);
         onChange(activities.some(activity => activity.farmingActivityId === id) ? id : '');
       }}>
         <option value="">{(lang === 'en' ? activitiesLoading ? "Loading activities..." : "Select farming activity" : activitiesLoading ? 'Đang tải hoạt động...' : 'Chọn hoạt động canh tác')}</option>
         {activities.map(activity => <option key={activity.farmingActivityId} value={activity.farmingActivityId}>{activity.activityName}</option>)}
       </select>
+      {errors['usage-activity'] && <p id="usage-activity-error" role="alert" className="mu-field-error">{translate(errors['usage-activity'])}</p>}
       {activitiesError && <div role="alert">{translate(activitiesError)} <button type="button" disabled={disabled} onClick={() => setActivitiesAttempt(attempt => attempt + 1)}>{(lang === 'en' ? "Reload activities" : "Tải lại hoạt động")}</button></div>}
       {seasonId && !activitiesLoading && !activitiesError && activities.length === 0 ? <p role="status">{(lang === 'en' ? "This season has no farming activities. Create a diary entry first." : "Mùa vụ chưa có hoạt động canh tác. Hãy tạo nhật ký canh tác trước.")}</p> : null}
       </div>

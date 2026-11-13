@@ -113,13 +113,6 @@ export const SHORT_TERM_CROPS: CropCategoryResp[] = [
   { id: 20, categoryName: 'Bắp Ngọt (Sweet Corn)', description: 'Cây ngắn ngày (65-75 ngày), thu hoạch bắp tươi' },
 ];
 
-const DEFAULT_CATEGORIES: CropCategoryResp[] = [
-  { id: 1, categoryName: 'Rau ăn lá', description: 'Cải ngọt, cải xanh, xà lách, rau muống, cải bó xôi' },
-  { id: 2, categoryName: 'Rau ăn quả', description: 'Cà chua, dưa leo, ớt chuông, đậu bắp, khổ qua' },
-  { id: 3, categoryName: 'Rau ăn củ', description: 'Cà rốt, củ cải trắng, khoai tây, hành tây' },
-  { id: 4, categoryName: 'Cây ăn quả', description: 'Cam, bưởi, xoài, nhãn, thanh long, dưa lưới' },
-  { id: 5, categoryName: 'Cây gia vị & rau thơm', description: 'Húng quế, ngò rí, hành lá, tía tô' },
-];
 
 let cachedCategories: CropCategoryResp[] | null = null;
 
@@ -140,19 +133,6 @@ export async function fetchCropCategories(): Promise<CropCategoryResp[]> {
     return SHORT_TERM_CROPS;
   }
 }
-
-async function unusedOriginalFetch(): Promise<CropCategoryResp[]> {
-  try {
-    const list = await request<CropCategoryResp[]>('/crop-categories');
-    cachedCategories = list && list.length > 0 ? list : DEFAULT_CATEGORIES;
-    return cachedCategories;
-  } catch {
-    cachedCategories = DEFAULT_CATEGORIES;
-    return DEFAULT_CATEGORIES;
-  }
-}
-
-
 
 export async function fetchCropSeasonsByFarm(
   farmId: number,
@@ -252,5 +232,3 @@ export async function fetchCropSeasonsForBlock(
   );
   return results.sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
 }
-
-

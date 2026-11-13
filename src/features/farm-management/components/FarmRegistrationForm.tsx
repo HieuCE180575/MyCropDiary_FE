@@ -1,3 +1,6 @@
+import { Button } from '../../../shared/components/Button';
+import { FarmGoongMap } from './FarmGoongMap';
+
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import {
@@ -20,7 +23,7 @@ import {
   type LatLngPoint,
   type WardOption,
 } from '../goongMapService';
-import { FarmGoongMap } from './FarmGoongMap';
+
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 const INITIAL_VALUES: FarmRegistrationFormValues = {
@@ -325,7 +328,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
       <div className="panel-title">
         <div>
           <h2>{lang === 'en' ? 'Farm Registration Information' : 'Thông tin đăng ký trang trại'}</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: '#64748b' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: 'var(--color-muted)' }}>
             {lang === 'en' ? 'Select Province / City, District, Ward / Commune and trace farm boundaries on the map.' : 'Chọn Tỉnh/Thành phố, Quận/Huyện, Phường/Xã và vẽ vùng tọa độ trang trại trên bản đồ.'}
           </p>
         </div>
@@ -333,9 +336,9 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
 
       {submitError ? <p className="form-error-banner">{translate(submitError)}</p> : null}
 
-      <label className="form-field">
+      <label className="form-field structured-field-card">
         <span>{lang === 'en' ? 'Proposed Farm Name *' : 'Tên trang trại dự kiến *'}</span>
-        <input
+        <input className="ui-input"
           type="text"
           maxLength={160}
           value={values.proposedFarmName}
@@ -347,9 +350,9 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
       </label>
 
       {/* Địa chỉ chi tiết */}
-      <label className="form-field">
+      <label className="form-field structured-field-card">
         <span>{lang === 'en' ? 'Detailed Address *' : 'Địa chỉ chi tiết *'}</span>
-        <input
+        <input className="ui-input"
           type="text"
           value={values.address}
           maxLength={300}
@@ -364,10 +367,10 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
       <div className="farm-registration-location-fields">
         {/* 1. Tỉnh / Thành phố */}
         <div className="form-field" style={{ position: 'relative' }}>
-          <label style={{ display: 'grid', gap: '6px' }}>
+          <label className="structured-field-card" style={{ display: 'grid', gap: '6px' }}>
             <span>{lang === 'en' ? 'Province / City' : 'Tỉnh / thành phố'}</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
+              <input className="ui-input"
                 type="text"
                 readOnly
                 value={values.province ?? ''}
@@ -393,7 +396,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                 onBlur={() => handleBlur('province')}
                 placeholder={lang === 'en' ? "-- Select Province / City --" : "-- Chọn Tỉnh / Thành phố --"}
                 autoComplete="off"
-                style={{ width: '100%', paddingRight: '30px', cursor: 'pointer', background: '#ffffff' }}
+                style={{ width: '100%', paddingRight: '30px', cursor: 'pointer' }}
               />
               <span
                 onMouseDown={(e) => {
@@ -401,7 +404,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                   setFilterKeyword('');
                   setOpenDropdown((cur) => (cur === 'province' ? null : 'province'));
                 }}
-                style={{ position: 'absolute', right: '10px', cursor: 'pointer', color: '#64748b', fontSize: '12px' }}
+                style={{ position: 'absolute', right: '10px', cursor: 'pointer', color: 'var(--color-muted)', fontSize: '12px' }}
               >
                 ▼
               </span>
@@ -418,15 +421,15 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                 right: 0,
                 zIndex: 45,
                 marginTop: '4px',
-                background: '#ffffff',
-                border: '1px solid #10b981',
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-primary-text)',
                 borderRadius: '10px',
                 boxShadow: '0 12px 28px rgba(15, 23, 42, 0.14)',
                 maxHeight: '250px',
                 overflowY: 'auto',
               }}
             >
-              <div style={{ padding: '7px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: '12px', color: '#166534', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ padding: '7px 12px', background: 'var(--color-success-bg)', borderBottom: '1px solid var(--color-success-bg)', fontSize: '12px', color: 'var(--color-success)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>{(lang === 'en' ? filterKeyword ? `🔍 Filtering: "${filterKeyword}"` : "Type to filter provinces/cities" : filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : 'Gõ phím bất kỳ để lọc nhanh Tỉnh/TP')}</span>
                 {filterKeyword && (
                   <button
@@ -435,14 +438,14 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                           e.preventDefault();
                           setFilterKeyword('');
                         }}
-                        style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
+                        style={{ border: 0, background: 'transparent', color: 'var(--color-danger)', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
                       >
                     {(lang === 'en' ? "Clear filter" : "Xóa lọc")}
                   </button>
                 )}
               </div>
               {filteredProvinces.length === 0 ? (
-                <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
+                <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-muted)' }}>
                   {(lang === 'en' ? "No matching province / city" : "Không tìm thấy Tỉnh / Thành phố phù hợp")}
                 </div>
               ) : (
@@ -457,10 +460,10 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                       padding: '9px 12px',
                       fontSize: '13.5px',
                       cursor: 'pointer',
-                      background: values.province === prov.name ? '#ecfdf5' : '#ffffff',
-                      color: values.province === prov.name ? '#047857' : '#0f172a',
+                      background: values.province === prov.name ? 'var(--color-success-bg)' : 'var(--color-surface)',
+                      color: values.province === prov.name ? 'var(--color-primary-text)' : 'var(--color-text)',
                       fontWeight: values.province === prov.name ? 700 : 500,
-                      borderBottom: '1px solid #f8fafc',
+                      borderBottom: '1px solid var(--color-page)',
                     }}
                   >
                     {prov.name}
@@ -473,10 +476,10 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
 
         {/* 2. Quận / Huyện (chỉ hiển thị các Quận/Huyện thuộc Tỉnh/TP đã chọn) */}
         <div className="form-field" style={{ position: 'relative' }}>
-          <label style={{ display: 'grid', gap: '6px' }}>
+          <label className="structured-field-card" style={{ display: 'grid', gap: '6px' }}>
             <span>{lang === 'en' ? 'District' : 'Quận / huyện'}</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
+              <input className="ui-input"
                 type="text"
                 readOnly
                 value={values.district ?? ''}
@@ -501,12 +504,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                 onBlur={() => handleBlur('district')}
                 placeholder={values.province ? (lang === 'en' ? '-- Select District --' : '-- Chọn Quận / Huyện --') : (lang === 'en' ? 'Select Province / City first' : 'Chọn Tỉnh / Thành phố trước')}
                 autoComplete="off"
-                style={{
-                  width: '100%',
-                  paddingRight: '30px',
-                  cursor: values.province ? 'pointer' : 'not-allowed',
-                  background: values.province ? '#ffffff' : '#f8fafc',
-                }}
+                style={{ width: '100%', paddingRight: '30px', cursor: values.province ? 'pointer' : 'not-allowed' }}
               />
               <span
                 onMouseDown={(e) => {
@@ -514,7 +512,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                   setFilterKeyword('');
                   setOpenDropdown((cur) => (cur === 'district' ? null : 'district'));
                 }}
-                style={{ position: 'absolute', right: '10px', cursor: 'pointer', color: '#64748b', fontSize: '12px' }}
+                style={{ position: 'absolute', right: '10px', cursor: 'pointer', color: 'var(--color-muted)', fontSize: '12px' }}
               >
                 ▼
               </span>
@@ -531,8 +529,8 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                 right: 0,
                 zIndex: 45,
                 marginTop: '4px',
-                background: '#ffffff',
-                border: '1px solid #10b981',
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-primary-text)',
                 borderRadius: '10px',
                 boxShadow: '0 12px 28px rgba(15, 23, 42, 0.14)',
                 maxHeight: '250px',
@@ -540,16 +538,16 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
               }}
             >
               {!values.province ? (
-                <div style={{ padding: '10px 12px', fontSize: '13px', color: '#d97706' }}>
+                <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-warning)' }}>
                   {(lang === 'en' ? "⚠️ Select a Province / City first to filter Districts" : "⚠️ Vui lòng chọn Tỉnh / Thành phố trước để lọc Quận / Huyện")}
                 </div>
               ) : loadingDistricts ? (
-                <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
+                <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-muted)' }}>
                   {(lang === 'en' ? "⏳ Loading Districts for " : "⏳ Đang tải Quận / Huyện của ")} {values.province}...
                 </div>
               ) : (
                 <>
-                  <div style={{ padding: '7px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: '12px', color: '#166534', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ padding: '7px 12px', background: 'var(--color-success-bg)', borderBottom: '1px solid var(--color-success-bg)', fontSize: '12px', color: 'var(--color-success)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{(lang === 'en' ? filterKeyword ? `🔍 Filtering: "${filterKeyword}"` : `Districts in ${values.province}` : filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : `Quận/Huyện thuộc ${values.province}`)}</span>
                     {filterKeyword && (
                       <button
@@ -558,14 +556,14 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                           e.preventDefault();
                           setFilterKeyword('');
                         }}
-                        style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
+                        style={{ border: 0, background: 'transparent', color: 'var(--color-danger)', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
                       >
                         {(lang === 'en' ? "Clear filter" : "Xóa lọc")}
                       </button>
                     )}
                   </div>
                   {filteredDistricts.length === 0 ? (
-                    <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
+                    <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-muted)' }}>
                       {(lang === 'en' ? "No districts match the keyword" : "Không có Quận / Huyện khớp từ khóa")}
                     </div>
                   ) : (
@@ -580,10 +578,10 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                           padding: '9px 12px',
                           fontSize: '13.5px',
                           cursor: 'pointer',
-                          background: values.district === dist.name ? '#ecfdf5' : '#ffffff',
-                          color: values.district === dist.name ? '#047857' : '#0f172a',
+                          background: values.district === dist.name ? 'var(--color-success-bg)' : 'var(--color-surface)',
+                          color: values.district === dist.name ? 'var(--color-primary-text)' : 'var(--color-text)',
                           fontWeight: values.district === dist.name ? 700 : 500,
-                          borderBottom: '1px solid #f8fafc',
+                          borderBottom: '1px solid var(--color-page)',
                         }}
                       >
                         {dist.name}
@@ -598,10 +596,10 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
 
         {/* 3. Phường / Xã (chỉ hiển thị các Phường/Xã thuộc Quận/Huyện đã chọn) */}
         <div className="form-field" style={{ position: 'relative' }}>
-          <label style={{ display: 'grid', gap: '6px' }}>
+          <label className="structured-field-card" style={{ display: 'grid', gap: '6px' }}>
             <span>{lang === 'en' ? 'Ward / Commune' : 'Phường / xã'}</span>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <input
+              <input className="ui-input"
                 type="text"
                 readOnly
                 value={values.ward ?? ''}
@@ -621,12 +619,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                 onBlur={() => handleBlur('ward')}
                 placeholder={values.district ? (lang === 'en' ? '-- Select Ward / Commune --' : '-- Chọn Phường / Xã --') : (lang === 'en' ? 'Select District first' : 'Chọn Quận / Huyện trước')}
                 autoComplete="off"
-                style={{
-                  width: '100%',
-                  paddingRight: '30px',
-                  cursor: values.district ? 'pointer' : 'not-allowed',
-                  background: values.district ? '#ffffff' : '#f8fafc',
-                }}
+                style={{ width: '100%', paddingRight: '30px', cursor: values.district ? 'pointer' : 'not-allowed' }}
               />
               <span
                 onMouseDown={(e) => {
@@ -634,7 +627,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                   setFilterKeyword('');
                   setOpenDropdown((cur) => (cur === 'ward' ? null : 'ward'));
                 }}
-                style={{ position: 'absolute', right: '10px', cursor: 'pointer', color: '#64748b', fontSize: '12px' }}
+                style={{ position: 'absolute', right: '10px', cursor: 'pointer', color: 'var(--color-muted)', fontSize: '12px' }}
               >
                 ▼
               </span>
@@ -651,8 +644,8 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                 right: 0,
                 zIndex: 45,
                 marginTop: '4px',
-                background: '#ffffff',
-                border: '1px solid #10b981',
+                background: 'var(--color-surface)',
+                border: '1px solid var(--color-primary-text)',
                 borderRadius: '10px',
                 boxShadow: '0 12px 28px rgba(15, 23, 42, 0.14)',
                 maxHeight: '250px',
@@ -660,16 +653,16 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
               }}
             >
               {!values.district ? (
-                <div style={{ padding: '10px 12px', fontSize: '13px', color: '#d97706' }}>
+                <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-warning)' }}>
                   {(lang === 'en' ? "⚠️ Select a District first to filter Wards / Communes" : "⚠️ Vui lòng chọn Quận / Huyện trước để lọc Phường / Xã")}
                 </div>
               ) : loadingWards ? (
-                <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
+                <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-muted)' }}>
                   {(lang === 'en' ? "⏳ Loading Wards / Communes for " : "⏳ Đang tải Phường / Xã của ")} {values.district}...
                 </div>
               ) : (
                 <>
-                  <div style={{ padding: '7px 12px', background: '#f0fdf4', borderBottom: '1px solid #dcfce7', fontSize: '12px', color: '#166534', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ padding: '7px 12px', background: 'var(--color-success-bg)', borderBottom: '1px solid var(--color-success-bg)', fontSize: '12px', color: 'var(--color-success)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{(lang === 'en' ? filterKeyword ? `🔍 Filtering: "${filterKeyword}"` : `Wards/Communes in ${values.district}` : filterKeyword ? `🔍 Đang lọc: "${filterKeyword}"` : `Phường/Xã thuộc ${values.district}`)}</span>
                     {filterKeyword && (
                       <button
@@ -678,14 +671,14 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                           e.preventDefault();
                           setFilterKeyword('');
                         }}
-                        style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
+                        style={{ border: 0, background: 'transparent', color: 'var(--color-danger)', cursor: 'pointer', fontSize: '11.5px', fontWeight: 600 }}
                       >
                         {(lang === 'en' ? "Clear filter" : "Xóa lọc")}
                       </button>
                     )}
                   </div>
                   {filteredWards.length === 0 ? (
-                    <div style={{ padding: '10px 12px', fontSize: '13px', color: '#64748b' }}>
+                    <div style={{ padding: '10px 12px', fontSize: '13px', color: 'var(--color-muted)' }}>
                       {(lang === 'en' ? "No wards / communes match the keyword" : "Không có Phường / Xã khớp từ khóa")}
                     </div>
                   ) : (
@@ -700,10 +693,10 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
                           padding: '9px 12px',
                           fontSize: '13.5px',
                           cursor: 'pointer',
-                          background: values.ward === w.name ? '#ecfdf5' : '#ffffff',
-                          color: values.ward === w.name ? '#047857' : '#0f172a',
+                          background: values.ward === w.name ? 'var(--color-success-bg)' : 'var(--color-surface)',
+                          color: values.ward === w.name ? 'var(--color-primary-text)' : 'var(--color-text)',
                           fontWeight: values.ward === w.name ? 700 : 500,
-                          borderBottom: '1px solid #f8fafc',
+                          borderBottom: '1px solid var(--color-page)',
                         }}
                       >
                         {w.name}
@@ -736,9 +729,9 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         />
       </div>
 
-      <label className="form-field">
+      <label className="form-field structured-field-card">
         <span>{lang === 'en' ? 'Farm Description' : 'Mô tả trang trại'}</span>
-        <textarea
+        <textarea className="ui-textarea"
           rows={4}
           maxLength={1000}
           value={values.description}
@@ -749,9 +742,9 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         {errors.description ? <small className="field-error">{translate(errors.description)}</small> : null}
       </label>
 
-      <label className="form-field">
+      <label className="form-field structured-field-card">
         <span>{lang === 'en' ? 'Supporting Document URL' : 'Đường dẫn tài liệu minh chứng'}</span>
-        <input
+        <input className="ui-input"
           type="url"
           value={values.documentUrl ?? ''}
           maxLength={1000}
@@ -768,9 +761,9 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         )}
       </label>
 
-      <button type="submit" className="primary-button" disabled={submitting}>
+      <Button type="submit" variant="primary" loading={submitting}>
         {submitting ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...') : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
-      </button>
+      </Button>
     </form>
   );
 }

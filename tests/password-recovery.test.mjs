@@ -81,14 +81,14 @@ test('password recovery handles strong password validation, show/hide password t
     await set('recovery-password', 'password123');
     await set('recovery-confirmation', 'password123');
     await submit();
-    assert.match(document.querySelector('[role="alert"]').textContent, /in hoa/);
+    assert.match(document.querySelector('[role="alert"]').textContent, /chữ hoa/);
     assert.equal(calls.length, 1);
 
     // Strong password but mismatched confirmation
     await set('recovery-password', 'Password@123');
     await set('recovery-confirmation', 'Different@123');
     await submit();
-    assert.match(document.querySelector('[role="alert"]').textContent, /không khớp/);
+    assert.match(document.querySelector('[role="alert"]').textContent, /chưa khớp/);
     assert.equal(calls.length, 1);
 
     // Matching strong password -> hits API -> expired OTP error

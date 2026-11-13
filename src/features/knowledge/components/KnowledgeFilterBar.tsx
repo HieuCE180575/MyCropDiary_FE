@@ -17,6 +17,7 @@ export function KnowledgeFilterBar({ category, onCategoryChange, sort, onSortCha
         <button
           type="button"
           className={`filter-chip${category === 'all' ? ' active' : ''}`}
+          aria-pressed={category === 'all'}
           onClick={() => onCategoryChange('all')}
         >
           {lang === 'en' ? 'All' : 'Tất cả'}
@@ -26,6 +27,7 @@ export function KnowledgeFilterBar({ category, onCategoryChange, sort, onSortCha
             key={option.value}
             type="button"
             className={`filter-chip${category === option.value ? ' active' : ''}`}
+            aria-pressed={category === option.value}
             onClick={() => onCategoryChange(option.value)}
           >
             {getKnowledgeCategoryLabel(option.value, lang)}
@@ -35,7 +37,7 @@ export function KnowledgeFilterBar({ category, onCategoryChange, sort, onSortCha
 
       <label className="sort-select">
         <span>{lang === 'en' ? 'Sort' : 'Sắp xếp'}</span>
-        <select value={sort} onChange={(event) => onSortChange(event.target.value as KnowledgeSort)}>
+        <select className="ui-select" value={sort} onChange={(event) => onSortChange(event.target.value as KnowledgeSort)}>
           <option value="newest">{lang === 'en' ? 'Newest' : 'Mới nhất'}</option>
           <option value="popular">{lang === 'en' ? 'Most Popular' : 'Xem nhiều nhất'}</option>
         </select>

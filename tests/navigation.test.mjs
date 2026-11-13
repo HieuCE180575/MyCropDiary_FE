@@ -10,7 +10,8 @@ test('rendered navigation and direct routes respect the personal User and Admin 
   const oldWindow = globalThis.window;
   const oldStorage = globalThis.localStorage;
   globalThis.window = new EventTarget();
-  globalThis.localStorage = { removeItem() {} };
+  globalThis.localStorage = { getItem(key) { return key === 'mcd_lang' ? 'vi' : null; }, setItem() {}, removeItem() {} };
+  globalThis.window.localStorage = globalThis.localStorage;
   try {
     const { App } = await server.ssrLoadModule('/src/app/App.tsx');
     const { AuthProvider } = await server.ssrLoadModule('/src/features/auth/AuthProvider.tsx');

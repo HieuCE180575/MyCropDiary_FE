@@ -1,9 +1,15 @@
-import { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth';
+import { Button } from '../../shared/components/Button';
+import { Link } from 'react-router-dom';
 import { Icon } from '../../shared/components/Icon';
-import { useAdmin } from './AdminProvider';
 import { AdminBadge } from './AdminComponents';
+import { formatNumber as uiFormatNumber } from '../../shared/format/formatters';
+
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+
+import { useAdmin } from './AdminProvider';
+
 import { displayValue } from './adminConfig';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 
@@ -11,7 +17,7 @@ type ChartMetric = 'activity' | 'cost' | 'compliance';
 
 export function AdminDashboard() {
   const { lang, t: translate } = useLanguage();
-  const { user } = useAuth();
+
   const { state, registrationsLoading, registrationsError, reloadRegistrations } = useAdmin();
   const navigate = useNavigate();
 
@@ -28,9 +34,7 @@ export function AdminDashboard() {
   const lockedUsersCount = state.users.filter((u) => u.status === 'LOCKED').length;
   const activeCropsCount = state.crops.filter((c) => c.status === 'ACTIVE').length || 16;
   const activeSeasonsCount = state.seasons.reduce((acc, s) => acc + s.active, 0) || 28;
-  const completedChecklists = state.seasons.reduce((acc, s) => acc + s.complete, 0) || 71;
-  const totalChecklists = state.seasons.reduce((acc, s) => acc + s.checked, 0) || 89;
-  const complianceRate = Math.round((completedChecklists / (totalChecklists || 1)) * 100);
+
 
   // Dynamic chart datasets based on selected metric
   const chartData = useMemo(() => {
@@ -122,7 +126,7 @@ export function AdminDashboard() {
           </div>
           <div className="card-bottom-content">
             <div className="card-stat-info">
-              <strong className="stat-number">{userCount.toLocaleString('vi-VN')}</strong>
+              <strong className="stat-number">{uiFormatNumber(userCount, lang)}</strong>
               <div className="stat-trend positive">
                 <Icon name="trending-up" />
                 <span>{(lang === 'en' ? "+12.4% this month" : "+12.4% tháng này")}</span>
@@ -504,7 +508,7 @@ export function AdminDashboard() {
             <div className="crop-distribution-section">
               <div className="crop-dist-header">
                 <small>{(lang === 'en' ? "Cultivated area breakdown" : "Cơ cấu diện tích canh tác")}</small>
-                <strong>185.4 ha</strong>
+                <strong>{uiFormatNumber(185.4, lang)} ha</strong>
               </div>
               <div className="crop-stacked-bar">
                 <span className="bar-leafy" style={{ width: '42%' }} title={(lang === 'en' ? "Leafy vegetables: 42%" : "Rau ăn lá: 42%")} />
@@ -537,8 +541,8 @@ export function AdminDashboard() {
             </Link>
           </div>
 
-          <div className="admin-table-scroll">
-            <table className="admin-table">
+          <div className="admin-table-scroll ui-table-scroll" tabIndex={0}>
+            <table className="ui-data-table admin-table">
               <caption className="sr-only">{(lang === 'en' ? "Recent farm registrations" : "Hồ sơ đăng ký trang trại gần đây")}</caption>
               <thead>
                 <tr>
@@ -558,9 +562,9 @@ export function AdminDashboard() {
                       ) : (
                         <>
                           <p role="alert">{translate(registrationsError)}</p>
-                          <button className="action-button" onClick={reloadRegistrations}>
+                          <Button variant="secondary" onClick={reloadRegistrations}>
                             {(lang === 'en' ? "Retry" : "Thử lại")}
-                          </button>
+                          </Button>
                         </>
                       )}
                     </td>
@@ -583,10 +587,10 @@ export function AdminDashboard() {
                       </button>
                     </td>
                     <td>
-                      <span>{item.province || item.district || 'Hà Nội'}</span>
+                      <span>{item.province || item.district || "Hà Nội"}</span>
                     </td>
                     <td>
-                      <span>{translate(displayValue('createdAt', item.createdAt))}</span>
+                      <span>{displayValue('createdAt', item.createdAt, lang)}</span>
                     </td>
                     <td>
                       <AdminBadge collection="registrations" status={item.status} />
@@ -625,8 +629,8 @@ export function AdminDashboard() {
                 <i />
                 <div>
                   <strong>{translate(item.name)}</strong>
-                  <p>{translate(item.actor ?? "")} {(lang === 'en' ? " · Resource ID: " : " · Mã đối tượng: ")} {item.resourceId}</p>
-                  <small>{translate(displayValue('createdAt', item.createdAt))}</small>
+                  <p>{item.actor ?? ""} {(lang === 'en' ? " · Resource ID: " : " · Mã đối tượng: ")} {item.resourceId}</p>
+                  <small>{displayValue('createdAt', item.createdAt, lang)}</small>
                 </div>
               </article>
             ))}
@@ -644,7 +648,7 @@ export function AdminDashboard() {
             </div>
             <div className="health-item">
               <span className="health-dot active" />
-              <span>AI Engine: <strong>{(lang === 'en' ? "Ready" : "Sẵn sàng")}</strong></span>
+              <span>{translate("AI Engine:")} <strong>{(lang === 'en' ? "Ready" : "Sẵn sàng")}</strong></span>
             </div>
           </div>
         </div>

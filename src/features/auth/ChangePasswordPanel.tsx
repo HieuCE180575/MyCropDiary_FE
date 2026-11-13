@@ -1,6 +1,9 @@
+import { Button } from '../../shared/components/Button';
+import { Icon } from '../../shared/components/Icon';
+
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useState, type FormEvent } from 'react';
-import { Icon } from '../../shared/components/Icon';
+
 import { changeUserPassword } from './authApi';
 
 interface PasswordFieldProps {
@@ -16,11 +19,11 @@ function PasswordField({ name, label, value, onChange, current = false, disabled
   const { t: translate } = useLanguage();
   const [visible, setVisible] = useState(false);
   return (
-    <label className="profile-password-field">
+    <label className="profile-password-field structured-field-card">
       <span>{translate(label)}</span>
       <span className="profile-password-input">
         <Icon name="lock" />
-        <input
+        <input className="ui-input"
           name={name}
           type={visible ? 'text' : 'password'}
           placeholder={translate(label)}
@@ -34,7 +37,7 @@ function PasswordField({ name, label, value, onChange, current = false, disabled
         <button
           type="button"
           onClick={() => setVisible((prev) => !prev)}
-          aria-label={`${visible ? 'Hide' : 'Show'} ${label}`}
+          aria-label={`${translate(visible ? 'Hide' : 'Show')} ${translate(label)}`}
           aria-pressed={visible}
           tabIndex={-1}
         >
@@ -108,9 +111,9 @@ export function ChangePasswordPanel({
             margin: '12px 0',
             padding: '10px 14px',
             borderRadius: '8px',
-            background: status.type === 'success' ? '#ecfdf5' : '#fef2f2',
-            border: `1px solid ${status.type === 'success' ? '#a7f3d0' : '#fecaca'}`,
-            color: status.type === 'success' ? '#065f46' : '#991b1b',
+            background: status.type === 'success' ? "var(--color-success-bg)" : "var(--color-danger-bg)",
+            border: `1px solid ${status.type === 'success' ? "var(--color-border)" : "var(--color-border)"}`,
+            color: status.type === 'success' ? "var(--color-success)" : "var(--color-danger)",
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
@@ -139,9 +142,7 @@ export function ChangePasswordPanel({
             onChange={setNewPassword}
             disabled={loading}
           />
-          <small id="new-password-help" style={{ color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block' }}>
-            New password must be at least 8 characters long.
-          </small>
+          <small id="new-password-help" style={{ color: "var(--color-muted)", fontSize: '12px', marginTop: '4px', display: 'block' }}>{translate("New password must be at least 8 characters long.")}</small>
         </div>
         <PasswordField
           name="confirmPassword"
@@ -152,10 +153,10 @@ export function ChangePasswordPanel({
         />
 
         <div style={{ marginTop: '10px', display: 'flex', justifyContent: embedded ? 'flex-end' : 'flex-start', gap: '10px' }}>
-          <button className="action-button solid primary-button" type="submit" disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          <Button variant="primary" type="submit" disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             <Icon name="save" />
-            {loading ? 'Saving password...' : 'Save New Password'}
-          </button>
+            {loading ? translate("Saving password...") : translate("Save New Password")}
+          </Button>
         </div>
       </form>
     </>
@@ -172,8 +173,8 @@ export function ChangePasswordPanel({
           <Icon name="lock" />
         </span>
         <div>
-          <h2 id="change-password-heading">Change Password</h2>
-          <p className="profile-password-description">Protect your account with a strong, secure, and unique password.</p>
+          <h2 id="change-password-heading">{translate("Change Password")}</h2>
+          <p className="profile-password-description">{translate("Protect your account with a strong, secure, and unique password.")}</p>
         </div>
       </div>
       {formBody}
