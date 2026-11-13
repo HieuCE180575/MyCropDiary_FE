@@ -77,7 +77,14 @@ export function Modal({ open, onClose, title, children, className, headerIcon, v
           if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
         }}>
         {!customLayout && <div className={variant === 'admin' ? 'admin-modal-heading' : 'modal-header'}>
-          {title ? <h2 id={titleId}>{headerIcon}{translate(title)}</h2> : <span />}
+          {title ? (
+            <h2 id={titleId} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              {headerIcon}
+              <span>{translate(title)}</span>
+            </h2>
+          ) : (
+            <span />
+          )}
           <button type="button" className={variant === 'admin' ? 'admin-close' : 'modal-close'} aria-label={(lang === 'en' ? "Close dialog" : "Đóng cửa sổ")} onClick={onClose}>
             <Icon name="close" />
           </button>
