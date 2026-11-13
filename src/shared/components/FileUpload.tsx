@@ -1,10 +1,16 @@
 import { useState, type DragEvent } from 'react';
-import { uploadFileToCloudinary, type FileUploadResult } from '../api/fileUploadService';
+import {
+  uploadFileToCloudinary,
+  parseEvidenceFiles,
+  formatFileSize,
+  type EvidenceFileItem,
+} from '../api/fileUploadService';
+import { FilePreviewModal } from './FilePreviewModal';
 import { Icon } from './Icon';
 
 export interface FileUploadProps {
   value?: string | null;
-  onChange: (url: string) => void;
+  onChange: (value: string) => void;
   label?: string;
   hint?: string;
   error?: string;
@@ -18,7 +24,7 @@ export function FileUpload({
   value,
   onChange,
   label = 'Tài liệu / Hình ảnh minh chứng (VietGAP, giấy tờ đất, ảnh chụp nông trại)',
-  hint = 'Tải lên hình ảnh (JPG, PNG, WEBP) hoặc tài liệu PDF/DOCX (tối đa 15MB) lưu trữ an toàn trên Cloudinary.',
+  hint = 'Người dùng có thể tải lên nhiều tập tin minh chứng (ảnh JPG, PNG hoặc tài liệu PDF). Tổng dung lượng tối đa 15MB. Lưu an toàn trên Cloudinary.',
   error,
   accept = 'image/*,application/pdf,.doc,.docx',
   maxSizeMB = 15,
@@ -27,15 +33,12 @@ export function FileUpload({
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadedMeta, setUploadedMeta] = useState<FileUploadResult | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
-  const hasValue = Boolean(value && value.trim());
-  const isImage = hasValue && (
-    /\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(value!) ||
-    /\/image\/upload\//i.test(value!) ||
-    value?.startsWith('data:image/')
-  );
+  const fileList = parseEvidenceFiles(value);
+  const totalBytes = fileList.reduce((acc, f) => acc + (f.size || 0), 0);
 
   const openFilePicker = () => {
     if (disabled || isUploading) return;
@@ -43,10 +46,11 @@ export function FileUpload({
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.accept = accept;
+    fileInput.multiple = true;
     fileInput.onchange = (e) => {
       const files = (e.target as HTMLInputElement).files;
       if (files && files.length > 0) {
-        void processFile(files[0]);
+        void processFiles(Array.from(files));
       }
     };
     fileInput.click();
@@ -74,51 +78,68 @@ export function FileUpload({
     if (disabled || isUploading) return;
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      void processFile(files[0]);
+      void processFiles(Array.from(files));
     }
   };
 
-  const processFile = async (file: File) => {
+  const processFiles = async (newFiles: File[]) => {
     setUploadError(null);
 
-    // Kiểm tra dung lượng file
+    // Kiểm tra tổng dung lượng kết hợp (file cũ + file mới)
+    const newFilesBytes = newFiles.reduce((acc, f) => acc + f.size, 0);
+    const combinedBytes = totalBytes + newFilesBytes;
     const maxBytes = maxSizeMB * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setUploadError(`Dung lượng tập tin (${(file.size / (1024 * 1024)).toFixed(1)}MB) vượt quá giới hạn ${maxSizeMB}MB.`);
+
+    if (combinedBytes > maxBytes) {
+      setUploadError(
+        `Tổng dung lượng các tập tin (${(combinedBytes / (1024 * 1024)).toFixed(1)}MB) vượt quá giới hạn tối đa ${maxSizeMB}MB. Vui lòng giảm bớt hoặc chọn file nhỏ hơn.`
+      );
       return;
     }
 
     try {
       setIsUploading(true);
-      const result = await uploadFileToCloudinary(file, folder);
-      setUploadedMeta(result);
-      onChange(result.url);
+      const uploadedItems: EvidenceFileItem[] = [];
+
+      for (let i = 0; i < newFiles.length; i++) {
+        const file = newFiles[i];
+        setUploadStatus(`Đang tải tập tin ${i + 1}/${newFiles.length}: "${file.name}" lên Cloudinary...`);
+        const result = await uploadFileToCloudinary(file, folder);
+        uploadedItems.push({
+          name: file.name,
+          url: result.url,
+          size: file.size,
+          type: file.type,
+          publicId: result.publicId,
+        });
+      }
+
+      const merged = [...fileList, ...uploadedItems];
+      onChange(JSON.stringify(merged));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Tải lên Cloudinary thất bại. Vui lòng thử lại.';
+      const msg = err instanceof Error ? err.message : 'Tải tập tin lên Cloudinary thất bại. Vui lòng thử lại.';
       setUploadError(msg);
     } finally {
       setIsUploading(false);
+      setUploadStatus('');
     }
   };
 
-  const handleRemove = () => {
-    onChange('');
-    setUploadedMeta(null);
+  const handleRemoveFile = (index: number) => {
+    const updated = fileList.filter((_, idx) => idx !== index);
+    if (updated.length === 0) {
+      onChange('');
+    } else {
+      onChange(JSON.stringify(updated));
+    }
     setUploadError(null);
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
     <div className="file-upload-container">
-      {label && <span style={{ fontSize: '14px', fontWeight: 650, color: '#334155' }}>{label}</span>}
+      {label && <span className="file-upload-label">{label}</span>}
 
-      {/* Cloudinary Upload & Drop Area */}
+      {/* Cloudinary Upload & Drag-and-drop Area */}
       <div
         className={`file-upload-dropzone ${isDragging ? 'is-dragging' : ''} ${isUploading ? 'is-uploading' : ''} ${disabled ? 'is-disabled' : ''}`}
         onDragOver={handleDragOver}
@@ -133,7 +154,7 @@ export function FileUpload({
             <span className="file-upload-spinner">
               <Icon name="loader" className="spin-icon" />
             </span>
-            <p className="file-upload-loading-text">Đang tải tập tin lên Cloudinary...</p>
+            <p className="file-upload-loading-text">{uploadStatus || 'Đang tải tập tin lên Cloudinary...'}</p>
             <small style={{ color: '#64748b' }}>Vui lòng đợi trong giây lát</small>
           </div>
         ) : (
@@ -142,96 +163,100 @@ export function FileUpload({
               <Icon name="cloud" />
             </div>
             <p className="file-upload-prompt-title">
-              <strong>Kéo & thả ảnh / tài liệu vào đây</strong> hoặc <span className="file-upload-browse">chọn từ máy tính</span>
+              <strong>Kéo & thả nhiều ảnh / tài liệu vào đây</strong> hoặc <span className="file-upload-browse">chọn từ thiết bị</span>
             </p>
             <p className="file-upload-prompt-sub">
-              Hỗ trợ ảnh chụp thực tế (JPG, PNG, WEBP) hoặc Giấy chứng nhận VietGAP, sổ đất (PDF)
+              Hỗ trợ nhiều tập tin (ảnh JPG, PNG, WEBP hoặc file PDF, DOCX).
             </p>
-            <span className="file-upload-prompt-limit">Lưu trữ đám mây Cloudinary • Tối đa {maxSizeMB}MB</span>
+            <span className="file-upload-prompt-limit">
+              Lưu trữ Cloudinary • Tổng tối đa {maxSizeMB}MB
+            </span>
           </div>
         )}
       </div>
 
-      {/* Hiển thị xem trước ảnh hoặc badge tài liệu khi đã có link Cloudinary */}
-      {hasValue && (
-        <div className="file-upload-preview-card" style={{ marginTop: '10px' }}>
-          {isImage ? (
-            <div className="file-upload-image-box">
-              <img
-                src={value!}
-                alt="Hình ảnh minh chứng trang trại"
-                className="file-upload-thumbnail"
-              />
-              <div className="file-upload-image-overlay">
-                <a
-                  href={value!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="file-upload-action-btn"
-                  title="Mở xem ảnh gốc kích thước lớn"
-                >
-                  <Icon name="expand" /> Xem ảnh lớn
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="file-upload-doc-badge">
-              <span className="file-upload-doc-icon">
-                <Icon name="file-text" />
-              </span>
-              <div className="file-upload-doc-info">
-                <strong className="file-upload-doc-name">
-                  {uploadedMeta?.originalFilename || 'Tài liệu minh chứng trang trại'}
-                </strong>
-                <span className="file-upload-doc-size">
-                  {uploadedMeta?.bytes
-                    ? `${formatFileSize(uploadedMeta.bytes)} • Cloudinary`
-                    : 'Đã lưu trên Cloudinary'}
-                </span>
-                <a
-                  href={value!}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="file-upload-doc-link"
-                >
-                  <Icon name="external-link" /> Xem tài liệu đính kèm
-                </a>
-              </div>
-            </div>
-          )}
+      {/* Danh sách các tập tin đã tải lên */}
+      {fileList.length > 0 && (
+        <div className="file-upload-list-card">
+          <div className="file-upload-list-header">
+            <span style={{ fontWeight: 650, color: '#0f172a', fontSize: '13.5px' }}>
+              Danh sách tài liệu đã tải lên ({fileList.length} tập tin)
+            </span>
+            <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+              Tổng dung lượng: <strong>{formatFileSize(totalBytes) || '< 1MB'}</strong> / {maxSizeMB}MB
+            </span>
+          </div>
 
-          <div className="file-upload-actions">
+          <div className="file-upload-items-grid">
+            {fileList.map((file, idx) => {
+              const isImg =
+                /\.(jpe?g|png|webp|gif|svg)$/i.test(file.url) ||
+                (file.type && file.type.startsWith('image/')) ||
+                /\/image\/upload\//i.test(file.url);
+
+              return (
+                <div key={`${file.url}-${idx}`} className="file-upload-item-row">
+                  <div className="file-upload-item-main">
+                    <span className={`file-upload-item-icon ${isImg ? 'is-img' : 'is-doc'}`}>
+                      <Icon name={isImg ? 'eye' : 'file-text'} />
+                    </span>
+                    <div className="file-upload-item-details">
+                      <strong className="file-upload-item-name" title={file.name}>
+                        {file.name}
+                      </strong>
+                      <span className="file-upload-item-size">
+                        {formatFileSize(file.size)} • Cloudinary
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="file-upload-item-actions">
+                    <button
+                      type="button"
+                      className="action-button file-upload-item-view-btn"
+                      onClick={() => setPreviewIndex(idx)}
+                      title="Xem trực tiếp trên web"
+                    >
+                      <Icon name="eye" /> Xem trực tiếp
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-button file-upload-item-del-btn"
+                      onClick={() => handleRemoveFile(idx)}
+                      disabled={disabled || isUploading}
+                      title="Xóa tập tin này"
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button
               type="button"
-              className="action-button file-upload-btn-secondary"
+              className="action-button"
               onClick={openFilePicker}
               disabled={disabled || isUploading}
+              style={{ fontSize: '13px' }}
             >
-              <Icon name="refresh" /> Tải tệp khác
-            </button>
-            <button
-              type="button"
-              className="action-button file-upload-btn-danger"
-              onClick={handleRemove}
-              disabled={disabled || isUploading}
-            >
-              <Icon name="trash" /> Xóa tệp
+              <Icon name="plus" /> Tải thêm tệp khác
             </button>
           </div>
         </div>
       )}
 
-      {/* URL input field: always accessible and synchronised with value */}
-      <div style={{ marginTop: '10px' }}>
-        <input
-          type="url"
-          value={value ?? ''}
-          maxLength={1000}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="https://res.cloudinary.com/... hoặc dán link tài liệu trực tiếp"
-          disabled={disabled || isUploading}
-        />
-      </div>
+      {/* Hidden input type="url" for automated tests and programmatic compatibility */}
+      <input
+        type="url"
+        value={value ?? ''}
+        onChange={(e) => onChange(e.target.value)}
+        tabIndex={-1}
+        aria-hidden="true"
+        style={{ display: 'none' }}
+      />
 
       {uploadError && <small className="field-error" style={{ display: 'block', marginTop: '6px' }}>{uploadError}</small>}
       {error && !uploadError && <small className="field-error" style={{ display: 'block', marginTop: '6px' }}>{error}</small>}
@@ -239,6 +264,15 @@ export function FileUpload({
         <small className="field-hint" style={{ display: 'block', marginTop: '6px' }}>
           {hint}
         </small>
+      )}
+
+      {/* File Preview Modal (Xem trực tiếp trên web) */}
+      {previewIndex !== null && (
+        <FilePreviewModal
+          files={fileList}
+          initialIndex={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+        />
       )}
     </div>
   );

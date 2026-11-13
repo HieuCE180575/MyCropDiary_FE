@@ -9,6 +9,8 @@ import { AdminBadge, AdminEmpty, AdminField, AdminModal, AdminPageHeading } from
 import type { AdminCommand, AdminRecord, Collection } from './adminTypes';
 import { FarmGoongMap } from '../farm-management/components/FarmGoongMap';
 import { parseBoundaryCoordinates } from '../farm-management/goongMapService';
+import { parseEvidenceFiles, formatFileSize, type EvidenceFileItem } from '../../shared/api/fileUploadService';
+import { FilePreviewModal } from '../../shared/components/FilePreviewModal';
 
 type DialogState = { mode: 'detail' | 'edit' | 'create'; id?: string } | { mode: 'action'; id: string; status: string };
 const initialFilters = { query: '', status: '', from: '', to: '', extra: '' };
@@ -77,6 +79,8 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
   const [feedbackStatus, setFeedbackStatus] = useState(record?.status ?? 'OPEN');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [previewFiles, setPreviewFiles] = useState<EvidenceFileItem[] | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const submit = async (command: AdminCommand) => {
     if (submitting) return;
     setSubmitting(true);
@@ -119,18 +123,56 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
 
   return <AdminModal title={`Chi tiết ${config.singular}`} close={close} wide><div className="admin-modal-body">
     <div className="admin-detail-title"><span className="shortcut-icon"><Icon name={config.icon} /></span><div><span className="admin-subtle">{record.id}</span><h3>{record.name}</h3><AdminBadge collection={collection} status={record.status} /></div></div>
-    <dl className="admin-details"><div><dt>Ngày tạo</dt><dd>{displayValue('createdAt', record.createdAt)}</dd></div>{details.filter(field => field.key !== 'name').map(field => <div key={field.key} className={field.type === 'textarea' || ['question', 'answer', 'comment', 'reply', 'description', 'reason', 'source'].includes(field.key) ? 'full' : ''}><dt>{field.label}</dt><dd>{field.key === 'document' && /^https?:\/\//i.test(record[field.key] ?? '') ? (
-      /\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(record[field.key] ?? '') || /\/image\/upload\//i.test(record[field.key] ?? '') ? (
-        <div style={{ marginTop: '4px' }}>
-          <a href={record[field.key]} target="_blank" rel="noreferrer">
-            <img src={record[field.key]} alt="Minh chứng" style={{ maxWidth: '160px', maxHeight: '100px', borderRadius: '6px', border: '1px solid #cbd5e1', objectFit: 'cover' }} />
-          </a>
-          <div><a href={record[field.key]} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>🔍 Xem ảnh minh chứng Cloudinary</a></div>
+    <dl className="admin-details"><div><dt>Ngày tạo</dt><dd>{displayValue('createdAt', record.createdAt)}</dd></div>{details.filter(field => field.key !== 'name').map(field => <div key={field.key} className={field.type === 'textarea' || ['question', 'answer', 'comment', 'reply', 'description', 'reason', 'source', 'document'].includes(field.key) ? 'full' : ''}><dt>{field.label}</dt><dd>{field.key === 'document' && record[field.key] ? (() => {
+      const evidenceFiles = parseEvidenceFiles(record[field.key]);
+      if (evidenceFiles.length === 0) return displayValue(field.key, record[field.key]);
+      return (
+        <div className="status-evidence-list admin-evidence-list">
+          {evidenceFiles.map((file, idx) => {
+            const isImg =
+              /\.(jpe?g|png|webp|gif|svg)$/i.test(file.url) ||
+              (file.type && file.type.startsWith('image/')) ||
+              /\/image\/upload\//i.test(file.url);
+            return (
+              <div key={`${file.url}-${idx}`} className="status-evidence-item">
+                <div className="status-evidence-info">
+                  <span className={`file-upload-item-icon ${isImg ? 'is-img' : 'is-doc'}`} style={{ width: '32px', height: '32px' }}>
+                    <Icon name={isImg ? 'eye' : 'file-text'} />
+                  </span>
+                  <div>
+                    <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{file.name}</strong>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>{formatFileSize(file.size)}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    className="action-button"
+                    style={{ fontSize: '12.5px', padding: '5px 10px' }}
+                    onClick={() => {
+                      setPreviewFiles(evidenceFiles);
+                      setPreviewIndex(idx);
+                    }}
+                  >
+                    <Icon name="eye" /> Xem trên web
+                  </button>
+                  <a
+                    href={file.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="action-button file-preview-open-link"
+                    style={{ fontSize: '12.5px', padding: '5px 8px' }}
+                    title="Mở liên kết gốc Cloudinary"
+                  >
+                    <Icon name="external-link" />
+                  </a>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      ) : (
-        <a href={record[field.key]} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 600 }}>📄 Mở tài liệu minh chứng Cloudinary</a>
-      )
-    ) : displayValue(field.key, record[field.key])}</dd></div>)}</dl>
+      );
+    })() : displayValue(field.key, record[field.key])}</dd></div>)}</dl>
     {collection === 'registrations' && (
       <div style={{ marginTop: '16px' }}>
         <FarmGoongMap
@@ -148,7 +190,15 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
       </div>
     )}
     {collection === 'feedback' && <form id="feedback-review-form" className="admin-feedback-form" onSubmit={(event) => { event.preventDefault(); submit({ type: 'feedback', collection: 'feedback', id: record.id, reply, status: feedbackStatus }); }}><h3>Xử lý phản hồi</h3><AdminField field={{ key: 'reply', label: 'Nội dung trả lời người gửi', type: 'textarea', maxLength: 3000 }} value={reply} onChange={setReply} /><AdminField field={{ key: 'status', label: 'Trạng thái xử lý', type: 'select', options: feedbackStatuses, required: true }} value={feedbackStatus} onChange={setFeedbackStatus} /><p className="admin-subtle">Nội dung trả lời trong bản xem trước không được gửi đến người dùng thật.</p>{error && <p role="alert" className="admin-form-error">{error}</p>}</form>}
-  </div><div className="admin-modal-footer"><button className="action-button" onClick={close}>Đóng</button><RecordActions collection={collection} record={record} change={change} />{collection === 'feedback' && <button className="action-button solid" type="submit" form="feedback-review-form">Lưu phản hồi xử lý</button>}</div></AdminModal>;
+  </div><div className="admin-modal-footer"><button className="action-button" onClick={close}>Đóng</button><RecordActions collection={collection} record={record} change={change} />{collection === 'feedback' && <button className="action-button solid" type="submit" form="feedback-review-form">Lưu phản hồi xử lý</button>}</div>
+  {previewFiles && previewFiles.length > 0 && (
+    <FilePreviewModal
+      files={previewFiles}
+      initialIndex={previewIndex}
+      onClose={() => setPreviewFiles(null)}
+    />
+  )}
+  </AdminModal>;
 }
 
 function RecordActions({ collection, record, change }: { collection: Collection; record: AdminRecord; change: (dialog: DialogState) => void }) {

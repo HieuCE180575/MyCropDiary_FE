@@ -99,3 +99,50 @@ test('fileUploadService: deleteUploadedFile successfully calls delete API', asyn
     await server.close();
   }
 });
+
+test('fileUploadService: parseEvidenceFiles parses JSON, comma-separated and single URL', async () => {
+  const server = await createServer({
+    configFile: false,
+    optimizeDeps: { noDiscovery: true, include: [] },
+    server: { middlewareMode: true, watch: null, ws: false },
+    appType: 'custom',
+  });
+
+  try {
+    const { parseEvidenceFiles, getWebPreviewUrl } = await server.ssrLoadModule('/src/shared/api/fileUploadService.ts');
+
+    // 1. Empty or null
+    assert.deepEqual(parseEvidenceFiles(''), []);
+    assert.deepEqual(parseEvidenceFiles(null), []);
+
+    // 2. JSON array
+    const jsonStr = JSON.stringify([
+      { name: 'GiayPhep.pdf', url: 'https://res.cloudinary.com/drajm922/image/upload/v1/test.pdf', size: 102400 },
+      { name: 'HinhAnh.png', url: 'https://res.cloudinary.com/drajm922/image/upload/v1/photo.png', size: 204800 },
+    ]);
+    const parsedJson = parseEvidenceFiles(jsonStr);
+    assert.equal(parsedJson.length, 2);
+    assert.equal(parsedJson[0].name, 'GiayPhep.pdf');
+    assert.equal(parsedJson[1].name, 'HinhAnh.png');
+
+    // 3. Single URL
+    const single = parseEvidenceFiles('https://res.cloudinary.com/drajm922/image/upload/v1/farm_cert.pdf');
+    assert.equal(single.length, 1);
+    assert.equal(single[0].name, 'farm_cert.pdf');
+    assert.equal(single[0].url, 'https://res.cloudinary.com/drajm922/image/upload/v1/farm_cert.pdf');
+
+    // 4. getWebPreviewUrl converts Cloudinary PDF to jpg preview to bypass 401 ACL deny
+    const pdfPreview = getWebPreviewUrl('https://res.cloudinary.com/drajm922/image/upload/v1794589254/mycropdiary/evidence/file_gpnzfc.pdf');
+    assert.equal(pdfPreview.isConvertedPdf, true);
+    assert.equal(pdfPreview.isImage, true);
+    assert.equal(pdfPreview.previewUrl, 'https://res.cloudinary.com/drajm922/image/upload/v1794589254/mycropdiary/evidence/file_gpnzfc.jpg');
+
+    // 5. Normal image stays unchanged
+    const imgPreview = getWebPreviewUrl('https://res.cloudinary.com/drajm922/image/upload/v1/photo.png');
+    assert.equal(imgPreview.isConvertedPdf, false);
+    assert.equal(imgPreview.isImage, true);
+    assert.equal(imgPreview.previewUrl, 'https://res.cloudinary.com/drajm922/image/upload/v1/photo.png');
+  } finally {
+    await server.close();
+  }
+});

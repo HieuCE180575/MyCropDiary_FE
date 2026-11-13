@@ -3729,3 +3729,282 @@ button {
   color: #0f172a;
 }
 
+/* Evidence list in registration status and admin details */
+.status-evidence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.status-evidence-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.status-evidence-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.status-evidence-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-evidence-list {
+  max-width: 100%;
+}
+
+/* File Preview Modal */
+.file-preview-backdrop {
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+}
+
+.file-preview-modal-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 960px;
+  height: 90vh;
+  max-height: 840px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.file-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  gap: 16px;
+}
+
+.file-preview-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.file-preview-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ecfdf5;
+  color: #059669;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.file-preview-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 500px;
+}
+
+.file-preview-subtitle {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.file-preview-open-link {
+  font-size: 13px !important;
+  padding: 6px 12px !important;
+  color: #059669 !important;
+  border-color: #a7f3d0 !important;
+  background: #ffffff !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.file-preview-open-link:hover {
+  background: #ecfdf5 !important;
+}
+
+.file-preview-close-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.file-preview-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.file-preview-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+}
+
+.file-preview-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.file-preview-tab:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.file-preview-tab.active {
+  background: #059669;
+  color: #ffffff;
+  border-color: #059669;
+  font-weight: 500;
+}
+
+.file-preview-tab-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #0f172a;
+  position: relative;
+}
+
+.file-preview-pdf-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 12.5px;
+  border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+}
+
+.file-preview-pdf-notice strong {
+  color: #38bdf8;
+}
+
+.file-preview-raw-link {
+  color: #38bdf8;
+  text-decoration: underline;
+  margin-left: auto;
+  font-weight: 500;
+}
+
+.file-preview-raw-link:hover {
+  color: #7dd3fc;
+}
+
+.file-preview-media-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: auto;
+}
+
+.file-preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.file-preview-iframe-wrapper {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+.file-preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.file-preview-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.file-preview-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
