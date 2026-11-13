@@ -10,7 +10,7 @@ import {
   subscribeToAuthChanges,
   updateAuthUser,
 } from './authStorage';
-import { logoutUser } from './authApi';
+import { logoutUser, authenticateWithGoogle } from './authApi';
 
 interface AuthContextValue {
   accessToken: string | null;
@@ -32,6 +32,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessTokenState(getAccessToken());
     setUser(getAuthUser());
   }), []);
+
+  // Bắt token nếu người dùng được redirect từ Google OAuth
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token=')) {
+      const hash = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : window.location.hash;
+      const params = new URLSearchParams(hash);
+      const googleToken = params.get('access_token');
+      if (googleToken) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        void (async () => {
+          try {
+            const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${googleToken}` },
+            });
+            if (userInfoRes.ok) {
+              const profile = (await userInfoRes.json()) as { email?: string; name?: string; picture?: string };
+              if (profile.email) {
+                const session = await authenticateWithGoogle({
+                  email: profile.email,
+                  fullName: profile.name,
+                  avatarUrl: profile.picture,
+                });
+                setSession(session);
+              }
+            }
+          } catch (e) {
+            console.error('Lỗi nhận diện Google token từ URL hash:', e);
+          }
+        })();
+      }
+    }
+  }, []);
 
   const setSession = (session: AuthSession) => saveAccessToken(session.accessToken, session.user, session.refreshToken);
   const signOut = () => {
