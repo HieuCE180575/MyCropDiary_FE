@@ -199,14 +199,18 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       }
       setMessages((prev) => [...prev, aiResp]);
     } catch (err) {
-      // In case backend is temporarily unreachable, provide local fallback
+      // In case backend or AI API is temporarily unreachable/overloaded
+      const errMsg = err instanceof Error && err.message ? err.message : '';
+      const fallbackText = lang === 'en'
+        ? (errMsg || 'AI Assistant service is temporarily busy or unreachable. Please try asking again.')
+        : (errMsg || 'Trợ lý AI tạm thời bị gián đoạn kết nối tới máy chủ hoặc dịch vụ đang quá tải. Vui lòng bấm gửi lại câu hỏi sau giây lát.');
+
       const fallbackAiMsg: AssistantMessage = {
         messageId: Date.now() + 1,
         conversationId: activeConversationId || 0,
         senderType: 'assistant',
-        uiMessageKey: 'ai.localFallback',
-        messageText: 'Dựa trên quy chuẩn VietGAP TCVN 11892-1:2017: Hãy ưu tiên sử dụng chế phẩm sinh học đối kháng (Neem Oil, nấm ký sinh Beauveria) và tuân thủ nghiêm ngặt thời gian cách ly PHI trước thu hoạch.',
-        sources: ['TCVN 11892-1:2017 (VietGAP)'],
+        messageText: fallbackText,
+        sources: ['Hệ thống MyCropDiary'],
         createdAt: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, fallbackAiMsg]);
