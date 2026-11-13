@@ -10,7 +10,7 @@ import { TablePagination } from '../../shared/components/TablePagination';
 import { Icon } from '../../shared/components/Icon';
 
 
-import { formatNumber as uiFormatNumber } from '../../shared/format/formatters';
+import { formatNumber as uiFormatNumber, formatDate } from '../../shared/format/formatters';
 
 import { usePagination } from '../../shared/hooks/usePagination';
 
@@ -57,6 +57,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
   // Inventory state
   const [inventories, setInventories] = useState<InventoryItemResp[]>([]);
   const [loadingInventories, setLoadingInventories] = useState(false);
+  const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItemResp | null>(null);
   const [filterWarehouseId, setFilterWarehouseId] = useState<number | 'ALL'>('ALL');
   const [searchMaterialKeyword, setSearchMaterialKeyword] = useState('');
   const [editingInventory, setEditingInventory] = useState<InventoryItemResp | null>(null);
@@ -661,6 +662,16 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                           <div className="table-action-btns zone-card-actions">
                             <button
                               type="button"
+                              className="table-icon-btn primary"
+                              title={lang === 'en' ? 'View Inventory Details' : 'Xem chi tiết tồn kho'}
+                              aria-label={translate("View") + " " + (it.materialName)}
+                              onClick={() => setSelectedInventoryItem(it)}
+                            >
+                              <Icon name="eye" size={15} />
+                              <span className="sr-only">{lang === 'en' ? "View details" : "Xem chi tiết"}</span>
+                            </button>
+                            <button
+                              type="button"
                               className="table-icon-btn edit"
                               title={lang === 'en' ? 'Edit Inventory' : 'Chỉnh sửa tồn kho'}
                               aria-label={translate("Edit") + " " + (it.materialName)}
@@ -673,6 +684,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                               }}
                             >
                               <Icon name="edit" size={15} />
+                              <span className="sr-only">{lang === 'en' ? "Edit" : "Chỉnh sửa"}</span>
                             </button>
                             <button
                               type="button"
@@ -682,6 +694,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                               onClick={() => setDeleteTarget({ kind: 'inventory', id: it.inventoryId, farmId: selectedFarm?.id })}
                             >
                               <Icon name="trash" size={15} />
+                              <span className="sr-only">{lang === 'en' ? "Delete" : "Xóa"}</span>
                             </button>
                           </div>
                         </td>
@@ -731,6 +744,83 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
           <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)' }}>
             <Button type="button" variant="secondary" onClick={() => setSelectedWarehouse(null)}>
               {lang === 'en' ? 'Close' : 'Đóng'}
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: Inventory Item Details */}
+      {selectedInventoryItem && (
+        <Modal open customLayout className="modal-form-layout" onClose={() => setSelectedInventoryItem(null)} style={{ width: 'min(540px, 100%)' }}>
+          <div className="modal-header">
+            <div>
+              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Material Stock Information' : 'Thông tin tồn kho vật tư'}</span>
+              <h2 style={{ margin: '4px 0 0' }}>
+                {selectedInventoryItem.materialName}
+              </h2>
+            </div>
+            <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setSelectedInventoryItem(null)}><Icon name="close" /></button>
+          </div>
+          <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="ui-form-grid" style={{ background: 'var(--color-page)', padding: '16px', borderRadius: '8px', gap: '12px' }}>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Warehouse Location' : 'Kho lưu trữ'}</span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>{selectedInventoryItem.warehouseName}</strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Stock Status' : 'Tình trạng tồn kho'}</span>
+                <span
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '8px',
+                    fontSize: '11.5px',
+                    fontWeight: 700,
+                    display: 'inline-block',
+                    marginTop: '2px',
+                    background: selectedInventoryItem.isLowStock ? 'var(--color-danger-bg)' : 'var(--color-success-bg)',
+                    color: selectedInventoryItem.isLowStock ? 'var(--color-danger)' : 'var(--color-success)',
+                  }}
+                >
+                  {selectedInventoryItem.isLowStock ? (lang === 'en' ? '⚠️ Low Stock' : '⚠️ Sắp hết hàng') : (lang === 'en' ? '✓ In Stock' : '✓ Đủ tồn kho')}
+                </span>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Quantity on Hand' : 'Số lượng thực tế'}</span>
+                <strong style={{ fontSize: '15px', color: 'var(--color-primary-text)' }}>
+                  {uiFormatNumber(Number(selectedInventoryItem.quantityOnHand), lang)} {materialUnitLabel(selectedInventoryItem.unit, lang)}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Reorder Level' : 'Mức đặt lại hàng'}</span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {uiFormatNumber(Number(selectedInventoryItem.reorderLevel), lang)} {translate(selectedInventoryItem.unit)}
+                </strong>
+              </div>
+            </div>
+
+            <div style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>
+              {lang === 'en' ? 'Last inventory update: ' : 'Cập nhật lần cuối: '}
+              <strong>{selectedInventoryItem.updatedAt ? formatDate(selectedInventoryItem.updatedAt, lang) : '—'}</strong>
+            </div>
+          </div>
+          <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--color-border)' }}>
+            <Button type="button" variant="secondary" onClick={() => setSelectedInventoryItem(null)}>
+              {lang === 'en' ? 'Close' : 'Đóng'}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                const it = selectedInventoryItem;
+                setSelectedInventoryItem(null);
+                setEditingInventory(it);
+                setUpdateInventoryForm({
+                  quantityOnHand: Number(it.quantityOnHand),
+                  reorderLevel: Number(it.reorderLevel),
+                });
+              }}
+            >
+              <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit Inventory' : 'Chỉnh sửa'}
             </Button>
           </div>
         </Modal>

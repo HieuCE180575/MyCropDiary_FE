@@ -235,14 +235,18 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
                               </span>
                             </td>
                             <td style={{ textAlign: 'center' }}>
-                              <Button
-                                type="button"
-                                variant="secondary"
-
-                                onClick={() => void handleSelectSeason(String(s.cropSeasonId))}
-                              >
-                                {(lang === 'en' ? "View season details" : "Xem chi tiết vụ")}
-                              </Button>
+                              <div className="table-action-btns" style={{ justifyContent: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="table-icon-btn primary"
+                                  title={lang === 'en' ? "View season report" : "Xem chi tiết mùa vụ"}
+                                  aria-label={lang === 'en' ? `View report for ${s.seasonName}` : `Xem chi tiết ${s.seasonName}`}
+                                  onClick={() => void handleSelectSeason(String(s.cropSeasonId))}
+                                >
+                                  <Icon name="eye" size={15} />
+                                  <span className="sr-only">{lang === 'en' ? "View details" : "Xem chi tiết"}</span>
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}

@@ -764,35 +764,66 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                               </td>
 
                               <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-                                  <Button
+                                <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+                                  <button
                                     type="button"
-                                    variant="primary"
+                                    className="table-icon-btn primary"
+                                    title={lang === 'en' ? "View farm details & map" : "Xem chi tiết trang trại & bản đồ"}
+                                    aria-label={lang === 'en' ? `View details ${f.farmName}` : `Xem chi tiết ${f.farmName}`}
                                     onClick={() => {
                                       setActiveFarmId(f.id);
                                       setViewMode('detail');
                                     }}
-                                    style={{ padding: '6px 12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                                   >
-                                    <Icon name="search" size={14} /> {lang === 'en' ? 'View Profile' : 'Xem hồ sơ'}
-                                  </Button>
-
-                                  {!isCurrentActive ? (
-                                    <Button
+                                    <Icon name="eye" size={15} />
+                                    <span className="sr-only">{lang === 'en' ? "View details" : "Xem chi tiết"}</span>
+                                  </button>
+                                  {isOwner && (
+                                    <button
                                       type="button"
-                                      variant="secondary"
+                                      className="table-icon-btn edit"
+                                      title={lang === 'en' ? "Edit farm details" : "Chỉnh sửa thông tin trang trại"}
+                                      aria-label={lang === 'en' ? `Edit ${f.farmName}` : `Chỉnh sửa ${f.farmName}`}
+                                      onClick={() => {
+                                        setActiveFarmId(f.id);
+                                        setIsEditOpen(true);
+                                      }}
+                                    >
+                                      <Icon name="edit" size={15} />
+                                      <span className="sr-only">{lang === 'en' ? "Edit" : "Chỉnh sửa"}</span>
+                                    </button>
+                                  )}
+                                  {!isCurrentActive ? (
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn assign"
+                                      title={lang === 'en' ? "Select as active workspace" : "Chọn làm trang trại làm việc"}
+                                      aria-label={lang === 'en' ? `Select ${f.farmName}` : `Chọn ${f.farmName}`}
                                       onClick={() => {
                                         selectFarm(f.id);
-                                        showToast(`Đã chọn "${f.farmName}" làm không gian làm việc hiện tại.`);
+                                        showToast(lang === 'en' ? `Selected "${f.farmName}" as active workspace.` : `Đã chọn "${f.farmName}" làm không gian làm việc hiện tại.`);
                                       }}
-                                      style={{ padding: '6px 12px', fontSize: '13px' }}
                                     >
-                                      {lang === 'en' ? 'Switch' : 'Chọn làm việc'}
-                                    </Button>
+                                      <Icon name="check" size={15} />
+                                      <span className="sr-only">{lang === 'en' ? "Select" : "Chọn"}</span>
+                                    </button>
                                   ) : (
-                                    <Button type="button" variant="secondary" disabled style={{ opacity: 0.7, padding: '6px 12px', fontSize: '13px' }}>
-                                      ✓ {lang === 'en' ? 'Selected' : 'Đang chọn'}
-                                    </Button>
+                                    <span
+                                      className="profile-tag-pill"
+                                      style={{
+                                        background: 'var(--color-success-bg)',
+                                        color: 'var(--color-primary-text)',
+                                        fontWeight: 700,
+                                        fontSize: '11px',
+                                        padding: '4px 8px',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                      title={lang === 'en' ? 'Currently active workspace' : 'Đang làm việc tại trang trại này'}
+                                    >
+                                      🌿 {lang === 'en' ? 'Active' : 'Đang chọn'}
+                                    </span>
                                   )}
                                 </div>
                               </td>

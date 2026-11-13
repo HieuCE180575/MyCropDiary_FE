@@ -14,6 +14,7 @@ import { formatDate as displayDate } from '../../shared/format/formatters';
 import { usePagination } from '../../shared/hooks/usePagination';
 
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { farmRole } from '../auth/accessPolicy';
 
@@ -57,6 +58,8 @@ export function StaffManagementPage() {
   const [workerStatusFilter, setWorkerStatusFilter] = useState('ALL');
   const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<FarmWorkerResp | null>(null);
+  const [viewingStaff, setViewingStaff] = useState<FarmStaffRecord | null>(null);
+  const [viewingWorker, setViewingWorker] = useState<FarmWorkerResp | null>(null);
   const [workerForm, setWorkerForm] = useState<FarmWorkerReq>({
     farmMemberId: 0,
     workerCode: '',
@@ -687,20 +690,18 @@ export function StaffManagementPage() {
                         <th scope="col" style={{ width: isOwner ? '11%' : '12%', textAlign: 'center' }}>
                           {lang === 'en' ? 'Joined Date' : 'Ngày tham gia'}
                         </th>
-                        <th scope="col" style={{ width: isOwner ? '11%' : '12%', textAlign: 'center' }}>
+                        <th scope="col" style={{ width: '11%', textAlign: 'center' }}>
                           {lang === 'en' ? 'Status' : 'Trạng thái'}
                         </th>
-                        {isOwner && (
-                          <th scope="col" style={{ width: '12%', textAlign: 'center', }}>
-                            {lang === 'en' ? 'Actions' : 'Thao tác'}
-                          </th>
-                        )}
+                        <th scope="col" style={{ width: '13%', textAlign: 'center' }}>
+                          {lang === 'en' ? 'Actions' : 'Thao tác'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {staffLoadError ? (<tr><td colSpan={9}><LoadError message={staffLoadError} onRetry={() => { void loadData(); }} /></td></tr>) : filteredStaff.length === 0 ? (
+                      {staffLoadError ? (<tr><td colSpan={8}><LoadError message={staffLoadError} onRetry={() => { void loadData(); }} /></td></tr>) : filteredStaff.length === 0 ? (
                         <tr>
-                          <td colSpan={isOwner ? 8 : 7} style={{ textAlign: 'center', padding: '56px 20px', background: 'var(--color-surface)' }}>
+                          <td colSpan={8} style={{ textAlign: 'center', padding: '56px 20px', background: 'var(--color-surface)' }}>
                             <div style={{ maxWidth: '440px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                               <div
                                 style={{
@@ -862,55 +863,67 @@ export function StaffManagementPage() {
                               </span>
                             </td>
 
-                            {isOwner && (
-                              <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
-                                  <button
-                                    type="button"
-                                    className="table-icon-btn edit"
-                                    title={(lang === 'en' ? "Edit staff information" : "Chỉnh sửa thông tin staff")}
-                                    aria-label={(lang === 'en' ? `Edit ${displayName}` : `Chỉnh sửa ${displayName}`)}
-                                    onClick={() => openEditModal(staff)}
-                                  >
-                                    <Icon name="edit" size={15} />
-                                    <span className="sr-only">{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</span>
-                                  </button>
-                                  {isActive ? (
-                                    <button
-                                      type="button"
-                                      className="table-icon-btn"
-                                      title={(lang === 'en' ? "Suspend staff member" : "Tạm ngưng hoạt động nhân viên")}
-                                      aria-label={(lang === 'en' ? `Suspend ${displayName}` : `Tạm dừng ${displayName}`)}
-                                      onClick={() => requestAction('deactivate', staff.farmMemberId, displayName)}
-                                    >
-                                      <Icon name="close" size={14} />
-                                      <span className="sr-only">{(lang === 'en' ? "Suspend" : "Tạm ngưng")}</span>
-                                    </button>
-                                  ) : (
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  className="table-icon-btn primary"
+                                  title={lang === 'en' ? "View staff profile" : "Xem chi tiết nhân sự"}
+                                  aria-label={lang === 'en' ? `View ${displayName}` : `Xem chi tiết ${displayName}`}
+                                  onClick={() => setViewingStaff(staff)}
+                                >
+                                  <Icon name="eye" size={15} />
+                                  <span className="sr-only">{lang === 'en' ? "View details" : "Xem chi tiết"}</span>
+                                </button>
+                                {isOwner && (
+                                  <>
                                     <button
                                       type="button"
                                       className="table-icon-btn edit"
-                                      title={(lang === 'en' ? "Reactivate staff member" : "Kích hoạt lại nhân viên")}
-                                      aria-label={(lang === 'en' ? `Reactivate ${displayName}` : `Kích hoạt lại ${displayName}`)}
-                                      onClick={() => handleReactivate(staff.farmMemberId, displayName)}
+                                      title={lang === 'en' ? "Edit staff information" : "Chỉnh sửa thông tin staff"}
+                                      aria-label={lang === 'en' ? `Edit ${displayName}` : `Chỉnh sửa ${displayName}`}
+                                      onClick={() => openEditModal(staff)}
                                     >
-                                      <Icon name="check" size={14} />
-                                      <span className="sr-only">{(lang === 'en' ? "Activate" : "Kích hoạt")}</span>
+                                      <Icon name="edit" size={15} />
+                                      <span className="sr-only">{lang === 'en' ? "Edit" : "Chỉnh sửa"}</span>
                                     </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="table-icon-btn danger"
-                                    title={(lang === 'en' ? "Remove staff from farm" : "Xóa staff khỏi trang trại")}
-                                    aria-label={(lang === 'en' ? `Delete ${displayName}` : `Xóa ${displayName}`)}
-                                    onClick={() => setDeleteWorkerTarget(staff)}
-                                  >
-                                    <Icon name="trash" size={15} />
-                                    <span className="sr-only">{(lang === 'en' ? "Delete" : "Xóa")}</span>
-                                  </button>
-                                </div>
-                              </td>
-                            )}
+                                    {isActive ? (
+                                      <button
+                                        type="button"
+                                        className="table-icon-btn danger"
+                                        title={lang === 'en' ? "Suspend staff member" : "Tạm ngưng hoạt động nhân viên"}
+                                        aria-label={lang === 'en' ? `Suspend ${displayName}` : `Tạm dừng ${displayName}`}
+                                        onClick={() => requestAction('deactivate', staff.farmMemberId, displayName)}
+                                      >
+                                        <Icon name="close" size={14} />
+                                        <span className="sr-only">{lang === 'en' ? "Suspend" : "Tạm ngưng"}</span>
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="table-icon-btn assign"
+                                        title={lang === 'en' ? "Reactivate staff member" : "Kích hoạt lại nhân viên"}
+                                        aria-label={lang === 'en' ? `Reactivate ${displayName}` : `Kích hoạt lại ${displayName}`}
+                                        onClick={() => handleReactivate(staff.farmMemberId, displayName)}
+                                      >
+                                        <Icon name="check" size={14} />
+                                        <span className="sr-only">{lang === 'en' ? "Activate" : "Kích hoạt"}</span>
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn danger"
+                                      title={lang === 'en' ? "Remove staff from farm" : "Xóa staff khỏi trang trại"}
+                                      aria-label={lang === 'en' ? `Delete ${displayName}` : `Xóa ${displayName}`}
+                                      onClick={() => setDeleteWorkerTarget(staff)}
+                                    >
+                                      <Icon name="trash" size={15} />
+                                      <span className="sr-only">{lang === 'en' ? "Delete" : "Xóa"}</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })
@@ -997,20 +1010,18 @@ export function StaffManagementPage() {
                         <th scope="col" style={{ width: isOwner ? '13%' : '15%', textAlign: 'center' }}>
                           {lang === 'en' ? 'Start Date' : 'Ngày bắt đầu'}
                         </th>
-                        <th scope="col" style={{ width: isOwner ? '13%' : '15%', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: '13%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Assigned By' : 'Người giao việc'}
                         </th>
-                        {isOwner && (
-                          <th scope="col" style={{ width: '12%', textAlign: 'center', }}>
-                            {lang === 'en' ? 'Actions' : 'Thao tác'}
-                          </th>
-                        )}
+                        <th scope="col" style={{ width: '12%', textAlign: 'center' }}>
+                          {lang === 'en' ? 'Actions' : 'Thao tác'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {assignmentLoadError ? (<tr><td colSpan={7}><LoadError message={assignmentLoadError} onRetry={() => { void loadData(); }} /></td></tr>) : filteredAssignments.length === 0 ? (
                         <tr>
-                          <td colSpan={isOwner ? 7 : 6} style={{ textAlign: 'center', padding: '56px 20px', background: 'var(--color-surface)' }}>
+                          <td colSpan={7} style={{ textAlign: 'center', padding: '56px 20px', background: 'var(--color-surface)' }}>
                             <div style={{ maxWidth: '440px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                               <div
                                 style={{
@@ -1128,22 +1139,31 @@ export function StaffManagementPage() {
                               </span>
                             </td>
 
-                            {isOwner && (
-                              <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                <div className="table-action-btns" style={{ justifyContent: 'center' }}>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
+                                <Link
+                                  to={`/zones/${item.zoneId}`}
+                                  className="table-icon-btn primary"
+                                  title={lang === 'en' ? "View zone details" : "Xem chi tiết phân khu"}
+                                  aria-label={lang === 'en' ? `View zone ${item.zoneName}` : `Xem chi tiết phân khu ${item.zoneName}`}
+                                >
+                                  <Icon name="eye" size={15} />
+                                  <span className="sr-only">{lang === 'en' ? "View details" : "Xem chi tiết"}</span>
+                                </Link>
+                                {isOwner && (
                                   <button
                                     type="button"
                                     className="table-icon-btn danger"
-                                    title={(lang === 'en' ? "Remove staff assignment from zone" : "Hủy phân công staff khỏi phân khu")}
-                                    aria-label={(lang === 'en' ? `Cancel assignment for ${displayName}` : `Hủy phân công cho ${displayName}`)}
+                                    title={lang === 'en' ? "Remove staff assignment from zone" : "Hủy phân công staff khỏi phân khu"}
+                                    aria-label={lang === 'en' ? `Cancel assignment for ${displayName}` : `Hủy phân công cho ${displayName}`}
                                     onClick={() => requestAction('assignment', item.assignmentId)}
                                   >
                                     <Icon name="trash" size={15} />
-                                    <span className="sr-only">{(lang === 'en' ? "Cancel assignment" : "Hủy phân công")}</span>
+                                    <span className="sr-only">{lang === 'en' ? "Cancel assignment" : "Hủy phân công"}</span>
                                   </button>
-                                </div>
-                              </td>
-                            )}
+                                )}
+                              </div>
+                            </td>
                           </tr>
                         );
                       })
@@ -1249,10 +1269,38 @@ export function StaffManagementPage() {
                           <td className="worker-profile-notes">
                             {w.notes || '—'}
                           </td>
-                          <td>
+                          <td style={{ textAlign: 'right' }}>
                             <div className="table-action-btns">
-                              <button type="button" className="table-icon-btn edit" title={lang === 'en' ? 'Edit worker profile' : 'Sửa hồ sơ công nhân'} aria-label={lang === 'en' ? `Edit ${w.fullName}` : `Sửa ${w.fullName}`} onClick={() => handleOpenEditWorker(w)}><Icon name="edit" size={15} /></button>
-                              <button type="button" className="table-icon-btn danger" title={lang === 'en' ? 'Delete worker profile' : 'Xóa hồ sơ công nhân'} aria-label={lang === 'en' ? `Delete ${w.fullName}` : `Xóa ${w.fullName}`} onClick={() => requestAction('worker', w.workerId, w.fullName)}><Icon name="trash" size={15} /></button>
+                              <button
+                                type="button"
+                                className="table-icon-btn primary"
+                                title={lang === 'en' ? 'View worker profile' : 'Xem chi tiết hồ sơ công nhân'}
+                                aria-label={lang === 'en' ? `View ${w.fullName}` : `Xem chi tiết ${w.fullName}`}
+                                onClick={() => setViewingWorker(w)}
+                              >
+                                <Icon name="eye" size={15} />
+                                <span className="sr-only">{lang === 'en' ? 'View details' : 'Xem chi tiết'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="table-icon-btn edit"
+                                title={lang === 'en' ? 'Edit worker profile' : 'Sửa hồ sơ công nhân'}
+                                aria-label={lang === 'en' ? `Edit ${w.fullName}` : `Sửa ${w.fullName}`}
+                                onClick={() => handleOpenEditWorker(w)}
+                              >
+                                <Icon name="edit" size={15} />
+                                <span className="sr-only">{lang === 'en' ? 'Edit' : 'Chỉnh sửa'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="table-icon-btn danger"
+                                title={lang === 'en' ? 'Delete worker profile' : 'Xóa hồ sơ công nhân'}
+                                aria-label={lang === 'en' ? `Delete ${w.fullName}` : `Xóa ${w.fullName}`}
+                                onClick={() => requestAction('worker', w.workerId, w.fullName)}
+                              >
+                                <Icon name="trash" size={15} />
+                                <span className="sr-only">{lang === 'en' ? 'Delete' : 'Xóa'}</span>
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1708,6 +1756,262 @@ export function StaffManagementPage() {
           </div>
         </form>
       </Modal>
+
+      {/* View Staff Member Profile Modal */}
+      {viewingStaff && (
+        <Modal
+          open={Boolean(viewingStaff)}
+          onClose={() => setViewingStaff(null)}
+          title={lang === 'en' ? "Staff Member Profile" : "Hồ sơ chi tiết nhân sự"}
+          headerIcon={<Icon name="eye" size={20} />}
+          style={{ width: 'min(560px, 100%)' }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              className="structured-field-card"
+              style={{
+                background: 'var(--color-success-bg)',
+                borderColor: 'var(--color-border)',
+                marginBottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '16px',
+              }}
+            >
+              <div
+                style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '16px',
+                  background: 'var(--color-primary)',
+                  color: '#ffffff',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                {viewingStaff.fullName.trim().charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: 'var(--color-text)' }}>
+                    {viewingStaff.fullName}
+                  </h3>
+                  <span className={`status-dot-badge ${viewingStaff.status === 'ACTIVE' ? 'active' : 'completed'}`}>
+                    <span className="dot" />
+                    {lang === 'en' ? (viewingStaff.status === 'ACTIVE' ? 'Active' : 'Inactive') : (viewingStaff.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã ngưng')}
+                  </span>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-muted)' }}>
+                  ID #{viewingStaff.farmMemberId} · {viewingStaff.farmRole === 'OWNER' ? (lang === 'en' ? 'Farm Owner' : 'Chủ trang trại') : (lang === 'en' ? 'Technical Staff' : 'Nhân sự kỹ thuật')}
+                </p>
+              </div>
+            </div>
+
+            <div className="ui-form-grid" style={{ background: 'var(--color-page)', padding: '16px', borderRadius: '10px', gap: '12px' }}>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Email Address' : 'Địa chỉ Email'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {viewingStaff.email || '—'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {viewingStaff.phoneNumber || '—'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Professional Title' : 'Chức danh công việc'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {viewingStaff.jobTitle || viewingStaff.roleLabel || '—'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Join Date' : 'Ngày gia nhập'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {viewingStaff.joinedAt ? displayDate(viewingStaff.joinedAt, lang) : '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', display: 'block', marginBottom: '8px' }}>
+                {lang === 'en' ? 'Assigned Production Zones:' : 'Phân khu phụ trách:'}
+              </span>
+              {(() => {
+                const memberAssignments = assignments.filter((a) => a.farmMemberId === viewingStaff.farmMemberId || a.staffEmail === viewingStaff.email);
+                if (memberAssignments.length === 0) {
+                  return (
+                    <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'var(--color-surface)', border: '1px dashed var(--color-border)', fontSize: '13px', color: 'var(--color-muted)' }}>
+                      {lang === 'en' ? 'No specific zone assignments.' : 'Chưa được phân công phụ trách phân khu nào.'}
+                    </div>
+                  );
+                }
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {memberAssignments.map((a) => (
+                      <span key={a.assignmentId} className="crop-cat-pill" style={{ background: 'var(--color-success-bg)', color: 'var(--color-primary-text)', fontWeight: 600 }}>
+                        📍 {a.zoneName}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+              <Button type="button" variant="secondary" onClick={() => setViewingStaff(null)}>
+                {lang === 'en' ? 'Close' : 'Đóng'}
+              </Button>
+              {isOwner && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => {
+                    const toEdit = viewingStaff;
+                    setViewingStaff(null);
+                    openEditModal(toEdit);
+                  }}
+                >
+                  <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit Staff' : 'Chỉnh sửa'}
+                </Button>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* View Worker Profile Modal */}
+      {viewingWorker && (
+        <Modal
+          open={Boolean(viewingWorker)}
+          onClose={() => setViewingWorker(null)}
+          title={lang === 'en' ? "Worker Profile Details" : "Chi tiết hồ sơ công nhân"}
+          headerIcon={<Icon name="eye" size={20} />}
+          style={{ width: 'min(560px, 100%)' }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              className="structured-field-card"
+              style={{
+                background: 'var(--color-success-bg)',
+                borderColor: 'var(--color-border)',
+                marginBottom: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                padding: '16px',
+              }}
+            >
+              <div
+                style={{
+                  width: '54px',
+                  height: '54px',
+                  borderRadius: '16px',
+                  background: 'var(--color-primary)',
+                  color: '#ffffff',
+                  display: 'grid',
+                  placeItems: 'center',
+                  fontSize: '22px',
+                  fontWeight: 700,
+                  flexShrink: 0,
+                }}
+              >
+                👷
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: 'var(--color-text)' }}>
+                    {viewingWorker.fullName}
+                  </h3>
+                  <StatusBadge
+                    tone={viewingWorker.employmentStatus === 'active' ? 'success' : 'neutral'}
+                    label={<>
+                      {lang === 'en' ? (viewingWorker.employmentStatus === 'active' ? 'Active' : viewingWorker.employmentStatus === 'seasonal' ? 'Seasonal' : 'Left') : (viewingWorker.employmentStatus === 'active' ? 'Đang làm việc' : viewingWorker.employmentStatus === 'seasonal' ? 'Thời vụ' : 'Đã nghỉ')}
+                    </>}
+                  />
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--color-muted)' }}>
+                  {viewingWorker.workerCode || `#${viewingWorker.workerId}`} · {viewingWorker.jobTitle || (lang === 'en' ? 'Worker' : 'Công nhân')}
+                </p>
+              </div>
+            </div>
+
+            <div className="ui-form-grid" style={{ background: 'var(--color-page)', padding: '16px', borderRadius: '10px', gap: '12px' }}>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {viewingWorker.phoneNumber || '—'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Email Address' : 'Địa chỉ Email'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {viewingWorker.email || '—'}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Employment Status' : 'Tình trạng làm việc'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {lang === 'en' ? (viewingWorker.employmentStatus === 'active' ? 'Full-time / Active' : viewingWorker.employmentStatus === 'seasonal' ? 'Seasonal' : 'Left') : (viewingWorker.employmentStatus === 'active' ? 'Chính thức / Đang làm' : viewingWorker.employmentStatus === 'seasonal' ? 'Thời vụ' : 'Đã nghỉ việc')}
+                </strong>
+              </div>
+              <div>
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>
+                  {lang === 'en' ? 'Hire Date' : 'Ngày vào làm'}
+                </span>
+                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
+                  {viewingWorker.hiredAt ? displayDate(viewingWorker.hiredAt, lang) : '—'}
+                </strong>
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)', display: 'block', marginBottom: '4px' }}>
+                {lang === 'en' ? 'Worker Notes & Certifications:' : 'Ghi chú & Chứng nhận:'}
+              </span>
+              <p style={{ margin: 0, padding: '12px 14px', borderRadius: '8px', background: 'var(--color-surface)', border: '1px solid var(--color-border)', fontSize: '13.5px', color: 'var(--color-text)', lineHeight: 1.5 }}>
+                {viewingWorker.notes || (lang === 'en' ? 'No notes provided.' : 'Chưa có ghi chú kinh nghiệm hoặc chứng nhận VietGAP.')}
+              </p>
+            </div>
+
+            <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+              <Button type="button" variant="secondary" onClick={() => setViewingWorker(null)}>
+                {lang === 'en' ? 'Close' : 'Đóng'}
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => {
+                  const toEdit = viewingWorker;
+                  setViewingWorker(null);
+                  handleOpenEditWorker(toEdit);
+                }}
+              >
+                <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit Profile' : 'Chỉnh sửa hồ sơ'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
       <ConfirmDialog open={Boolean(pendingAction)}
         title={pendingAction?.kind === 'worker' ? (lang === 'en' ? 'Delete worker profile' : 'Xóa hồ sơ công nhân')
           : pendingAction?.kind === 'deactivate' ? (lang === 'en' ? 'Deactivate member' : 'Ngừng kích hoạt thành viên')
