@@ -474,72 +474,28 @@ export function RegisterPage() {
                     </small>
                   ) : null}
 
-                  <div
-                    id="password-hint"
-                    className="password-rules-box"
-                    style={{
-                      marginTop: '8px',
-                      padding: '10px 12px',
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '12px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '4px',
-                    }}
-                  >
-                    <span style={{ fontWeight: 650, color: '#334155', marginBottom: '2px' }}>
+                  <div id="password-hint" className="password-rules-box">
+                    <span className="password-rules-title">
                       Security Requirements:
                     </span>
-                    <span
-                      style={{
-                        color: hasMinLength ? '#16a34a' : '#64748b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: hasMinLength ? 600 : 400,
-                      }}
-                    >
-                      <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />
-                      8 to 100 characters
-                    </span>
-                    <span
-                      style={{
-                        color: hasUpperCase ? '#16a34a' : '#64748b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: hasUpperCase ? 600 : 400,
-                      }}
-                    >
-                      <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />
-                      At least 1 uppercase letter (A-Z)
-                    </span>
-                    <span
-                      style={{
-                        color: hasLowerCase ? '#16a34a' : '#64748b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: hasLowerCase ? 600 : 400,
-                      }}
-                    >
-                      <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />
-                      At least 1 lowercase letter (a-z)
-                    </span>
-                    <span
-                      style={{
-                        color: hasSpecialChar ? '#16a34a' : '#64748b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        fontWeight: hasSpecialChar ? 600 : 400,
-                      }}
-                    >
-                      <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />
-                      At least 1 special character (!@#$%^&*...)
-                    </span>
+                    <div className="password-rules-grid">
+                      <span className={`password-rule-item ${hasMinLength ? 'is-valid' : ''}`}>
+                        <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />
+                        8 to 100 characters
+                      </span>
+                      <span className={`password-rule-item ${hasUpperCase ? 'is-valid' : ''}`}>
+                        <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />
+                        At least 1 uppercase (A-Z)
+                      </span>
+                      <span className={`password-rule-item ${hasLowerCase ? 'is-valid' : ''}`}>
+                        <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />
+                        At least 1 lowercase (a-z)
+                      </span>
+                      <span className={`password-rule-item ${hasSpecialChar ? 'is-valid' : ''}`}>
+                        <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />
+                        At least 1 special char (!@#...)
+                      </span>
+                    </div>
                   </div>
                 </div>
 
