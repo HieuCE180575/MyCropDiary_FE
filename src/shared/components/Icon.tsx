@@ -31,7 +31,7 @@ const icons: Record<string, LucideIcon> = {
   filter: SlidersHorizontal, expand: Maximize2,
   activity: Activity, layers: Layers, zap: Zap, database: Database, building: Building2, trash: Trash2,
   weight: Weight, flask: FlaskConical, granules: Grip, help: CircleHelp,
-  users: Users, gauge: Gauge, 'map-pin': MapPin, bug: Bug, thermometer: Thermometer, 'arrow-up': ArrowUp,
+  users: Users, gauge: Gauge, 'map-pin': MapPin, bug: Bug, thermometer: Thermometer, 'arrow-up': ArrowUp
 };
 
 export function Icon({ name, className, ...props }: LucideProps & { name: string }) {

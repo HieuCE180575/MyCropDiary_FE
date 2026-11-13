@@ -10,7 +10,7 @@ import { formatDateTime as uiFormatDateTime } from '../../shared/format/formatte
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
 import { usePagination } from '../../shared/hooks/usePagination';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 
@@ -26,7 +26,6 @@ import {
   type CropSeasonResp,
   type CropSeasonBlockResp,
 } from './cropSeasonService';
-import { AlertCircle } from 'lucide-react';
 
 interface FarmingActivity {
   id: number;
@@ -78,21 +77,6 @@ export function FarmingActivitiesPage() {
   const [weatherNotes, setWeatherNotes] = useState('Trời nắng nhẹ, độ ẩm 75%');
   const [saving, setSaving] = useState(false);
   const [activityModalError, setActivityModalError] = useState<string | null>(null);
-
-  const [activityFieldErrors, setActivityFieldErrors] = useState<{
-    block?: string;
-    type?: string;
-    startedAt?: string;
-    name?: string;
-    description?: string;
-    weatherNotes?: string;
-    resultNotes?: string;
-  }>({});
-
-  const blockRef = useRef<HTMLSelectElement>(null);
-  const typeRef = useRef<HTMLSelectElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const startedAtRef = useRef<HTMLInputElement>(null);
 
   const loadSeasons = async () => {
     if (!selectedFarm?.id) {
@@ -206,111 +190,25 @@ export function FarmingActivitiesPage() {
     }
   };
 
-  const validateActivityForm = () => {
-    const errors: typeof activityFieldErrors = {};
-
-    // 1. Target Block
-    if (seasonBlocks.length === 0) {
-      errors.block = lang === 'en'
-        ? 'This crop season has no assigned blocks. Please assign a block first.'
-        : 'Mùa vụ chưa được gán lô đất. Vui lòng gán lô đất trước.';
-    } else if (!selectedBlockId) {
-      errors.block = lang === 'en'
-        ? 'Please select a target block.'
-        : 'Vui lòng chọn lô đất thực hiện.';
-    } else {
-      const selectedBlock = seasonBlocks.find(
-        sb => sb.blockId === Number(selectedBlockId)
-      );
-
-      if (!selectedBlock) {
-        errors.block = lang === 'en'
-          ? 'The selected block is invalid. Please select another block.'
-          : 'Lô đất đã chọn không hợp lệ. Vui lòng chọn lại.';
-      }
-    }
-
-    // 2. Activity Type
-    const validActivityTypes = [
-      'Soil Preparation',
-      'Gieo cấy',
-      'Fertilizing',
-      'Irrigation',
-      'Spraying',
-      'Làm cỏ',
-      'Harvest'
-    ];
-
-    if (!validActivityTypes.includes(actType)) {
-      errors.type = lang === 'en'
-        ? 'Please select a valid activity type.'
-        : 'Vui lòng chọn loại hoạt động hợp lệ.';
-    }
-
-    // 3. Activity Time
-    if (!startedAt) {
-      errors.startedAt = lang === 'en'
-        ? 'Please select the activity date and time.'
-        : 'Vui lòng chọn thời gian thực hiện.';
-    } else if (Number.isNaN(Date.parse(startedAt))) {
-      errors.startedAt = lang === 'en'
-        ? 'Please enter a valid date and time.'
-        : 'Vui lòng nhập ngày giờ hợp lệ.';
-    }
-
-    // 4. Activity Name
-    const trimmedName = actName.trim();
-
-    if (!trimmedName) {
-      errors.name = lang === 'en'
-        ? 'Please enter an activity name.'
-        : 'Vui lòng nhập tên hoạt động.';
-    } else if (trimmedName.length > 160) {
-      errors.name = lang === 'en'
-        ? 'Activity name cannot exceed 160 characters.'
-        : 'Tên hoạt động không được vượt quá 160 ký tự.';
-    }
-
-    setActivityFieldErrors(errors);
-
-    return errors;
-  };
-
   const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const errors = validateActivityForm();
-
-    if (Object.keys(errors).length > 0) {
-      if (errors.block) {
-        blockRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-        blockRef.current?.focus();
-      } else if (errors.name) {
-        nameRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-        nameRef.current?.focus();
-      } else if (errors.type) {
-        typeRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-        typeRef.current?.focus();
-      } else if (errors.startedAt) {
-        startedAtRef.current?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-        });
-        startedAtRef.current?.focus();
-      }
-
+    const trimmedActName = actName.trim();
+    if (!trimmedActName) {
+      setActivityModalError((lang === 'en' ? "Enter a farming activity name." : 'Vui lòng nhập tên hoạt động canh tác.'));
       return;
     }
-
+    if (!seasonId) {
+      setActivityModalError((lang === 'en' ? "Select a crop season." : 'Vui lòng chọn mùa vụ canh tác mục tiêu.'));
+      return;
+    }
+    if (seasonBlocks.length > 0 && !selectedBlockId) {
+      setActivityModalError((lang === 'en' ? "Select a block assigned to this season." : 'Vui lòng chọn lô đất thực hiện (đã được phân bổ vào mùa vụ này).'));
+      return;
+    }
+    if (startedAt && endedAt && endedAt < startedAt) {
+      setActivityModalError((lang === 'en' ? `End time (${endedAt}) cannot be before the start time (${startedAt}).` : `Thời gian kết thúc (${endedAt}) không thể trước thời gian bắt đầu (${startedAt}).`));
+      return;
+    }
     setSaving(true);
     setActivityModalError(null);
     setNotification(null);
@@ -564,8 +462,8 @@ export function FarmingActivitiesPage() {
                     {s.seasonStatus === 'active'
                       ? (lang === 'en' ? 'Active' : 'Đang canh tác')
                       : s.seasonStatus === 'planned'
-                        ? (lang === 'en' ? 'Planned' : 'Chuẩn bị vụ')
-                        : (lang === 'en' && s.seasonStatus === 'completed' ? 'Completed' : s.seasonStatus)}
+                      ? (lang === 'en' ? 'Planned' : 'Chuẩn bị vụ')
+                      : (lang === 'en' && s.seasonStatus === 'completed' ? 'Completed' : s.seasonStatus)}
                     )
                   </option>
                 ))
@@ -956,8 +854,6 @@ export function FarmingActivitiesPage() {
         onClose={() => {
           setIsModalOpen(false);
           setEditingActivity(null);
-          setActivityFieldErrors({})
-          setActivityModalError(null)
         }}
         title={editingActivity ? (lang === 'en' ? 'Update Farming Log' : 'Cập nhật nhật ký canh tác') : (lang === 'en' ? 'Record Farming Activity' : 'Ghi nhận hoạt động canh tác')}
         headerIcon={<Icon name="book" size={20} />}
@@ -966,42 +862,12 @@ export function FarmingActivitiesPage() {
           {lang === 'en' ? 'Selected Season: ' : 'Mùa vụ đang chọn: '}<strong style={{ color: 'var(--color-primary-text)' }}>{currentSeason?.seasonName}</strong>
         </p>
 
-        <form onSubmit={handleCreateActivity} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} noValidate>
-          {(Object.keys(activityFieldErrors).length > 0 || activityModalError) && (
-            <div
-              role="alert"
-              style={{
-                padding: '12px 16px',
-                borderRadius: '8px',
-                background: '#fef2f2',
-                border: '1px solid #fecaca',
-                color: '#b91c1c',
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
-              }}
-            >
-              <AlertCircle size={18} style={{ flexShrink: 0 }} />
-
-              <div>
-                {Object.keys(activityFieldErrors).length > 0 && (
-                  <p style={{ margin: 0 }}>
-                    {lang === 'en'
-                      ? 'Please correct the highlighted fields before saving.'
-                      : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
-                  </p>
-                )}
-
-                {activityModalError && (
-                  <p style={{ margin: 0 }}>
-                    {translate(activityModalError)}
-                  </p>
-                )}
-              </div>
-            </div>
+        <form onSubmit={handleCreateActivity} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {activityModalError && (
+            <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
+              {translate(activityModalError)}
+            </p>
           )}
-
           {/* Lô đất thực hiện */}
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
@@ -1023,16 +889,7 @@ export function FarmingActivitiesPage() {
                   id="act-block-select"
                   required
                   value={selectedBlockId}
-                  onChange={(e) => {
-                    setSelectedBlockId(
-                      e.target.value ? Number(e.target.value) : ''
-                    );
-
-                    setActivityFieldErrors(prev => ({
-                      ...prev,
-                      block: undefined
-                    }));
-                  }}
+                  onChange={(e) => setSelectedBlockId(e.target.value ? Number(e.target.value) : '')}
                 >
                   {seasonBlocks.map((sb) => (
                     <option key={sb.blockId} value={sb.blockId}>
@@ -1041,17 +898,6 @@ export function FarmingActivitiesPage() {
                     </option>
                   ))}
                 </select>
-                {activityFieldErrors.block && (
-                  <p className="field-error"
-                    style={{
-                      color: '#dc2626',
-                      fontSize: '12px',
-                      marginTop: '5px',
-                      marginBottom: 0
-                    }}>
-                    {activityFieldErrors.block}
-                  </p>
-                )}
               </div>
             )}
           </div>
@@ -1069,13 +915,7 @@ export function FarmingActivitiesPage() {
                 <select className="ui-select"
                   id="act-type-select"
                   value={actType}
-                  onChange={(e) => {
-                    setActType(e.target.value);
-                    setActivityFieldErrors(prev => ({
-                      ...prev,
-                      type: undefined
-                    }));
-                  }}
+                  onChange={(e) => setActType(e.target.value)}
                 >
                   <option value="Soil Preparation">{(lang === 'en' ? "Soil Preparation & Substrate Treatment" : "Soil Preparation & Xử lý giá thể")}</option>
                   <option value="Gieo cấy">{(lang === 'en' ? "Seeding & Transplanting" : "Seeding & Cấy cây con")}</option>
@@ -1085,17 +925,6 @@ export function FarmingActivitiesPage() {
                   <option value="Làm cỏ">{(lang === 'en' ? "Weeding & Pruning" : "Làm cỏ & Tỉa cành")}</option>
                   <option value="Harvest">{(lang === 'en' ? "Crop Harvesting" : "Harvest nông sản")}</option>
                 </select>
-                {activityFieldErrors.type && (
-                  <p className="field-error"
-                    style={{
-                      color: '#dc2626',
-                      fontSize: '12px',
-                      marginTop: '5px',
-                      marginBottom: 0
-                    }}>
-                    {activityFieldErrors.type}
-                  </p>
-                )}
               </div>
             </div>
 
@@ -1112,25 +941,8 @@ export function FarmingActivitiesPage() {
                   type="datetime-local"
                   required
                   value={startedAt}
-                  onChange={(e) => {
-                    setActType(e.target.value);
-                    setActivityFieldErrors(prev => ({
-                      ...prev,
-                      type: undefined
-                    }));
-                  }}
+                  onChange={(e) => setStartedAt(e.target.value)}
                 />
-                {activityFieldErrors.startedAt && (
-                  <p className="field-error"
-                    style={{
-                      color: '#dc2626',
-                      fontSize: '12px',
-                      marginTop: '5px',
-                      marginBottom: 0
-                    }}>
-                    {activityFieldErrors.startedAt}
-                  </p>
-                )}
               </div>
             </div>
           </div>
@@ -1148,46 +960,10 @@ export function FarmingActivitiesPage() {
                 id="act-name-input"
                 type="text"
                 required
-                maxLength={160}
                 placeholder={(lang === 'en' ? "Example: Early-season NPK fertilization for the Summer–Autumn season in Block A01" : "VD: Fertilizing NPK đầu vụ cho Vụ Hè Thu tại Lô A01")}
                 value={actName}
-                onChange={(e) => {
-                  const value = e.target.value;
-
-                  setActName(value)
-
-                  setActivityFieldErrors((prev) => {
-                    const updated = { ...prev };
-
-                    // Validate assessed date
-                    if (!value.trim()) {
-                      updated.name = lang === 'en'
-                        ? 'Please enter an activity name.'
-                        : 'Vui lòng nhập tên hoạt động.'
-                    } else if (value.trim().length > 100) {
-                      updated.name =
-                        lang === 'en'
-                          ? 'Activity name cannot exceed 160 characters.'
-                          : 'Tên hoạt động không được vượt quá 160 ký tự.';
-                    } else {
-                      delete updated.name;
-                    }
-
-                    return updated;
-                  });
-                }}
+                onChange={(e) => setActName(e.target.value)}
               />
-              {activityFieldErrors.name && (
-                <p className="field-error"
-                  style={{
-                    color: '#dc2626',
-                    fontSize: '12px',
-                    marginTop: '5px',
-                    marginBottom: 0
-                  }}>
-                  {activityFieldErrors.name}
-                </p>
-              )}
             </div>
           </div>
 
@@ -1256,8 +1032,6 @@ export function FarmingActivitiesPage() {
               onClick={() => {
                 setIsModalOpen(false);
                 setEditingActivity(null);
-                setActivityFieldErrors({})
-                setActivityModalError(null)
               }}
               disabled={saving}
             >{translate("Cancel")}</Button>

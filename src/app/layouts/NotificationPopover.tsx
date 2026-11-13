@@ -23,7 +23,6 @@ export function NotificationPopover({
   loading,
   invitations,
   respondingInvId,
-  invitationError,
   onMarkAllAsRead,
   onNotificationClick,
   onRespond,
@@ -43,11 +42,6 @@ export function NotificationPopover({
       </div>
 
       <div className="notif-body">
-        {invitationError && (
-          <p role="alert" className="form-error-banner" style={{ margin: '0 0 10px' }}>
-            {invitationError}
-          </p>
-        )}
         {invitations.length > 0 && (
           <section className="notif-section">
             <p className="notif-section-title">

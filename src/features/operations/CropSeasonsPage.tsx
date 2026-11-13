@@ -1028,6 +1028,7 @@ export function CropSeasonsPage() {
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input className="ui-input"
+                    ref={startDateRef}
                     id="modal-cs-start"
                     type="date"
                     value={formValues.startDate}
@@ -1079,6 +1080,7 @@ export function CropSeasonsPage() {
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input className="ui-input"
+                    ref={endDateRef}
                     id="modal-cs-end"
                     type="date"
                     value={formValues.endDate}
@@ -1329,11 +1331,74 @@ export function CropSeasonsPage() {
                                 min="0.01"
                                 max={block.areaValue}
                                 value={cfg.plantedArea}
-                                onChange={(e) =>
-                                  updateSelectedBlockConfig(block.blockId, { plantedArea: e.target.value })
-                                }
+                                onChange={(e) => {
+                                  const value = e.target.value;
+
+                                  // Update the selected Block configuration
+                                  updateSelectedBlockConfig(block.blockId, {
+                                    plantedArea: value,
+                                  });
+
+                                  // Validate planted area
+                                  setSeasonErrors((prev) => {
+                                    const updated = { ...prev };
+                                    const area = Number(value);
+                                    const unit = cfg.areaUnit
+
+                                    if (!value.trim()) {
+                                      updated.plantedAreas = {
+                                        ...prev.plantedAreas,
+                                        [block.blockId]:
+                                          lang === 'en'
+                                            ? 'Planted area is required.'
+                                            : 'Vui lòng nhập diện tích trồng.',
+                                      };
+                                    } else if (
+                                      !Number.isFinite(area) ||
+                                      area <= 0 ||
+                                      area > block.areaValue
+                                    ) {
+                                      updated.plantedAreas = {
+                                        ...prev.plantedAreas,
+                                        [block.blockId]:
+                                          lang === 'en'
+                                            ? `Planted area must be greater than 0 and cannot exceed ${block.areaValue} ${unit}.`
+                                            : `Diện tích trồng phải lớn hơn 0 và không được vượt quá ${block.areaValue} ${unit}.`,
+                                      };
+                                    } else {
+                                      const nextPlantedAreaErrors = { ...prev.plantedAreas };
+                                      delete nextPlantedAreaErrors[block.blockId];
+
+                                      if (Object.keys(nextPlantedAreaErrors).length > 0) {
+                                        updated.plantedAreas = nextPlantedAreaErrors;
+                                      } else {
+                                        delete updated.plantedAreas;
+                                      }
+                                    }
+
+                                    return updated;
+                                  });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (['e', 'E', '+', '-'].includes(e.key)) {
+                                    e.preventDefault();
+                                  }
+                                }}
+
                                 style={{ width: '100%', padding: '7px 10px' }}
                               />
+                              {seasonErrors.plantedAreas?.[block.blockId] && (
+                                <p className="field-error"
+                                  style={{
+                                    color: '#dc2626',
+                                    fontSize: '12px',
+                                    marginTop: '5px',
+                                    marginBottom: 0
+                                  }}>
+                                  {seasonErrors.plantedAreas[block.blockId]}
+                                </p>
+                              )}
+
                             </div>
                             <div>
                               <label htmlFor="crop-seasons-page-field-2"
@@ -1385,7 +1450,11 @@ export function CropSeasonsPage() {
             </div>
 
             <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-              <Button type="button" variant="secondary" onClick={() => setModalMode(null)} disabled={saving}>
+              <Button type="button" variant="secondary" onClick={() => {
+                setSeasonErrors({});
+                setSeasonModalError(null);
+                setModalMode(null)
+              }} disabled={saving}>
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={saving}>
@@ -1741,7 +1810,11 @@ export function CropSeasonsPage() {
 
         {/* Assign Block Modal */}
         {isAssignBlockOpen && (
-          <Modal open customLayout onClose={() => setIsAssignBlockOpen(false)} style={{ width: 'min(580px, 100%)', maxHeight: '90vh' }}>
+          <Modal open customLayout onClose={() => {
+            setAssignBlockModalError(null)
+            setAssignBlockErrors({})
+            setIsAssignBlockOpen(false)
+          }} style={{ width: 'min(580px, 100%)', maxHeight: '90vh' }}>
               <div className="modal-header">
                 <div>
                   <span className="eyebrow">{lang === 'en' ? 'Block Allocation' : 'Phân công lô đất canh tác'}</span>
@@ -1801,6 +1874,7 @@ export function CropSeasonsPage() {
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <select className="ui-select"
+                      ref={blockIdRef}
                       id="assign-block-select"
                       value={assignBlockForm.blockId}
                       onChange={(e) => {

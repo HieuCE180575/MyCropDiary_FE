@@ -29,6 +29,8 @@ import {
 
 
 export function AppLayout() {
+
+
   const { user } = useAuth();
   const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
   return (
@@ -96,6 +98,7 @@ function getInitialTheme(): 'light' | 'dark' {
 }
 
 function WorkspaceLayout() {
+
   const { signOut, user } = useAuth();
   const { lang, t, t: translate } = useLanguage();
   const { farms, selectedFarm, selectFarm } = useFarmWorkspace();
@@ -103,6 +106,7 @@ function WorkspaceLayout() {
   const { pathname } = useLocation();
 
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
+
 
   useEffect(() => {
     try {
@@ -220,7 +224,6 @@ function WorkspaceLayout() {
   const [invitationError, setInvitationError] = useState<string | null>(null);
 
   const totalUnread = invitations.length + unreadCount;
-
   const loadInvitations = async () => {
     if (!user || user?.systemRole?.toUpperCase() === 'ADMIN') return;
     try {
@@ -406,7 +409,7 @@ function WorkspaceLayout() {
                 <Icon name="bell" />
                 {totalUnread > 0 && (
                   <span className="notification-badge">
-                    {totalUnread}
+                    {totalUnread > 99 ? '99+' : totalUnread}
                   </span>
                 )}
               </button>
@@ -425,7 +428,6 @@ function WorkspaceLayout() {
                 />
               )}
             </div>
-
             {/* Profile Avatar / Dropdown Menu */}
             <div className="account-menu" ref={accountMenuRef} style={{ position: 'relative' }}>
               <button
@@ -605,7 +607,7 @@ function WorkspaceLayout() {
           <Outlet />
         </main>
         {!isAdmin && <PublicFooter />}
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
