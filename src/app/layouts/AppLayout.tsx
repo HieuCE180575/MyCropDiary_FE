@@ -254,8 +254,8 @@ function WorkspaceLayout() {
             <div className="season-card">
               <strong><Icon name="leaf" />{translate('Your Farm')}</strong>
               <p>{translate('Submit farm registration request and track approval progress.')}</p>
-              <Link to="/farm-registration">
-                {translate('Register Farm')} <Icon name="arrow" />
+              <Link to="/farm?tab=register">
+                {translate('Farm Management')} <Icon name="arrow" />
               </Link>
             </div>
           )}

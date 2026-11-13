@@ -3,7 +3,6 @@ import { AppLayout } from './layouts/AppLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { DashboardPage } from '../pages/DashboardPage';
 import { FarmInfoPage } from '../pages/FarmInfoPage';
-import { FarmRegistrationPage } from '../pages/FarmRegistrationPage';
 import { KnowledgePage } from '../pages/KnowledgePage';
 import { LoginPage } from '../pages/LoginPage';
 import { HomePage } from '../pages/HomePage';
@@ -45,7 +44,7 @@ export function App() {
               element={<DashboardPage />}
             />
 
-            <Route path="/farm-registration" element={<FarmRegistrationPage />} />
+            <Route path="/farm-registration" element={<FarmInfoPage defaultTab="register" />} />
             <Route path="/farm" element={<FarmInfoPage />} />
             <Route path="/workers" element={<Navigate to="/members" replace />} />
             <Route path="/zones" element={<ZoneListPage />} />
