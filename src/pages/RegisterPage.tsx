@@ -1,12 +1,10 @@
 import { Link, Navigate } from 'react-router-dom';
-import { GoogleAuthModal } from '../features/auth';
+import { GoogleAuthModal, useAuth } from '../features/auth';
+import { registerAccount, resendOtp, verifyOtp } from '../features/auth/authApi';
+import { signInWithGoogleDirect, initializeGoogleOneTap } from '../features/auth/googleAuthService';
 import { Icon } from '../shared/components/Icon';
 import { useLanguage } from '../shared/i18n/LanguageContext';
-import { type FormEvent, useRef, useState } from 'react';
-
-import { useAuth } from '../features/auth';
-import { registerAccount, resendOtp, verifyOtp } from '../features/auth/authApi';
-
+import { type FormEvent, useRef, useState, useEffect } from 'react';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const PHONE_CHARS_REGEX = /^[0-9+\s-]*$/;
@@ -116,7 +114,35 @@ export function RegisterPage() {
   const [touched, setTouched] = useState<Partial<Record<keyof FormValues, boolean>>>({});
   const [pending, setPending] = useState(false);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const busy = useRef(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      void initializeGoogleOneTap((session) => {
+        setSession(session);
+      });
+    }
+  }, [isAuthenticated, setSession]);
+
+  const handleGoogleSignInClick = async () => {
+    if (pending || googleLoading) return;
+    setError('');
+    setNotice('');
+    setGoogleLoading(true);
+    try {
+      const session = await signInWithGoogleDirect();
+      setSession(session);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!msg.includes('hủy') && !msg.includes('cancelled') && !msg.includes('access_denied')) {
+        setError(msg);
+        setIsGoogleModalOpen(true);
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -584,8 +610,8 @@ export function RegisterPage() {
                 <button
                   className="btn-google-auth"
                   type="button"
-                  disabled={pending}
-                  onClick={() => setIsGoogleModalOpen(true)}
+                  disabled={pending || googleLoading}
+                  onClick={() => void handleGoogleSignInClick()}
                   title={translate("Sign up quickly with Google")}
                 >
                   <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -594,7 +620,7 @@ export function RegisterPage() {
                     <path fill="#FBBC05" d="M5.28 14.27A7.195 7.195 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.966 11.966 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
                     <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                   </svg>
-                  <span>{translate("Quick Register with Google")}</span>
+                  <span>{googleLoading ? translate("Authenticating...") : translate("Quick Register with Google")}</span>
                 </button>
               </>
             )}
