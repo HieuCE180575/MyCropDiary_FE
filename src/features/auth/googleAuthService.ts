@@ -90,8 +90,9 @@ export async function promptGoogleAccountChooser(): Promise<GoogleAuthRequest> {
   await ensureGoogleScriptLoaded();
 
   const clientId = getGoogleClientId();
+  const oauth2 = window.google?.accounts?.oauth2;
 
-  if (!window.google?.accounts?.oauth2) {
+  if (!oauth2) {
     throw new Error('Không thể tải Google Identity Services SDK. Vui lòng kiểm tra kết nối mạng.');
   }
 
@@ -99,7 +100,7 @@ export async function promptGoogleAccountChooser(): Promise<GoogleAuthRequest> {
     let resolved = false;
 
     try {
-      const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      const tokenClient = oauth2.initTokenClient({
         client_id: clientId,
         scope: 'openid email profile',
         prompt: 'select_account',
@@ -187,8 +188,9 @@ export async function initializeGoogleOneTap(onSuccess: (session: AuthSession) =
   try {
     await ensureGoogleScriptLoaded();
     const clientId = getGoogleClientId();
-    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
-      window.google.accounts.id.initialize({
+    const googleId = typeof window !== 'undefined' ? window.google?.accounts?.id : undefined;
+    if (googleId) {
+      googleId.initialize({
         client_id: clientId,
         auto_select: false,
         cancel_on_tap_outside: true,
@@ -203,7 +205,7 @@ export async function initializeGoogleOneTap(onSuccess: (session: AuthSession) =
           }
         },
       });
-      window.google.accounts.id.prompt();
+      googleId.prompt();
     }
   } catch {
     // Silent fallback
