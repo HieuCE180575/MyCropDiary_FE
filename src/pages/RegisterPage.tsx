@@ -1,10 +1,10 @@
+import { useLanguage } from '../shared/i18n/LanguageContext';
+import { type FormEvent, useRef, useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { GoogleAuthModal, useAuth } from '../features/auth';
+import { useAuth, GoogleAuthModal } from '../features/auth';
 import { registerAccount, resendOtp, verifyOtp } from '../features/auth/authApi';
 import { signInWithGoogleDirect, initializeGoogleOneTap } from '../features/auth/googleAuthService';
 import { Icon } from '../shared/components/Icon';
-import { useLanguage } from '../shared/i18n/LanguageContext';
-import { type FormEvent, useRef, useState, useEffect } from 'react';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 const PHONE_CHARS_REGEX = /^[0-9+\s-]*$/;
@@ -107,7 +107,7 @@ const registerBenefits = [
 ];
 
 export function RegisterPage() {
-  const { lang, t: translate } = useLanguage();
+  const { t: translate } = useLanguage();
   const { isAuthenticated, setSession } = useAuth();
   const [step, setStep] = useState<'register' | 'verify'>('register');
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
@@ -252,13 +252,18 @@ export function RegisterPage() {
         <div className="showcase-inner">
           <div className="showcase-badge">
             <Icon name="shield" />
-            <span>{translate("Smart & Sustainable Agriculture")}</span>
+            <span>Smart &amp; Sustainable Agriculture</span>
           </div>
 
           <div className="showcase-content">
-            <h1 id="register-showcase-title">{translate("Start your")}<br />
-              <span className="gradient-text">{translate("Digital Farming")}</span><br />{translate("journey with MyCropDiary.")}</h1>
-            <p className="showcase-desc">{translate("Create a personal account to register your farm, store cultivation logs, and track production according to VietGAP standards.")}</p>
+            <h1 id="register-showcase-title">
+              Start your<br />
+              <span className="gradient-text">Digital Farming</span><br />
+              journey with MyCropDiary.
+            </h1>
+            <p className="showcase-desc">
+              Create a personal account to register your farm, store cultivation logs, and track production according to VietGAP standards.
+            </p>
           </div>
 
           <div className="feature-grid">
@@ -269,7 +274,7 @@ export function RegisterPage() {
                 </div>
                 <div className="feature-body">
                   <strong>{translate(item.title)}</strong>
-                  <p>{translate(item.desc)}</p>
+                  <p>{item.desc}</p>
                 </div>
               </article>
             ))}
@@ -278,30 +283,30 @@ export function RegisterPage() {
           <div className="showcase-highlight-card">
             <div className="highlight-stat">
               <span className="stat-number">10,000+</span>
-              <span className="stat-label">{translate("Diaries Logged")}</span>
+              <span className="stat-label">Diaries Logged</span>
             </div>
             <div className="highlight-divider" />
             <div className="highlight-stat">
-              <span className="stat-number">{translate("Free")}</span>
-              <span className="stat-label">{translate("Get started today")}</span>
+              <span className="stat-number">Free</span>
+              <span className="stat-label">Get started today</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* Right Column: Register / OTP Form */}
-      <section className="auth-panel" aria-label={translate("Create account")}>
+      <section className="auth-panel" aria-label="Create account">
         <div className="auth-card">
           {/* Step Indicator */}
-          <div className="step-indicator-bar" aria-label={translate("Registration steps")}>
+          <div className="step-indicator-bar" aria-label="Registration steps">
             <div className={`step-item ${step === 'register' ? 'is-current' : 'is-done'}`}>
               <span className="step-badge">{step === 'verify' ? <Icon name="check" /> : '1'}</span>
-              <span className="step-label">{translate("Information")}</span>
+              <span className="step-label">Information</span>
             </div>
             <div className="step-connector" />
             <div className={`step-item ${step === 'verify' ? 'is-current' : ''}`}>
               <span className="step-badge">2</span>
-              <span className="step-label">{translate("OTP Verification")}</span>
+              <span className="step-label">OTP Verification</span>
             </div>
           </div>
 
@@ -309,11 +314,11 @@ export function RegisterPage() {
             <div className="auth-card-icon">
               <Icon name={step === 'register' ? 'user-plus' : 'shield'} />
             </div>
-            <h2>{step === 'register' ? translate("Create New Account") : translate("Verify Email Address")}</h2>
+            <h2>{step === 'register' ? 'Create New Account' : 'Verify Email Address'}</h2>
             <p>
               {step === 'register'
-                ? translate("Sign up to start managing your digital farm and crop seasons")
-                : (lang === 'en' ? `Enter the 6-digit verification code sent to ${values.email || translate("your email")}.` : `Nhập mã xác minh gồm 6 chữ số đã gửi đến ${values.email || translate("your email")}.`)}
+                ? 'Sign up to start managing your digital farm and crop seasons'
+                : `Enter the 6-digit verification code sent to ${values.email || 'your email'}.`}
             </p>
           </div>
 
@@ -334,22 +339,25 @@ export function RegisterPage() {
           <form key={step} onSubmit={submit} className="auth-form" aria-busy={pending} noValidate>
             {step === 'register' ? (
               <>
-                <div className="form-group structured-field-card">
-                  <label htmlFor="reg-fullname">{translate("Full Name")}<span className="required-star">*</span>
+                <div className="form-group">
+                  <label htmlFor="reg-fullname">
+                    Full Name <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon" aria-hidden="true"><Icon name="user" /></span>
+                    <span className="input-lead-icon">
+                      <Icon name="user" />
+                    </span>
                     <input
                       id="reg-fullname"
                       name="fullName"
                       autoComplete="name"
                       maxLength={150}
-                      placeholder={translate("e.g. John Doe")}
+                      placeholder="e.g. John Doe"
                       required
                       value={values.fullName}
                       onChange={(e) => handleChange('fullName', e.target.value)}
                       onBlur={() => handleBlur('fullName')}
-                      className={(((touched.fullName && errors.fullName ? 'is-invalid' : undefined)) ?? '') + ' ui-input'}
+                      className={touched.fullName && errors.fullName ? 'is-invalid' : undefined}
                       aria-invalid={Boolean(touched.fullName && errors.fullName)}
                       aria-describedby={touched.fullName && errors.fullName ? 'fullName-error' : undefined}
                     />
@@ -357,16 +365,19 @@ export function RegisterPage() {
                   {touched.fullName && errors.fullName && (
                     <small id="fullName-error" className="field-error" role="alert">
                       <Icon name="warning" className="field-error-icon" />
-                      <span>{translate(errors.fullName)}</span>
+                      <span>{errors.fullName}</span>
                     </small>
                   )}
                 </div>
 
-                <div className="form-group structured-field-card">
-                  <label htmlFor="reg-email">{translate("Email Address")}<span className="required-star">*</span>
+                <div className="form-group">
+                  <label htmlFor="reg-email">
+                    Email Address <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon" aria-hidden="true"><Icon name="mail" /></span>
+                    <span className="input-lead-icon">
+                      <Icon name="mail" />
+                    </span>
                     <input
                       id="reg-email"
                       name="email"
@@ -378,7 +389,7 @@ export function RegisterPage() {
                       value={values.email}
                       onChange={(e) => handleChange('email', e.target.value)}
                       onBlur={() => handleBlur('email')}
-                      className={(((touched.email && errors.email ? 'is-invalid' : undefined)) ?? '') + ' ui-input'}
+                      className={touched.email && errors.email ? 'is-invalid' : undefined}
                       aria-invalid={Boolean(touched.email && errors.email)}
                       aria-describedby={touched.email && errors.email ? 'email-error' : undefined}
                     />
@@ -386,16 +397,19 @@ export function RegisterPage() {
                   {touched.email && errors.email && (
                     <small id="email-error" className="field-error" role="alert">
                       <Icon name="warning" className="field-error-icon" />
-                      <span>{translate(errors.email)}</span>
+                      <span>{errors.email}</span>
                     </small>
                   )}
                 </div>
 
-                <div className="form-group structured-field-card">
-                  <label htmlFor="reg-phone">{translate("Phone Number")}<span className="optional-tag">{translate("(optional)")}</span>
+                <div className="form-group">
+                  <label htmlFor="reg-phone">
+                    Phone Number <span className="optional-tag">(optional)</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon" aria-hidden="true"><Icon name="phone" /></span>
+                    <span className="input-lead-icon">
+                      <Icon name="phone" />
+                    </span>
                     <input
                       id="reg-phone"
                       name="phoneNumber"
@@ -406,7 +420,7 @@ export function RegisterPage() {
                       value={values.phoneNumber}
                       onChange={(e) => handleChange('phoneNumber', e.target.value)}
                       onBlur={() => handleBlur('phoneNumber')}
-                      className={(((touched.phoneNumber && errors.phoneNumber ? 'is-invalid' : undefined)) ?? '') + ' ui-input'}
+                      className={touched.phoneNumber && errors.phoneNumber ? 'is-invalid' : undefined}
                       aria-invalid={Boolean(touched.phoneNumber && errors.phoneNumber)}
                       aria-describedby={touched.phoneNumber && errors.phoneNumber ? 'phoneNumber-error' : undefined}
                     />
@@ -414,16 +428,19 @@ export function RegisterPage() {
                   {touched.phoneNumber && errors.phoneNumber && (
                     <small id="phoneNumber-error" className="field-error" role="alert">
                       <Icon name="warning" className="field-error-icon" />
-                      <span>{translate(errors.phoneNumber)}</span>
+                      <span>{errors.phoneNumber}</span>
                     </small>
                   )}
                 </div>
 
-                <div className="form-group structured-field-card">
-                  <label htmlFor="reg-password">{translate("Password")}<span className="required-star">*</span>
+                <div className="form-group">
+                  <label htmlFor="reg-password">
+                    Password <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon" aria-hidden="true"><Icon name="lock" /></span>
+                    <span className="input-lead-icon">
+                      <Icon name="lock" />
+                    </span>
                     <input
                       id="reg-password"
                       name="password"
@@ -431,12 +448,12 @@ export function RegisterPage() {
                       autoComplete="new-password"
                       minLength={8}
                       maxLength={100}
-                      placeholder={translate("From 8 to 100 characters")}
+                      placeholder="From 8 to 100 characters"
                       required
                       value={values.password}
                       onChange={(e) => handleChange('password', e.target.value)}
                       onBlur={() => handleBlur('password')}
-                      className={(((touched.password && errors.password ? 'is-invalid' : undefined)) ?? '') + ' ui-input'}
+                      className={touched.password && errors.password ? 'is-invalid' : undefined}
                       aria-invalid={Boolean(touched.password && errors.password)}
                       aria-describedby={touched.password && errors.password ? 'password-error' : 'password-hint'}
                     />
@@ -444,7 +461,7 @@ export function RegisterPage() {
                       type="button"
                       className="input-trailing-toggle"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      aria-label={showPassword ? translate("Hide password") : translate("Show password")}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                       tabIndex={-1}
                     >
                       <Icon name={showPassword ? 'eye-off' : 'eye'} />
@@ -453,7 +470,7 @@ export function RegisterPage() {
                   {touched.password && errors.password ? (
                     <small id="password-error" className="field-error" role="alert">
                       <Icon name="warning" className="field-error-icon" />
-                      <span>{translate(errors.password)}</span>
+                      <span>{errors.password}</span>
                     </small>
                   ) : null}
 
@@ -463,8 +480,8 @@ export function RegisterPage() {
                     style={{
                       marginTop: '8px',
                       padding: '10px 12px',
-                      background: 'var(--color-page)',
-                      border: '1px solid var(--color-border)',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
                       borderRadius: '8px',
                       fontSize: '12px',
                       display: 'flex',
@@ -472,55 +489,68 @@ export function RegisterPage() {
                       gap: '4px',
                     }}
                   >
-                    <span style={{ fontWeight: 650, color: 'var(--color-body)', marginBottom: '2px' }}>{translate("Security Requirements:")}</span>
+                    <span style={{ fontWeight: 650, color: '#334155', marginBottom: '2px' }}>
+                      Security Requirements:
+                    </span>
                     <span
                       style={{
-                        color: hasMinLength ? 'var(--color-success)' : 'var(--color-muted)',
+                        color: hasMinLength ? '#16a34a' : '#64748b',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         fontWeight: hasMinLength ? 600 : 400,
                       }}
                     >
-                      <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />{translate("8 to 100 characters")}</span>
+                      <Icon name={hasMinLength ? 'check' : 'shield'} size={12} />
+                      8 to 100 characters
+                    </span>
                     <span
                       style={{
-                        color: hasUpperCase ? 'var(--color-success)' : 'var(--color-muted)',
+                        color: hasUpperCase ? '#16a34a' : '#64748b',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         fontWeight: hasUpperCase ? 600 : 400,
                       }}
                     >
-                      <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />{translate("At least 1 uppercase letter (A-Z)")}</span>
+                      <Icon name={hasUpperCase ? 'check' : 'shield'} size={12} />
+                      At least 1 uppercase letter (A-Z)
+                    </span>
                     <span
                       style={{
-                        color: hasLowerCase ? 'var(--color-success)' : 'var(--color-muted)',
+                        color: hasLowerCase ? '#16a34a' : '#64748b',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         fontWeight: hasLowerCase ? 600 : 400,
                       }}
                     >
-                      <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />{translate("At least 1 lowercase letter (a-z)")}</span>
+                      <Icon name={hasLowerCase ? 'check' : 'shield'} size={12} />
+                      At least 1 lowercase letter (a-z)
+                    </span>
                     <span
                       style={{
-                        color: hasSpecialChar ? 'var(--color-success)' : 'var(--color-muted)',
+                        color: hasSpecialChar ? '#16a34a' : '#64748b',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         fontWeight: hasSpecialChar ? 600 : 400,
                       }}
                     >
-                      <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />{translate("At least 1 special character (!@#$%^&*...)")}</span>
+                      <Icon name={hasSpecialChar ? 'check' : 'shield'} size={12} />
+                      At least 1 special character (!@#$%^&*...)
+                    </span>
                   </div>
                 </div>
 
-                <div className="form-group structured-field-card">
-                  <label htmlFor="reg-confirmation">{translate("Confirm Password")}<span className="required-star">*</span>
+                <div className="form-group">
+                  <label htmlFor="reg-confirmation">
+                    Confirm Password <span className="required-star">*</span>
                   </label>
                   <div className="input-with-icon">
-                    <span className="input-lead-icon" aria-hidden="true"><Icon name="lock" /></span>
+                    <span className="input-lead-icon">
+                      <Icon name="lock" />
+                    </span>
                     <input
                       id="reg-confirmation"
                       name="confirmation"
@@ -528,12 +558,12 @@ export function RegisterPage() {
                       autoComplete="new-password"
                       minLength={8}
                       maxLength={100}
-                      placeholder={translate("Re-enter password")}
+                      placeholder="Re-enter password"
                       required
                       value={values.confirmation}
                       onChange={(e) => handleChange('confirmation', e.target.value)}
                       onBlur={() => handleBlur('confirmation')}
-                      className={(((touched.confirmation && errors.confirmation ? 'is-invalid' : undefined)) ?? '') + ' ui-input'}
+                      className={touched.confirmation && errors.confirmation ? 'is-invalid' : undefined}
                       aria-invalid={Boolean(touched.confirmation && errors.confirmation)}
                       aria-describedby={touched.confirmation && errors.confirmation ? 'confirmation-error' : undefined}
                     />
@@ -541,7 +571,7 @@ export function RegisterPage() {
                       type="button"
                       className="input-trailing-toggle"
                       onClick={() => setShowConfirmation((prev) => !prev)}
-                      aria-label={showConfirmation ? translate("Hide password") : translate("Show password")}
+                      aria-label={showConfirmation ? 'Hide password' : 'Show password'}
                       tabIndex={-1}
                     >
                       <Icon name={showConfirmation ? 'eye-off' : 'eye'} />
@@ -550,16 +580,20 @@ export function RegisterPage() {
                   {touched.confirmation && errors.confirmation && (
                     <small id="confirmation-error" className="field-error" role="alert">
                       <Icon name="warning" className="field-error-icon" />
-                      <span>{translate(errors.confirmation)}</span>
+                      <span>{errors.confirmation}</span>
                     </small>
                   )}
                 </div>
               </>
             ) : (
-              <div className="form-group otp-form-group structured-field-card">
-                <label htmlFor="reg-otp">{translate("Enter 6-digit OTP Code")}</label>
+              <div className="form-group otp-form-group">
+                <label htmlFor="reg-otp">
+                  Enter 6-digit OTP Code
+                </label>
                 <div className="input-with-icon otp-input-wrap">
-                  <span className="input-lead-icon" aria-hidden="true"><Icon name="shield" /></span>
+                  <span className="input-lead-icon">
+                    <Icon name="shield" />
+                  </span>
                   <input
                     id="reg-otp"
                     name="otp"
@@ -582,7 +616,7 @@ export function RegisterPage() {
                 {touched.otp && errors.otp && (
                   <small id="otp-error" className="field-error" role="alert">
                     <Icon name="warning" className="field-error-icon" />
-                    <span>{translate(errors.otp)}</span>
+                    <span>{errors.otp}</span>
                   </small>
                 )}
               </div>
@@ -598,13 +632,13 @@ export function RegisterPage() {
                 name={pending ? 'loader' : step === 'register' ? 'user-plus' : 'shield'}
                 className={pending ? 'icon-spin' : undefined}
               />
-              <span>{pending ? translate("Processing…") : step === 'register' ? translate("Register Account") : translate("Verify and Sign In")}</span>
+              <span>{pending ? 'Processing…' : step === 'register' ? 'Register Account' : 'Verify and Sign In'}</span>
             </button>
 
             {step === 'register' && (
               <>
                 <div className="auth-divider">
-                  <span>{translate("or")}</span>
+                  <span>or</span>
                 </div>
 
                 <button
@@ -612,7 +646,7 @@ export function RegisterPage() {
                   type="button"
                   disabled={pending || googleLoading}
                   onClick={() => void handleGoogleSignInClick()}
-                  title={translate("Sign up quickly with Google")}
+                  title="Đăng ký nhanh bằng Google (Chọn tài khoản trên máy)"
                 >
                   <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                     <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -620,7 +654,7 @@ export function RegisterPage() {
                     <path fill="#FBBC05" d="M5.28 14.27A7.195 7.195 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.966 11.966 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
                     <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                   </svg>
-                  <span>{googleLoading ? translate("Authenticating...") : translate("Quick Register with Google")}</span>
+                  <span>{googleLoading ? 'Đang mở Google...' : 'Đăng ký nhanh bằng Google'}</span>
                 </button>
               </>
             )}
@@ -640,7 +674,7 @@ export function RegisterPage() {
                 }
               >
                 <Icon name="refresh" />
-                <span>{translate("Resend OTP Code")}</span>
+                <span>Resend OTP Code</span>
               </button>
               <span className="action-divider">•</span>
               <button
@@ -653,7 +687,7 @@ export function RegisterPage() {
                   setNotice('');
                 }}
               >
-                <span>{translate("Change Email / Back")}</span>
+                <span>Change Email / Back</span>
               </button>
             </div>
           )}
@@ -680,12 +714,16 @@ export function RegisterPage() {
                   setError('');
                   setNotice('You can enter your received OTP code or request a new one.');
                 }}
-              >{translate("Already registered but haven't verified email?")}</button>
+              >
+                Already registered but haven't verified email?
+              </button>
             </div>
           )}
 
-          <p className="auth-switch-prompt">{translate("Already have an account?")}{' '}
-            <Link to="/login" className="auth-switch-link">{translate("Sign in now")}<Icon name="arrow" />
+          <p className="auth-switch-prompt">
+            Already have an account?{' '}
+            <Link to="/login" className="auth-switch-link">
+              Sign in now <Icon name="arrow" />
             </Link>
           </p>
         </div>
