@@ -119,7 +119,18 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
 
   return <AdminModal title={`Chi tiết ${config.singular}`} close={close} wide><div className="admin-modal-body">
     <div className="admin-detail-title"><span className="shortcut-icon"><Icon name={config.icon} /></span><div><span className="admin-subtle">{record.id}</span><h3>{record.name}</h3><AdminBadge collection={collection} status={record.status} /></div></div>
-    <dl className="admin-details"><div><dt>Ngày tạo</dt><dd>{displayValue('createdAt', record.createdAt)}</dd></div>{details.filter(field => field.key !== 'name').map(field => <div key={field.key} className={field.type === 'textarea' || ['question', 'answer', 'comment', 'reply', 'description', 'reason', 'source'].includes(field.key) ? 'full' : ''}><dt>{field.label}</dt><dd>{field.key === 'document' && /^https?:\/\//i.test(record[field.key] ?? '') ? <a href={record[field.key]} target="_blank" rel="noreferrer">Mở tài liệu</a> : displayValue(field.key, record[field.key])}</dd></div>)}</dl>
+    <dl className="admin-details"><div><dt>Ngày tạo</dt><dd>{displayValue('createdAt', record.createdAt)}</dd></div>{details.filter(field => field.key !== 'name').map(field => <div key={field.key} className={field.type === 'textarea' || ['question', 'answer', 'comment', 'reply', 'description', 'reason', 'source'].includes(field.key) ? 'full' : ''}><dt>{field.label}</dt><dd>{field.key === 'document' && /^https?:\/\//i.test(record[field.key] ?? '') ? (
+      /\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(record[field.key] ?? '') || /\/image\/upload\//i.test(record[field.key] ?? '') ? (
+        <div style={{ marginTop: '4px' }}>
+          <a href={record[field.key]} target="_blank" rel="noreferrer">
+            <img src={record[field.key]} alt="Minh chứng" style={{ maxWidth: '160px', maxHeight: '100px', borderRadius: '6px', border: '1px solid #cbd5e1', objectFit: 'cover' }} />
+          </a>
+          <div><a href={record[field.key]} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>🔍 Xem ảnh minh chứng Cloudinary</a></div>
+        </div>
+      ) : (
+        <a href={record[field.key]} target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 600 }}>📄 Mở tài liệu minh chứng Cloudinary</a>
+      )
+    ) : displayValue(field.key, record[field.key])}</dd></div>)}</dl>
     {collection === 'registrations' && (
       <div style={{ marginTop: '16px' }}>
         <FarmGoongMap

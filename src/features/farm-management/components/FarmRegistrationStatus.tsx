@@ -61,7 +61,29 @@ export function FarmRegistrationStatus({
           </div>
         ) : null}
         {registration.documentUrl && /^https?:\/\//i.test(registration.documentUrl) && (
-          <div><dt>Tài liệu minh chứng</dt><dd><a href={registration.documentUrl} target="_blank" rel="noreferrer">Mở tài liệu minh chứng</a></dd></div>
+          <div>
+            <dt>Tài liệu / Ảnh minh chứng</dt>
+            <dd>
+              {/\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(registration.documentUrl) || /\/image\/upload\//i.test(registration.documentUrl) ? (
+                <div style={{ marginTop: '6px' }}>
+                  <a href={registration.documentUrl} target="_blank" rel="noreferrer" title="Mở ảnh kích thước đầy đủ">
+                    <img
+                      src={registration.documentUrl}
+                      alt="Ảnh minh chứng nông trại"
+                      style={{ maxWidth: '280px', maxHeight: '180px', borderRadius: '8px', border: '1px solid #cbd5e1', objectFit: 'cover', display: 'block' }}
+                    />
+                  </a>
+                  <a href={registration.documentUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '6px', fontSize: '13px', color: '#059669', fontWeight: 600 }}>
+                    🔍 Mở ảnh gốc trên Cloudinary
+                  </a>
+                </div>
+              ) : (
+                <a href={registration.documentUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#059669', fontWeight: 600 }}>
+                  📄 Mở tài liệu minh chứng (Cloudinary)
+                </a>
+              )}
+            </dd>
+          </div>
         )}
         {registration.description ? (
           <div>

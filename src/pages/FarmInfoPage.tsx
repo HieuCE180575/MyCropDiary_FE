@@ -21,6 +21,7 @@ import {
 } from '../features/farm-management/goongMapService';
 import { FarmGoongMap } from '../features/farm-management/components/FarmGoongMap';
 import { useRealtimeSync } from '../shared/realtime/realtimeSync';
+import { FileUpload } from '../shared/components/FileUpload';
 
 export function FarmInfoPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,6 +39,7 @@ export function FarmInfoPage() {
   const [editLat, setEditLat] = useState<number | null>(null);
   const [editLng, setEditLng] = useState<number | null>(null);
   const [editBoundary, setEditBoundary] = useState<LatLngPoint[]>([]);
+  const [editCoverImage, setEditCoverImage] = useState('');
   const [updating, setUpdating] = useState(false);
   const [actionMsg, setActionMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -92,6 +94,7 @@ export function FarmInfoPage() {
           setEditLat(detail.latitude ?? null);
           setEditLng(detail.longitude ?? null);
           setEditBoundary(parseBoundaryCoordinates(detail.boundaryCoordinates));
+          setEditCoverImage(detail.coverImageUrl || '');
         } else {
           setFarmDetail({
             id: selectedFarm.id,
@@ -151,6 +154,7 @@ export function FarmInfoPage() {
         latitude: editLat,
         longitude: editLng,
         boundaryCoordinates: stringifyBoundaryCoordinates(editBoundary) || null,
+        coverImageUrl: editCoverImage.trim() || undefined,
       });
       setFarmDetail(updated);
       setIsEditOpen(false);
@@ -309,6 +313,11 @@ export function FarmInfoPage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
             {/* Main Info Card */}
             <div className="panel" style={{ padding: '28px' }}>
+              {farmDetail.coverImageUrl && (
+                <div style={{ width: '100%', maxHeight: '240px', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+                  <img src={farmDetail.coverImageUrl} alt={farmDetail.farmName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                   <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '24px' }}>
@@ -477,6 +486,17 @@ export function FarmInfoPage() {
                     }
                   }}
                   onBoundaryChange={setEditBoundary}
+                />
+              </div>
+              <div>
+                <FileUpload
+                  value={editCoverImage}
+                  onChange={setEditCoverImage}
+                  label="Ảnh bìa / Ảnh thực tế nông trại (Cloudinary)"
+                  hint="Tải ảnh chụp thực tế trang trại lên Cloudinary để hiển thị trên hồ sơ."
+                  folder="mycropdiary/farms"
+                  accept="image/*"
+                  disabled={updating}
                 />
               </div>
               <div>
