@@ -3,24 +3,14 @@ import type { ModuleDefinition } from '../../shared/types/module';
 // Report 3: Actors (pp. 11–12) and detailed use cases (pp. 19–29).
 export const moduleDefinitions: ModuleDefinition[] = [
   {
-    "key": "farm-registration",
-    "path": "farm-registration",
-    "title": "Farm Registration",
-    "ucRange": "UC-09",
-    "group": "farm",
-    "access": "user",
-    "icon": "plus",
-    "description": "Submit farm registration request; view details, track status, update or cancel pending request."
-  },
-  {
     "key": "farm",
     "path": "farm",
-    "title": "Farm Information",
-    "ucRange": "UC-13",
+    "title": "Farm Management",
+    "ucRange": "UC-09 & UC-13",
     "group": "farm",
-    "access": "farm",
+    "access": "user",
     "icon": "home",
-    "description": "View active farm information. Farm owners can update farm details."
+    "description": "Manage farm list, view details, create or register new farms, and track VietGAP approval."
   },
   {
     "key": "knowledge",

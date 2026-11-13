@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
 import { UserProfilePanel } from '../features/auth/UserProfilePanel';
 import { FarmInfoPage } from './FarmInfoPage';
-import { FarmRegistrationPage } from './FarmRegistrationPage';
 import { KnowledgePage } from './KnowledgePage';
 import { StaffManagementPage } from '../features/staff/StaffManagementPage';
 import { ZoneListPage } from './zone';
@@ -30,7 +29,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'password') return <Navigate to="/profile" replace />;
 
   if (module.key === 'farm') return <FarmInfoPage />;
-  if (module.key === 'farm-registration') return <FarmRegistrationPage />;
+  if (module.key === 'farm-registration') return <FarmInfoPage defaultTab="register" />;
   if (module.key === 'knowledge') return <KnowledgePage />;
   if (module.key === 'members') return <StaffManagementPage />;
   if (module.key === 'production') return <ZoneListPage />;

@@ -6,7 +6,7 @@ import type { ModuleDefinition } from '../../shared/types/module';
 
 const sidebarGroups = [
   { id: 'overview', title: 'Dashboard', keys: ['dashboard'] },
-  { id: 'farm', title: 'Farm Setup', keys: ['farm-registration', 'farm', 'members', 'production'] },
+  { id: 'farm', title: 'Farm Setup', keys: ['farm', 'members', 'production'] },
   { id: 'supplies', title: 'Material Preparation', keys: ['suppliers', 'purchases'] },
   { id: 'cultivation', title: 'Cultivation', keys: ['seasons', 'tasks', 'activities', 'materials', 'harvests'] },
   { id: 'compliance', title: 'VietGAP Compliance', keys: ['checklists', 'assessments', 'environment', 'training'] },
