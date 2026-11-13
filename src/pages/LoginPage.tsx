@@ -1,10 +1,10 @@
+import { useLanguage } from '../shared/i18n/LanguageContext';
 import { type FormEvent, useState, useEffect } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth, GoogleAuthModal } from '../features/auth';
 import { authenticate } from '../features/auth/authApi';
 import { signInWithGoogleDirect, initializeGoogleOneTap } from '../features/auth/googleAuthService';
 import { Icon } from '../shared/components/Icon';
-import { useLanguage } from '../shared/i18n/LanguageContext';
 
 const loginBenefits = [
   {
@@ -84,7 +84,7 @@ export function LoginPage() {
 
     const trimmedEmail = email.trim();
     if (!trimmedEmail || !password) {
-      setError(translate('Please enter both email and password.'));
+      setError('Please enter both email and password.');
       return;
     }
 
@@ -95,7 +95,7 @@ export function LoginPage() {
       const authorization = await authenticate(trimmedEmail, password);
       setSession(authorization);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : translate('Login failed. Please try again.'));
+      setError(reason instanceof Error ? reason.message : 'Login failed. Please try again.');
     } finally {
       setPending(false);
     }
@@ -108,113 +108,131 @@ export function LoginPage() {
         <div className="showcase-inner">
           <div className="showcase-badge">
             <Icon name="shield" />
-            <span>{translate("Smart & Sustainable Agriculture")}</span>
+            <span>Smart &amp; Sustainable Agriculture</span>
           </div>
 
           <div className="showcase-content">
             <h1 id="login-showcase-title">
-              {translate("Transparent Cultivation.")}
-              <br />
-              <span className="text-gradient">{translate("Elevating Vietnamese Agriculture.")}</span>
+              Welcome back to<br />
+              <span className="gradient-text">MyCropDiary</span><br />
+              VietGAP Digital Diary.
             </h1>
             <p className="showcase-desc">
-              {translate("MyCropDiary enables precision farm and block management, full traceability, standard-compliant digital logging, and an intelligent audit-support AI assistant.")}
+              Log in to manage crop seasons, update farming diaries by Zone &amp; Block, and synchronize origin traceability records.
             </p>
           </div>
 
-          <div className="showcase-cards">
-            {loginBenefits.map((b) => (
-              <div key={b.title} className="benefit-card">
-                <div className="benefit-icon-wrapper">
-                  <Icon name={b.icon} />
+          <div className="feature-grid">
+            {loginBenefits.map((item) => (
+              <article className="feature-card" key={item.title}>
+                <div className="feature-icon-wrapper">
+                  <Icon name={item.icon} className="feature-icon" />
                 </div>
-                <div>
-                  <h2 className="benefit-title">{translate(b.title)}</h2>
-                  <p className="benefit-desc">{translate(b.desc)}</p>
+                <div className="feature-body">
+                  <strong>{translate(item.title)}</strong>
+                  <p>{item.desc}</p>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
 
-          <div className="showcase-footer">
-            <span className="showcase-dot" />
-            <span>{translate("Compliant with VietGAP Standards TCVN 11892-1:2017")}</span>
+          <div className="showcase-highlight-card">
+            <div className="highlight-stat">
+              <span className="stat-number">10,000+</span>
+              <span className="stat-label">Diaries Logged</span>
+            </div>
+            <div className="highlight-divider" />
+            <div className="highlight-stat">
+              <span className="stat-number">100%</span>
+              <span className="stat-label">VietGAP Standardized</span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Right Column: Interactive Login Card */}
-      <section className="auth-form-column" aria-label="Sign-in form">
+      {/* Right Column: Login Form */}
+      <section className="auth-panel" aria-label="Sign in to your account">
         <div className="auth-card">
           <div className="auth-card-header">
-            <div className="auth-brand-pill">
-              <span className="brand-dot" />
-              <span>{translate("Crop Management Portal")}</span>
+            <div className="auth-card-icon">
+              <Icon name="login" />
             </div>
-            <h2 className="auth-title">{translate("Welcome Back")}</h2>
-            <p className="auth-subtitle">{translate("Sign in with your email and password to access the workspace.")}</p>
+            <h2>Welcome Back!</h2>
+            <p>Sign in to manage your digital farm and cultivation diaries</p>
           </div>
 
-          {notice && (
-            <div className="auth-alert success" role="status">
-              <Icon name="check" size={16} />
-              <span>{notice}</span>
-            </div>
-          )}
-
           {error && (
-            <div className="auth-alert error" role="alert">
-              <Icon name="alert" size={16} />
-              <span>{error}</span>
+            <div className="auth-error-banner" role="alert">
+              <Icon name="warning" />
+              <span>{translate(error)}</span>
             </div>
           )}
 
-          <form className="auth-form" onSubmit={submit} noValidate>
+          {notice && (
+            <div className="auth-notice-banner" role="status">
+              <Icon name="check-circle" />
+              <span>{translate(notice)}</span>
+            </div>
+          )}
+
+          <form id="login-form" className="auth-form" autoComplete="on" onSubmit={submit} noValidate>
             <div className="form-group">
-              <label htmlFor="login-email">{translate("Work / Personal Email")}</label>
-              <div className="input-affix-wrapper">
-                <span className="input-prefix-icon" aria-hidden="true">
+              <label htmlFor="login-email">Email Address</label>
+              <div className="input-with-icon">
+                <span className="input-lead-icon">
                   <Icon name="mail" />
                 </span>
                 <input
                   id="login-email"
+                  name="email"
                   type="email"
                   autoComplete="email"
-                  placeholder={translate("Enter your email address…")}
-                  value={email}
-                  disabled={pending}
-                  onChange={(event) => setEmail(event.target.value)}
+                  maxLength={254}
+                  placeholder="name@example.com"
                   required
+                  disabled={pending}
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError('');
+                  }}
                 />
               </div>
             </div>
 
             <div className="form-group">
-              <div className="form-group-label-row">
-                <label htmlFor="login-password">{translate("Password")}</label>
-                <Link to="/forgot-password" className="auth-forgot-link">
-                  {translate("Forgot password?")}
+              <div className="label-with-action">
+                <label htmlFor="login-password">Password</label>
+                <Link
+                  to="/forgot-password"
+                  className="link-forgot-password"
+                >
+                  Forgot password?
                 </Link>
               </div>
-              <div className="input-affix-wrapper">
-                <span className="input-prefix-icon" aria-hidden="true">
+              <div className="input-with-icon">
+                <span className="input-lead-icon">
                   <Icon name="lock" />
                 </span>
                 <input
                   id="login-password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
-                  placeholder={translate("Enter your account password…")}
-                  value={password}
-                  disabled={pending}
-                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Enter your password"
                   required
+                  disabled={pending}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError('');
+                  }}
                 />
                 <button
                   type="button"
-                  className="input-suffix-action"
+                  className="input-trailing-toggle"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? translate("Hide password") : translate("Show password")}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   tabIndex={-1}
                 >
                   <Icon name={showPassword ? 'eye-off' : 'eye'} />
@@ -232,11 +250,11 @@ export function LoginPage() {
                 name={pending ? 'loader' : 'login'}
                 className={pending ? 'icon-spin' : undefined}
               />
-              <span>{pending ? translate("Authenticating…") : translate("Sign In")}</span>
+              <span>{pending ? 'Authenticating…' : 'Sign In'}</span>
             </button>
 
             <div className="auth-divider">
-              <span>{translate("or")}</span>
+              <span>or</span>
             </div>
 
             <button
@@ -244,7 +262,7 @@ export function LoginPage() {
               type="button"
               disabled={pending || googleLoading}
               onClick={() => void handleGoogleSignInClick()}
-              title={translate("Sign in with Google")}
+              title="Đăng nhập nhanh với Google (Chọn tài khoản trên máy)"
             >
               <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                 <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -252,11 +270,13 @@ export function LoginPage() {
                 <path fill="#FBBC05" d="M5.28 14.27A7.195 7.195 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.966 11.966 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
                 <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
               </svg>
-              <span>{googleLoading ? translate("Authenticating...") : translate("Continue with Google")}</span>
+              <span>{googleLoading ? 'Đang mở Google...' : 'Tiếp tục với Google'}</span>
             </button>
 
-            <p className="auth-switch-prompt">{translate("Don't have an account yet?")}{' '}
-              <Link to="/register" className="auth-switch-link">{translate("Register now")}{' '}<Icon name="arrow" />
+            <p className="auth-switch-prompt">
+              Don't have an account yet?{' '}
+              <Link to="/register" className="auth-switch-link">
+                Register now <Icon name="arrow" />
               </Link>
             </p>
           </form>
