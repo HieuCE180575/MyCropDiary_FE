@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { EmptyState } from '../shared/components/EmptyState';
+import { PageHeading } from '../shared/components/PageHeading';
+import { Button } from '../shared/components/Button';
 import { FarmRegistrationForm } from '../features/farm-management/components/FarmRegistrationForm';
 import { FarmRegistrationStatus } from '../features/farm-management/components/FarmRegistrationStatus';
+
+import { useCallback, useEffect, useState } from 'react';
+
+
 import {
   cancelFarmRegistration,
   fetchMyLatestRegistration,
@@ -43,15 +49,13 @@ export function FarmRegistrationPage() {
         setLoadError(
           error instanceof Error
             ? error.message
-            : lang === 'en'
-              ? 'Failed to load registration details.'
-              : 'Không tải được đăng ký.'
+            : 'Không tải được đăng ký.'
         );
       }
     } finally {
       if (!signal?.aborted && !silent) setLoading(false);
     }
-  }, [user?.userId, lang]);
+  }, [user?.userId]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -109,12 +113,8 @@ export function FarmRegistrationPage() {
 
   return (
     <section className="farm-registration-page">
-      <div className="page-heading">
-        <div>
-          <h1>{lang === 'en' ? 'Farm Registration' : 'Đăng ký trang trại'}</h1>
-        </div>
-        <button
-          className="action-button"
+      <PageHeading   title={<>{lang === 'en' ? 'Farm Registration' : 'Đăng ký trang trại'}</>}><Button
+          variant="secondary"
           disabled={loading || submitting || cancelling}
           onClick={() => {
             void loadRegistration();
@@ -122,20 +122,16 @@ export function FarmRegistrationPage() {
           }}
         >
           {lang === 'en' ? 'Refresh Status' : 'Cập nhật trạng thái'}
-        </button>
-      </div>
+        </Button></PageHeading>
 
       {loading ? (
-        <div className="panel empty-state">
-          <div className="empty-icon">⏳</div>
-          <h2>{lang === 'en' ? 'Loading registration details...' : 'Đang tải thông tin đăng ký...'}</h2>
-        </div>
+        <EmptyState  className="panel" title={<>{lang === 'en' ? 'Loading registration details...' : 'Đang tải thông tin đăng ký...'}</>} icon={<>⏳</>} />
       ) : loadError ? (
         <div className="panel">
           <p role="alert">{translate(loadError)}</p>
-          <button className="primary-button" onClick={() => void loadRegistration()}>
+          <Button variant="primary" onClick={() => void loadRegistration()}>
             {lang === 'en' ? 'Retry' : 'Thử lại'}
-          </button>
+          </Button>
         </div>
       ) : shouldShowForm ? (
         <FarmRegistrationForm submitting={submitting} submitError={submitError} onSubmit={handleSubmit} />

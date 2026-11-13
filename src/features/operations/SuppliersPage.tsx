@@ -1,7 +1,19 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+import { message, type TranslationMessage } from "../../shared/i18n/translate";
+import { LoadError } from '../../shared/components/LoadError';
+import { PageHeading } from '../../shared/components/PageHeading';
+import { Button } from '../../shared/components/Button';
+import { TablePagination } from '../../shared/components/TablePagination';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
+
+import { formatDate as uiFormatDate } from '../../shared/format/formatters';
+
+import { usePagination } from '../../shared/hooks/usePagination';
+
+import { useEffect, useState, useMemo } from 'react';
+import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+
+
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import {
   fetchSuppliers,
@@ -14,19 +26,20 @@ import {
   type UpdateSupplierPayload,
 } from './procurementService';
 
-export function SuppliersPage() {
+export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
   const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id;
 
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
-  const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
 
   // View Details Modal
   const [selectedSupplier, setSelectedSupplier] = useState<SupplierItem | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
+
 
   // Create Supplier Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -59,14 +72,12 @@ export function SuppliersPage() {
   const loadSuppliers = async (searchKw?: string) => {
     if (!farmId) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await fetchSuppliers(farmId, searchKw);
       setSuppliers(data);
     } catch (err) {
-      setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load suppliers." : err instanceof Error ? err.message : 'Không thể tải danh sách nhà cung cấp.'),
-        type: 'error',
-      });
+      setLoadError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load suppliers." : err instanceof Error ? err.message : 'Không thể tải danh sách nhà cung cấp.'));
     } finally {
       setLoading(false);
     }
@@ -86,9 +97,9 @@ export function SuppliersPage() {
     void loadSuppliers();
   };
 
-  // View Details 
+  // View Details
   const handleOpenDetails = async (supplierId: number) => {
-    setLoadingDetail(true);
+
     try {
       const detail = await fetchSupplierDetails(supplierId);
       setSelectedSupplier(detail);
@@ -96,12 +107,13 @@ export function SuppliersPage() {
       const fallback = suppliers.find((s) => s.supplierId === supplierId) || null;
       setSelectedSupplier(fallback);
     } finally {
-      setLoadingDetail(false);
+
     }
   };
 
-  // Create 
+  // Create
   const handleOpenCreate = () => {
+    setNotification(null);
     setCreateForm({
       supplierName: '',
       contactName: '',
@@ -117,9 +129,10 @@ export function SuppliersPage() {
     e.preventDefault();
     if (!farmId) return;
     if (!createForm.supplierName.trim()) {
-      alert((lang === 'en' ? "Enter a supplier name." : 'Vui lòng nhập tên nhà cung cấp.'));
+      setNotification({ text: lang === 'en' ? 'Enter a supplier name.' : 'Vui lòng nhập tên nhà cung cấp.', type: 'error' });
       return;
     }
+    setNotification(null);
     setSubmittingCreate(true);
     try {
       const created = await createSupplier(farmId, {
@@ -132,7 +145,7 @@ export function SuppliersPage() {
       });
       setSuppliers((prev) => [created, ...prev]);
       setNotification({
-        text: (lang === 'en' ? `Added supplier "${created.supplierName}" successfully!` : `Đã thêm nhà cung cấp "${created.supplierName}" thành công!`),
+        text: (message("Added supplier \"{value1}\" successfully!", { value1: created.supplierName })),
         type: 'success',
       });
       setIsCreateOpen(false);
@@ -146,9 +159,10 @@ export function SuppliersPage() {
     }
   };
 
-  // Update 
+  // Update
   const handleOpenEdit = (supplier: SupplierItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
+    setNotification(null);
     setEditingSupplier(supplier);
     setUpdateForm({
       supplierName: supplier.supplierName,
@@ -164,9 +178,10 @@ export function SuppliersPage() {
     e.preventDefault();
     if (!editingSupplier) return;
     if (!updateForm.supplierName.trim()) {
-      alert((lang === 'en' ? "Supplier name is required." : 'Tên nhà cung cấp không được để trống.'));
+      setNotification({ text: lang === 'en' ? 'Supplier name is required.' : 'Tên nhà cung cấp không được để trống.', type: 'error' });
       return;
     }
+    setNotification(null);
     setSubmittingUpdate(true);
     try {
       const updated = await updateSupplier(editingSupplier.supplierId, {
@@ -184,7 +199,7 @@ export function SuppliersPage() {
         setSelectedSupplier(updated);
       }
       setNotification({
-        text: (lang === 'en' ? `Updated supplier "${updated.supplierName}" successfully!` : `Đã cập nhật nhà cung cấp "${updated.supplierName}" thành công!`),
+        text: (message("Updated supplier \"{value1}\" successfully!", { value1: updated.supplierName })),
         type: 'success',
       });
       setEditingSupplier(null);
@@ -198,7 +213,7 @@ export function SuppliersPage() {
     }
   };
 
-  // Delete Eligible Supplier 
+  // Delete Eligible Supplier
   const handleOpenDelete = (supplier: SupplierItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setDeletingSupplier(supplier);
@@ -214,7 +229,7 @@ export function SuppliersPage() {
         setSelectedSupplier(null);
       }
       setNotification({
-        text: (lang === 'en' ? `Deleted supplier "${deletingSupplier.supplierName}" successfully!` : `Đã xóa nhà cung cấp "${deletingSupplier.supplierName}" thành công!`),
+        text: (message("Deleted supplier \"{value1}\" successfully!", { value1: deletingSupplier.supplierName })),
         type: 'success',
       });
       setDeletingSupplier(null);
@@ -241,11 +256,14 @@ export function SuppliersPage() {
     );
   }, [suppliers, keyword]);
 
+  const suppliersPagination = usePagination(filteredSuppliers, JSON.stringify([keyword]));
+
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* Status / Action Notification Banner */}
       {notification && (
         <div
+          role={notification.type === 'error' ? 'alert' : 'status'}
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
@@ -264,49 +282,32 @@ export function SuppliersPage() {
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+      <PageHeading level={embedded ? 2 : 1}   title={<>
             {lang === 'en' ? 'Suppliers' : 'Nhà cung cấp'}
-          </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+          </>} description={<>
             {lang === 'en'
               ? `${suppliers.length} input and service suppliers at ${selectedFarm?.farmName || 'Farm'}`
               : `${suppliers.length} nhà cung ứng vật tư & dịch vụ tại ${selectedFarm?.farmName || 'trang trại'}`}
-          </p>
-        </div>
-
-        <div>
-          <button
+          </>}><div>
+          <Button
             type="button"
-            className="primary-button"
+            variant="primary"
             onClick={handleOpenCreate}
-            style={{
-              padding: '10px 18px',
-              fontSize: '14px',
-              fontWeight: 700,
-              borderRadius: '10px',
-              background: '#059669',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-            }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
             <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Supplier' : 'Thêm nhà cung cấp'}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </div></PageHeading>
 
       {/* Main Unified Clean Card Container matching Mockup */}
       <div className="zone-clean-card">
         {/* Filter Bar */}
         <form onSubmit={handleSearch} className="zone-clean-filter-bar">
           <div className="zone-clean-search" style={{ flex: '1 1 300px' }}>
-            <span className="search-icon">
+            <span className="search-icon" aria-hidden="true">
               <Icon name="search" size={17} />
             </span>
-            <input
+            <input aria-label={lang === 'en' ? 'Search by supplier name, contact, phone, address...' : 'Tìm kiếm theo tên nhà cung cấp, người đại diện, số điện thoại, địa chỉ...'} id="suppliers-page-control-1" className="ui-input"
               type="search"
               placeholder={lang === 'en' ? 'Search by supplier name, contact, phone, address...' : 'Tìm kiếm theo tên nhà cung cấp, người đại diện, số điện thoại, địa chỉ...'}
               value={keyword}
@@ -314,13 +315,13 @@ export function SuppliersPage() {
             />
           </div>
 
-          <button
+          <Button
             type="submit"
-            className="action-button solid"
-            style={{ height: '42px', padding: '0 18px', borderRadius: '10px' }}
+            variant="primary"
+
           >
             {lang === 'en' ? 'Search' : 'Tìm kiếm'}
-          </button>
+          </Button>
 
           {keyword && (
             <button
@@ -335,79 +336,81 @@ export function SuppliersPage() {
         </form>
 
         {/* Table Wrap */}
-        <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-          <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+        <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
+          <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
-              <tr style={{ background: '#f8fafc' }}>
-                <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+              <tr style={{ background: 'var(--color-page)' }}>
+                <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
                   <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'SUPPLIER NAME' : 'TÊN NHÀ CUNG CẤP'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'CONTACT PERSON' : 'NGƯỜI ĐẠI DIỆN'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'EMAIL' : 'EMAIL'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                <th scope="col">
                   {lang === 'en' ? 'ADDRESS' : 'ĐỊA CHỈ'}
                 </th>
-                <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                <th scope="col" style={{ textAlign: 'center' }}>
                   {lang === 'en' ? 'PURCHASE HISTORY' : 'LỊCH SỬ MUA'}
                 </th>
-                <th style={{ width: '140px', padding: '14px 16px', textAlign: 'right' }}>
-                  &nbsp;
+                <th scope="col" style={{ width: '140px', textAlign: 'right' }}>
+                  {lang === 'en' ? 'Actions' : 'Thao tác'}
                 </th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'Loading suppliers directory...' : 'Đang tải danh bạ nhà cung cấp...'}
                   </td>
                 </tr>
+              ) : loadError ? (
+                <tr><td colSpan={8}><LoadError message={loadError} onRetry={() => { void loadSuppliers(keyword.trim() || undefined); }} /></td></tr>
               ) : filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'No suppliers matching keywords.' : 'Không tìm thấy nhà cung cấp nào phù hợp với từ khóa.'}
                   </td>
                 </tr>
               ) : (
-                filteredSuppliers.map((supplier) => (
-                  <tr key={supplier.supplierId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                      <input type="checkbox" aria-label={`Select #${supplier.supplierId}`} style={{ cursor: 'pointer' }} />
+                suppliersPagination.items.map((supplier) => (
+                  <tr key={supplier.supplierId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ textAlign: 'center' }}>
+                      <input type="checkbox" aria-label={translate("Select") + " #" + (supplier.supplierId)} style={{ cursor: 'pointer' }} />
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
+                    <td>
                       <span
                         onClick={() => handleOpenDetails(supplier.supplierId)}
                         style={{
                           fontWeight: 750,
                           fontSize: '15px',
-                          color: '#0f172a',
+                          color: 'var(--color-text)',
                           cursor: 'pointer',
                           display: 'block',
                           transition: 'color 0.15s ease',
                         }}
-                        onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
-                        onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                        onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--color-primary-text)')}
+                        onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                       >
                         {supplier.supplierName}
                       </span>
-                      <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--color-primary-text)', fontWeight: 600, display: 'block', marginTop: '2px' }}>
                         #SUP-{supplier.supplierId} • VietGAP
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px', color: '#334155', fontSize: '13.5px', fontWeight: 500 }}>
+                    <td style={{ color: 'var(--color-body)', fontSize: '13.5px', fontWeight: 500 }}>
                       {supplier.contactName || '—'}
                     </td>
-                    <td style={{ padding: '14px 16px', color: '#0284c7', fontSize: '13.5px', fontWeight: 600 }}>
+                    <td style={{ color: 'var(--color-info)', fontSize: '13.5px', fontWeight: 600 }}>
                       {supplier.phone ? (
                         <a href={`tel:${supplier.phone}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                           {supplier.phone}
@@ -416,24 +419,24 @@ export function SuppliersPage() {
                         '—'
                       )}
                     </td>
-                    <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13.5px' }}>
+                    <td style={{ color: 'var(--color-muted)', fontSize: '13.5px' }}>
                       {supplier.email || '—'}
                     </td>
-                    <td style={{ padding: '14px 16px', color: '#475569', fontSize: '13.5px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <td style={{ color: 'var(--color-body)', fontSize: '13.5px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {supplier.address || '—'}
                     </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                      <span className="profile-tag-pill" style={{ background: '#f1f5f9', color: '#334155' }}>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="profile-tag-pill" style={{ background: 'var(--color-subtle)', color: 'var(--color-body)' }}>
                         {supplier.totalPurchasesCount || 0} {lang === 'en' ? 'orders' : 'đơn'}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right' }}>
                       <div className="table-action-btns zone-card-actions">
                         <button
                           type="button"
                           className="table-icon-btn primary"
                           title={lang === 'en' ? 'View Details' : 'Xem chi tiết nhà cung cấp'}
-                          aria-label={`View ${supplier.supplierName}`}
+                          aria-label={translate("View") + " " + (supplier.supplierName)}
                           onClick={() => handleOpenDetails(supplier.supplierId)}
                         >
                           <Icon name="eye" size={15} />
@@ -442,7 +445,7 @@ export function SuppliersPage() {
                           type="button"
                           className="table-icon-btn edit"
                           title={lang === 'en' ? 'Edit Supplier' : 'Chỉnh sửa thông tin'}
-                          aria-label={`Edit ${supplier.supplierName}`}
+                          aria-label={translate("Edit") + " " + (supplier.supplierName)}
                           onClick={(e) => handleOpenEdit(supplier, e)}
                         >
                           <Icon name="edit" size={15} />
@@ -451,7 +454,7 @@ export function SuppliersPage() {
                           type="button"
                           className="table-icon-btn danger"
                           title={lang === 'en' ? 'Delete Supplier (if eligible)' : 'Xóa nhà cung cấp (nếu đủ điều kiện)'}
-                          aria-label={`Delete ${supplier.supplierName}`}
+                          aria-label={translate("Delete") + " " + (supplier.supplierName)}
                           onClick={(e) => handleOpenDelete(supplier, e)}
                         >
                           <Icon name="trash" size={15} />
@@ -466,18 +469,7 @@ export function SuppliersPage() {
         </div>
 
         {/* Footer */}
-        <div className="zone-table-footer">
-          <span>
-            {lang === 'en'
-              ? `Showing 1–${filteredSuppliers.length} of ${suppliers.length} suppliers`
-              : `Hiển thị 1–${filteredSuppliers.length} trong ${suppliers.length} nhà cung cấp`}
-          </span>
-          <div className="zone-pagination-wrap">
-            <button type="button" className="zone-page-btn" disabled>&lt;</button>
-            <button type="button" className="zone-page-btn active">1</button>
-            <button type="button" className="zone-page-btn" disabled>&gt;</button>
-          </div>
-        </div>
+        <TablePagination {...suppliersPagination} disabled={loading} />
       </div>
 
       {/* View Supplier Details Modal */}
@@ -487,72 +479,72 @@ export function SuppliersPage() {
           onClose={() => setSelectedSupplier(null)}
           title={lang === 'en' ? `Supplier Profile: ${selectedSupplier.supplierName}` : `Hồ sơ nhà cung cấp: ${selectedSupplier.supplierName}`}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: '450px', maxWidth: '600px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, maxWidth: '600px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'var(--color-page)', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
               <div>
-                <span className="profile-tag-pill" style={{ background: '#ecfdf5', color: '#059669', marginBottom: '4px' }}>
+                <span className="profile-tag-pill" style={{ background: 'var(--color-success-bg)', color: 'var(--color-primary-text)', marginBottom: '4px' }}>
                   {lang === 'en' ? '✓ VietGAP Verified' : '✓ Đã kiểm định VietGAP'}
                 </span>
-                <h3 style={{ margin: '6px 0 2px', fontSize: '18px', color: '#0f172a' }}>{selectedSupplier.supplierName}</h3>
-                <small style={{ color: '#64748b' }}>{lang === 'en' ? 'System Code:' : 'Mã hệ thống:'} #SUP-{selectedSupplier.supplierId}</small>
+                <h3 style={{ margin: '6px 0 2px', fontSize: '18px', color: 'var(--color-text)' }}>{selectedSupplier.supplierName}</h3>
+                <small style={{ color: 'var(--color-muted)' }}>{lang === 'en' ? 'System Code:' : 'Mã hệ thống:'} #SUP-{selectedSupplier.supplierId}</small>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12.5px', color: '#64748b' }}>{lang === 'en' ? 'Purchase History:' : 'Lịch sử thu mua:'}</span>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0284c7' }}>
+                <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Purchase History:' : 'Lịch sử thu mua:'}</span>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-info)' }}>
                   {selectedSupplier.totalPurchasesCount || 0} {lang === 'en' ? 'orders' : 'hóa đơn'}
                 </div>
               </div>
             </div>
 
             {/* Information Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'CONTACT PERSON' : 'NGƯỜI ĐẠI DIỆN LIÊN HỆ'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+            <div className="ui-form-grid" >
+              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'CONTACT PERSON' : 'NGƯỜI ĐẠI DIỆN LIÊN HỆ'}</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', marginTop: '4px' }}>
                   {selectedSupplier.contactName || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0284c7', marginTop: '4px' }}>
+              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}</div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-info)', marginTop: '4px' }}>
                   {selectedSupplier.phone || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'EMAIL ADDRESS' : 'ĐỊA CHỈ EMAIL'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginTop: '4px' }}>
+              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'EMAIL ADDRESS' : 'ĐỊA CHỈ EMAIL'}</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginTop: '4px' }}>
                   {selectedSupplier.email || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'DATE CREATED' : 'NGÀY TẠO HỒ SƠ'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: '#0f172a', marginTop: '4px' }}>
-                  {selectedSupplier.createdAt ? new Date(selectedSupplier.createdAt).toLocaleDateString(lang === 'en' ? 'en-US' : 'vi-VN') : '—'}
+              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'DATE CREATED' : 'NGÀY TẠO HỒ SƠ'}</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginTop: '4px' }}>
+                  {selectedSupplier.createdAt ? uiFormatDate(selectedSupplier.createdAt, lang) : '—'}
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{lang === 'en' ? 'HEADQUARTERS / WAREHOUSE ADDRESS' : 'ĐỊA CHỈ TRỤ SỞ / KHO HÀNG'}</div>
-              <div style={{ fontSize: '14px', color: '#334155', marginTop: '4px' }}>
+            <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'HEADQUARTERS / WAREHOUSE ADDRESS' : 'ĐỊA CHỈ TRỤ SỞ / KHO HÀNG'}</div>
+              <div style={{ fontSize: '14px', color: 'var(--color-body)', marginTop: '4px' }}>
                 {selectedSupplier.address || (lang === 'en' ? 'No address provided' : 'Chưa cập nhật địa chỉ')}
               </div>
             </div>
 
             {selectedSupplier.notes && (
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fefce8' }}>
-                <div style={{ fontSize: '12px', color: '#b45309', fontWeight: 700 }}>{lang === 'en' ? 'CONTRACT NOTES / SUPPLIED MATERIALS' : 'GHI CHÚ HỢP ĐỒNG / VẬT TƯ CUNG CẤP'}</div>
-                <div style={{ fontSize: '13.5px', color: '#78350f', marginTop: '4px' }}>{selectedSupplier.notes}</div>
+              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-warning-bg)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--color-warning)', fontWeight: 700 }}>{lang === 'en' ? 'CONTRACT NOTES / SUPPLIED MATERIALS' : 'GHI CHÚ HỢP ĐỒNG / VẬT TƯ CUNG CẤP'}</div>
+                <div style={{ fontSize: '13.5px', color: 'var(--color-warning)', marginTop: '4px' }}>{selectedSupplier.notes}</div>
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button
+              <Button
                 type="button"
-                className="action-button edit"
+                variant="secondary" className="edit"
                 onClick={() => {
                   const s = selectedSupplier;
                   setSelectedSupplier(null);
@@ -560,10 +552,10 @@ export function SuppliersPage() {
                 }}
               >
                 <Icon name="edit" size={14} /> {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="action-button danger"
+                variant="danger"
                 onClick={() => {
                   const s = selectedSupplier;
                   setSelectedSupplier(null);
@@ -571,10 +563,10 @@ export function SuppliersPage() {
                 }}
               >
                 <Icon name="trash" size={14} /> {lang === 'en' ? 'Delete' : 'Xóa nhà cung cấp'}
-              </button>
-              <button type="button" className="action-button solid" onClick={() => setSelectedSupplier(null)}>
+              </Button>
+              <Button type="button" variant="primary" onClick={() => setSelectedSupplier(null)}>
                 {lang === 'en' ? 'Close' : 'Đóng'}
-              </button>
+              </Button>
             </div>
           </div>
         </Modal>
@@ -583,95 +575,96 @@ export function SuppliersPage() {
       {/* Create Supplier Modal */}
       {isCreateOpen && (
         <Modal open={true} onClose={() => setIsCreateOpen(false)} title={lang === 'en' ? 'Add New Supplier' : 'Thêm mới nhà cung cấp vật tư'}>
-          <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+          <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', }}>
+            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-1">
                 {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
               </label>
-              <input
+              <input id="suppliers-page-field-1" className="ui-input"
                 type="text"
                 required
                 placeholder={lang === 'en' ? 'e.g. Green Agriculture JSC...' : 'Ví dụ: Công ty Cổ phần Nông nghiệp Xanh...'}
                 value={createForm.supplierName}
                 onChange={(e) => setCreateForm({ ...createForm, supplierName: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="ui-form-grid">
+              <div className="form-group structured-field-card">
+                <label htmlFor="suppliers-page-field-2">
                   {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
                 </label>
-                <input
+                <input id="suppliers-page-field-2" className="ui-input"
                   type="text"
                   placeholder={lang === 'en' ? 'Full name...' : 'Họ và tên...'}
                   value={createForm.contactName || ''}
                   onChange={(e) => setCreateForm({ ...createForm, contactName: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
 
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+              <div className="form-group structured-field-card">
+                <label htmlFor="suppliers-page-field-3">
                   {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
                 </label>
-                <input
+                <input id="suppliers-page-field-3" className="ui-input"
                   type="tel"
                   placeholder="09xx..."
                   value={createForm.phone || ''}
                   onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-4">
                 {lang === 'en' ? 'Email' : 'Email'}
               </label>
-              <input
+              <input id="suppliers-page-field-4" className="ui-input"
                 type="email"
                 placeholder="supplier@example.com..."
                 value={createForm.email || ''}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-5">
                 {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
               </label>
-              <input
+              <input id="suppliers-page-field-5" className="ui-input"
                 type="text"
                 placeholder={lang === 'en' ? 'Street, Ward, District, City...' : 'Số nhà, đường, quận/huyện, tỉnh thành...'}
                 value={createForm.address || ''}
                 onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-6">
                 {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
               </label>
-              <textarea
+              <textarea id="suppliers-page-field-6" className="ui-textarea"
                 rows={2}
                 placeholder={lang === 'en' ? 'Supplies organic fertilizers, F1 seeds...' : 'Chuyên cung ứng phân trùn quế, hạt giống F1...'}
                 value={createForm.notes || ''}
                 onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button type="button" className="action-button" onClick={() => setIsCreateOpen(false)} disabled={submittingCreate}>
+              <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)} disabled={submittingCreate}>
                 {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
-              </button>
-              <button type="submit" className="action-button solid" disabled={submittingCreate}>
+              </Button>
+              <Button type="submit" variant="primary" loading={submittingCreate}>
                 {submittingCreate ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Create Supplier' : 'Tạo nhà cung cấp')}
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>
@@ -680,89 +673,90 @@ export function SuppliersPage() {
       {/* Update Supplier Modal */}
       {editingSupplier && (
         <Modal open={true} onClose={() => setEditingSupplier(null)} title={lang === 'en' ? `Update Supplier #${editingSupplier.supplierId}` : `Cập nhật nhà cung cấp #${editingSupplier.supplierId}`}>
-          <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+          <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', }}>
+            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-7">
                 {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
               </label>
-              <input
+              <input id="suppliers-page-field-7" className="ui-input"
                 type="text"
                 required
                 value={updateForm.supplierName}
                 onChange={(e) => setUpdateForm({ ...updateForm, supplierName: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="ui-form-grid">
+              <div className="form-group structured-field-card">
+                <label htmlFor="suppliers-page-field-8">
                   {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
                 </label>
-                <input
+                <input id="suppliers-page-field-8" className="ui-input"
                   type="text"
                   value={updateForm.contactName || ''}
                   onChange={(e) => setUpdateForm({ ...updateForm, contactName: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
 
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+              <div className="form-group structured-field-card">
+                <label htmlFor="suppliers-page-field-9">
                   {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
                 </label>
-                <input
+                <input id="suppliers-page-field-9" className="ui-input"
                   type="tel"
                   value={updateForm.phone || ''}
                   onChange={(e) => setUpdateForm({ ...updateForm, phone: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
             </div>
 
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-10">
                 {lang === 'en' ? 'Email' : 'Email'}
               </label>
-              <input
+              <input id="suppliers-page-field-10" className="ui-input"
                 type="email"
                 value={updateForm.email || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, email: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-11">
                 {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
               </label>
-              <input
+              <input id="suppliers-page-field-11" className="ui-input"
                 type="text"
                 value={updateForm.address || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, address: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
+            <div className="form-group structured-field-card">
+              <label htmlFor="suppliers-page-field-12">
                 {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
               </label>
-              <textarea
+              <textarea id="suppliers-page-field-12" className="ui-textarea"
                 rows={2}
                 value={updateForm.notes || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, notes: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13.5px' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <button type="button" className="action-button" onClick={() => setEditingSupplier(null)} disabled={submittingUpdate}>
+              <Button type="button" variant="secondary" onClick={() => setEditingSupplier(null)} disabled={submittingUpdate}>
                 {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
-              </button>
-              <button type="submit" className="action-button solid" disabled={submittingUpdate}>
+              </Button>
+              <Button type="submit" variant="primary" loading={submittingUpdate}>
                 {submittingUpdate ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
-              </button>
+              </Button>
             </div>
           </form>
         </Modal>
@@ -779,10 +773,10 @@ export function SuppliersPage() {
             onClose={() => setDeletingSupplier(null)}
             title={lang === 'en' ? 'Delete Supplier Confirmation' : 'Xác nhận xóa nhà cung cấp'}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '420px', maxWidth: '520px' }}>
-              <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px', color: '#0f172a' }}>{deletingSupplier.supplierName}</h4>
-                <p style={{ margin: 0, fontSize: '12.5px', color: '#64748b' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '520px' }}>
+              <div style={{ padding: '12px 16px', background: 'var(--color-page)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                <h4 style={{ margin: '0 0 4px', fontSize: '15px', color: 'var(--color-text)' }}>{deletingSupplier.supplierName}</h4>
+                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-muted)' }}>
                   {lang === 'en' ? 'Supplier ID:' : 'Mã đơn vị:'} #SUP-{deletingSupplier.supplierId} • {lang === 'en' ? 'Contact:' : 'Người liên hệ:'} {deletingSupplier.contactName || '—'}
                 </p>
               </div>
@@ -792,15 +786,15 @@ export function SuppliersPage() {
                 style={{
                   padding: '12px 16px',
                   borderRadius: '8px',
-                  background: isEligible ? '#ecfdf5' : '#fef2f2',
-                  border: `1px solid ${isEligible ? '#10b981' : '#ef4444'}`,
+                  background: isEligible ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
+                  border: `1px solid ${isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)'}`,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: isEligible ? '#065f46' : '#991b1b', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)', marginBottom: '4px' }}>
                   <Icon name={isEligible ? 'check' : 'warning'} size={16} />
                   <span>{isEligible ? (lang === 'en' ? 'Supplier eligible for deletion' : 'Nhà cung cấp đủ điều kiện xóa (Eligible)') : (lang === 'en' ? 'Ineligible for deletion' : 'Không đủ điều kiện xóa (Ineligible)')}</span>
                 </div>
-                <p style={{ margin: 0, fontSize: '12.5px', color: isEligible ? '#047857' : '#b91c1c' }}>
+                <p style={{ margin: 0, fontSize: '12.5px', color: isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)' }}>
                   {hasPurchases
                     ? (lang === 'en'
                       ? `This supplier has ${deletingSupplier.totalPurchasesCount} purchase orders recorded in the system. To ensure VietGAP traceability audit compliance, suppliers with active transaction history cannot be deleted.`
@@ -812,23 +806,23 @@ export function SuppliersPage() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
-                <button
+                <Button
                   type="button"
-                  className="action-button"
+                  variant="secondary"
                   onClick={() => setDeletingSupplier(null)}
                   disabled={submittingDelete}
                 >
                   {isEligible ? (lang === 'en' ? 'Cancel' : 'Hủy bỏ') : (lang === 'en' ? 'Close' : 'Đóng')}
-                </button>
+                </Button>
                 {isEligible && (
-                  <button
+                  <Button
                     type="button"
-                    className="action-button danger"
+                    variant="danger"
                     disabled={submittingDelete}
                     onClick={handleDeleteSubmit}
                   >
                     {submittingDelete ? (lang === 'en' ? 'Deleting...' : 'Đang xóa...') : (lang === 'en' ? 'Confirm Delete' : 'Xác nhận xóa')}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -838,4 +832,3 @@ export function SuppliersPage() {
     </section>
   );
 }
-

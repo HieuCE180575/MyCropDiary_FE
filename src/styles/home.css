@@ -85,7 +85,7 @@
 .home-hero-mesh {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 25%, rgba(16, 185, 129, 0.22) 0%, transparent 45%),
     radial-gradient(circle at 85% 75%, rgba(5, 150, 105, 0.18) 0%, transparent 50%),
     linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -1295,9 +1295,9 @@
   }
 
   .btn-cta-white,
-  .btn-cta-outline,
-  .btn-hero-primary,
-  .btn-hero-secondary {
+.btn-cta-outline,
+.btn-hero-primary,
+.btn-hero-secondary {
     width: 100%;
   }
 

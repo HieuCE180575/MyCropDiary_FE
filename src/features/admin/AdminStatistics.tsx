@@ -1,16 +1,18 @@
+import { AdminPageHeading } from './AdminComponents';
+import { formatNumber } from '../../shared/format/formatters';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
-import { Icon } from '../../shared/components/Icon';
+
 import { useState, useEffect } from 'react';
 import { useAdmin } from './AdminProvider';
-import { AdminEmpty, AdminPageHeading } from './AdminComponents';
+
 import { fetchAdminStatistics, type AdminStatisticsData } from './adminService';
 
 const types = { overview: 'Tổng quan hệ thống', users: 'Tài khoản', seasons: 'Mùa vụ', registrations: 'Hồ sơ trang trại', feedback: 'Phản hồi AI' };
 type StatisticType = keyof typeof types;
-const number = (value: number) => value.toLocaleString('vi-VN');
 
 export function AdminStatistics() {
   const { lang, t: translate } = useLanguage();
+  const number = (value: number) => formatNumber(value, lang);
   const { state } = useAdmin();
   const [type, setType] = useState<StatisticType>('overview');
   const [statsData, setStatsData] = useState<AdminStatisticsData | null>(null);

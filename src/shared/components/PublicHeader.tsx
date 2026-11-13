@@ -1,9 +1,13 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../features/auth';
+import { Link } from 'react-router-dom';
 import { Icon } from './Icon';
-import { useLanguage } from '../i18n/LanguageContext';
 import { LanguageSwitch } from './LanguageSwitch';
+import { Modal } from './Modal';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useAuth } from '../../features/auth';
+
+import { useLanguage } from '../i18n/LanguageContext';
+
 
 export function PublicHeader() {
   const { isAuthenticated, user, signOut } = useAuth();
@@ -15,22 +19,31 @@ export function PublicHeader() {
 
   const isActive = (path: string) => location.pathname === path;
 
+  useEffect(() => { setMobileMenuOpen(false); }, [location.key]);
+  useEffect(() => {
+    const desktop = window.matchMedia?.('(min-width: 769px)');
+    if (!desktop) return;
+    const closeOnDesktop = () => { if (desktop.matches) setMobileMenuOpen(false); };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
+  }, []);
+
   return (
     <header className="public-header" role="banner">
       <div className="public-header-inner">
         <div className="header-brand-wrap">
-          <Link to="/" className="public-brand" aria-label="MyCropDiary Home">
+          <Link to="/" className="public-brand" aria-label={t("MyCropDiary Home")}>
             <span className="brand-icon-box">
               <Icon name="leaf" className="brand-leaf-icon" />
             </span>
             <div className="brand-text-group">
               <strong className="brand-name">MyCropDiary</strong>
-              <span className="brand-tag">VietGAP Agriculture</span>
+              <span className="brand-tag">{t("VietGAP Agriculture")}</span>
             </div>
           </Link>
         </div>
 
-        <nav className="public-nav-desktop" aria-label="Main Navigation">
+        <nav className="public-nav-desktop" aria-label={t("Main Navigation")}>
           <Link
             to="/"
             className={`nav-link ${isActive('/') ? 'is-active' : ''}`}
@@ -65,8 +78,8 @@ export function PublicHeader() {
               <Link
                 className="account-profile"
                 to="/profile"
-                title="View user profile"
-                aria-label="User Profile"
+                title={t("View user profile")}
+                aria-label={t("User Profile")}
               >
                 <span className="avatar">
                   <Icon name="user" />
@@ -80,7 +93,7 @@ export function PublicHeader() {
                 className="account-logout"
                 type="button"
                 onClick={signOut}
-                title="Sign out of system"
+                title={t("Sign out of system")}
               >
                 <Icon name="logout" />
                 <span>{t('nav.signOut', 'Sign Out')}</span>
@@ -108,18 +121,19 @@ export function PublicHeader() {
           <button
             type="button"
             className="mobile-menu-toggle"
+            aria-controls="public-mobile-navigation"
             onClick={() => setMobileMenuOpen((open) => !open)}
             aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={mobileMenuOpen ? t("Close menu") : t("Open menu")}
           >
             <Icon name={mobileMenuOpen ? 'close' : 'menu'} />
           </button>
         </div>
       </div>
 
-      {mobileMenuOpen && (
-        <div className="public-mobile-drawer" role="dialog" aria-modal="true">
-          <div className="mobile-drawer-inner">
+      <Modal open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)}
+        title={t('Main Navigation')} className="public-mobile-drawer">
+          <nav className="mobile-drawer-inner" id="public-mobile-navigation" aria-label={t('Main Navigation')}>
             <div style={{ marginBottom: '12px' }}>
               <LanguageSwitch variant="header" />
             </div>
@@ -134,6 +148,7 @@ export function PublicHeader() {
             <Link
               to="/knowledge"
               className={`mobile-nav-link ${isActive('/knowledge') ? 'is-active' : ''}`}
+              aria-current={isActive('/knowledge') ? 'page' : undefined}
               onClick={() => setMobileMenuOpen(false)}
             >
               {t('nav.knowledge', 'VietGAP Knowledge')}
@@ -162,8 +177,8 @@ export function PublicHeader() {
                     to="/profile"
                     className="account-profile mobile-profile"
                     onClick={() => setMobileMenuOpen(false)}
-                    title="View user profile"
-                    aria-label="User Profile"
+                    title={t("View user profile")}
+                    aria-label={t("User Profile")}
                   >
                     <span className="avatar">
                       <Icon name="user" />
@@ -214,9 +229,8 @@ export function PublicHeader() {
                 </div>
               )}
             </div>
-          </div>
-        </div>
-      )}
+          </nav>
+      </Modal>
     </header>
   );
 }

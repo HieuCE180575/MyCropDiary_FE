@@ -1,6 +1,11 @@
-import { useEffect, useState } from 'react';
+import { Button } from '../../../shared/components/Button';
 import { Modal } from '../../../shared/components/Modal';
 import { Icon } from '../../../shared/components/Icon';
+import { formatDateTime as uiFormatDateTime } from '../../../shared/format/formatters';
+
+import { useEffect, useState } from 'react';
+
+
 import { fetchBlockConditions } from '../zoneBlockService';
 import type { Block, BlockConditionObservation } from '../types';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
@@ -41,7 +46,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleString('vi-VN', {
+      return uiFormatDateTime(dateStr, lang, {
         hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
@@ -56,7 +61,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
   return (
     <Modal open={isOpen} onClose={onClose} title={lang === 'en' ? `Monitoring History: ${block.blockName}` : `Lịch sử theo dõi: ${block.blockName}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>
+        <p style={{ margin: 0, color: 'var(--color-muted)', fontSize: '13px' }}>
           {lang === 'en' ? 'Total monitoring records: ' : 'Tổng số bản ghi theo dõi: '}<strong>{conditions.length}</strong>
         </p>
         <button
@@ -72,20 +77,20 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+        <div style={{ textAlign: 'center', padding: '30px', color: 'var(--color-muted)' }}>
           <Icon name="loader" className="animate-spin" size={24} />
           <p style={{ marginTop: '8px' }}>{lang === 'en' ? 'Loading condition history...' : 'Đang tải lịch sử tình trạng...'}</p>
         </div>
       ) : error ? (
         <div className="alert alert--error" role="alert">
           <p>{translate(error)}</p>
-          <button type="button" className="action-button" onClick={() => setAttempt(value => value + 1)}>{(lang === 'en' ? "Retry" : "Thử lại")}</button>
+          <Button type="button" variant="secondary" onClick={() => setAttempt(value => value + 1)}>{(lang === 'en' ? "Retry" : "Thử lại")}</Button>
         </div>
       ) : conditions.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '12px' }}>
+        <div style={{ textAlign: 'center', padding: '36px 16px', background: 'var(--color-page)', borderRadius: '12px' }}>
           <span style={{ fontSize: '32px' }}>📋</span>
-          <h4 style={{ margin: '8px 0 4px 0', color: '#1e293b' }}>{lang === 'en' ? 'No condition records yet' : 'Chưa có ghi nhận tình trạng nào'}</h4>
-          <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#64748b' }}>
+          <h4 style={{ margin: '8px 0 4px 0', color: 'var(--color-text)' }}>{lang === 'en' ? 'No condition records yet' : 'Chưa có ghi nhận tình trạng nào'}</h4>
+          <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--color-muted)' }}>
             {lang === 'en' ? 'Record observations about crop health, pests, or soil quality.' : 'Hãy ghi nhận các quan sát về sức khỏe cây trồng, sâu bệnh hoặc chất lượng đất.'}
           </p>
           <button

@@ -1,24 +1,24 @@
+import { message, type TranslationMessage } from "../../shared/i18n/translate";
+import { LoadError } from '../../shared/components/LoadError';
+import { TabList, tabPanelProps } from '../../shared/components/TabList';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { StatusBadge } from '../../shared/components/StatusBadge';
+import { PageHeading } from '../../shared/components/PageHeading';
+import { Button } from '../../shared/components/Button';
+import { TablePagination } from '../../shared/components/TablePagination';
+import { Icon } from '../../shared/components/Icon';
+import { Modal } from '../../shared/components/Modal';
+
+import { formatDate as displayDate } from '../../shared/format/formatters';
+import { usePagination } from '../../shared/hooks/usePagination';
+
 import { useEffect, useState } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { farmRole } from '../auth/accessPolicy';
-import { Icon } from '../../shared/components/Icon';
-import { Modal } from '../../shared/components/Modal';
-import {
-  getFarmStaffList,
-  addFarmStaffMember,
-  updateFarmStaffMember,
-  deactivateFarmStaffMember,
-  deleteFarmStaffMember,
-  fetchCandidateUsers,
-  type CandidateUser,
-  type FarmStaffRecord,
-  getFarmWorkersApi,
-  createFarmWorkerApi,
-  updateFarmWorkerApi,
-  deleteFarmWorkerApi,
-  type FarmWorkerResp,
-  type FarmWorkerReq,
-} from './staffService';
+
+
+import { getFarmStaffList, addFarmStaffMember, updateFarmStaffMember, deactivateFarmStaffMember, deleteFarmStaffMember, type FarmStaffRecord, getFarmWorkersApi, createFarmWorkerApi, updateFarmWorkerApi, deleteFarmWorkerApi, type FarmWorkerResp, type FarmWorkerReq } from './staffService';
 import {
   fetchZonesByFarm,
   fetchZoneAssignments,
@@ -49,6 +49,10 @@ export function StaffManagementPage() {
   // Worker Records state (Worker Records)
   const [workers, setWorkers] = useState<FarmWorkerResp[]>([]);
   const [loadingWorkers, setLoadingWorkers] = useState(false);
+  const [workerLoadError, setWorkerLoadError] = useState<string | null>(null);
+  const [staffLoadError, setStaffLoadError] = useState<string | null>(null);
+  const [assignmentLoadError, setAssignmentLoadError] = useState<string | null>(null);
+  const [zoneLoadError, setZoneLoadError] = useState<string | null>(null);
   const [workerSearch, setWorkerSearch] = useState('');
   const [workerStatusFilter, setWorkerStatusFilter] = useState('ALL');
   const [isWorkerModalOpen, setIsWorkerModalOpen] = useState(false);
@@ -70,21 +74,23 @@ export function StaffManagementPage() {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [assignSearch, setAssignSearch] = useState('');
   const [assignZoneFilter, setAssignZoneFilter] = useState('ALL');
-  const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ kind: 'worker' | 'deactivate' | 'assignment'; id: number; name: string; farmId: number } | null>(null);
+  const [confirmingAction, setConfirmingAction] = useState(false);
+
+  const requestAction = (kind: 'worker' | 'deactivate' | 'assignment', id: number, name = '') => {
+    if (farmId) setPendingAction({ kind, id, name, farmId });
+  };
 
   // Add Staff Modal
     // Candidate Users for Add Staff
-  const [candidates, setCandidates] = useState<CandidateUser[]>([]);
-  const [loadingCandidates, setLoadingCandidates] = useState(false);
-  const [candidateKeyword, setCandidateKeyword] = useState('');
-  const [selectedCandidate, setSelectedCandidate] = useState<CandidateUser | null>(null);
-  const [useManualEmail, setUseManualEmail] = useState(false);
+
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('STAFF');
   const [jobTitle, setJobTitle] = useState('Kỹ sư nông nghiệp');
   const [savingStaff, setSavingStaff] = useState(false);
-  const [addStaffError, setAddStaffError] = useState<string | null>(null);
+  const [addStaffError, setAddStaffError] = useState<TranslationMessage | null>(null);
 
   // Edit Staff Modal
   const [editingStaff, setEditingStaff] = useState<FarmStaffRecord | null>(null);
@@ -105,9 +111,11 @@ export function StaffManagementPage() {
   const [assignedAtDate, setAssignedAtDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [assignNotes, setAssignNotes] = useState('');
   const [savingAssign, setSavingAssign] = useState(false);
-  const [assignModalError, setAssignModalError] = useState<string | null>(null);
+  const [assignModalError, setAssignModalError] = useState<TranslationMessage | null>(null);
 
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
+
+  useEffect(() => { if (isAddStaffOpen || editingStaff || isAssignOpen || isWorkerModalOpen) setNotification(null); }, [isAddStaffOpen, editingStaff?.farmMemberId, isAssignOpen, isWorkerModalOpen]);
 
   useEffect(() => {
     if (!farmId) return;
@@ -131,12 +139,21 @@ export function StaffManagementPage() {
 
   const loadData = async (silent = false) => {
     if (!farmId) return;
+    setStaffLoadError(null);
+    setAssignmentLoadError(null);
+    setZoneLoadError(null);
     if (!silent && !farmStaffMemoryCache.has(farmId)) setLoading(true);
     try {
       const [staffData, zoneData, assignData] = await Promise.all([
         getFarmStaffList(farmId),
-        fetchZonesByFarm(farmId).catch(() => [] as Zone[]),
-        fetchZoneAssignments(farmId).catch(() => [] as StaffZoneAssignment[]),
+        fetchZonesByFarm(farmId).catch(error => {
+          setZoneLoadError(error instanceof Error ? error.message : (lang === 'en' ? 'Unable to load production zones.' : 'Không tải được khu vực sản xuất.'));
+          return [] as Zone[];
+        }),
+        fetchZoneAssignments(farmId).catch(error => {
+          setAssignmentLoadError(error instanceof Error ? error.message : (lang === 'en' ? 'Unable to load assignments.' : 'Không tải được phân công.'));
+          return [] as StaffZoneAssignment[];
+        }),
       ]);
       setStaffList(staffData);
       setZones(zoneData);
@@ -149,8 +166,9 @@ export function StaffManagementPage() {
       });
     } catch (err) {
       if (!silent) {
+        setStaffLoadError(err instanceof Error ? err.message : (lang === 'en' ? 'Unable to load farm staff data.' : 'Không tải được nhân sự trang trại.'));
         setNotification({
-          text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load farm staff data." : err instanceof Error ? err.message : 'Không thể tải dữ liệu staff trang trại.'),
+          text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to load farm staff data." : err instanceof Error ? err.message : 'Không thể tải dữ liệu nhân sự trang trại.'),
           type: 'error',
         });
       }
@@ -162,13 +180,15 @@ export function StaffManagementPage() {
   const loadWorkers = async () => {
     if (!farmId) return;
     setLoadingWorkers(true);
+    setWorkerLoadError(null);
     try {
       const list = await getFarmWorkersApi(farmId, {
         status: workerStatusFilter === 'ALL' ? undefined : workerStatusFilter,
         keyword: workerSearch.trim() || undefined,
       });
       setWorkers(list);
-    } catch {
+    } catch (error) {
+      setWorkerLoadError(error instanceof Error ? error.message : (lang === 'en' ? 'Unable to load worker profiles.' : 'Không tải được hồ sơ công nhân.'));
       setWorkers([]);
     } finally {
       setLoadingWorkers(false);
@@ -232,7 +252,7 @@ export function StaffManagementPage() {
   };
 
   const handleDeleteWorker = async (workerId: number) => {
-    if (!farmId || !window.confirm((lang === 'en' ? "Are you sure you want to delete this worker profile?" : 'Bạn có chắc chắn muốn xóa hồ sơ công nhân này?'))) return;
+    if (!farmId) return;
     try {
       await deleteFarmWorkerApi(farmId, workerId);
       setNotification({ text: (lang === 'en' ? "Worker profile deleted successfully." : 'Đã xóa hồ sơ công nhân thành công.'), type: 'success' });
@@ -249,22 +269,10 @@ export function StaffManagementPage() {
     setIsAddStaffOpen(true);
     setAddStaffError(null);
     setEmail('');
-    setSelectedCandidate(null);
-    setCandidateKeyword('');
-    setUseManualEmail(false);
+
     setRole('STAFF');
     setJobTitle('Kỹ sư nông nghiệp');
-    if (farmId) {
-      setLoadingCandidates(true);
-      try {
-        const list = await fetchCandidateUsers(farmId);
-        setCandidates(list);
-      } catch {
-        setCandidates([]);
-      } finally {
-        setLoadingCandidates(false);
-      }
-    }
+
   };
 
   const handleAddStaff = async (e: React.FormEvent) => {
@@ -278,7 +286,7 @@ export function StaffManagementPage() {
 
     const existing = staffList.find((s) => s.email.toLowerCase() === trimmedEmail);
     if (existing) {
-      setAddStaffError((lang === 'en' ? `Account "${email.trim()}" is already a farm member (Status: ${existing.status || 'Active'}). Duplicate members cannot be added!` : `Tài khoản "${email.trim()}" đã là thành viên of trang trại (Trạng thái: ${existing.status || 'Active'}). Không thể thêm trùng lặp!`));
+      setAddStaffError((message("Account \"{value1}\" is already a farm member (Status: {value2}). Duplicate members cannot be added!", { value1: email.trim(), value2: message(existing.status || 'Active') })));
       return;
     }
 
@@ -292,7 +300,7 @@ export function StaffManagementPage() {
         jobTitle: jobTitle.trim() || undefined,
       });
       setNotification({
-        text: (lang === 'en' ? `Added member "${created.fullName}" (${created.email}) to the farm successfully!` : `Đã thêm thành viên "${created.fullName}" (${created.email}) vào trang trại thành công!`),
+        text: (message("Added member \"{value1}\" ({value2}) to the farm successfully!", { value1: created.fullName, value2: created.email })),
         type: 'success',
       });
       setIsAddStaffOpen(false);
@@ -314,15 +322,14 @@ export function StaffManagementPage() {
 
   const handleDeactivate = async (memberId: number, name: string) => {
     if (!selectedFarm?.id) return;
-    if (!window.confirm((lang === 'en' ? `Deactivate member "${name}" from the farm?` : `Ngừng kích hoạt thành viên "${name}" khỏi trang trại?`))) return;
     setNotification(null);
     try {
       await deactivateFarmStaffMember(selectedFarm.id, memberId);
-      setNotification({ text: (lang === 'en' ? `Suspended access for "${name}".` : `Đã tạm dừng quyền truy cập của "${name}".`), type: 'success' });
+      setNotification({ text: (message("Suspended access for \"{value1}\".", { value1: name })), type: 'success' });
       await loadData();
     } catch (err) {
       setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : `Unable to deactivate member "${name}".` : err instanceof Error ? err.message : `Không thể vô hiệu hóa thành viên "${name}".`),
+        text: (err instanceof Error ? err.message : message("Unable to deactivate member \"{value1}\".", { value1: name })),
         type: 'error',
       });
     }
@@ -333,11 +340,11 @@ export function StaffManagementPage() {
     setNotification(null);
     try {
       await updateFarmStaffMember(selectedFarm.id, memberId, { status: 'ACTIVE' });
-      setNotification({ text: (lang === 'en' ? `Reactivated member "${name}" successfully!` : `Đã kích hoạt lại thành viên "${name}" thành công!`), type: 'success' });
+      setNotification({ text: (message("Reactivated member \"{value1}\" successfully!", { value1: name })), type: 'success' });
       await loadData();
     } catch (err) {
       setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : `Unable to reactivate "${name}".` : err instanceof Error ? err.message : `Không thể kích hoạt lại "${name}".`),
+        text: (err instanceof Error ? err.message : message("Unable to reactivate \"{value1}\".", { value1: name })),
         type: 'error',
       });
     }
@@ -365,7 +372,7 @@ export function StaffManagementPage() {
         status: editStatus,
       });
       setNotification({
-        text: (lang === 'en' ? `Updated member "${editingStaff.fullName}" successfully!` : `Đã cập nhật thông tin thành viên "${editingStaff.fullName}" thành công!`),
+        text: (message("Updated member \"{value1}\" successfully!", { value1: editingStaff.fullName })),
         type: 'success',
       });
       setEditingStaff(null);
@@ -382,17 +389,20 @@ export function StaffManagementPage() {
 
   const handleDeleteStaff = async (memberId: number, name: string) => {
     if (!selectedFarm?.id) return;
-    if (!window.confirm((lang === 'en' ? `Confirm removal of member "${name}" from the farm? This revokes all access and assignments.` : `Xác nhận xóa thành viên "${name}" khỏi trang trại? Thao tác này sẽ hủy mọi quyền truy cập và phân công.`))) return;
+    setDeletingWorker(true);
     setNotification(null);
     try {
       await deleteFarmStaffMember(selectedFarm.id, memberId);
-      setNotification({ text: (lang === 'en' ? `Removed member "${name}" from the farm successfully!` : `Đã xóa thành viên "${name}" khỏi trang trại thành công!`), type: 'success' });
+      setNotification({ text: (message("Removed member \"{value1}\" from the farm successfully!", { value1: name })), type: 'success' });
       await loadData();
+      setDeleteWorkerTarget(null);
     } catch (err) {
       setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : `Unable to remove member "${name}".` : err instanceof Error ? err.message : `Không thể xóa thành viên "${name}".`),
+        text: (err instanceof Error ? err.message : message("Unable to remove member \"{value1}\".", { value1: name })),
         type: 'error',
       });
+    } finally {
+      setDeletingWorker(false);
     }
   };
 
@@ -420,7 +430,7 @@ export function StaffManagementPage() {
     if (alreadyAssigned) {
       const staffObj = staffList.find((s) => s.farmMemberId === Number(assignStaffId));
       const zoneObj = zones.find((z) => z.zoneId === Number(assignZoneId));
-      const msg = (lang === 'en' ? `Staff member "${(staffObj?.fullName || '#' + assignStaffId)}" is already assigned to zone "${(zoneObj?.zoneName || '#' + assignZoneId)}". Duplicate assignments are not allowed!` : `Nhân sự "${staffObj?.fullName || '#' + assignStaffId}" đã và đang được phân công phụ trách phân khu "${zoneObj?.zoneName || '#' + assignZoneId}". Không thể phân công trùng lặp!`);
+      const msg = message("Staff member \"{value1}\" is already assigned to zone \"{value2}\". Duplicate assignments are not allowed!", { value1: (staffObj?.fullName || '#' + assignStaffId), value2: (zoneObj?.zoneName || '#' + assignZoneId) });
       setAssignModalError(msg);
       return;
     }
@@ -452,7 +462,6 @@ export function StaffManagementPage() {
 
   const handleUnassign = async (assignmentId: number) => {
     if (!selectedFarm?.id) return;
-    if (!window.confirm((lang === 'en' ? "Are you sure you want to cancel this assignment?" : 'Bạn có chắc muốn hủy lượt phân công này?'))) return;
     setNotification(null);
     try {
       await unassignStaffFromZone(selectedFarm.id, assignmentId);
@@ -463,6 +472,20 @@ export function StaffManagementPage() {
         text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to cancel assignment." : err instanceof Error ? err.message : 'Không thể hủy phân công.'),
         type: 'error',
       });
+    }
+  };
+
+  const confirmPendingAction = async () => {
+    if (!pendingAction || confirmingAction) return;
+    if (pendingAction.farmId !== farmId) { setPendingAction(null); return; }
+    setConfirmingAction(true);
+    try {
+      if (pendingAction.kind === 'worker') await handleDeleteWorker(pendingAction.id);
+      else if (pendingAction.kind === 'deactivate') await handleDeactivate(pendingAction.id, pendingAction.name);
+      else await handleUnassign(pendingAction.id);
+    } finally {
+      setConfirmingAction(false);
+      setPendingAction(null);
     }
   };
 
@@ -511,6 +534,16 @@ export function StaffManagementPage() {
     return { displayName, subTitle, initials };
   };
 
+  const filteredWorkers = workers.filter((w) => {
+    if (workerStatusFilter !== 'ALL' && w.employmentStatus !== workerStatusFilter) return false;
+    const query = workerSearch.trim().toLowerCase();
+    return !query || [w.workerCode, w.fullName, w.jobTitle].some((value) => value?.toLowerCase().includes(query));
+  });
+  const workerPagination = usePagination(filteredWorkers, JSON.stringify([farmId, workerSearch, workerStatusFilter]));
+
+  const staffPagination = usePagination(filteredStaff, JSON.stringify([farmId, search, statusFilter]));
+  const assignmentsPagination = usePagination(filteredAssignments, JSON.stringify([farmId, assignSearch, assignZoneFilter]));
+
   return (
     <section className="staff-management-page" style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', minWidth: 0, margin: '0 auto', paddingBottom: '40px' }}>
       {/* Status / Notification Banner */}
@@ -532,111 +565,71 @@ export function StaffManagementPage() {
       )}
 
       {/* Main Page Heading matching FarmHub Modern Mockup */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px', width: '100%', boxSizing: 'border-box' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
-            {lang === 'en' ? 'Farm Staff & Area Assignments' : 'Người lao động & Phân công'}
-          </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+      <PageHeading   title={<>
+            {lang === 'en' ? 'Staff & Assignments' : 'Nhân sự và phân công'}
+          </>} description={<>
             {lang === 'en' ? `${staffList.length} staff · ${assignments.length} VietGAP cultivation area assignments at ${selectedFarm?.farmName || 'Farm'}` : `${staffList.length} nhân viên · ${assignments.length} phân công vùng canh tác VietGAP tại ${selectedFarm?.farmName || 'Trang trại'}`}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          {isOwner &&
-            (activeTab === 'staff' ? (
-              <button
+          </>}><div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {(isOwner || activeTab === 'workers') &&
+            (activeTab === 'workers' ? (
+              <Button type="button" variant="primary" onClick={handleOpenAddWorker}>
+                <Icon name="plus" size={17} /> {lang === 'en' ? 'Add worker profile' : 'Thêm hồ sơ công nhân'}
+              </Button>
+            ) : activeTab === 'staff' ? (
+              <Button
                 type="button"
-                className="primary-button"
+                variant="primary"
                 onClick={openAddStaffModal}
-                style={{
-                  padding: '10px 18px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  borderRadius: '10px',
-                  background: '#059669',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
                 <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Staff' : 'Thêm nhân viên'}
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="button"
-                className="primary-button"
+                variant="primary"
                 onClick={openAssignModal}
-                style={{
-                  padding: '10px 18px',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  borderRadius: '10px',
-                  background: '#059669',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
               >
                 <Icon name="plus" size={17} /> {lang === 'en' ? 'Assign New Area' : 'Phân công vùng mới'}
-              </button>
+              </Button>
             ))}
-        </div>
-      </div>
+        </div></PageHeading>
 
       {/* Unified Clean Card Container */}
       <div className="zone-clean-card">
         {/* Integrated Tabs */}
-        <div className="zone-integrated-tabs">
-          <button
-            type="button"
-            className={`zone-integrated-tab-btn ${activeTab === 'staff' ? 'active' : ''}`}
-            onClick={() => setActiveTab('staff')}
-          >
-            <Icon name="users" size={17} /> Staff List <span className="tab-count">({staffList.length})</span>
-          </button>
-          <button
-            type="button"
-            className={`zone-integrated-tab-btn ${activeTab === 'assignments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('assignments')}
-          >
-            <Icon name="blocks" size={17} /> Zone Assignments <span className="tab-count">({assignments.length})</span>
-          </button>
-          <button
-            type="button"
-            className={`zone-integrated-tab-btn ${activeTab === 'workers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('workers')}
-          >
-            <Icon name="users" size={17} /> {(lang === 'en' ? " Worker profiles " : " Hồ sơ công nhân ")} <span className="tab-count">({workers.length})</span>
-          </button>
-        </div>
+        <TabList idPrefix="staff" label={lang === 'en' ? 'Staff sections' : 'Các mục nhân sự'} inset
+            value={activeTab} onChange={setActiveTab} items={[
+              { value: 'staff', label: <><Icon name="users" size={17} /> {translate('Staff List')} <span className="tab-count">({staffList.length})</span></> },
+              { value: 'assignments', label: <><Icon name="plots" size={17} /> {translate('Zone Assignments')} <span className="tab-count">({assignments.length})</span></> },
+              { value: 'workers', label: <><Icon name="users" size={17} /> {(lang === 'en' ? " Worker profiles " : " Hồ sơ công nhân ")} <span className="tab-count">({workers.length})</span></> },
+            ]} />
 
         {activeTab === 'staff' && (
-          <>
+          <div {...tabPanelProps('staff', 'staff')}>
             {/* Filter Bar */}
             <div className="zone-clean-filter-bar">
               <div className="zone-clean-search">
-                <span className="search-icon">
+                <span className="search-icon" aria-hidden="true">
                   <Icon name="search" size={17} />
                 </span>
-                <input
+                <input aria-label={translate('Search by name, email, or phone...')} id="staff-management-page-control-2" className="ui-input"
                   type="search"
-                  placeholder="Search by name, email, or phone..."
+                  placeholder={translate('Search by name, email, or phone...')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
               <div className="zone-clean-select-wrap">
-                <select
+                <select className="ui-select"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   aria-label={(lang === 'en' ? "Filter by active status" : "Lọc theo trạng thái hoạt động")}
                 >
-                  <option value="ALL">All Statuses</option>
-                  <option value="ACTIVE">Active</option>
+                  <option value="ALL">{translate('All Statuses')}</option>
+                  <option value="ACTIVE">{translate('Active')}</option>
                   <option value="SUSPENDED">{(lang === 'en' ? "Inactive" : "Đã ngưng hoạt động")}</option>
                 </select>
                 <span className="select-arrow">
@@ -659,56 +652,53 @@ export function StaffManagementPage() {
             </div>
 
             {loading ? (
-              <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
-                <div className="empty-icon">⏳</div>
-                <h2>{(lang === 'en' ? "Loading staff..." : "Đang tải danh sách staff...")}</h2>
-              </div>
+              <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading staff..." : "Đang tải danh sách nhân sự...")}</>} icon={<>⏳</>} />
             ) : (
               <>
-                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
-                  <table className="data-table" style={{ width: '100%', minWidth: '960px', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'auto' }}>
+                <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }} tabIndex={0}>
+                  <table className="ui-data-table ui-data-table--wide" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'auto' }}>
                     <thead>
-                      <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ width: '44px', minWidth: '44px', padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <tr style={{ background: 'var(--color-page)' }}>
+                        <th scope="col" style={{ width: '44px', minWidth: '44px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                           <input type="checkbox" aria-label={(lang === 'en' ? "Select all staff" : "Chọn tất cả staff")} style={{ cursor: 'pointer' }} />
                         </th>
-                        <th style={{ width: isOwner ? '23%' : '26%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: isOwner ? '23%' : '26%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Staff Member' : 'Thành viên'}
                         </th>
-                        <th style={{ width: isOwner ? '20%' : '23%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: isOwner ? '20%' : '23%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Contact' : 'Liên hệ'}
                         </th>
-                        <th style={{ width: isOwner ? '12%' : '14%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: isOwner ? '12%' : '14%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Role' : 'Vai trò'}
                         </th>
-                        <th style={{ width: isOwner ? '11%' : '13%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th scope="col" style={{ width: isOwner ? '11%' : '13%', textAlign: 'center' }}>
                           {lang === 'en' ? 'Assigned Areas' : 'Vùng tham gia'}
                         </th>
-                        <th style={{ width: isOwner ? '11%' : '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th scope="col" style={{ width: isOwner ? '11%' : '12%', textAlign: 'center' }}>
                           {lang === 'en' ? 'Joined Date' : 'Ngày tham gia'}
                         </th>
-                        <th style={{ width: isOwner ? '11%' : '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th scope="col" style={{ width: isOwner ? '11%' : '12%', textAlign: 'center' }}>
                           {lang === 'en' ? 'Status' : 'Trạng thái'}
                         </th>
                         {isOwner && (
-                          <th style={{ width: '12%', padding: '12px 10px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col" style={{ width: '12%', textAlign: 'center', }}>
                             {lang === 'en' ? 'Actions' : 'Thao tác'}
                           </th>
                         )}
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredStaff.length === 0 ? (
+                      {staffLoadError ? (<tr><td colSpan={9}><LoadError message={staffLoadError} onRetry={() => { void loadData(); }} /></td></tr>) : filteredStaff.length === 0 ? (
                         <tr>
-                          <td colSpan={isOwner ? 8 : 7} style={{ textAlign: 'center', padding: '56px 20px', background: '#ffffff' }}>
+                          <td colSpan={isOwner ? 8 : 7} style={{ textAlign: 'center', padding: '56px 20px', background: 'var(--color-surface)' }}>
                             <div style={{ maxWidth: '440px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                               <div
                                 style={{
                                   width: '56px',
                                   height: '56px',
                                   borderRadius: '14px',
-                                  background: '#ecfdf5',
-                                  color: '#059669',
+                                  background: 'var(--color-success-bg)',
+                                  color: 'var(--color-primary-text)',
                                   display: 'grid',
                                   placeItems: 'center',
                                   marginBottom: '14px',
@@ -716,47 +706,37 @@ export function StaffManagementPage() {
                               >
                                 <Icon name="users" size={28} />
                               </div>
-                              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+                              <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--color-text)', margin: '0 0 6px' }}>
                                 {(lang === 'en' ? "No matching staff" : "Chưa có staff phù hợp")}
                               </h3>
-                              <p style={{ color: '#64748b', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
+                              <p style={{ color: 'var(--color-muted)', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
                                 {lang === 'en' ? 'Try searching with different keywords or click "Add Staff" with an activated account email.' : 'Hãy thử tìm kiếm với từ khóa khác hoặc bấm "Thêm nhân viên" bằng email tài khoản đã kích hoạt.'}
                               </p>
                               {isOwner && (
-                                <button
+                                <Button
                                   type="button"
-                                  className="primary-button"
+                                  variant="primary"
                                   onClick={openAddStaffModal}
-                                  style={{
-                                    padding: '8px 18px',
-                                    fontSize: '13.5px',
-                                    fontWeight: 700,
-                                    borderRadius: '9px',
-                                    background: '#059669',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    boxShadow: '0 3px 10px rgba(5, 150, 105, 0.2)',
-                                  }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                                 >
                                   <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Staff' : 'Thêm nhân viên'}
-                                </button>
+                                </Button>
                               )}
                             </div>
                           </td>
                         </tr>
                       ) : (
-                        filteredStaff.map((staff) => {
+                        staffPagination.items.map((staff) => {
                         const isActive = staff.status === 'ACTIVE';
                         const { displayName, subTitle, initials } = parseStaffName(staff.fullName);
 
                         return (
-                          <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                               <input type="checkbox" aria-label={(lang === 'en' ? `Select ${displayName}` : `Chọn ${displayName}`)} style={{ cursor: 'pointer' }} />
                             </td>
 
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                            <td style={{ verticalAlign: 'middle', overflow: 'hidden' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                                 <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
                                   {initials}
@@ -765,7 +745,7 @@ export function StaffManagementPage() {
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                     <strong
                                       style={{
-                                        color: '#0f172a',
+                                        color: 'var(--color-text)',
                                         fontSize: '14px',
                                         fontWeight: 700,
                                         whiteSpace: 'nowrap',
@@ -776,7 +756,7 @@ export function StaffManagementPage() {
                                     >
                                       {displayName}
                                     </strong>
-                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', flexShrink: 0 }}>
+                                    <span style={{ fontSize: '11px', color: 'var(--color-muted)', fontWeight: 600, background: 'var(--color-subtle)', padding: '1px 5px', borderRadius: '4px', flexShrink: 0 }}>
                                       #{staff.farmMemberId}
                                     </span>
                                   </div>
@@ -785,7 +765,7 @@ export function StaffManagementPage() {
                                       style={{
                                         display: 'block',
                                         fontSize: '12px',
-                                        color: '#059669',
+                                        color: 'var(--color-primary-text)',
                                         fontWeight: 600,
                                         marginTop: '2px',
                                         whiteSpace: 'nowrap',
@@ -801,10 +781,10 @@ export function StaffManagementPage() {
                               </div>
                             </td>
 
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                            <td style={{ verticalAlign: 'middle', overflow: 'hidden' }}>
                               <div
                                 style={{
-                                  color: '#0f172a',
+                                  color: 'var(--color-text)',
                                   fontSize: '13px',
                                   fontWeight: 500,
                                   whiteSpace: 'nowrap',
@@ -817,7 +797,7 @@ export function StaffManagementPage() {
                               </div>
                               <span
                                 style={{
-                                  color: '#64748b',
+                                  color: 'var(--color-muted)',
                                   fontSize: '12px',
                                   marginTop: '2px',
                                   display: 'block',
@@ -831,28 +811,28 @@ export function StaffManagementPage() {
                               </span>
                             </td>
 
-                            <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span
                                 className="crop-cat-pill"
                                 style={{
-                                  background: staff.farmRole === 'OWNER' ? '#ecfdf5' : '#f8fafc',
-                                  color: staff.farmRole === 'OWNER' ? '#047857' : '#334155',
-                                  borderColor: staff.farmRole === 'OWNER' ? '#a7f3d0' : '#cbd5e1',
+                                  background: staff.farmRole === 'OWNER' ? 'var(--color-success-bg)' : 'var(--color-page)',
+                                  color: staff.farmRole === 'OWNER' ? 'var(--color-primary-text)' : 'var(--color-body)',
+                                  borderColor: staff.farmRole === 'OWNER' ? 'var(--color-border)' : 'var(--color-input-border)',
                                   fontWeight: 650,
                                 }}
                               >
-                                {translate(staff.roleLabel)}
+                                {staff.jobTitle || translate(staff.roleLabel)}
                               </span>
                             </td>
 
-                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span
                                 style={{
                                   display: 'inline-block',
                                   padding: '3px 10px',
                                   borderRadius: '6px',
-                                  background: staff.activeAssignmentCount > 0 ? '#ecfdf5' : '#f1f5f9',
-                                  color: staff.activeAssignmentCount > 0 ? '#047857' : '#64748b',
+                                  background: staff.activeAssignmentCount > 0 ? 'var(--color-success-bg)' : 'var(--color-subtle)',
+                                  color: staff.activeAssignmentCount > 0 ? 'var(--color-primary-text)' : 'var(--color-muted)',
                                   fontWeight: 700,
                                   fontSize: '13px',
                                 }}
@@ -861,19 +841,19 @@ export function StaffManagementPage() {
                               </span>
                             </td>
 
-                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                              {staff.joinedAt ? new Date(staff.joinedAt).toLocaleDateString('vi-VN') : '—'}
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle', color: 'var(--color-muted)', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                              {staff.joinedAt ? displayDate(staff.joinedAt, lang) : '—'}
                             </td>
 
-                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
                                 <span className="dot" />
-                                {(lang === 'en' ? isActive ? "Active" : "Inactive" : isActive ? 'Active' : 'Đã ngưng')}
+                                {(lang === 'en' ? isActive ? "Active" : "Inactive" : isActive ? 'Đang hoạt động' : 'Đã ngưng')}
                               </span>
                             </td>
 
                             {isOwner && (
-                              <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                 <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
                                   <button
                                     type="button"
@@ -891,7 +871,7 @@ export function StaffManagementPage() {
                                       className="table-icon-btn"
                                       title={(lang === 'en' ? "Suspend staff member" : "Tạm ngưng hoạt động nhân viên")}
                                       aria-label={(lang === 'en' ? `Suspend ${displayName}` : `Tạm dừng ${displayName}`)}
-                                      onClick={() => handleDeactivate(staff.farmMemberId, displayName)}
+                                      onClick={() => requestAction('deactivate', staff.farmMemberId, displayName)}
                                     >
                                       <Icon name="close" size={14} />
                                       <span className="sr-only">{(lang === 'en' ? "Suspend" : "Tạm ngưng")}</span>
@@ -930,50 +910,35 @@ export function StaffManagementPage() {
                 </div>
 
                 {/* Table Footer */}
-                <div className="zone-table-footer">
-                  <div>
-                    Showing {filteredStaff.length > 0 ? `1–${filteredStaff.length}` : '0'} of {filteredStaff.length} staff
-                  </div>
-                  <div className="zone-pagination-wrap">
-                    <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Previous page" : "Trang trước")}>
-                      <Icon name="chevron-left" size={15} />
-                    </button>
-                    <button type="button" className="zone-page-btn active">
-                      1
-                    </button>
-                    <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Next page" : "Trang sau")}>
-                      <Icon name="chevron-right" size={15} />
-                    </button>
-                  </div>
-                </div>
+                <TablePagination {...staffPagination} disabled={loading} />
               </>
             )}
-          </>
+          </div>
         )}
 
         {activeTab === 'assignments' && (
-          <>
+          <div {...tabPanelProps('staff', 'assignments')}>
             {/* Filter Bar */}
             <div className="zone-clean-filter-bar">
               <div className="zone-clean-search">
-                <span className="search-icon">
+                <span className="search-icon" aria-hidden="true">
                   <Icon name="search" size={17} />
                 </span>
-                <input
+                <input aria-label={translate("Search by staff name or assigned zone...")} id="staff-management-page-control-3" className="ui-input"
                   type="search"
-                  placeholder="Search by staff name or assigned zone..."
+                  placeholder={translate("Search by staff name or assigned zone...")}
                   value={assignSearch}
                   onChange={(e) => setAssignSearch(e.target.value)}
                 />
               </div>
 
               <div className="zone-clean-select-wrap">
-                <select
+                <select className="ui-select"
                   value={assignZoneFilter}
                   onChange={(e) => setAssignZoneFilter(e.target.value)}
                   aria-label={(lang === 'en' ? "Filter by production zone" : "Lọc theo phân khu sản xuất")}
                 >
-                  <option value="ALL">All Zones ({zones.length})</option>
+                  <option value="ALL">{translate("All Zones (")}{zones.length})</option>
                   {zones.map((z) => (
                     <option key={z.zoneId} value={String(z.zoneId)}>
                       {z.zoneName}
@@ -1000,98 +965,85 @@ export function StaffManagementPage() {
             </div>
 
             {loading ? (
-              <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
-                <div className="empty-icon">⏳</div>
-                <h2>{(lang === 'en' ? "Loading assignments..." : "Đang tải danh sách phân công...")}</h2>
-              </div>
+              <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading assignments..." : "Đang tải danh sách phân công...")}</>} icon={<>⏳</>} />
             ) : (
               <>
-                <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }}>
-                  <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
+                <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0, width: '100%', overflowX: 'auto', boxSizing: 'border-box' }} tabIndex={0}>
+                  <table className="ui-data-table ui-data-table--wide" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
                     <thead>
-                      <tr style={{ background: '#f8fafc' }}>
-                        <th style={{ width: '40px', padding: '12px 8px', textAlign: 'center' }}>
+                      <tr style={{ background: 'var(--color-page)' }}>
+                        <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
                           <input type="checkbox" aria-label={(lang === 'en' ? "Select all assignments" : "Chọn tất cả phân công")} style={{ cursor: 'pointer' }} />
                         </th>
-                        <th style={{ width: isOwner ? '24%' : '27%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: isOwner ? '24%' : '27%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Production Zone' : 'Phân khu sản xuất'}
                         </th>
-                        <th style={{ width: isOwner ? '23%' : '26%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: isOwner ? '23%' : '26%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Assigned Staff' : 'Nhân sự phụ trách'}
                         </th>
-                        <th style={{ width: isOwner ? '15%' : '17%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: isOwner ? '15%' : '17%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Role / Title' : 'Vai trò / Chức vụ'}
                         </th>
-                        <th style={{ width: isOwner ? '13%' : '15%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                        <th scope="col" style={{ width: isOwner ? '13%' : '15%', textAlign: 'center' }}>
                           {lang === 'en' ? 'Start Date' : 'Ngày bắt đầu'}
                         </th>
-                        <th style={{ width: isOwner ? '13%' : '15%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                        <th scope="col" style={{ width: isOwner ? '13%' : '15%', textAlign: 'left' }}>
                           {lang === 'en' ? 'Assigned By' : 'Người giao việc'}
                         </th>
                         {isOwner && (
-                          <th style={{ width: '12%', padding: '12px 10px', textAlign: 'center', fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col" style={{ width: '12%', textAlign: 'center', }}>
                             {lang === 'en' ? 'Actions' : 'Thao tác'}
                           </th>
                         )}
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAssignments.length === 0 ? (
+                      {assignmentLoadError ? (<tr><td colSpan={7}><LoadError message={assignmentLoadError} onRetry={() => { void loadData(); }} /></td></tr>) : filteredAssignments.length === 0 ? (
                         <tr>
-                          <td colSpan={isOwner ? 7 : 6} style={{ textAlign: 'center', padding: '56px 20px', background: '#ffffff' }}>
+                          <td colSpan={isOwner ? 7 : 6} style={{ textAlign: 'center', padding: '56px 20px', background: 'var(--color-surface)' }}>
                             <div style={{ maxWidth: '440px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                               <div
                                 style={{
                                   width: '56px',
                                   height: '56px',
                                   borderRadius: '14px',
-                                  background: '#ecfdf5',
-                                  color: '#059669',
+                                  background: 'var(--color-success-bg)',
+                                  color: 'var(--color-primary-text)',
                                   display: 'grid',
                                   placeItems: 'center',
                                   marginBottom: '14px',
                                 }}
                               >
-                                <Icon name="blocks" size={28} />
+                                <Icon name="plots" size={28} />
                               </div>
-                              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+                              <h3 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--color-text)', margin: '0 0 6px' }}>
                                 {(lang === 'en' ? assignments.length === 0 ? "No assignments yet" : "No matching assignments" : assignments.length === 0 ? 'No assignments yet' : 'Không tìm thấy phân công phù hợp')}
                               </h3>
-                              <p style={{ color: '#64748b', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
+                              <p style={{ color: 'var(--color-muted)', fontSize: '13.5px', margin: '0 0 18px', lineHeight: 1.5 }}>
                                 {(lang === 'en' ? assignments.length === 0 ? 'Assign technical personnel to production zones to oversee seasons, blocks, and VietGAP compliance.' : "Try another keyword or reset the zone filter." : assignments.length === 0
                                   ? 'Assign technical personnel to production zones to oversee seasons, blocks, and VietGAP compliance.'
                                   : 'Hãy thử tìm kiếm với từ khóa khác hoặc làm mới bộ lọc phân khu.')}
                               </p>
                               {isOwner && assignments.length === 0 && (
-                                <button
+                                <Button
                                   type="button"
-                                  className="primary-button"
+                                  variant="primary"
                                   onClick={openAssignModal}
-                                  style={{
-                                    padding: '9px 18px',
-                                    fontSize: '13.5px',
-                                    fontWeight: 700,
-                                    borderRadius: '9px',
-                                    background: '#059669',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-                                  }}
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                                 >
                                   <Icon name="plus" size={16} /> {(lang === 'en' ? " Assign now" : " Phân công ngay")}
-                                </button>
+                                </Button>
                               )}
                             </div>
                           </td>
                         </tr>
                       ) : (
-                        filteredAssignments.map((item) => {
+                        assignmentsPagination.items.map((item) => {
                         const { displayName, subTitle, initials } = parseStaffName(item.staffName);
 
                         return (
-                          <tr key={item.assignmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                          <tr key={item.assignmentId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                            <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
                               <input
                                 type="checkbox"
                                 aria-label={(lang === 'en' ? `Select assignment for ${displayName}` : `Chọn phân công của ${displayName}`)}
@@ -1099,47 +1051,47 @@ export function StaffManagementPage() {
                               />
                             </td>
 
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                            <td style={{ verticalAlign: 'middle', overflow: 'hidden' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                                 <span
                                   style={{
                                     width: '34px',
                                     height: '34px',
                                     borderRadius: '10px',
-                                    background: '#ecfdf5',
-                                    color: '#059669',
+                                    background: 'var(--color-success-bg)',
+                                    color: 'var(--color-primary-text)',
                                     display: 'grid',
                                     placeItems: 'center',
                                     flexShrink: 0,
                                   }}
                                 >
-                                  <Icon name="blocks" size={17} />
+                                  <Icon name="plots" size={17} />
                                 </span>
                                 <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={(lang === 'en' ? item.zoneName || `Zone #${item.zoneId}` : item.zoneName || `Phân khu #${item.zoneId}`)}>
+                                  <strong style={{ display: 'block', color: 'var(--color-text)', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={(lang === 'en' ? item.zoneName || `Zone #${item.zoneId}` : item.zoneName || `Phân khu #${item.zoneId}`)}>
                                     {(lang === 'en' ? item.zoneName || `Zone #${item.zoneId}` : item.zoneName || `Phân khu #${item.zoneId}`)}
                                   </strong>
-                                  <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>
+                                  <span style={{ fontSize: '11.5px', color: 'var(--color-muted)', fontWeight: 500 }}>
                                     {(lang === 'en' ? "Code: KV-00" : "Mã: KV-00")}{item.zoneId}
                                   </span>
                                 </div>
                               </div>
                             </td>
 
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                            <td style={{ verticalAlign: 'middle', overflow: 'hidden' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                                 <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
                                   {initials}
                                 </div>
                                 <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={displayName}>
+                                  <strong style={{ display: 'block', color: 'var(--color-text)', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={displayName}>
                                     {displayName}
                                   </strong>
-                                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.staffEmail || ''}>
+                                  <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.staffEmail || ''}>
                                     {(lang === 'en' ? item.staffEmail || "No email" : item.staffEmail || 'Chưa có email')}
                                   </span>
                                   {subTitle && (
-                                    <span style={{ display: 'block', fontSize: '11.5px', color: '#059669', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={translate(subTitle)}>
+                                    <span style={{ display: 'block', fontSize: '11.5px', color: 'var(--color-primary-text)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={translate(subTitle)}>
                                       {translate(subTitle)}
                                     </span>
                                   )}
@@ -1147,34 +1099,34 @@ export function StaffManagementPage() {
                               </div>
                             </td>
 
-                            <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                            <td style={{ verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                               <span
                                 className="crop-cat-pill"
-                                style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 650 }}
+                                style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', borderColor: 'var(--color-border)', fontWeight: 650 }}
                               >
-                                {(lang === 'en' ? item.jobTitle || "Assigned technical staff" : item.jobTitle || 'Technical Staff phụ trách')}
+                                {(lang === 'en' ? item.jobTitle || "Assigned technical staff" : item.jobTitle || 'Nhân viên kỹ thuật phụ trách')}
                               </span>
                             </td>
 
-                            <td style={{ padding: '12px 10px', color: '#64748b', fontSize: '13px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
+                            <td style={{ color: 'var(--color-muted)', fontSize: '13px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              {item.assignedAt ? displayDate(item.assignedAt, lang) : '—'}
                             </td>
 
-                            <td style={{ padding: '12px 12px', color: '#334155', fontSize: '13px', fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden' }}>
-                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }} title={item.assignedByName || 'Farm Owner'}>
-                                {item.assignedByName || 'Farm Owner'}
+                            <td style={{ color: 'var(--color-body)', fontSize: '13px', fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden' }}>
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }} title={item.assignedByName || translate("Farm Owner")}>
+                                {item.assignedByName || translate("Farm Owner")}
                               </span>
                             </td>
 
                             {isOwner && (
-                              <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                              <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
                                 <div className="table-action-btns" style={{ justifyContent: 'center' }}>
                                   <button
                                     type="button"
                                     className="table-icon-btn danger"
                                     title={(lang === 'en' ? "Remove staff assignment from zone" : "Hủy phân công staff khỏi phân khu")}
                                     aria-label={(lang === 'en' ? `Cancel assignment for ${displayName}` : `Hủy phân công cho ${displayName}`)}
-                                    onClick={() => handleUnassign(item.assignmentId)}
+                                    onClick={() => requestAction('assignment', item.assignmentId)}
                                   >
                                     <Icon name="trash" size={15} />
                                     <span className="sr-only">{(lang === 'en' ? "Cancel assignment" : "Hủy phân công")}</span>
@@ -1191,35 +1143,20 @@ export function StaffManagementPage() {
                 </div>
 
                 {/* Table Footer */}
-                <div className="zone-table-footer">
-                  <div>
-                    Showing {filteredAssignments.length > 0 ? `1–${filteredAssignments.length}` : '0'} of {filteredAssignments.length} {(lang === 'en' ? " assignments" : " lượt phân công")}
-                  </div>
-                  <div className="zone-pagination-wrap">
-                    <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Previous page" : "Trang trước")}>
-                      <Icon name="chevron-left" size={15} />
-                    </button>
-                    <button type="button" className="zone-page-btn active">
-                      1
-                    </button>
-                    <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Next page" : "Trang sau")}>
-                      <Icon name="chevron-right" size={15} />
-                    </button>
-                  </div>
-                </div>
+                <TablePagination {...assignmentsPagination} disabled={loading} />
               </>
             )}
-          </>
+          </div>
         )}
 
         {activeTab === 'workers' && (
-          <>
-            <div className="zone-clean-filter-bar">
+          <div {...tabPanelProps('staff', 'workers')}>
+            <div className="zone-clean-filter-bar worker-profile-filters">
               <div className="zone-clean-search">
-                <span className="search-icon">
+                <span className="search-icon" aria-hidden="true">
                   <Icon name="search" size={17} />
                 </span>
-                <input
+                <input aria-label={(lang === 'en' ? "Search by worker ID, name, or position..." : "Tìm theo mã công nhân, họ tên, chức danh...")} id="staff-management-page-control-4" className="ui-input"
                   type="search"
                   placeholder={(lang === 'en' ? "Search by worker ID, name, or position..." : "Tìm theo mã công nhân, họ tên, chức danh...")}
                   value={workerSearch}
@@ -1228,27 +1165,20 @@ export function StaffManagementPage() {
               </div>
 
               <div className="zone-clean-select-wrap">
-                <select
+                <select className="ui-select"
                   value={workerStatusFilter}
                   onChange={(e) => setWorkerStatusFilter(e.target.value)}
                   aria-label={(lang === 'en' ? "Filter by employment status" : "Lọc theo tình trạng làm việc")}
                 >
                   <option value="ALL">{(lang === 'en' ? "All statuses" : "Tất cả tình trạng")}</option>
-                  <option value="active">{(lang === 'en' ? "Active" : "Đang làm việc (Active)")}</option>
-                  <option value="inactive">{(lang === 'en' ? "Inactive" : "Đã nghỉ việc (Inactive)")}</option>
+                  <option value="active">{(lang === 'en' ? "Active" : "Đang làm việc")}</option>
+                  <option value="inactive">{(lang === 'en' ? "Inactive" : "Đã nghỉ việc")}</option>
                   <option value="seasonal">{(lang === 'en' ? "Seasonal" : "Thời vụ (Seasonal)")}</option>
                 </select>
+                <span className="select-arrow"><Icon name="chevron" size={16} /></span>
               </div>
 
-              <div className="zone-clean-actions">
-                <button
-                  type="button"
-                  className="zone-btn zone-btn-primary"
-                  onClick={handleOpenAddWorker}
-                >
-                  <Icon name="plus" size={16} /> {(lang === 'en' ? " Add worker profile" : " Thêm hồ sơ công nhân")}
-                </button>
-              </div>
+              <button type="button" className="zone-clean-reload-btn" title={lang === 'en' ? 'Reset filters' : 'Làm mới bộ lọc'} aria-label={lang === 'en' ? 'Reset filters' : 'Làm mới bộ lọc'} onClick={() => { setWorkerSearch(''); setWorkerStatusFilter('ALL'); }}><Icon name="refresh" size={16} /></button>
             </div>
 
             {loadingWorkers ? (
@@ -1256,80 +1186,63 @@ export function StaffManagementPage() {
                 <div className="zone-spinner" />
                 <p>{(lang === 'en' ? "Loading worker profiles..." : "Đang tải danh sách hồ sơ công nhân...")}</p>
               </div>
-            ) : workers.length === 0 ? (
+            ) : workerLoadError ? (<LoadError message={workerLoadError} onRetry={() => { void loadWorkers(); }} />) : workers.length === 0 ? (
               <div className="zone-clean-empty">
                 <Icon name="users" size={48} />
                 <h3>{(lang === 'en' ? "No worker profiles yet" : "Chưa có hồ sơ công nhân")}</h3>
                 <p>{(lang === 'en' ? "Click \"Add worker profile\" to create worker records under VietGAP standards." : "Nhấn nút \"Thêm hồ sơ công nhân\" để thiết lập hồ sơ người lao động theo tiêu chuẩn VietGAP.")}</p>
               </div>
             ) : (
-              <div className="zone-clean-table-wrap">
-                <table className="zone-clean-table">
+              <>
+              <div className="zone-table-wrap worker-profile-table-wrap ui-table-scroll" tabIndex={0}>
+                <table className="ui-data-table ui-data-table--wide worker-profile-table">
+                  <colgroup>
+                    <col style={{ width: '9%' }} /><col style={{ width: '23%' }} />
+                    <col style={{ width: '19%' }} /><col style={{ width: '12%' }} />
+                    <col style={{ width: '14%' }} /><col style={{ width: '14%' }} />
+                    <col style={{ width: '9%' }} />
+                  </colgroup>
                   <thead>
                     <tr>
-                      <th>{(lang === 'en' ? "Worker ID" : "Mã CN")}</th>
-                      <th>{(lang === 'en' ? "Full Name & Phone" : "Họ tên & SĐT")}</th>
-                      <th>{(lang === 'en' ? "Position / Job title" : "Vị trí / Chức danh")}</th>
-                      <th>{(lang === 'en' ? "Employment start date" : "Ngày vào làm")}</th>
-                      <th>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
-                      <th>{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
-                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                      <th scope="col">{(lang === 'en' ? "Worker ID" : "Mã CN")}</th>
+                      <th scope="col">{(lang === 'en' ? "Full Name & Phone" : "Họ tên & SĐT")}</th>
+                      <th scope="col">{(lang === 'en' ? "Position / Job title" : "Vị trí / Chức danh")}</th>
+                      <th scope="col">{(lang === 'en' ? "Employment start date" : "Ngày vào làm")}</th>
+                      <th scope="col">{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
+                      <th scope="col">{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
+                      <th scope="col">{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {workers
-                      .filter((w) => {
-                        if (workerStatusFilter !== 'ALL' && w.employmentStatus !== workerStatusFilter) return false;
-                        if (workerSearch.trim()) {
-                          const q = workerSearch.toLowerCase();
-                          const matchCode = w.workerCode?.toLowerCase().includes(q);
-                          const matchName = w.fullName?.toLowerCase().includes(q);
-                          const matchJob = w.jobTitle?.toLowerCase().includes(q);
-                          if (!matchCode && !matchName && !matchJob) return false;
-                        }
-                        return true;
-                      })
-                      .map((w) => (
+                    {filteredWorkers.length === 0 && <tr><td colSpan={7}><EmptyState title={lang === 'en' ? 'No matching worker profiles' : 'Không có hồ sơ công nhân phù hợp'} /></td></tr>}
+                    {workerPagination.items.map((w) => (
                         <tr key={w.workerId}>
                           <td>
-                            <span className="profile-tag-pill" style={{ fontWeight: 700 }}>
-                              {w.workerCode}
+                            <span className="worker-profile-code">
+                              {w.workerCode || `#${w.workerId}`}
                             </span>
                           </td>
                           <td>
-                            <strong>{w.fullName}</strong>
+                            <div className="worker-profile-person"><span className="staff-initials-avatar">{parseStaffName(w.fullName).initials}</span><div><strong>{parseStaffName(w.fullName).displayName}</strong>
                             {w.phoneNumber && (
-                              <div style={{ fontSize: '12px', color: '#64748b' }}>📞 {w.phoneNumber}</div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{w.phoneNumber}</div>
                             )}
+                            </div></div>
                           </td>
                           <td>{(lang === 'en' ? w.jobTitle || "Worker" : w.jobTitle || 'Công nhân')}</td>
-                          <td>{w.hiredAt ? new Date(w.hiredAt).toLocaleDateString('vi-VN') : '—'}</td>
+                          <td>{w.hiredAt ? displayDate(w.hiredAt, lang) : '—'}</td>
                           <td>
-                            <span className={`status-badge ${w.employmentStatus === 'active' ? 'status-badge--success' : ''}`}>
+                            <StatusBadge tone={w.employmentStatus === 'active' ? 'success' : 'neutral'} label={<>
                               {(lang === 'en' ? w.employmentStatus === 'active' ? "Active" : w.employmentStatus === 'seasonal' ? "Seasonal" : "Left" : w.employmentStatus === 'active' ? 'Đang làm việc' : w.employmentStatus === 'seasonal' ? 'Thời vụ' : 'Đã nghỉ')}
-                            </span>
+                            </>} />
                           </td>
-                          <td style={{ maxWidth: '200px', fontSize: '12.5px', color: '#64748b' }}>
+                          <td className="worker-profile-notes">
                             {w.notes || '—'}
                           </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', gap: '8px' }}>
-                              <button
-                                type="button"
-                                className="action-button"
-                                onClick={() => handleOpenEditWorker(w)}
-                                style={{ fontSize: '12px', padding: '4px 8px' }}
-                              >
-                                {(lang === 'en' ? "Edit" : "Sửa")}
-                              </button>
-                              <button
-                                type="button"
-                                className="outline-button"
-                                onClick={() => void handleDeleteWorker(w.workerId)}
-                                style={{ fontSize: '12px', padding: '4px 8px', color: '#dc2626', borderColor: '#fca5a5' }}
-                              >
-                                {(lang === 'en' ? "Delete" : "Xóa")}
-                              </button>
+                          <td>
+                            <div className="table-action-btns">
+                              <button type="button" className="table-icon-btn edit" title={lang === 'en' ? 'Edit worker profile' : 'Sửa hồ sơ công nhân'} aria-label={lang === 'en' ? `Edit ${w.fullName}` : `Sửa ${w.fullName}`} onClick={() => handleOpenEditWorker(w)}><Icon name="edit" size={15} /></button>
+                              <button type="button" className="table-icon-btn danger" title={lang === 'en' ? 'Delete worker profile' : 'Xóa hồ sơ công nhân'} aria-label={lang === 'en' ? `Delete ${w.fullName}` : `Xóa ${w.fullName}`} onClick={() => requestAction('worker', w.workerId, w.fullName)}><Icon name="trash" size={15} /></button>
                             </div>
                           </td>
                         </tr>
@@ -1337,8 +1250,10 @@ export function StaffManagementPage() {
                   </tbody>
                 </table>
               </div>
+              <TablePagination {...workerPagination} disabled={loadingWorkers} />
+              </>
             )}
-          </>
+          </div>
         )}
       </div>
 
@@ -1349,7 +1264,7 @@ export function StaffManagementPage() {
         title={lang === 'en' ? 'Add Staff to Farm' : 'Thêm nhân viên vào trang trại'}
         headerIcon={<Icon name="users" size={20} />}
       >
-        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b', lineHeight: 1.5 }}>
+        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--color-muted)', lineHeight: 1.5 }}>
           {(lang === 'en' ? "Enter an existing MyCropDiary user's email to grant farm access." : "Nhập email của người dùng đã có tài khoản trên MyCropDiary để cấp quyền làm việc tại trang trại.")}
         </p>
         <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1361,12 +1276,12 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="add-staff-email" className="structured-field-label">
-                {(lang === 'en' ? "Staff account email " : "Email tài khoản nhân viên ")} <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Staff account email " : "Email tài khoản nhân viên ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              <label htmlFor="add-staff-email" className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="add-staff-email"
                 type="email"
                 required
@@ -1380,12 +1295,12 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="add-staff-role" className="structured-field-label">
-                {(lang === 'en' ? "Farm role " : "Vai trò of trang trại ")} <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Farm role " : "Vai trò trong trang trại ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Phân quyền")}</span>
+              <label htmlFor="add-staff-role" className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Phân quyền")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <select
+              <select className="ui-select"
                 id="add-staff-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
@@ -1401,10 +1316,10 @@ export function StaffManagementPage() {
               <label htmlFor="add-staff-job-title" className="structured-field-label">
                 {(lang === 'en' ? "Professional title" : "Chức danh chuyên môn")}
               </label>
-              <span className="structured-field-badge">Showing</span>
+              <label htmlFor="add-staff-job-title" className="structured-field-badge">{translate("Showing")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="add-staff-job-title"
                 type="text"
                 maxLength={100}
@@ -1416,12 +1331,12 @@ export function StaffManagementPage() {
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={() => setIsAddStaffOpen(false)} disabled={savingStaff}>
+            <Button type="button" variant="secondary" onClick={() => setIsAddStaffOpen(false)} disabled={savingStaff}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
-            </button>
-            <button type="submit" className="primary-button" disabled={savingStaff}>
+            </Button>
+            <Button type="submit" variant="primary" loading={savingStaff}>
               {savingStaff ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Add Staff' : 'Thêm nhân viên')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -1433,19 +1348,20 @@ export function StaffManagementPage() {
         title={(lang === 'en' ? `Edit staff: ${editingStaff?.fullName || ''}` : `Chỉnh sửa nhân viên: ${editingStaff?.fullName || ''}`)}
         headerIcon={<Icon name="edit" size={20} />}
       >
-        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b' }}>
+        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--color-muted)' }}>
           {(lang === 'en' ? "Update the member's role, professional title, or employment status." : "Cập nhật vai trò, chức danh chuyên môn hoặc trạng thái làm việc của thành viên.")}
         </p>
         <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="edit-staff-role" className="structured-field-label">
-                {(lang === 'en' ? "Farm role " : "Vai trò of trang trại ")} <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Farm role " : "Vai trò trong trang trại ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Quyền hạn")}</span>
+              <label htmlFor="edit-staff-role" className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Quyền hạn")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <select
+              <select className="ui-select"
                 id="edit-staff-role"
                 value={editRole}
                 onChange={(e) => setEditRole(e.target.value as 'OWNER' | 'STAFF')}
@@ -1461,10 +1377,10 @@ export function StaffManagementPage() {
               <label htmlFor="edit-staff-job-title" className="structured-field-label">
                 {(lang === 'en' ? "Professional title" : "Chức danh chuyên môn")}
               </label>
-              <span className="structured-field-badge">{(lang === 'en' ? "Custom" : "Tùy chỉnh")}</span>
+              <label htmlFor="edit-staff-job-title" className="structured-field-badge">{(lang === 'en' ? "Custom" : "Tùy chỉnh")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="edit-staff-job-title"
                 type="text"
                 maxLength={100}
@@ -1480,27 +1396,27 @@ export function StaffManagementPage() {
               <label htmlFor="edit-staff-status" className="structured-field-label">
                 {(lang === 'en' ? "Employment status" : "Trạng thái làm việc")}
               </label>
-              <span className="structured-field-badge">{lang === 'en' ? 'Status' : 'Trạng thái'}</span>
+              <label htmlFor="edit-staff-status" className="structured-field-badge">{lang === 'en' ? 'Status' : 'Trạng thái'}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <select
+              <select className="ui-select"
                 id="edit-staff-status"
                 value={editStatus}
                 onChange={(e) => setEditStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
               >
-                <option value="ACTIVE">Active (ACTIVE)</option>
+                <option value="ACTIVE">{translate("Active (ACTIVE)")}</option>
                 <option value="INACTIVE">{(lang === 'en' ? "Suspended (INACTIVE)" : "Tạm ngưng (INACTIVE)")}</option>
               </select>
             </div>
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={() => setEditingStaff(null)} disabled={savingEdit}>
+            <Button type="button" variant="secondary" onClick={() => setEditingStaff(null)} disabled={savingEdit}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
-            </button>
-            <button type="submit" className="primary-button" disabled={savingEdit}>
+            </Button>
+            <Button type="submit" variant="primary" loading={savingEdit}>
               {(lang === 'en' ? savingEdit ? "Saving..." : "Save changes" : savingEdit ? 'Đang lưu...' : 'Lưu thay đổi')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -1510,9 +1426,9 @@ export function StaffManagementPage() {
         open={isAssignOpen}
         onClose={() => setIsAssignOpen(false)}
         title={(lang === 'en' ? "Assign staff to a zone" : "Phân công staff phụ trách phân khu")}
-        headerIcon={<Icon name="blocks" size={20} />}
+        headerIcon={<Icon name="plots" size={20} />}
       >
-        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b' }}>
+        <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: 'var(--color-muted)' }}>
           {(lang === 'en' ? "Assign an engineer or technical staff member to supervise and maintain VietGAP farming records for the production zone." : "Chỉ định kỹ sư hoặc nhân viên kỹ thuật chịu trách nhiệm giám sát và ghi chép nhật ký canh tác theo chuẩn VietGAP cho phân khu sản xuất.")}
         </p>
         <form onSubmit={handleAssignZone} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -1525,17 +1441,17 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="assign-staff-select" className="structured-field-label">
-                {(lang === 'en' ? "Select assigned staff " : "Chọn staff phụ trách ")} <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Select assigned staff " : "Chọn staff phụ trách ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
               <span className="structured-field-badge">{activeStaffOptions.length} {(lang === 'en' ? " available staff" : " staff khả dụng")}</span>
             </div>
             {activeStaffOptions.length === 0 ? (
-              <p style={{ color: '#dc2626', fontSize: '13.5px', margin: 0 }}>
+              <p style={{ color: 'var(--color-danger)', fontSize: '13.5px', margin: 0 }}>
                 {(lang === 'en' ? "⚠️ The farm has no active staff. Add staff before assigning." : "⚠️ Trang trại chưa có staff đang hoạt động. Vui lòng thêm nhân viên trước khi phân công.")}
               </p>
             ) : (
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select
+                <select className="ui-select"
                   id="assign-staff-select"
                   required
                   value={assignStaffId}
@@ -1544,7 +1460,7 @@ export function StaffManagementPage() {
                   <option value="">{(lang === 'en' ? "-- Select staff member --" : "-- Chọn thành viên phụ trách --")}</option>
                   {activeStaffOptions.map((s) => (
                     <option key={s.farmMemberId} value={s.farmMemberId}>
-                      {s.fullName} ({s.email}) — {(lang === 'en' ? s.roleLabel || "Staff" : s.roleLabel || 'Nhân sự')}
+                      {s.fullName} ({s.email}) — {(s.jobTitle || translate(s.roleLabel || "Staff"))}
                     </option>
                   ))}
                 </select>
@@ -1556,17 +1472,17 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="assign-zone-select" className="structured-field-label">
-                {(lang === 'en' ? "Assigned production zone " : "Phân khu sản xuất tiếp nhận ")} <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Assigned production zone " : "Phân khu sản xuất tiếp nhận ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
               <span className="structured-field-badge">{zones.length} {(lang === 'en' ? " zones" : " phân khu")}</span>
             </div>
-            {zones.length === 0 ? (
-              <p style={{ color: '#dc2626', fontSize: '13.5px', margin: 0 }}>
-                {(lang === 'en' ? "⚠️ This farm has no production zones. Create a zone first." : "⚠️ Chưa có phân khu sản xuất nào of trang trại. Vui lòng tạo phân khu trước.")}
+            {zoneLoadError ? <LoadError message={zoneLoadError} onRetry={() => { void loadData(); }} /> : zones.length === 0 ? (
+              <p style={{ color: 'var(--color-danger)', fontSize: '13.5px', margin: 0 }}>
+                {(lang === 'en' ? "⚠️ This farm has no production zones. Create a zone first." : "⚠️ Trang trại chưa có khu vực sản xuất. Vui lòng tạo khu vực trước.")}
               </p>
             ) : (
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select
+                <select className="ui-select"
                   id="assign-zone-select"
                   required
                   value={assignZoneId}
@@ -1588,12 +1504,12 @@ export function StaffManagementPage() {
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="assign-start-date" className="structured-field-label">
-                  {(lang === 'en' ? "Assignment start date " : "Ngày bắt đầu phụ trách ")} <span style={{ color: '#dc2626' }}>*</span>
+                  {(lang === 'en' ? "Assignment start date " : "Ngày bắt đầu phụ trách ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
-                <span className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</span>
+                <label htmlFor="assign-start-date" className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <input
+                <input className="ui-input"
                   id="assign-start-date"
                   type="date"
                   required
@@ -1608,10 +1524,10 @@ export function StaffManagementPage() {
                 <label htmlFor="assign-notes" className="structured-field-label">
                   {(lang === 'en' ? "Tasks & Notes" : "Nhiệm vụ & Ghi chú")}
                 </label>
-                <span className="structured-field-badge">{assignNotes.length}{(lang === 'en' ? "/200 characters" : "/200 ký tự")}</span>
+                <label htmlFor="assign-notes" className="structured-field-badge">{assignNotes.length}{(lang === 'en' ? "/200 characters" : "/200 ký tự")}</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <input
+                <input className="ui-input"
                   id="assign-notes"
                   type="text"
                   maxLength={200}
@@ -1624,16 +1540,16 @@ export function StaffManagementPage() {
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={() => setIsAssignOpen(false)} disabled={savingAssign}>
+            <Button type="button" variant="secondary" onClick={() => setIsAssignOpen(false)} disabled={savingAssign}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="primary-button"
+              variant="primary"
               disabled={savingAssign || !assignStaffId || !assignZoneId}
             >
               {(lang === 'en' ? savingAssign ? "Assigning..." : "Confirm assignment" : savingAssign ? 'Đang phân công...' : 'Xác nhận phân công')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -1646,106 +1562,121 @@ export function StaffManagementPage() {
         headerIcon={<Icon name="users" size={20} />}
       >
         <form onSubmit={handleSaveWorker} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+          {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+          <div className="structured-field-card">
+            <label htmlFor="staff-management-page-field-1">
               {(lang === 'en' ? "Farm member *" : "Thành viên trang trại *")}
             </label>
-            <select
+            <select id="staff-management-page-field-1" className="ui-select"
               required
               disabled={!!editingWorker}
               value={workerForm.farmMemberId}
               onChange={(e) => setWorkerForm((p) => ({ ...p, farmMemberId: Number(e.target.value) }))}
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              style={{ width: '100%', padding: '9px 12px' }}
             >
               <option value={0}>{(lang === 'en' ? "-- Select staff member --" : "-- Chọn thành viên nhân sự --")}</option>
               {staffList.map((s) => (
                 <option key={s.farmMemberId} value={s.farmMemberId}>
-                  {s.fullName} ({s.email}) - {translate(s.roleLabel)}
+                  {s.fullName} ({s.email}) - {s.jobTitle || translate(s.roleLabel)}
                 </option>
               ))}
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+          <div className="ui-form-grid" >
+            <div className="structured-field-card">
+              <label htmlFor="staff-management-page-control-1">
                 {(lang === 'en' ? "Worker code *" : "Mã công nhân *")}
               </label>
-              <input
+              <input id="staff-management-page-control-1" className="ui-input"
                 type="text"
                 required
                 value={workerForm.workerCode}
                 onChange={(e) => setWorkerForm((p) => ({ ...p, workerCode: e.target.value }))}
                 placeholder={(lang === 'en' ? "e.g. CN-001" : "VD: CN-001")}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+            <div className="structured-field-card">
+              <label htmlFor="staff-management-page-field-2">
                 {(lang === 'en' ? "Position / Job title" : "Vị trí / Chức danh")}
               </label>
-              <input
+              <input id="staff-management-page-field-2" className="ui-input"
                 type="text"
                 value={workerForm.jobTitle || ''}
                 onChange={(e) => setWorkerForm((p) => ({ ...p, jobTitle: e.target.value }))}
                 placeholder={(lang === 'en' ? "Example: Harvest worker, Sprayer..." : "VD: Công nhân thu hoạch, Phun thuốc...")}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+          <div className="ui-form-grid" >
+            <div className="structured-field-card">
+              <label htmlFor="staff-management-page-field-3">
                 {(lang === 'en' ? "Employment status *" : "Tình trạng làm việc *")}
               </label>
-              <select
+              <select id="staff-management-page-field-3" className="ui-select"
                 required
                 value={workerForm.employmentStatus || 'active'}
                 onChange={(e) => setWorkerForm((p) => ({ ...p, employmentStatus: e.target.value }))}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               >
-                <option value="active">{(lang === 'en' ? "Active" : "Đang làm việc (Active)")}</option>
+                <option value="active">{(lang === 'en' ? "Active" : "Đang làm việc")}</option>
                 <option value="seasonal">{(lang === 'en' ? "Seasonal worker" : "Lao động thời vụ (Seasonal)")}</option>
-                <option value="inactive">{(lang === 'en' ? "Inactive" : "Đã nghỉ việc (Inactive)")}</option>
+                <option value="inactive">{(lang === 'en' ? "Inactive" : "Đã nghỉ việc")}</option>
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+            <div className="structured-field-card">
+              <label htmlFor="staff-management-page-field-4">
                 {(lang === 'en' ? "Employment start date" : "Ngày vào làm")}
               </label>
-              <input
+              <input id="staff-management-page-field-4" className="ui-input"
                 type="date"
                 value={workerForm.hiredAt || ''}
                 onChange={(e) => setWorkerForm((p) => ({ ...p, hiredAt: e.target.value }))}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
           </div>
 
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+          <div className="structured-field-card">
+            <label htmlFor="staff-management-page-field-5">
               {(lang === 'en' ? "Profile notes" : "Ghi chú hồ sơ")}
             </label>
-            <textarea
+            <textarea id="staff-management-page-field-5" className="ui-textarea"
               rows={2}
               value={workerForm.notes || ''}
               onChange={(e) => setWorkerForm((p) => ({ ...p, notes: e.target.value }))}
               placeholder={(lang === 'en' ? "Note experience and existing VietGAP certifications..." : "Ghi chú kinh nghiệm, chứng chỉ VietGAP đã có...")}
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              style={{ width: '100%', padding: '9px 12px' }}
             />
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={() => setIsWorkerModalOpen(false)}>
+            <Button type="button" variant="secondary" onClick={() => setIsWorkerModalOpen(false)}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
-            </button>
-            <button type="submit" className="primary-button" disabled={savingWorker}>
+            </Button>
+            <Button type="submit" variant="primary" loading={savingWorker}>
               {(lang === 'en' ? savingWorker ? "Saving..." : editingWorker ? "Save changes" : "Add profile" : savingWorker ? 'Đang lưu...' : editingWorker ? 'Lưu thay đổi' : 'Thêm hồ sơ')}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
+      <ConfirmDialog open={Boolean(pendingAction)}
+        title={pendingAction?.kind === 'worker' ? (lang === 'en' ? 'Delete worker profile' : 'Xóa hồ sơ công nhân')
+          : pendingAction?.kind === 'deactivate' ? (lang === 'en' ? 'Deactivate member' : 'Ngừng kích hoạt thành viên')
+          : (lang === 'en' ? 'Cancel assignment' : 'Hủy phân công')}
+        description={pendingAction?.kind === 'worker' ? (lang === 'en' ? 'Are you sure you want to delete this worker profile?' : 'Bạn có chắc chắn muốn xóa hồ sơ công nhân này?')
+          : pendingAction?.kind === 'deactivate' ? (lang === 'en' ? `Deactivate member "${pendingAction.name}" from the farm?` : `Ngừng kích hoạt thành viên "${pendingAction.name}" khỏi trang trại?`)
+          : (lang === 'en' ? 'Are you sure you want to cancel this assignment?' : 'Bạn có chắc muốn hủy lượt phân công này?')}
+        tone="danger" loading={confirmingAction}
+        onClose={() => setPendingAction(null)} onConfirm={() => void confirmPendingAction()} />
+      <ConfirmDialog open={Boolean(deleteWorkerTarget)} title={lang === 'en' ? 'Remove farm member' : 'Xóa thành viên trang trại'}
+        description={lang === 'en' ? 'This revokes farm access and related assignments.' : 'Thao tác này sẽ hủy quyền truy cập trang trại và các phân công liên quan.'}
+        confirmLabel={lang === 'en' ? 'Remove member' : 'Xóa thành viên'} tone="danger" loading={deletingWorker}
+        onClose={() => { if (!deletingWorker) setDeleteWorkerTarget(null); }}
+        onConfirm={() => { if (deleteWorkerTarget) void handleDeleteStaff(deleteWorkerTarget.farmMemberId, deleteWorkerTarget.fullName); }} />
     </section>
   );
 }

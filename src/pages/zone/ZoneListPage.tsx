@@ -1,13 +1,25 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
-import { farmRole } from '../../features/auth/accessPolicy';
+import { message, type TranslationMessage } from "../../shared/i18n/translate";
+import { TabList, tabPanelProps } from '../../shared/components/TabList';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { PageHeading } from '../../shared/components/PageHeading';
+import { Button } from '../../shared/components/Button';
+import { TablePagination } from '../../shared/components/TablePagination';
+import { Link } from 'react-router-dom';
 import { Icon } from '../../shared/components/Icon';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { ZoneModal } from '../../features/production/components/ZoneModal';
 import { BlockModal } from '../../features/production/components/BlockModal';
 import { RecordConditionModal } from '../../features/production/components/RecordConditionModal';
 import { AssignStaffModal } from '../../features/production/components/AssignStaffModal';
+
+import { formatNumber as displayNumber } from '../../shared/format/formatters';
+import { usePagination } from '../../shared/hooks/usePagination';
+
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
+import { farmRole } from '../../features/auth/accessPolicy';
+
 import {
   fetchZonesByFarm,
   fetchAssignedZones,
@@ -51,7 +63,7 @@ export function ZoneListPage() {
   const [assignments, setAssignments] = useState<StaffZoneAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
 
   // Screen 1: Zones Filters
   const [zoneKeyword, setZoneKeyword] = useState('');
@@ -86,7 +98,7 @@ export function ZoneListPage() {
     void loadData(true);
   });
 
-  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+  const showToast = (text: TranslationMessage, type: 'success' | 'error' = 'success') => {
     setNotification({ text, type });
     setTimeout(() => setNotification(null), 4000);
   };
@@ -204,6 +216,9 @@ export function ZoneListPage() {
     });
   }, [visibleBlocks, blockKeyword, selectedZoneFilter]);
 
+  const zonePagination = usePagination(filteredZones, JSON.stringify([farmId, zoneKeyword, assignedStaffFilter]));
+  const blockPagination = usePagination(filteredBlocks, JSON.stringify([farmId, blockKeyword, selectedZoneFilter]));
+
   const totalZoneAreaM2 = zones.reduce(
     (acc, z) => acc + (z.areaUnit === 'ha' ? z.areaValue * 10000 : z.areaValue || 0),
     0
@@ -248,9 +263,9 @@ export function ZoneListPage() {
     try {
       await deleteZone(zoneToDelete.zoneId);
       setZones((prev) => prev.filter((item) => item.zoneId !== zoneToDelete.zoneId));
-      showToast((lang === 'en' ? `Deleted Zone "${zoneToDelete.zoneName}" successfully!` : `Đã xóa Zone "${zoneToDelete.zoneName}" thành công!`));
+      showToast((message("Deleted Zone \"{value1}\" successfully!", { value1: zoneToDelete.zoneName })));
     } catch (err) {
-      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Cannot delete Zone with linked data." : err instanceof Error ? err.message : 'Không thể xóa Zone khi đang có dữ liệu liên kết.'), 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Cannot delete Zone with linked data." : err instanceof Error ? err.message : 'Không thể xóa khu vực khi đang có dữ liệu liên kết.'), 'error');
     } finally {
       setZoneToDelete(null);
     }
@@ -259,7 +274,7 @@ export function ZoneListPage() {
   const handleCreateBlockClick = (zone?: Zone) => {
     const targetZone = zone || visibleZones[0];
     if (!targetZone) {
-      showToast((lang === 'en' ? "Create at least 1 Zone before creating a Block!" : 'Vui lòng tạo ít nhất 1 Zone trước khi tạo Block!'), 'error');
+      showToast((lang === 'en' ? "Create at least 1 Zone before creating a Block!" : 'Vui lòng tạo ít nhất một khu vực trước khi tạo lô sản xuất!'), 'error');
       return;
     }
     setBlockToEdit(null);
@@ -282,9 +297,9 @@ export function ZoneListPage() {
     try {
       await deleteBlock(blockToDelete.blockId);
       setBlocks((prev) => prev.filter((item) => item.blockId !== blockToDelete.blockId));
-      showToast((lang === 'en' ? `Deleted Block "${blockToDelete.blockName}" successfully!` : `Đã xóa Block "${blockToDelete.blockName}" thành công!`));
+      showToast((message("Deleted Block \"{value1}\" successfully!", { value1: blockToDelete.blockName })));
     } catch (err) {
-      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Cannot delete Block with linked seasons or condition records." : err instanceof Error ? err.message : 'Không thể xóa Block khi đang có hồ sơ mùa vụ/điều kiện liên kết.'), 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Cannot delete Block with linked seasons or condition records." : err instanceof Error ? err.message : 'Không thể xóa lô sản xuất khi đang có hồ sơ mùa vụ/điều kiện liên kết.'), 'error');
     } finally {
       setBlockToDelete(null);
     }
@@ -303,7 +318,7 @@ export function ZoneListPage() {
       <div className="zone-stats-sr-only" style={{ position: 'absolute', width: '1px', height: '1px', padding: 0, margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: 0 }}>
         <span className="stat-number">{(lang === 'en' ? statsReady ? `${zones.length} zones` : "—" : statsReady ? `${zones.length} khu` : '—')}</span>
         <span className="stat-number">{(lang === 'en' ? statsReady ? `${blocks.length} blocks` : "—" : statsReady ? `${blocks.length} lô` : '—')}</span>
-        <span className="stat-number">{statsReady ? `${totalZoneAreaM2.toLocaleString('vi-VN')} m²` : '—'}</span>
+        <span className="stat-number">{statsReady ? `${displayNumber(totalZoneAreaM2, lang)} m²` : '—'}</span>
         <span className="stat-number">{(lang === 'en' ? statsReady ? `${activeZonesCount} zones` : "—" : statsReady ? `${activeZonesCount} khu` : '—')}</span>
       </div>
 
@@ -328,118 +343,71 @@ export function ZoneListPage() {
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
-        <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+      <PageHeading   title={<>
             {activeTab === 'zones' ? (lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất') : (lang === 'en' ? 'Production Blocks' : 'Lô sản xuất')}
-          </h1>
-          <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+          </>} description={<>
             {statsReady
               ? (lang === 'en'
-                ? `${zones.length} zones · ${blocks.length} blocks · Total Area: ${totalZoneAreaM2.toLocaleString('en-US')} m²`
-                : `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${totalZoneAreaM2.toLocaleString('vi-VN')} m²`)
-              : (lang === 'en' ? 'Loading zones and blocks...' : 'Đang tải dữ liệu khu vực và Block...')}
-          </p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                ? `${zones.length} zones · ${blocks.length} blocks · Total Area: ${displayNumber(totalZoneAreaM2, lang)} m²`
+                : `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${displayNumber(totalZoneAreaM2, lang)} m²`)
+              : (lang === 'en' ? 'Loading zones and blocks...' : 'Đang tải dữ liệu khu vực và lô sản xuất...')}
+          </>}><div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {isOwner && activeTab === 'zones' && (
-            <button
+            <Button
               type="button"
-              className="primary-button"
+              variant="primary"
               onClick={handleCreateZoneClick}
-              style={{
-                padding: '10px 18px',
-                fontSize: '14px',
-                fontWeight: 700,
-                borderRadius: '10px',
-                background: '#059669',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-              }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Zone' : 'Thêm khu vực'}
-            </button>
+            </Button>
           )}
 
           {isOwner && activeTab === 'blocks' && (
-            <button
+            <Button
               type="button"
-              className="primary-button"
+              variant="primary"
               onClick={() => handleCreateBlockClick()}
-              style={{
-                padding: '10px 18px',
-                fontSize: '14px',
-                fontWeight: 700,
-                borderRadius: '10px',
-                background: '#059669',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
-              }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
-              <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Block' : 'Thêm Block'}
-            </button>
+              <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Block' : 'Thêm lô sản xuất'}
+            </Button>
           )}
-        </div>
-      </div>
+        </div></PageHeading>
 
       {/* Loading & Error States */}
       {loading && (
-        <div className="panel empty-state">
-          <div className="empty-icon">⏳</div>
-          <h2>{(lang === 'en' ? "Loading zones & production blocks..." : "Đang tải dữ liệu phân khu & lô sản xuất...")}</h2>
-          <p>{(lang === 'en' ? "Syncing zones and production blocks from the farm server." : "Hệ thống đang đồng bộ danh sách khu vực và lô sản xuất từ máy chủ trang trại.")}</p>
-        </div>
+        <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading zones & production blocks..." : "Đang tải dữ liệu phân khu & lô sản xuất...")}</>} description={<>{(lang === 'en' ? "Syncing zones and production blocks from the farm server." : "Hệ thống đang đồng bộ danh sách khu vực và lô sản xuất từ máy chủ trang trại.")}</>} icon={<>⏳</>} />
       )}
 
       {!loading && error && (
-        <div className="panel empty-state" role="alert">
-          <div className="empty-icon">⚠️</div>
-          <h2>{(lang === 'en' ? "Unable to load zones" : "Không thể tải danh sách phân khu")}</h2>
-          <p>{translate(error)}</p>
-          <button type="button" className="primary-button" onClick={() => void loadData()}>
+        <EmptyState role="alert" className="panel" title={<>{(lang === 'en' ? "Unable to load zones" : "Không thể tải danh sách phân khu")}</>} description={<>{translate(error)}</>} icon={<>⚠️</>} action={<><Button type="button" variant="primary" onClick={() => void loadData()}>
             {(lang === 'en' ? "Retry" : "Thử lại")}
-          </button>
-        </div>
+          </Button></>} />
       )}
 
       {/* Main Unified Clean Card Container matching Mockup */}
       {!loading && !error && (
         <div className="zone-clean-card">
           {/* Integrated Tabs */}
-          <div className="zone-integrated-tabs">
-            <button
-              type="button"
-              className={`zone-integrated-tab-btn ${activeTab === 'zones' ? 'active' : ''}`}
-              onClick={() => setActiveTab('zones')}
-            >
-              <Icon name="book" size={17} /> {lang === 'en' ? 'Zones' : 'Khu vực'} <span className="tab-count">({visibleZones.length})</span>
-            </button>
-            <button
-              type="button"
-              className={`zone-integrated-tab-btn ${activeTab === 'blocks' ? 'active' : ''}`}
-              onClick={() => setActiveTab('blocks')}
-            >
-              <Icon name="leaf" size={17} /> {lang === 'en' ? 'Blocks' : 'Block'} <span className="tab-count">({visibleBlocks.length})</span>
-            </button>
-          </div>
+          <TabList idPrefix="zone-list" label={lang === 'en' ? 'Production area sections' : 'Các mục khu vực sản xuất'} inset
+            value={activeTab} onChange={setActiveTab} items={[
+              { value: 'zones', label: <><Icon name="book" size={17} /> {lang === 'en' ? 'Zones' : 'Khu vực'} <span className="tab-count">({visibleZones.length})</span></> },
+              { value: 'blocks', label: <><Icon name="leaf" size={17} /> {lang === 'en' ? 'Blocks' : 'Block'} <span className="tab-count">({visibleBlocks.length})</span></> },
+            ]} />
 
           {/* =========================================================
               TAB 1: ZONES (Danh sách Khu vực)
              ========================================================= */}
           {activeTab === 'zones' && (
-            <>
+            <div {...tabPanelProps('zone-list', 'zones')}>
               {/* Filter Bar for Zones */}
               <div className="zone-clean-filter-bar">
                 <div className="zone-clean-search">
-                  <span className="search-icon">
+                  <span className="search-icon" aria-hidden="true">
                     <Icon name="search" size={17} />
                   </span>
-                  <input
+                  <input aria-label={lang === 'en' ? 'Search by zone name or code...' : 'Tìm theo tên hoặc mã khu vực'} className="ui-input"
                     id="search-zones-input"
                     type="search"
                     placeholder={lang === 'en' ? 'Search by zone name or code...' : 'Tìm theo tên hoặc mã khu vực'}
@@ -450,7 +418,7 @@ export function ZoneListPage() {
 
                 {isOwner && (
                   <div className="zone-clean-select-wrap">
-                    <select
+                    <select className="ui-select"
                       id="assigned-staff-filter"
                       value={assignedStaffFilter}
                       onChange={(e) => setAssignedStaffFilter(e.target.value)}
@@ -481,98 +449,93 @@ export function ZoneListPage() {
               </div>
 
               {filteredZones.length === 0 ? (
-                <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
-                  <div className="empty-icon">🗺️</div>
-                  <h2>{lang === 'en' ? 'No production zones found' : 'Chưa tìm thấy phân khu nào'}</h2>
-                  <p>
+                <EmptyState  className="panel" title={<>{lang === 'en' ? 'No production zones found' : 'Chưa tìm thấy phân khu nào'}</>} description={<>
                     {isOwner
                       ? (lang === 'en' ? 'Click "Add Zone" to set up the first production zone for your farm.' : 'Hãy nhấn "Thêm khu vực" để thiết lập khu vực quản lý đầu tiên cho trang trại.')
                       : (lang === 'en' ? 'You have not been assigned to any zones in this farm.' : 'Bạn hiện chưa được phân công phụ trách khu vực nào trong trang trại này.')}
-                  </p>
-                  {isOwner && (
-                    <button type="button" className="primary-button" onClick={handleCreateZoneClick}>
+                  </>} icon={<>🗺️</>} action={<>{isOwner && (
+                    <Button type="button" variant="primary" onClick={handleCreateZoneClick}>
                       <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Zone' : 'Thêm khu vực'}
-                    </button>
-                  )}
-                </div>
+                    </Button>
+                  )}</>} />
               ) : (
                 <>
-                  <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-                    <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
+                    <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                       <thead>
-                        <tr style={{ background: '#f8fafc' }}>
-                          <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                        <tr style={{ background: 'var(--color-page)' }}>
+                          <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
                             <input type="checkbox" aria-label={(lang === 'en' ? "Select all" : "Chọn tất cả")} style={{ cursor: 'pointer' }} />
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'Zone Name' : 'Tên khu vực'}
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'Zone Code' : 'Mã khu vực'}
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'Area' : 'Diện tích'}
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'Blocks' : 'Lô đất'}
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'In Charge' : 'Phụ trách'}
                           </th>
-                          <th style={{ width: '120px', padding: '14px 16px', textAlign: 'right' }}>
-                            &nbsp;
+                          <th scope="col" style={{ width: '120px', textAlign: 'right' }}>
+                            {lang === 'en' ? 'Actions' : 'Thao tác'}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredZones.map((zone) => {
+                        {zonePagination.items.map((zone) => {
                           const blockCount = blockCountByZoneMap.get(zone.zoneId) ?? zone.totalBlocks ?? 0;
                           const zoneStaff = staffByZoneMap.get(zone.zoneId) || [];
                           const canDelete = isOwner && blockCount === 0;
                           const codeDisplay = zone.areaCode || `KV-${String(zone.zoneId).padStart(3, '0')}`;
 
                           return (
-                            <tr key={zone.zoneId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <tr key={zone.zoneId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                              <td style={{ textAlign: 'center' }}>
                                 <input type="checkbox" aria-label={(lang === 'en' ? `Select ${zone.zoneName}` : `Chọn ${zone.zoneName}`)} style={{ cursor: 'pointer' }} />
                               </td>
 
-                              <td style={{ padding: '14px 16px' }}>
+                              <td>
                                 <Link
                                   to={`/zones/${zone.zoneId}`}
                                   style={{
                                     fontWeight: 750,
                                     fontSize: '15px',
-                                    color: '#0f172a',
+                                    color: 'var(--color-text)',
                                     textDecoration: 'none',
                                     display: 'block',
                                     transition: 'color 0.15s ease',
                                   }}
-                                  onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
-                                  onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                                  onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--color-primary-text)')}
+                                  onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                                 >
                                   {zone.zoneName}
                                 </Link>
-                                <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--color-muted)', display: 'block', marginTop: '3px' }}>
                                   {(lang === 'en' ? zone.description || "VietGAP farming management zone" : zone.description || 'Khu vực quản lý canh tác VietGAP')}
                                 </span>
                               </td>
 
-                              <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#334155', fontWeight: 500 }}>
+                              <td style={{ fontSize: '13.5px', color: 'var(--color-body)', fontWeight: 500 }}>
                                 {codeDisplay}
                               </td>
 
-                              <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#0f172a', fontWeight: 600 }}>
-                                {zone.areaValue.toLocaleString('vi-VN')} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
+                              <td style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 600 }}>
+                                {displayNumber(zone.areaValue, lang)} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
                               </td>
 
-                              <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#334155' }}>
+                              <td style={{ fontSize: '13.5px', color: 'var(--color-body)' }}>
                                 {blockCount} {(lang === 'en' ? " blocks" : " lô")}
                               </td>
 
-                              <td style={{ padding: '14px 16px' }}>
+                              <td>
                                 {zoneStaff.length === 0 ? (
-                                  <span style={{ color: '#94a3b8', fontSize: '13px', fontStyle: 'italic' }}>
+                                  <span style={{ color: 'var(--color-muted)', fontSize: '13px', fontStyle: 'italic' }}>
                                     {(lang === 'en' ? "Unassigned" : "Chưa phân công")}
                                   </span>
                                 ) : (
@@ -580,11 +543,11 @@ export function ZoneListPage() {
                                     <div className="staff-initials-avatar">
                                       {getStaffInitials(zoneStaff[0].staffName)}
                                     </div>
-                                    <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#0f172a' }}>
+                                    <span style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--color-text)' }}>
                                       {zoneStaff[0].staffName || `Staff #${zoneStaff[0].farmMemberId}`}
                                     </span>
                                     {zoneStaff.length > 1 && (
-                                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+                                      <span style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>
                                         +{zoneStaff.length - 1}
                                       </span>
                                     )}
@@ -592,13 +555,13 @@ export function ZoneListPage() {
                                 )}
                               </td>
 
-                              <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                              <td style={{ textAlign: 'right' }}>
                                 <div className="table-action-btns zone-card-actions">
                                   <Link
                                     to={`/zones/${zone.zoneId}`}
                                     className="table-icon-btn primary"
-                                    title={(lang === 'en' ? "View zone details" : "View Details phân khu")}
-                                    aria-label={`View Details ${zone.zoneName}`}
+                                    title={(lang === 'en' ? "View zone details" : "Xem chi tiết khu vực")}
+                                    aria-label={translate("View Details") + " " + (zone.zoneName)}
                                   >
                                     <Icon name="eye" size={15} />
                                   </Link>
@@ -607,8 +570,8 @@ export function ZoneListPage() {
                                       <button
                                         type="button"
                                         className="table-icon-btn edit"
-                                        title={(lang === 'en' ? "Edit zone" : "Edit khu vực")}
-                                        aria-label={`Edit ${zone.zoneName}`}
+                                        title={(lang === 'en' ? "Edit zone" : "Chỉnh sửa khu vực")}
+                                        aria-label={translate("Edit") + " " + (zone.zoneName)}
                                         onClick={() => handleEditZoneClick(zone)}
                                       >
                                         <Icon name="edit" size={15} />
@@ -634,7 +597,7 @@ export function ZoneListPage() {
                                             ? 'Delete khu vực'
                                             : `Không thể xóa khi còn ${blockCount} Block liên kết`)
                                         }
-                                        aria-label={`Delete ${zone.zoneName}`}
+                                        aria-label={translate("Delete") + " " + (zone.zoneName)}
                                         onClick={() => handleAttemptDeleteZone(zone)}
                                       >
                                         <Icon name="trash" size={15} />
@@ -651,49 +614,34 @@ export function ZoneListPage() {
                   </div>
 
                   {/* Table Footer matching mockup */}
-                  <div className="zone-table-footer">
-                    <div>
-                      {(lang === 'en' ? "Showing 1–" : "Hiển thị 1–")}{filteredZones.length} {(lang === 'en' ? " of " : " trong ")} {filteredZones.length} {(lang === 'en' ? " zones" : " khu vực")}
-                    </div>
-                    <div className="zone-pagination-wrap">
-                      <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Previous page" : "Trang trước")}>
-                        <Icon name="chevron-left" size={15} />
-                      </button>
-                      <button type="button" className="zone-page-btn active">
-                        1
-                      </button>
-                      <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Next page" : "Trang sau")}>
-                        <Icon name="chevron-right" size={15} />
-                      </button>
-                    </div>
-                  </div>
+                  <TablePagination {...zonePagination} disabled={loading} />
                 </>
               )}
-            </>
+            </div>
           )}
 
           {/* =========================================================
               TAB 2: BLOCKS (Danh sách Block)
              ========================================================= */}
           {activeTab === 'blocks' && (
-            <>
+            <div {...tabPanelProps('zone-list', 'blocks')}>
               {/* Filter Bar for Blocks */}
               <div className="zone-clean-filter-bar">
                 <div className="zone-clean-search">
-                  <span className="search-icon">
+                  <span className="search-icon" aria-hidden="true">
                     <Icon name="search" size={17} />
                   </span>
-                  <input
+                  <input aria-label={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã lô sản xuất'} className="ui-input"
                     id="search-blocks-input"
                     type="search"
-                    placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã Block'}
+                    placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã lô sản xuất'}
                     value={blockKeyword}
                     onChange={(e) => setBlockKeyword(e.target.value)}
                   />
                 </div>
 
                 <div className="zone-clean-select-wrap">
-                  <select
+                  <select className="ui-select"
                     id="block-zone-filter"
                     value={selectedZoneFilter}
                     onChange={(e) =>
@@ -725,95 +673,88 @@ export function ZoneListPage() {
               </div>
 
               {filteredBlocks.length === 0 ? (
-                <div className="panel empty-state" style={{ padding: '40px 20px', border: 'none', boxShadow: 'none' }}>
-                  <div className="empty-icon">🌿</div>
-                  <h2>{(lang === 'en' ? "No production blocks found" : "Chưa tìm thấy lô sản xuất nào")}</h2>
-                  <p>
+                <EmptyState  className="panel" title={<>{(lang === 'en' ? "No production blocks found" : "Chưa tìm thấy lô sản xuất nào")}</>} description={<>
                     {isOwner
-                      ? (lang === 'en' ? 'Click "Add Block" to add a new production block inside this zone.' : 'Nhấn "Thêm Block" để thêm lô sản xuất mới bên trong khu vực.')
-                      : (lang === 'en' ? 'No blocks match the filter criteria within your assigned zones.' : 'Không có Block nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.')}
-                  </p>
-                  {isOwner && visibleZones.length > 0 && (
-                    <button type="button" className="primary-button" onClick={() => handleCreateBlockClick()}>
-                      <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Block' : 'Thêm Block'}
-                    </button>
-                  )}
-                </div>
+                      ? (lang === 'en' ? 'Click "Add Block" to add a new production block inside this zone.' : 'Nhấn "Thêm lô sản xuất" để thêm lô sản xuất mới bên trong khu vực.')
+                      : (lang === 'en' ? 'No blocks match the filter criteria within your assigned zones.' : 'Không có lô sản xuất nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.')}
+                  </>} icon={<>🌿</>} action={<>{isOwner && visibleZones.length > 0 && (
+                    <Button type="button" variant="primary" onClick={() => handleCreateBlockClick()}>
+                      <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Block' : 'Thêm lô sản xuất'}
+                    </Button>
+                  )}</>} />
               ) : (
                 <>
-                  <div className="zone-table-wrap" style={{ margin: 0, border: 'none', borderRadius: 0 }}>
-                    <table className="data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
+                    <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                       <thead>
-                        <tr style={{ background: '#f8fafc' }}>
-                          <th style={{ width: '40px', padding: '14px 16px', textAlign: 'center' }}>
+                        <tr style={{ background: 'var(--color-page)' }}>
+                          <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
                             <input type="checkbox" aria-label={(lang === 'en' ? "Select all blocks" : "Chọn tất cả lô")} style={{ cursor: 'pointer' }} />
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'Block Name' : 'Tên lô đất'}
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'Block Code' : 'Mã lô đất'}
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">
                             {lang === 'en' ? 'Parent Zone' : 'Khu vực trực thuộc'}
                           </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
-                            Area
-                          </th>
-                          <th style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 600, color: '#475569' }}>
+                          <th scope="col">{translate("Area")}</th>
+                          <th scope="col">
                             {lang === 'en' ? 'Soil Type / Condition' : 'Loại đất / Điều kiện'}
                           </th>
-                          <th style={{ width: '130px', padding: '14px 16px', textAlign: 'right' }}>
-                            &nbsp;
+                          <th scope="col" style={{ width: '130px', textAlign: 'right' }}>
+                            {lang === 'en' ? 'Actions' : 'Thao tác'}
                           </th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredBlocks.map((b) => {
+                        {blockPagination.items.map((b) => {
                           const parentZone = zones.find((z) => z.zoneId === b.zoneId);
                           const zoneDisplay = b.zoneName || parentZone?.zoneName || `Khu #${b.zoneId}`;
                           const codeDisplay = `BLK-${String(b.blockId).padStart(3, '0')}`;
 
                           return (
-                            <tr key={b.blockId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                              <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                            <tr key={b.blockId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                              <td style={{ textAlign: 'center' }}>
                                 <input type="checkbox" aria-label={(lang === 'en' ? `Select ${b.blockName}` : `Chọn ${b.blockName}`)} style={{ cursor: 'pointer' }} />
                               </td>
 
-                              <td style={{ padding: '14px 16px' }}>
+                              <td>
                                 <Link
                                   to={`/zones/${b.zoneId}/blocks/${b.blockId}`}
                                   style={{
                                     fontWeight: 750,
                                     fontSize: '15px',
-                                    color: '#0f172a',
+                                    color: 'var(--color-text)',
                                     textDecoration: 'none',
                                     display: 'block',
                                     transition: 'color 0.15s ease',
                                   }}
-                                  onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
-                                  onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                                  onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--color-primary-text)')}
+                                  onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                                 >
                                   {b.blockName}
                                 </Link>
-                                <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--color-muted)', display: 'block', marginTop: '3px' }}>
                                   {(lang === 'en' ? b.description || "VietGAP agricultural block" : b.description || 'Lô canh tác nông nghiệp VietGAP')}
                                 </span>
                               </td>
 
-                              <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#334155', fontWeight: 500 }}>
+                              <td style={{ fontSize: '13.5px', color: 'var(--color-body)', fontWeight: 500 }}>
                                 {codeDisplay}
                               </td>
 
-                              <td style={{ padding: '14px 16px' }}>
+                              <td>
                                 <Link
                                   to={`/zones/${b.zoneId}`}
                                   style={{
                                     fontSize: '13px',
                                     fontWeight: 600,
-                                    color: '#059669',
+                                    color: 'var(--color-primary-text)',
                                     textDecoration: 'none',
-                                    background: '#ecfdf5',
+                                    background: 'var(--color-success-bg)',
                                     padding: '4px 10px',
                                     borderRadius: '6px',
                                     display: 'inline-block',
@@ -823,27 +764,27 @@ export function ZoneListPage() {
                                 </Link>
                               </td>
 
-                              <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#0f172a', fontWeight: 600 }}>
-                                {b.areaValue.toLocaleString('vi-VN')} {b.areaUnit === 'm2' ? 'm²' : b.areaUnit}
+                              <td style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 600 }}>
+                                {displayNumber(b.areaValue, lang)} {b.areaUnit === 'm2' ? 'm²' : b.areaUnit}
                               </td>
 
-                              <td style={{ padding: '14px 16px', fontSize: '13.5px', color: '#475569' }}>
+                              <td style={{ fontSize: '13.5px', color: 'var(--color-body)' }}>
                                 {b.soilType ? (
-                                  <span style={{ color: '#0f766e', fontWeight: 600 }}>
+                                  <span style={{ color: 'var(--color-teal)', fontWeight: 600 }}>
                                     {b.soilType}
                                   </span>
                                 ) : (
-                                  <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>{(lang === 'en' ? "Not recorded" : "Chưa ghi nhận")}</span>
+                                  <span style={{ color: 'var(--color-muted)', fontStyle: 'italic' }}>{(lang === 'en' ? "Not recorded" : "Chưa ghi nhận")}</span>
                                 )}
                               </td>
 
-                              <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                              <td style={{ textAlign: 'right' }}>
                                 <div className="table-action-btns">
                                   <button
                                     type="button"
                                     className="table-icon-btn primary"
-                                    title="View Details Block"
-                                    aria-label={`View Details ${b.blockName}`}
+                                    title={translate("View Details Block")}
+                                    aria-label={translate("View Details") + " " + (b.blockName)}
                                     onClick={() => navigate(`/zones/${b.zoneId}/blocks/${b.blockId}`)}
                                   >
                                     <Icon name="eye" size={15} />
@@ -851,8 +792,8 @@ export function ZoneListPage() {
                                   <button
                                     type="button"
                                     className="table-icon-btn edit"
-                                    title={(lang === 'en' ? "Edit Block information" : "Edit thông tin Block")}
-                                    aria-label={`Edit ${b.blockName}`}
+                                    title={(lang === 'en' ? "Edit Block information" : "Chỉnh sửa thông tin lô sản xuất")}
+                                    aria-label={translate("Edit") + " " + (b.blockName)}
                                     onClick={() => handleEditBlockClick(b)}
                                   >
                                     <Icon name="edit" size={15} />
@@ -873,8 +814,8 @@ export function ZoneListPage() {
                                     <button
                                       type="button"
                                       className="table-icon-btn danger"
-                                      title="Delete Block"
-                                      aria-label={`Delete ${b.blockName}`}
+                                      title={translate("Delete Block")}
+                                      aria-label={translate("Delete") + " " + (b.blockName)}
                                       onClick={() => setBlockToDelete(b)}
                                     >
                                       <Icon name="trash" size={15} />
@@ -890,25 +831,10 @@ export function ZoneListPage() {
                   </div>
 
                   {/* Table Footer for Blocks */}
-                  <div className="zone-table-footer">
-                    <div>
-                      {(lang === 'en' ? "Showing 1–" : "Hiển thị 1–")}{filteredBlocks.length} {(lang === 'en' ? " of " : " trong ")} {filteredBlocks.length} Block
-                    </div>
-                    <div className="zone-pagination-wrap">
-                      <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Previous page" : "Trang trước")}>
-                        <Icon name="chevron-left" size={15} />
-                      </button>
-                      <button type="button" className="zone-page-btn active">
-                        1
-                      </button>
-                      <button type="button" className="zone-page-btn" disabled aria-label={(lang === 'en' ? "Next page" : "Trang sau")}>
-                        <Icon name="chevron-right" size={15} />
-                      </button>
-                    </div>
-                  </div>
+                  <TablePagination {...blockPagination} disabled={loading} />
                 </>
               )}
-            </>
+            </div>
           )}
         </div>
       )}
@@ -927,10 +853,10 @@ export function ZoneListPage() {
         onSuccess={(saved) => {
           if (zoneToEdit) {
             setZones((prev) => prev.map((z) => (z.zoneId === saved.zoneId ? saved : z)));
-            showToast((lang === 'en' ? `Updated zone "${saved.zoneName}" successfully!` : `Đã cập nhật khu vực "${saved.zoneName}" thành công!`));
+            showToast((message("Updated zone \"{value1}\" successfully!", { value1: saved.zoneName })));
           } else {
             setZones((prev) => [saved, ...prev]);
-            showToast((lang === 'en' ? `Created zone "${saved.zoneName}" successfully!` : `Đã tạo mới khu vực "${saved.zoneName}" thành công!`));
+            showToast((message("Created zone \"{value1}\" successfully!", { value1: saved.zoneName })));
           }
         }}
       />
@@ -947,10 +873,10 @@ export function ZoneListPage() {
         onSuccess={(saved) => {
           if (blockToEdit) {
             setBlocks((prev) => prev.map((b) => (b.blockId === saved.blockId ? saved : b)));
-            showToast((lang === 'en' ? `Updated Block "${saved.blockName}" successfully!` : `Đã cập nhật Block "${saved.blockName}" thành công!`));
+            showToast((message("Updated Block \"{value1}\" successfully!", { value1: saved.blockName })));
           } else {
             setBlocks((prev) => [saved, ...prev]);
-            showToast((lang === 'en' ? `Created Block "${saved.blockName}" successfully!` : `Đã tạo mới Block "${saved.blockName}" thành công!`));
+            showToast((message("Created Block \"{value1}\" successfully!", { value1: saved.blockName })));
           }
         }}
       />
@@ -960,7 +886,7 @@ export function ZoneListPage() {
         block={conditionBlock}
         onClose={() => setIsRecordConditionOpen(false)}
         onSuccess={(obs: BlockConditionObservation) => {
-          showToast((lang === 'en' ? `Saved condition record (${obs.conditionType}) cho "${conditionBlock?.blockName}"!` : `Đã lưu hồ sơ điều kiện (${obs.conditionType}) cho "${conditionBlock?.blockName}"!`));
+          showToast((message("Saved condition record ({value1}) for \"{value2}\"!", { value1: obs.conditionType, value2: conditionBlock?.blockName })));
         }}
       />
 
@@ -973,7 +899,7 @@ export function ZoneListPage() {
         onClose={() => setZoneForAssignment(null)}
         onSuccess={(newAssign) => {
           setAssignments((prev) => [newAssign, ...prev]);
-          showToast((lang === 'en' ? `Assigned "${newAssign.staffName || 'nhân viên'}" to manage the zone successfully!` : `Đã phân công "${newAssign.staffName || 'nhân viên'}" phụ trách khu vực thành công!`));
+          showToast((message("Assigned \"{value1}\" to manage the zone successfully!", { value1: newAssign.staffName || message("Staff") })));
         }}
       />
 
@@ -989,7 +915,7 @@ export function ZoneListPage() {
 
       <ConfirmDialog
         open={Boolean(blockToDelete)}
-        title={(lang === 'en' ? "Confirm Block deletion" : "Xác nhận xóa Block")}
+        title={(lang === 'en' ? "Confirm Block deletion" : "Xác nhận xóa lô sản xuất")}
         description={(lang === 'en' ? `Are you sure you want to delete Block "${blockToDelete?.blockName}"? Deletion is allowed only for Blocks without linked seasons or diary entries.` : `Bạn có chắc chắn muốn xóa Block "${blockToDelete?.blockName}"? Hệ thống chỉ cho phép xóa khi Block chưa phát sinh mùa vụ hoặc nhật ký liên kết.`)}
         confirmLabel="Delete Block"
         tone="danger"
@@ -999,5 +925,3 @@ export function ZoneListPage() {
     </section>
   );
 }
-
-export const ProductionAreaListPage = ZoneListPage;

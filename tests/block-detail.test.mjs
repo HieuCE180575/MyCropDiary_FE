@@ -47,6 +47,7 @@ test('block detail opens from the zone, loads server data, retries failures and 
     const { createRoot } = await import('react-dom/client');
     const { ZoneDetailPage } = await server.ssrLoadModule('/src/pages/zone/ZoneDetailPage.tsx');
     const { ZoneListPage } = await server.ssrLoadModule('/src/pages/zone/ZoneListPage.tsx');
+    const { BlockDetailPage } = await server.ssrLoadModule('/src/pages/zone/BlockDetailPage.tsx');
     const { AuthProvider } = await server.ssrLoadModule('/src/features/auth/AuthProvider.tsx');
     const { FarmWorkspaceProvider } = await server.ssrLoadModule('/src/features/farm-management/FarmWorkspace.tsx');
     const storage = await server.ssrLoadModule('/src/features/auth/authStorage.ts');
@@ -56,6 +57,22 @@ test('block detail opens from the zone, loads server data, retries failures and 
       createElement(AuthProvider, null, createElement(FarmWorkspaceProvider, null, createElement(Routes, null,
         createElement(Route, { path: '/zones/:zoneId', element: createElement(ZoneDetailPage) })))))));
     assert.equal(calls.includes('/blocks/7'), false);
+    const checkTabs = async (prefix, expected) => {
+      const tabs = [...document.querySelectorAll(`[role="tab"][id^="${prefix}-tab-"]`)];
+      assert.equal(tabs.length, expected);
+      const selected = tabs.find(tab => tab.getAttribute('aria-selected') === 'true');
+      const before = calls.length;
+      for (const tab of [...tabs, selected]) {
+        await act(async () => tab.click());
+        assert.equal(document.querySelectorAll(`[role="tab"][id^="${prefix}-tab-"][aria-selected="true"]`).length, 1);
+        assert.equal(tab.getAttribute('aria-selected'), 'true');
+        const panel = document.getElementById(tab.getAttribute('aria-controls'));
+        assert.equal(panel?.getAttribute('role'), 'tabpanel');
+        assert.equal(panel.getAttribute('aria-labelledby'), tab.id);
+      }
+      assert.equal(calls.length, before, 'Switching local tabs must not reload server data');
+    };
+    await checkTabs('zone-detail', 3);
     await act(async () => document.querySelector('[aria-label="Xem chi tiết Lô A"]').click());
     assert.match(document.querySelector('[role="alert"]').textContent, /Không tìm thấy lô đất/);
     failure = false;
@@ -87,6 +104,15 @@ test('block detail opens from the zone, loads server data, retries failures and 
     assert.equal(document.querySelector('[role="alert"]'), null);
     assert.match(document.body.textContent, /Chưa tìm thấy phân khu nào/);
     assert.deepEqual([...document.querySelectorAll('.stat-number')].map(node => node.textContent.trim()), ['0 khu', '0 lô', '0 m²', '0 khu']);
+    await checkTabs('zone-list', 2);
+    await act(async () => root.unmount());
+    failure = false;
+    hold = false;
+    root = createRoot(document.getElementById('root'));
+    await act(async () => root.render(createElement(MemoryRouter, { initialEntries: ['/zones/3/blocks/7'] },
+      createElement(AuthProvider, null, createElement(FarmWorkspaceProvider, null, createElement(Routes, null,
+        createElement(Route, { path: '/zones/:zoneId/blocks/:blockId', element: createElement(BlockDetailPage) })))))));
+    await checkTabs('block-detail', 6);
   } finally {
     if (root) await act(async () => root.unmount());
     await server.close();

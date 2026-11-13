@@ -175,7 +175,7 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('tbody tr').textContent.includes('Đã khóa'));
 
     await navigate('/admin/crops');
-    await button('Thêm danh mục', '.admin-page-heading');
+    await button('Thêm danh mục', '.ui-page-heading');
     await set('dialog .admin-field:nth-child(1) input', 'RAU_DEN');
     await set('dialog .admin-field:nth-child(2) input', 'Rau dền');
     await set('dialog select', 'LEAFY');

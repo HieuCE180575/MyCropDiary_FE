@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { Button } from '../shared/components/Button';
 import { Link } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
+import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
+import { formatNumber as uiFormatNumber } from '../shared/format/formatters';
+
+import { useState } from 'react';
+
+
 import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
 import { useApiData } from '../shared/hooks/useApiData';
 import { getKnowledgeCategoryLabel } from '../features/knowledge/constants';
-import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
+
 import type { KnowledgeArticle } from '../features/knowledge/types';
 import { useLanguage } from '../shared/i18n/LanguageContext';
 
@@ -318,7 +324,7 @@ export function HomePage() {
                   </>
                 ) : (
                   <>
-                    Đồng hành cùng hơn <strong>1,500 nhà vườn &amp; hợp tác xã</strong> trên toàn quốc chuẩn hoá
+                    Đồng hành cùng hơn <strong>{uiFormatNumber(1500, lang)} nhà vườn &amp; hợp tác xã</strong> trên toàn quốc chuẩn hoá
                     quy trình sản xuất VietGAP, tối ưu chi phí phân bón vật tư, số hóa mùa vụ và mở rộng cơ hội vào siêu thị, xuất khẩu.
                   </>
                 )}
@@ -339,9 +345,9 @@ export function HomePage() {
               <div className="hero-trust-bar">
                 <div className="trust-item">
                   <div className="trust-avatar-stack">
-                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="Farmer" />
-                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=80&q=80" alt="Farmer" />
-                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80" alt="Farmer" />
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt={t("Farmer")} />
+                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=80&q=80" alt={t("Farmer")} />
+                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=80&q=80" alt={t("Farmer")} />
                   </div>
                   <div className="trust-text">
                     <strong>{lang === 'en' ? '1,500+ Farm Growers' : '1,500+ Nhà vườn'}</strong>
@@ -370,7 +376,7 @@ export function HomePage() {
               <div className="visual-card-wrapper">
                 <img
                   src="https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=1200&q=80"
-                  alt="High tech VietGAP agriculture"
+                  alt={t("High tech VietGAP agriculture")}
                   className="hero-main-photo"
                   loading="eager"
                 />
@@ -517,7 +523,7 @@ export function HomePage() {
           </div>
 
           {loading && <p role="status">{lang === 'en' ? 'Loading articles...' : 'Đang tải bài viết...'}</p>}
-          {error && <div role="alert"><p>{t(error)}</p><button type="button" className="action-button" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></div>}
+          {error && <div role="alert"><p>{t(error)}</p><Button type="button" variant="secondary" onClick={retry}>{lang === 'en' ? 'Retry' : 'Thử lại'}</Button></div>}
           {!loading && !error && featuredArticles.length === 0 && <p>{lang === 'en' ? 'No articles published yet.' : 'Chưa có bài viết được xuất bản.'}</p>}
           <div className="knowledge-cards-grid">
             {featuredArticles.map((article) => {
@@ -533,7 +539,7 @@ export function HomePage() {
                   <div className="card-body">
                     <div className="card-meta-line">
                       <span>⏱ {article.readTimeMinutes} {lang === 'en' ? 'min read' : 'phút đọc'}</span>
-                      <span>👁 {article.viewCount.toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN')} {lang === 'en' ? 'views' : 'lượt xem'}</span>
+                      <span>👁 {uiFormatNumber(article.viewCount, lang)} {lang === 'en' ? 'views' : 'lượt xem'}</span>
                     </div>
 
                     <h3 className="card-article-title">

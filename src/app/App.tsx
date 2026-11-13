@@ -1,7 +1,6 @@
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { PublicLayout } from './layouts/PublicLayout';
-import { moduleDefinitions } from './routes/moduleDefinitions';
 import { DashboardPage } from '../pages/DashboardPage';
 import { FarmInfoPage } from '../pages/FarmInfoPage';
 import { FarmRegistrationPage } from '../pages/FarmRegistrationPage';
@@ -20,6 +19,8 @@ import { AdminPage } from '../features/admin/AdminPage';
 import { ZoneListPage, ZoneFormPage, ZoneDetailPage, BlockDetailPage } from '../pages/zone';
 import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 import { LanguageProvider } from '../shared/i18n/LanguageContext';
+
+import { moduleDefinitions } from './routes/moduleDefinitions';
 
 export function App() {
   return (
@@ -46,6 +47,7 @@ export function App() {
 
             <Route path="/farm-registration" element={<FarmRegistrationPage />} />
             <Route path="/farm" element={<FarmInfoPage />} />
+            <Route path="/workers" element={<Navigate to="/members" replace />} />
             <Route path="/zones" element={<ZoneListPage />} />
             <Route path="/zones/new" element={<ZoneFormPage mode="create" />} />
             <Route path="/zones/:zoneId" element={<ZoneDetailPage />} />

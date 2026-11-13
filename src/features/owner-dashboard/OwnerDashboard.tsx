@@ -1,12 +1,15 @@
+import { Link } from 'react-router-dom';
+import { Icon } from '../../shared/components/Icon';
+import { CropAreaChart, DemoTag, EnvironmentPanel, RecentActivityPanel, SeasonProgressPanel, UpcomingTasksPanel } from './OwnerDashboardPanels';
 import { useCallback, useMemo } from 'react';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
-import { Link } from 'react-router-dom';
+
 import type { FarmSummary } from '../farm-management/api';
 import { useApiData } from '../../shared/hooks/useApiData';
-import { Icon } from '../../shared/components/Icon';
+
 import { loadOwnerDashboard } from './dashboardApi';
 import { areaInM2, formatArea, makeDashboardDemo } from './dashboardModel';
-import { CropAreaChart, DemoTag, EnvironmentPanel, RecentActivityPanel, SeasonProgressPanel, UpcomingTasksPanel } from './OwnerDashboardPanels';
+
 import '../../styles/owner-dashboard.css';
 
 export function OwnerDashboard({ farm }: { farm: FarmSummary }) {
@@ -30,24 +33,24 @@ export function OwnerDashboard({ farm }: { farm: FarmSummary }) {
   const address = data?.farm?.address?.trim() || [farm.district, farm.province].filter(Boolean).join(', ');
   const metadata = [
     { icon: 'map-pin', label: 'Location', value: address || 'Co Do, Can Tho', demo: !address },
-    { icon: 'leaf', label: 'Scale', value: formatArea(totalArea), demo: sampleArea },
+    { icon: 'leaf', label: 'Scale', value: formatArea(totalArea, lang), demo: sampleArea },
     { icon: 'sprout', label: 'Main Crop', value: [...new Set(seasons.map(season => season.cropCategoryName).filter(Boolean))].slice(0, 2).map(name => sampleSeasons ? translate(name) : name).join(', ') || 'Not updated', demo: sampleSeasons },
-    { icon: 'calendar', label: 'Active Crop Seasons', value: activeSeasons + ' seasons', demo: sampleSeasons },
+    { icon: 'calendar', label: 'Active Crop Seasons', value: `${activeSeasons} ${lang === 'en' ? 'seasons' : 'mùa vụ'}`, demo: sampleSeasons },
   ];
   const stats = [
-    { icon: 'gauge', label: 'Total Cultivated Area', value: formatArea(totalArea), to: '/production-areas', sample: sampleArea, tone: 'green' },
+    { icon: 'gauge', label: 'Total Cultivated Area', value: formatArea(totalArea, lang), to: '/production-areas', sample: sampleArea, tone: 'green' },
     { icon: 'sprout', label: 'Active Crop Seasons', value: String(activeSeasons), to: '/crop-seasons', sample: sampleSeasons, tone: 'green' },
-    { icon: 'users', label: 'Farm Workers', value: `${sampleStaff ? demo.staffCount : data.staffCount} people`, to: '/workers', sample: sampleStaff, tone: 'blue' },
-    { icon: 'plots', label: 'Production Zones & Blocks', value: `${sampleZones ? demo.zonesCount : new Set((data?.zones ?? []).map(zone => zone.zoneId)).size} zones`, to: '/production-areas', sample: sampleZones, tone: 'mint' },
+    { icon: 'users', label: 'Farm Workers', value: `${sampleStaff ? demo.staffCount : data.staffCount} ${lang === 'en' ? 'people' : 'người'}`, to: '/members', sample: sampleStaff, tone: 'blue' },
+    { icon: 'plots', label: 'Production Zones & Blocks', value: `${sampleZones ? demo.zonesCount : new Set((data?.zones ?? []).map(zone => zone.zoneId)).size} ${lang === 'en' ? 'zones' : 'khu'}`, to: '/production-areas', sample: sampleZones, tone: 'mint' },
   ];
-  return <section className="owner-dashboard" aria-label="Farm Overview">
+  return <section className="owner-dashboard" aria-label={translate("Farm Overview")}>
     <header className="owner-hero">
-      <Link to="/farm?edit=1" className="owner-edit-link"><Icon name="edit" size={16} />Edit Farm Information</Link>
-      <span className="owner-role-badge">FARM OWNER</span>
+      <Link to="/farm?edit=1" className="owner-edit-link"><Icon name="edit" size={16} />{lang === 'en' ? 'Edit Farm Information' : 'Chỉnh sửa thông tin trang trại'}</Link>
+      <span className="owner-role-badge">{lang === 'en' ? 'FARM OWNER' : 'CHỦ TRANG TRẠI'}</span>
       <h1>{farm.farmName}<Icon name="leaf" size={30} /></h1>
-      <p className="owner-hero-description">Sustainable farm management, aiming for clean and safe agricultural produce</p>
+      <p className="owner-hero-description">{lang === 'en' ? 'Sustainable farm management, aiming for clean and safe agricultural produce' : 'Quản lý trang trại bền vững, hướng đến nông sản sạch và an toàn'}</p>
       <div className="owner-hero-meta">{metadata.map(item => <div className="owner-meta-item" key={item.label}>
-        <Icon name={item.icon} size={28} /><div><span>{translate(item.label)}</span>{loading ? <span className="owner-skeleton owner-meta-skeleton" /> : <strong>{item.value}{item.demo && <span className="owner-inline-demo">Sample Data</span>}</strong>}</div>
+        <Icon name={item.icon} size={28} /><div><span>{translate(item.label)}</span>{loading ? <span className="owner-skeleton owner-meta-skeleton" /> : <strong>{item.value}{item.demo && <span className="owner-inline-demo">{translate('Sample Data')}</span>}</strong>}</div>
       </div>)}</div>
     </header>
     {(error || data?.issues.length) ? <div className="owner-data-notice" role="status"><Icon name="warning" size={15} /><span>{(lang === 'en' ? "Some data could not be loaded" : "Chưa tải được một số dữ liệu")}{data?.issues.length ? ': ' + data.issues.map(issue => issue).join(', ') : ''}{(lang === 'en' ? ". Illustrative panels are labeled “Sample Data”." : ". Các khối minh họa có nhãn “Dữ liệu mẫu”.")}</span><button type="button" onClick={retry}>{(lang === 'en' ? "Retry" : "Thử lại")}</button></div> : null}

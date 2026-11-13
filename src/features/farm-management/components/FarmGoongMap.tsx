@@ -1,3 +1,4 @@
+import { formatNumber as uiFormatNumber } from '../../../shared/format/formatters';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -541,7 +542,7 @@ export function FarmGoongMap({
         : boundary;
 
   const areaM2 = calculatePolygonAreaM2(effectivePolygon);
-  const areaHa = (areaM2 / 10000).toFixed(2);
+  const areaHa = uiFormatNumber(areaM2 / 10000, lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const handleGenerateSamplePolygon = () => {
     const sample = generateSampleFarmPolygon(activePoint);
@@ -561,20 +562,20 @@ export function FarmGoongMap({
   };
 
   return (
-    <div className="farm-goong-map-card" style={{ border: '1px solid #cbd5e1', borderRadius: '14px', overflow: 'hidden', background: '#ffffff', marginTop: '8px' }}>
+    <div className="farm-goong-map-card" style={{ border: '1px solid var(--color-input-border)', borderRadius: '14px', overflow: 'hidden', background: 'var(--color-surface)', marginTop: '8px' }}>
       {/* Thanh công cụ bản đồ */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '12px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'var(--color-page)', borderBottom: '1px solid var(--color-border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '13.5px', color: '#0f172a' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '13.5px', color: 'var(--color-text)' }}>
             {(lang === 'en' ? "🗺️ Farm coordinates & Boundary map" : "🗺️ Bản đồ tọa độ & Ranh giới trang trại")}
           </span>
           {areaM2 > 0 && (
-            <span style={{ background: '#dcfce7', color: '#166534', fontWeight: 700, fontSize: '12px', padding: '3px 10px', borderRadius: '999px' }}>
-              {(lang === 'en' ? "📐 Drawn area: " : "📐 Diện tích vùng vẽ: ")} {areaM2.toLocaleString('vi-VN')} m² (~{areaHa} ha)
+            <span style={{ background: 'var(--color-success-bg)', color: 'var(--color-success)', fontWeight: 700, fontSize: '12px', padding: '3px 10px', borderRadius: '999px' }}>
+              {(lang === 'en' ? "📐 Drawn area: " : "📐 Diện tích vùng vẽ: ")} {uiFormatNumber(areaM2, lang)} m² (~{areaHa} ha)
             </span>
           )}
           {reverseLoading && (
-            <span style={{ fontSize: '12px', color: '#059669', fontWeight: 600 }}>
+            <span style={{ fontSize: '12px', color: 'var(--color-primary-text)', fontWeight: 600 }}>
               {(lang === 'en' ? "⏳ Syncing address..." : "⏳ Đang đồng bộ địa chỉ...")}
             </span>
           )}
@@ -591,9 +592,9 @@ export function FarmGoongMap({
                   fontSize: '12.5px',
                   fontWeight: 600,
                   borderRadius: '8px',
-                  border: drawMode === 'pin' ? '1px solid #059669' : '1px solid #cbd5e1',
-                  background: drawMode === 'pin' ? '#ecfdf5' : '#ffffff',
-                  color: drawMode === 'pin' ? '#047857' : '#334155',
+                  border: drawMode === 'pin' ? '1px solid var(--color-primary-text)' : '1px solid var(--color-input-border)',
+                  background: drawMode === 'pin' ? 'var(--color-success-bg)' : 'var(--color-surface)',
+                  color: drawMode === 'pin' ? 'var(--color-primary-text)' : 'var(--color-body)',
                   cursor: 'pointer',
                 }}
               >
@@ -607,9 +608,9 @@ export function FarmGoongMap({
                   fontSize: '12.5px',
                   fontWeight: 600,
                   borderRadius: '8px',
-                  border: drawMode === 'polygon' ? '1px solid #059669' : '1px solid #cbd5e1',
-                  background: drawMode === 'polygon' ? '#ecfdf5' : '#ffffff',
-                  color: drawMode === 'polygon' ? '#047857' : '#334155',
+                  border: drawMode === 'polygon' ? '1px solid var(--color-primary-text)' : '1px solid var(--color-input-border)',
+                  background: drawMode === 'polygon' ? 'var(--color-success-bg)' : 'var(--color-surface)',
+                  color: drawMode === 'polygon' ? 'var(--color-primary-text)' : 'var(--color-body)',
                   cursor: 'pointer',
                 }}
               >
@@ -624,9 +625,9 @@ export function FarmGoongMap({
                   fontSize: '12.5px',
                   fontWeight: 600,
                   borderRadius: '8px',
-                  border: '1px solid #10b981',
-                  background: '#10b981',
-                  color: '#ffffff',
+                  border: '1px solid var(--color-primary)',
+                  background: 'var(--color-primary)',
+                  color: 'var(--color-on-primary)',
                   cursor: 'pointer',
                 }}
               >
@@ -641,9 +642,9 @@ export function FarmGoongMap({
                       padding: '6px 10px',
                       fontSize: '12px',
                       borderRadius: '8px',
-                      border: '1px solid #cbd5e1',
-                      background: '#ffffff',
-                      color: '#475569',
+                      border: '1px solid var(--color-input-border)',
+                      background: 'var(--color-surface)',
+                      color: 'var(--color-body)',
                       cursor: 'pointer',
                     }}
                   >
@@ -656,9 +657,9 @@ export function FarmGoongMap({
                       padding: '6px 10px',
                       fontSize: '12px',
                       borderRadius: '8px',
-                      border: '1px solid #fecaca',
-                      background: '#fef2f2',
-                      color: '#dc2626',
+                      border: '1px solid var(--color-border)',
+                      background: 'var(--color-danger-bg)',
+                      color: 'var(--color-danger)',
                       cursor: 'pointer',
                     }}
                   >
@@ -677,9 +678,9 @@ export function FarmGoongMap({
               fontSize: '12px',
               fontWeight: 600,
               borderRadius: '8px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#334155',
+              border: '1px solid var(--color-input-border)',
+              background: 'var(--color-surface)',
+              color: 'var(--color-body)',
               cursor: 'pointer',
             }}
           >
@@ -690,7 +691,7 @@ export function FarmGoongMap({
 
       {/* Hướng dẫn thao tác nhanh khi ở chế độ đăng ký/chỉnh sửa */}
       {editable && (
-        <div style={{ padding: '8px 16px', background: '#ecfdf5', borderBottom: '1px solid #d1fae5', fontSize: '12.5px', color: '#065f46', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ padding: '8px 16px', background: 'var(--color-success-bg)', borderBottom: '1px solid var(--color-border)', fontSize: '12.5px', color: 'var(--color-primary-text)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <span>
             {(lang === 'en' ? drawMode === 'pin' ? "💡 Tip: Select a Province/City, District, and Ward/Commune, or click the map to pin the farm center." : "💡 Tip: Click points on the map to draw the farm boundary polygon (at least 3 points), or click \"Create sample farm boundary\" and drag its vertices." : drawMode === 'pin'
               ? '💡 Mẹo: Chọn Tỉnh/Thành phố, Quận/Huyện, Phường/Xã hoặc nhấp trực tiếp lên bản đồ để ghim tọa độ tâm trang trại.'
@@ -706,12 +707,12 @@ export function FarmGoongMap({
           width: '100%',
           height: `${height}px`,
           position: 'relative',
-          background: '#e2e8f0',
+          background: 'var(--color-border)',
         }}
       />
 
       {/* Thanh thông tin tọa độ chân bản đồ */}
-      <div style={{ padding: '10px 16px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', fontSize: '12.5px', color: '#475569' }}>
+      <div style={{ padding: '10px 16px', background: 'var(--color-page)', borderTop: '1px solid var(--color-border)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '12px', fontSize: '12.5px', color: 'var(--color-body)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           <span>
             <strong>{(lang === 'en' ? "📍 Center coordinates:" : "📍 Tọa độ tâm:")}</strong>{' '}
@@ -721,13 +722,13 @@ export function FarmGoongMap({
           </span>
           <span>
             <strong>{(lang === 'en' ? "🗺️ Boundary drawn on map:" : "🗺️ Ranh giới vẽ trên map:")}</strong>{' '}
-            {(lang === 'en' ? effectivePolygon.length >= 3 ? `Drawn ${effectivePolygon.length} vertices (${areaM2.toLocaleString('vi-VN')} m²)` : "No boundary polygon drawn" : effectivePolygon.length >= 3
-              ? `Đã vẽ ${effectivePolygon.length} đỉnh (${areaM2.toLocaleString('vi-VN')} m²)`
+            {(lang === 'en' ? effectivePolygon.length >= 3 ? `Drawn ${effectivePolygon.length} vertices (${uiFormatNumber(areaM2, lang)} m²)` : "No boundary polygon drawn" : effectivePolygon.length >= 3
+              ? `Đã vẽ ${effectivePolygon.length} đỉnh (${uiFormatNumber(areaM2, lang)} m²)`
               : 'Chưa vẽ đa giác ranh giới')}
           </span>
         </div>
         {province && (
-          <span style={{ color: '#059669', fontWeight: 600 }}>
+          <span style={{ color: 'var(--color-primary-text)', fontWeight: 600 }}>
             {[ward, district, province].filter(Boolean).join(' • ')}
           </span>
         )}
@@ -735,4 +736,3 @@ export function FarmGoongMap({
     </div>
   );
 }
-

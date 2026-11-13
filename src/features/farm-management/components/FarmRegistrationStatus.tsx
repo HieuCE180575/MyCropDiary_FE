@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import { Button } from '../../../shared/components/Button';
 import { ConfirmDialog } from '../../../shared/components/ConfirmDialog';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
+import { FarmGoongMap } from './FarmGoongMap';
+import { formatDateTime as uiFormatDateTime } from '../../../shared/format/formatters';
+
+import { useState } from 'react';
+
+
 import { FARM_REGISTRATION_STATUS_LABEL, FARM_REGISTRATION_STATUS_TONE } from '../constants';
 import { parseBoundaryCoordinates } from '../goongMapService';
 import type { FarmRegistration } from '../types';
-import { FarmGoongMap } from './FarmGoongMap';
+
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface FarmRegistrationStatusProps {
@@ -16,7 +22,7 @@ interface FarmRegistrationStatusProps {
 }
 
 function formatDateTime(iso: string, lang: 'en' | 'vi'): string {
-  return new Date(iso).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
+  return uiFormatDateTime(iso, lang, { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 export function FarmRegistrationStatus({
@@ -126,19 +132,19 @@ export function FarmRegistrationStatus({
 
       <div className="farm-registration-actions">
         {canCancel ? (
-          <button
+          <Button
             type="button"
-            className="danger-button"
+            variant="danger"
             onClick={() => setConfirmOpen(true)}
             disabled={cancelling}
           >
             {lang === 'en' ? 'Cancel Registration' : 'Hủy đăng ký'}
-          </button>
+          </Button>
         ) : null}
         {canStartNew ? (
-          <button type="button" className="primary-button" onClick={onStartNew}>
+          <Button type="button" variant="primary" onClick={onStartNew}>
             {lang === 'en' ? 'Start New Registration' : 'Gửi đăng ký mới'}
-          </button>
+          </Button>
         ) : null}
       </div>
 

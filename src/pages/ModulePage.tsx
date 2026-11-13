@@ -1,7 +1,5 @@
-import { useLanguage } from '../shared/i18n/LanguageContext';
-import type { ModuleDefinition } from '../shared/types/module';
+import { PageHeading } from '../shared/components/PageHeading';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../features/auth';
 import { Icon } from '../shared/components/Icon';
 import { UserProfilePanel } from '../features/auth/UserProfilePanel';
 import { FarmInfoPage } from './FarmInfoPage';
@@ -21,6 +19,11 @@ import { VietGAPCompliancePage } from '../features/compliance/VietGAPComplianceP
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { AIAssistantPage } from '../features/ai/AIAssistantPage';
 
+import { useLanguage } from '../shared/i18n/LanguageContext';
+import type { ModuleDefinition } from '../shared/types/module';
+
+import { useAuth } from '../features/auth';
+
 export function ModulePage({ module }: { module: ModuleDefinition }) {
   const { lang, t: translate } = useLanguage();
   const { user } = useAuth();
@@ -29,7 +32,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'farm') return <FarmInfoPage />;
   if (module.key === 'farm-registration') return <FarmRegistrationPage />;
   if (module.key === 'knowledge') return <KnowledgePage />;
-  if (module.key === 'workers' || module.key === 'members') return <StaffManagementPage />;
+  if (module.key === 'members') return <StaffManagementPage />;
   if (module.key === 'production') return <ZoneListPage />;
   if (module.key === 'activities') return <FarmingActivitiesPage />;
   if (module.key === 'materials') return <MaterialUsagePage />;
@@ -53,12 +56,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
 
   return (
     <section className="profile-page-section">
-      <div className="page-heading">
-        <div>
-          <h1>{(lang === 'en' ? "Hello, " : "Xin chào, ")} {displayName}!</h1>
-          <p className="module-description">{translate(module.description)}</p>
-        </div>
-      </div>
+      <PageHeading   title={`${lang === 'en' ? "Hello, " : "Xin chào, "}${displayName}!`} description={<>{translate(module.description)}</>}></PageHeading>
       <div className="profile-container">
         {/* Profile Hero Card */}
         <div className="profile-hero-card">

@@ -1,4 +1,4 @@
-export { ZoneListPage, ProductionAreaListPage } from './ZoneListPage';
-export { ZoneDetailPage, ProudctionAreaDetailPage, ProductionAreaDetailPage } from './ZoneDetailPage';
-export { ZoneFormPage, ProductionAreaFormPage } from './ZoneFormPage';
+export { ZoneListPage } from './ZoneListPage';
+export { ZoneDetailPage } from './ZoneDetailPage';
+export { ZoneFormPage } from './ZoneFormPage';
 export { BlockDetailPage } from './BlockDetailPage';

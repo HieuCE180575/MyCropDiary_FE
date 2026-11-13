@@ -1,7 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { stripTypeScriptTypes } from 'node:module';
 import { JSDOM } from 'jsdom';
 import { createServer } from 'vite';
 import { createElement, act } from 'react';
@@ -9,8 +7,9 @@ import { MemoryRouter } from 'react-router-dom';
 import axios from 'axios';
 
 test('owner metrics convert areas, reject ambiguous allocations and clamp time progress', async () => {
-  const source = stripTypeScriptTypes(await readFile('src/features/owner-dashboard/dashboardModel.ts', 'utf8'), { mode: 'transform' });
-  const model = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+  const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom' });
+  try {
+  const model = await server.ssrLoadModule('/src/features/owner-dashboard/dashboardModel.ts');
   assert.equal(model.areaInM2(1.5, 'ha'), 15000);
   assert.equal(model.areaInM2(500, 'm²'), 500);
   assert.equal(model.areaInM2(1, 'unknown'), null);
@@ -30,16 +29,20 @@ test('owner metrics convert areas, reject ambiguous allocations and clamp time p
   assert.deepEqual(model.aggregateCropAreas(seasons, allocations), [{ name: 'Dưa lưới', areaM2: 10000 }]);
   assert.equal(model.aggregateCropAreas([...seasons, { cropSeasonId: 3, cropCategoryName: 'Rau', seasonStatus: 'active' }], [...allocations, { cropSeasonId: 3, blockId: 10, plantedArea: 1, areaUnit: 'ha' }]), null);
   assert.equal(model.aggregateCropAreas(seasons, []), null);
+  assert.equal(model.formatArea(15000, 'en'), '1.5 ha');
+  } finally { await server.close(); }
 });
 
 test('owner dashboard uses live farm totals, labels samples, opens existing edit and keeps Staff dashboard', async () => {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost:5173' });
+  dom.window.localStorage.setItem('mcd_lang', 'vi');
   const globals = { window: dom.window, document: dom.window.document, navigator: dom.window.navigator,
     Event: dom.window.Event, localStorage: dom.window.localStorage, sessionStorage: dom.window.sessionStorage, IS_REACT_ACT_ENVIRONMENT: true };
   const originals = new Map(Object.keys(globals).map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
   const adapter = axios.defaults.adapter;
   const calls = [];
+  const writes = [];
   const farms = [
     { id: 1, farmName: 'Farm One', currentUserRole: 'OWNER', status: 'ACTIVE' },
     { id: 2, farmName: 'Farm Two', currentUserRole: 'STAFF', status: 'ACTIVE' },
@@ -47,6 +50,7 @@ test('owner dashboard uses live farm totals, labels samples, opens existing edit
   let failed = false;
   axios.defaults.adapter = async config => {
     calls.push(config.url);
+    if (['post', 'put', 'patch', 'delete'].includes(config.method)) writes.push(config);
     let data;
     if (config.url.startsWith('/farms?')) data = { items: farms, last: true, totalPages: 1 };
     else if (config.url === '/farms/1') data = { ...farms[0], address: 'Địa chỉ thật', description: 'Farm description', latitude: null, longitude: null, createdAt: '2026-01-01', updatedAt: '2026-01-01' };
@@ -92,6 +96,17 @@ test('owner dashboard uses live farm totals, labels samples, opens existing edit
     await act(async () => document.querySelector('.owner-edit-link').click());
     assert.ok(document.querySelector('[role="dialog"]'));
     assert.match(document.querySelector('[role="dialog"]').textContent, /Chỉnh sửa/);
+    const editName = document.querySelector('[role="dialog"] input[type="text"]');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(editName, 'Unsaved farm name');
+      editName.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    const close = document.querySelector('[role="dialog"] .modal-close');
+    assert.equal(close.type, 'button');
+    await act(async () => close.click());
+    assert.equal(document.querySelector('[role="dialog"]'), null);
+    assert.equal(writes.length, 0, 'Closing the edit dialog never saves farm changes');
+    assert.doesNotMatch(document.querySelector('main').textContent, /Unsaved farm name/);
     failed = true;
     const api = await server.ssrLoadModule('/src/features/owner-dashboard/dashboardApi.ts');
     const result = await api.loadOwnerDashboard(1, new AbortController().signal);

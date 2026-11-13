@@ -1,3 +1,8 @@
+import { message, type TranslationMessage } from "../../../shared/i18n/translate";
+import { Button } from '../../../shared/components/Button';
+import { Icon } from '../../../shared/components/Icon';
+import { Modal } from '../../../shared/components/Modal';
+
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import type { Zone, ZoneFormValues } from '../types';
@@ -34,7 +39,7 @@ export function ZoneModal({
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<TranslationMessage | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -65,11 +70,11 @@ export function ZoneModal({
     e.preventDefault();
     const trimmedName = values.zoneName.trim();
     if (!trimmedName) {
-      setError((lang === 'en' ? "Enter a management zone name." : 'Vui lòng nhập tên khu vực quản lý (Zone Name).'));
+      setError((lang === 'en' ? "Enter a management zone name." : 'Vui lòng nhập tên khu vực quản lý.'));
       return;
     }
     if (trimmedName.length > 100) {
-      setError((lang === 'en' ? "Zone name must not exceed 100 characters." : 'Tên phân khu (Zone) không được vượt quá 100 ký tự.'));
+      setError((lang === 'en' ? "Zone name must not exceed 100 characters." : 'Tên khu vực không được vượt quá 100 ký tự.'));
       return;
     }
 
@@ -80,13 +85,13 @@ export function ZoneModal({
           (mode === 'create' || z.zoneId !== initialZone?.zoneId)
       );
       if (isDuplicate) {
-        setError((lang === 'en' ? `Zone name "${trimmedName}" already exists in this farm. Choose another name.` : `Tên phân khu (Zone) "${trimmedName}" đã tồn tại trong trang trại này. Vui lòng chọn tên khác.`));
+        setError((message("Zone name \"{value1}\" already exists in this farm. Choose another name.", { value1: trimmedName })));
         return;
       }
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError((lang === 'en' ? "Zone area must be a valid positive number (> 0)." : 'Area Zone phải là số dương hợp lệ (> 0).'));
+      setError((lang === 'en' ? "Zone area must be a valid positive number (> 0)." : 'Diện tích khu vực phải là số dương hợp lệ (> 0).'));
       return;
     }
 
@@ -108,21 +113,20 @@ export function ZoneModal({
       if (mode === 'create') {
         saved = await createZone(farmId, values);
       } else {
-        if (!initialZone) throw new Error('Không tìm thấy thông tin Zone cần cập nhật.');
+        if (!initialZone) throw new Error('Không tìm thấy thông tin khu vực cần cập nhật.');
         saved = await updateZone(initialZone.zoneId, values);
       }
       onSuccess(saved);
       onClose();
     } catch (err) {
-      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Zone information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Zone.'));
+      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Zone information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin khu vực.'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card" style={{ width: 'min(680px, 100%)', maxHeight: '90vh' }}>
+    <Modal open customLayout onClose={onClose} style={{ width: 'min(680px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
             <span className="eyebrow">
@@ -130,22 +134,20 @@ export function ZoneModal({
             </span>
             <h2>{mode === 'create' ? (lang === 'en' ? 'Create New Production Zone' : 'Tạo khu vực sản xuất mới') : (lang === 'en' ? 'Update Production Zone' : 'Cập nhật khu vực sản xuất')}</h2>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          <button type="button" className="modal-close" onClick={onClose} aria-label={translate("Close")}><Icon name="close" /></button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
           {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
 
-          <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-            <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-              <span className="structured-field-label" style={{ color: '#065f46' }}>
+          <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+            <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+              <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
                 {lang === 'en' ? 'Affiliated Farm' : 'Trang trại trực thuộc'}
               </span>
               <span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span>
             </div>
-            <div style={{ fontWeight: 700, color: '#047857', fontSize: '15px' }}>
+            <div style={{ fontWeight: 700, color: 'var(--color-primary-text)', fontSize: '15px' }}>
               🌱 {farmName || `Farm #${farmId}`}
             </div>
           </div>
@@ -153,12 +155,12 @@ export function ZoneModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="zone-name-input" className="structured-field-label">
-                {lang === 'en' ? 'Zone Name' : 'Tên phân khu (Zone)'} <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Zone Name' : 'Tên khu vực'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{values.zoneName.length}/100 {lang === 'en' ? 'chars · Required' : 'ký tự · Bắt buộc'}</span>
+              <label htmlFor="zone-name-input" className="structured-field-badge">{values.zoneName.length}/100 {lang === 'en' ? 'chars · Required' : 'ký tự · Bắt buộc'}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="zone-name-input"
                 type="text"
                 maxLength={100}
@@ -174,12 +176,12 @@ export function ZoneModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="zone-area-input" className="structured-field-label">
-                  {lang === 'en' ? 'Planned Zone Area' : 'Diện tích phân khu'} <span style={{ color: '#dc2626' }}>*</span>
+                  {lang === 'en' ? 'Planned Zone Area' : 'Diện tích phân khu'} <span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
-                <span className="structured-field-badge">&gt; 0</span>
+                <label htmlFor="zone-area-input" className="structured-field-badge">&gt; 0</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <input
+                <input className="ui-input"
                   id="zone-area-input"
                   type="number"
                   step="0.01"
@@ -195,10 +197,10 @@ export function ZoneModal({
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
                 <label htmlFor="zone-unit-select" className="structured-field-label">{lang === 'en' ? 'Area Unit' : 'Đơn vị diện tích'}</label>
-                <span className="structured-field-badge">{lang === 'en' ? 'Unit' : 'Đơn vị'}</span>
+                <label htmlFor="zone-unit-select" className="structured-field-badge">{lang === 'en' ? 'Unit' : 'Đơn vị'}</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select
+                <select className="ui-select"
                   id="zone-unit-select"
                   value={values.areaUnit}
                   onChange={(e) => setValues({ ...values, areaUnit: e.target.value })}
@@ -215,10 +217,10 @@ export function ZoneModal({
               <label htmlFor="zone-desc-input" className="structured-field-label">
                 {lang === 'en' ? 'Zone Features & Infrastructure' : 'Mô tả đặc điểm phân khu & hạ tầng'}
               </label>
-              <span className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+              <label htmlFor="zone-desc-input" className="structured-field-badge">{values.description.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <textarea
+              <textarea className="ui-textarea"
                 id="zone-desc-input"
                 rows={3}
                 maxLength={500}
@@ -234,10 +236,10 @@ export function ZoneModal({
               <label htmlFor="zone-image-input" className="structured-field-label">
                 {lang === 'en' ? 'Map / Field Image URL' : 'Đường dẫn ảnh sơ đồ / thực địa'}
               </label>
-              <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              <label htmlFor="zone-image-input" className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</label>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input
+              <input className="ui-input"
                 id="zone-image-input"
                 type="url"
                 placeholder="https://..."
@@ -248,15 +250,12 @@ export function ZoneModal({
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
-              Cancel
-            </button>
-            <button type="submit" className="primary-button" disabled={loading}>
-              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : mode === 'create' ? (lang === 'en' ? 'Create Zone' : 'Tạo Zone') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
-            </button>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{translate("Cancel")}</Button>
+            <Button type="submit" variant="primary" disabled={loading}>
+              {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : mode === 'create' ? (lang === 'en' ? 'Create Zone' : 'Tạo khu vực') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 }

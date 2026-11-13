@@ -1,6 +1,7 @@
+import { Pagination } from '../../shared/components/Pagination';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { getFarms } from './api';
-import { Pagination } from '../../shared/components/Pagination';
+
 import { useApiData } from '../../shared/hooks/useApiData';
 import { useCallback, useState } from 'react';
 

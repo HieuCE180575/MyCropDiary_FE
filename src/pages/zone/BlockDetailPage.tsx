@@ -1,37 +1,29 @@
-import { useLanguage } from '../../shared/i18n/LanguageContext';
-import { useEffect, useState, useMemo } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
-import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
-import { farmRole } from '../../features/auth/accessPolicy';
+import { message, type TranslationMessage } from "../../shared/i18n/translate";
+import { TabList, tabPanelProps } from '../../shared/components/TabList';
+import { EmptyState } from '../../shared/components/EmptyState';
+import { PageHeading } from '../../shared/components/PageHeading';
+import { Button } from '../../shared/components/Button';
+import { Modal } from '../../shared/components/Modal';
+import { Link } from 'react-router-dom';
 import { Icon } from '../../shared/components/Icon';
 import { CropCategoryCombobox } from '../../features/operations/CropCategoryCombobox';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { BlockModal } from '../../features/production/components/BlockModal';
 import { RecordConditionModal } from '../../features/production/components/RecordConditionModal';
 import { FarmGoongMap } from '../../features/farm-management/components/FarmGoongMap';
-import {
-  fetchBlockById,
-  fetchZoneById,
-  fetchBlockConditions,
-  deleteBlock,
-  fetchBlockRiskRecords,
-  saveRiskRecord,
-  fetchBlockSoilAssessments,
-  saveSoilAssessment,
-  createSoilAssessmentApi,
-  fetchSoilAssessmentHistoryApi,
-  fetchSoilAssessmentDetailsApi,
-  updateSoilAssessmentApi,
-  deleteSoilAssessmentApi,
-  createWaterAssessmentApi,
-  fetchWaterAssessmentHistoryApi,
-  fetchWaterAssessmentDetailsApi,
-  updateWaterAssessmentApi,
-  deleteWaterAssessmentApi,
-  type WaterAssessmentBackendResp,
-  fetchBlockWaterAssessments,
-  saveWaterAssessment,
-} from '../../features/production/zoneBlockService';
+
+
+import { formatDate as uiFormatDate } from '../../shared/format/formatters';
+
+
+import { formatDateTime as displayDateTime, formatNumber as displayNumber } from '../../shared/format/formatters';
+import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { useEffect, useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
+import { farmRole } from '../../features/auth/accessPolicy';
+
+import { fetchBlockById, fetchZoneById, fetchBlockConditions, deleteBlock, fetchBlockRiskRecords, saveRiskRecord, fetchBlockSoilAssessments, saveSoilAssessment, createSoilAssessmentApi, fetchSoilAssessmentHistoryApi, fetchSoilAssessmentDetailsApi, updateSoilAssessmentApi, deleteSoilAssessmentApi, fetchBlockWaterAssessments, saveWaterAssessment } from '../../features/production/zoneBlockService';
 import {
   fetchCropCategories,
   fetchCropSeasonsForBlock,
@@ -80,7 +72,7 @@ export function BlockDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
 
   // Filters per tab
   const [seasonSearch, setSeasonSearch] = useState('');
@@ -184,7 +176,7 @@ export function BlockDetailPage() {
     void loadBlockDetails(true);
   });
 
-  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+  const showToast = (text: TranslationMessage, type: 'success' | 'error' = 'success') => {
     setNotification({ text, type });
     setTimeout(() => setNotification(null), 4000);
   };
@@ -281,7 +273,7 @@ export function BlockDetailPage() {
     if (!block) return;
     setEditingSeason(null);
     setSeasonForm({
-      seasonName: `Vụ canh tác tại ${block.blockName} (${new Date().toLocaleDateString('vi-VN')})`,
+      seasonName: `Vụ canh tác tại ${block.blockName} (${uiFormatDate(new Date(), lang)})`,
       cropCategoryId: categories[0]?.id || 1,
       cropCategoryName: categories[0]?.categoryName || '',
       startDate: new Date().toISOString().split('T')[0],
@@ -335,7 +327,7 @@ export function BlockDetailPage() {
           expectedHarvestAt: seasonForm.expectedHarvestAt || seasonForm.endDate || null,
         });
         setBlockSeasons((prev) => [{ ...createdSeason, blockMapping: mapping }, ...prev]);
-        showToast((lang === 'en' ? `Created season "${createdSeason.seasonName}" on ${block.blockName}!` : `Đã tạo mùa vụ "${createdSeason.seasonName}" trên ${block.blockName}!`));
+        showToast((message("Created season \"{value1}\" on {value2}!", { value1: createdSeason.seasonName, value2: block.blockName })));
       } else if (seasonModalMode === 'edit' && editingSeason) {
         const updatedSeason = await updateCropSeason(editingSeason.cropSeasonId, {
           seasonName: seasonForm.seasonName.trim(),
@@ -358,11 +350,11 @@ export function BlockDetailPage() {
               : item
           )
         );
-        showToast((lang === 'en' ? `Updated season "${updatedSeason.seasonName}"!` : `Đã cập nhật mùa vụ "${updatedSeason.seasonName}"!`));
+        showToast((message("Updated season \"{value1}\"!", { value1: updatedSeason.seasonName })));
       }
       setSeasonModalMode(null);
     } catch (err) {
-      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save season on this Block." : err instanceof Error ? err.message : 'Không thể lưu mùa vụ trên Block này.'), 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save season on this Block." : err instanceof Error ? err.message : 'Không thể lưu mùa vụ trên lô sản xuất này.'), 'error');
     } finally {
       setSavingSeason(false);
     }
@@ -389,41 +381,7 @@ export function BlockDetailPage() {
     });
     setRiskRecords(fetchBlockRiskRecords(block.zoneId, block.blockId));
     setRiskModalMode(null);
-    showToast((lang === 'en' ? `Saved risk record for Block "${saved.riskType}"!` : `Đã lưu hồ sơ rủi ro Block "${saved.riskType}"!`));
-  };
-
-  const reloadWaterHistory = async (bId: number, zId: number, bName: string) => {
-    try {
-      const beWaters = await fetchWaterAssessmentHistoryApi(bId);
-      if (beWaters && beWaters.length > 0) {
-        const records: WaterAssessmentRecord[] = beWaters.map((w: WaterAssessmentBackendResp) => {
-          return {
-            assessmentId: w.assessmentId,
-            blockId: w.blockId || bId,
-            blockName: w.blockName || bName,
-            zoneId: w.zoneId || zId,
-            zoneName: w.zoneName || undefined,
-            assessedAt: w.assessedAt ? w.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
-            waterSource: w.waterSourceName || 'Giếng khoan & Hồ lắng',
-            sampleCode: `WATER-${w.assessmentId}`,
-            phLevel: w.waterPh != null ? Number(w.waterPh) : 6.8,
-            ecValue: w.temperatureC != null ? Number(w.temperatureC) : 0.45,
-            coliformResult: 'SAFE',
-            heavyMetalResult: 'SAFE',
-            laboratoryName: 'Trung tâm Phân tích Nông nghiệp',
-            conclusion: (w.qualityStatus as any) || 'DAT_CHUAN',
-            treatmentMeasure: w.notes || 'Hệ thống lắng lọc cát + đĩa lọc',
-            notes: w.notes,
-            recordedByName: w.conductedByName || 'Kỹ sư Nông học',
-          };
-        });
-        setWaterRecords(records);
-        return;
-      }
-    } catch {
-      // fallback
-    }
-    setWaterRecords(fetchBlockWaterAssessments(zId, bId, bName));
+    showToast((message("Saved risk record for Block \"{value1}\"!", { value1: saved.riskType })));
   };
 
   const reloadSoilHistory = async (bId: number, zId: number, bName: string) => {
@@ -526,7 +484,7 @@ export function BlockDetailPage() {
           notes: soilForm.notes,
           assessedAt: soilForm.assessedAt ? new Date(soilForm.assessedAt).toISOString() : new Date().toISOString(),
         });
-        showToast((lang === 'en' ? `Updated soil assessment "${soilForm.sampleCode}"!` : `Đã cập nhật đánh giá thổ nhưỡng "${soilForm.sampleCode}"!`));
+        showToast((message("Updated soil assessment \"{value1}\"!", { value1: soilForm.sampleCode })));
       } else {
         await createSoilAssessmentApi(block.blockId, {
           soilPh: parseFloat(soilForm.phLevel) || 6.5,
@@ -535,7 +493,7 @@ export function BlockDetailPage() {
           notes: soilForm.notes,
           assessedAt: soilForm.assessedAt ? new Date(soilForm.assessedAt).toISOString() : new Date().toISOString(),
         });
-        showToast((lang === 'en' ? `Added soil assessment "${soilForm.sampleCode}"!` : `Đã thêm mới đánh giá thổ nhưỡng "${soilForm.sampleCode}"!`));
+        showToast((message("Added soil assessment \"{value1}\"!", { value1: soilForm.sampleCode })));
       }
       await reloadSoilHistory(block.blockId, block.zoneId, block.blockName);
     } catch {
@@ -557,7 +515,7 @@ export function BlockDetailPage() {
         recordedByName: soilForm.recordedByName,
       });
       setSoilRecords(fetchBlockSoilAssessments(block.zoneId, block.blockId, block.blockName));
-      showToast((lang === 'en' ? `Saved soil assessment "${saved.sampleCode}"!` : `Đã lưu hồ sơ đánh giá đất "${saved.sampleCode}"!`));
+      showToast((message("Saved soil assessment \"{value1}\"!", { value1: saved.sampleCode })));
     }
     setSoilModalMode(null);
   };
@@ -566,11 +524,11 @@ export function BlockDetailPage() {
     if (!soilToDelete || !block) return;
     try {
       await deleteSoilAssessmentApi(soilToDelete.assessmentId);
-      showToast((lang === 'en' ? `Deleted soil assessment "${soilToDelete.sampleCode}"!` : `Đã xóa phiếu đánh giá thổ nhưỡng "${soilToDelete.sampleCode}"!`));
+      showToast((message("Deleted soil assessment \"{value1}\"!", { value1: soilToDelete.sampleCode })));
       await reloadSoilHistory(block.blockId, block.zoneId, block.blockName);
     } catch {
       setSoilRecords((prev) => prev.filter((s) => s.assessmentId !== soilToDelete.assessmentId));
-      showToast((lang === 'en' ? `Soil assessment deleted!` : `Đã xóa phiếu đánh giá thổ nhưỡng!`));
+      showToast(("Soil assessment deleted!"));
     } finally {
       setSoilToDelete(null);
     }
@@ -600,7 +558,7 @@ export function BlockDetailPage() {
     });
     setWaterRecords(fetchBlockWaterAssessments(block.zoneId, block.blockId, block.blockName));
     setWaterModalMode(null);
-    showToast((lang === 'en' ? `Saved water assessment "${saved.sampleCode}"!` : `Đã lưu hồ sơ đánh giá nước "${saved.sampleCode}"!`));
+    showToast((message("Saved water assessment \"{value1}\"!", { value1: saved.sampleCode })));
   };
 
   const handleConfirmDeleteBlock = async () => {
@@ -609,7 +567,7 @@ export function BlockDetailPage() {
       await deleteBlock(block.blockId);
       navigate(`/zones/${block.zoneId}`);
     } catch (err) {
-      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Cannot delete Block with linked data." : err instanceof Error ? err.message : 'Không thể xóa Block khi đang có dữ liệu liên kết.'), 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Cannot delete Block with linked data." : err instanceof Error ? err.message : 'Không thể xóa lô sản xuất khi đang có dữ liệu liên kết.'), 'error');
       setIsDeleteBlockOpen(false);
     }
   };
@@ -617,10 +575,7 @@ export function BlockDetailPage() {
   if (loading) {
     return (
       <section className="farm-registration-page" style={{ maxWidth: '1240px' }}>
-        <div className="panel empty-state">
-          <div className="empty-icon">⏳</div>
-          <h2>{(lang === 'en' ? "Loading details for Block #" : "Đang tải thông tin chi tiết Block #")}{blockId}...</h2>
-        </div>
+        <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading details for Block #" : "Đang tải thông tin chi tiết lô sản xuất #")}{blockId}...</>} icon={<>⏳</>} />
       </section>
     );
   }
@@ -628,14 +583,7 @@ export function BlockDetailPage() {
   if (error || !block) {
     return (
       <section className="farm-registration-page" style={{ maxWidth: '1240px' }}>
-        <div className="panel empty-state" role="alert">
-          <div className="empty-icon">⚠️</div>
-          <h2>{(lang === 'en' ? "Block not found" : "Không tìm thấy thông tin Block")}</h2>
-          <p>{(lang === 'en' ? error || `Block #${blockId} does not exist or you do not have access.` : error || `Block #${blockId} không tồn tại hoặc bạn không có quyền truy cập.`)}</p>
-          <Link to="/zones" className="primary-button">
-            Back to Zones
-          </Link>
-        </div>
+        <EmptyState role="alert" className="panel" title={<>{(lang === 'en' ? "Block not found" : "Không tìm thấy thông tin lô sản xuất")}</>} description={<>{(lang === 'en' ? error || `Block #${blockId} does not exist or you do not have access.` : error || `Block #${blockId} không tồn tại hoặc bạn không có quyền truy cập.`)}</>} icon={<>⚠️</>} action={<><Link to="/zones" className="ui-button ui-button--primary">{translate("Back to Zones")}</Link></>} />
       </section>
     );
   }
@@ -655,39 +603,32 @@ export function BlockDetailPage() {
       </div>
 
       {/* Screen 4 Header matching FarmRegistrationPage */}
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">
-            BLK-{String(block.blockId).padStart(3, '0')} · {resolvedZoneName} · {farmName}
-          </span>
-          <h1>
+      <PageHeading   title={<>
             {block.blockName} · {resolvedZoneName} · {farmName}
-          </h1>
-          <p style={{ margin: '6px 0 0', color: '#64748b', fontSize: '14.5px' }}>
-            {block.description || (lang === 'en' ? 'Production block under VietGAP standard management.' : 'Block sản xuất trực thuộc Zone quản lý theo tiêu chuẩn VietGAP.')}
-          </p>
-        </div>
-
-        {/* Top Buttons per spec: Back, Edit Block, Record Conditions; Owner has Delete Block when eligible */}
-        <div className="dashboard-actions">
-          <Link to={`/zones/${block.zoneId}`} className="action-button">
+          </>} description={<>
+            {block.description || (lang === 'en' ? 'Production block under VietGAP standard management.' : 'Lô sản xuất thuộc khu vực quản lý theo tiêu chuẩn VietGAP.')}
+          </>} leading={<><span className="eyebrow">
+            BLK-{String(block.blockId).padStart(3, '0')} · {resolvedZoneName} · {farmName}
+          </span></>}>{/* Top Buttons per spec: Back, Edit Block, Record Conditions; Owner has Delete Block when eligible */}
+<div className="dashboard-actions">
+          <Link to={`/zones/${block.zoneId}`} className="ui-button ui-button--secondary">
             {lang === 'en' ? '← Back' : '← Quay lại'}
           </Link>
-          <button type="button" className="action-button" onClick={() => setIsEditBlockOpen(true)}>
-            {(lang === 'en' ? "Edit Block" : "Chỉnh sửa Block")}
-          </button>
-          <button type="button" className="primary-button" onClick={() => setIsRecordConditionOpen(true)}>
+          <Button type="button" variant="secondary" onClick={() => setIsEditBlockOpen(true)}>
+            {(lang === 'en' ? "Edit Block" : "Chỉnh sửa lô sản xuất")}
+          </Button>
+          <Button type="button" variant="primary" onClick={() => setIsRecordConditionOpen(true)}>
             {(lang === 'en' ? "Record conditions" : "Ghi nhận điều kiện")}
-          </button>
+          </Button>
           {isOwner && (
-            <button
+            <Button
               type="button"
-              className={canDeleteBlock ? 'action-button danger' : 'action-button'}
+              variant={canDeleteBlock ? 'danger' : 'secondary'}
               style={{ opacity: canDeleteBlock ? 1 : 0.55 }}
               onClick={() => {
                 if (!canDeleteBlock) {
                   showToast(
-                    (lang === 'en' ? "Cannot delete a Block with linked seasons or condition history." : 'Không thể xóa Block khi đang có mùa vụ hoặc lịch sử điều kiện liên kết.'),
+                    (lang === 'en' ? "Cannot delete a Block with linked seasons or condition history." : 'Không thể xóa lô sản xuất khi đang có mùa vụ hoặc lịch sử điều kiện liên kết.'),
                     'error'
                   );
                   return;
@@ -695,11 +636,10 @@ export function BlockDetailPage() {
                 setIsDeleteBlockOpen(true);
               }}
             >
-              {(lang === 'en' ? "Delete Block" : "Xóa Block")}
-            </button>
+              {(lang === 'en' ? "Delete Block" : "Xóa lô sản xuất")}
+            </Button>
           )}
-        </div>
-      </div>
+        </div></PageHeading>
 
       {notification && (
         <div
@@ -730,21 +670,21 @@ export function BlockDetailPage() {
             </h2>
           </div>
           <span className="profile-role-pill">
-            {block.areaValue.toLocaleString('vi-VN')} {block.areaUnit === 'm2' ? 'm²' : block.areaUnit}
+            {displayNumber(block.areaValue, lang)} {block.areaUnit === 'm2' ? 'm²' : block.areaUnit}
           </span>
         </div>
 
         <dl className="detail-list" style={{ marginBottom: 0 }}>
           <div>
-            <dt>{(lang === 'en' ? "Block Name & Code" : "Tên & Mã Block")}</dt>
+            <dt>{(lang === 'en' ? "Block Name & Code" : "Tên và mã lô sản xuất")}</dt>
             <dd>
-              {block.blockName} (BLK-{String(block.blockId).padStart(3, '0')})
+              {block.blockName}{' '}(BLK-{String(block.blockId).padStart(3, '0')})
             </dd>
           </div>
           <div>
             <dt>{(lang === 'en' ? "Parent zone" : "Khu vực trực thuộc")}</dt>
             <dd>
-              <Link to={`/zones/${block.zoneId}`} style={{ color: '#059669', textDecoration: 'underline' }}>
+              <Link to={`/zones/${block.zoneId}`} style={{ color: 'var(--color-primary-text)', textDecoration: 'underline' }}>
                 {resolvedZoneName}
               </Link>
             </dd>
@@ -756,7 +696,7 @@ export function BlockDetailPage() {
           <div>
             <dt>{(lang === 'en' ? "Area" : "Diện tích")}</dt>
             <dd>
-              {block.areaValue.toLocaleString('vi-VN')} {block.areaUnit === 'm2' ? 'm²' : block.areaUnit}
+              {displayNumber(block.areaValue, lang)} {block.areaUnit === 'm2' ? 'm²' : block.areaUnit}
             </dd>
           </div>
           <div>
@@ -775,67 +715,32 @@ export function BlockDetailPage() {
       </div>
 
       {/* 6 Tabs Navigation per specification */}
-      <div className="zone-tabs-nav">
-        <button
-          type="button"
-          className={activeTab === 'overview' ? 'zone-tab-btn active' : 'zone-tab-btn'}
-          onClick={() => setActiveTab('overview')}
-        >
-          {(lang === 'en' ? "Overview" : "Tổng quan")}
-        </button>
-        <button
-          type="button"
-          className={activeTab === 'seasons' ? 'zone-tab-btn active' : 'zone-tab-btn'}
-          onClick={() => setActiveTab('seasons')}
-        >
-          {(lang === 'en' ? "Crop seasons (" : "Mùa vụ canh tác (")}{blockSeasons.length})
-        </button>
-        <button
-          type="button"
-          className={activeTab === 'conditions' ? 'zone-tab-btn active' : 'zone-tab-btn'}
-          onClick={() => setActiveTab('conditions')}
-        >
-          {(lang === 'en' ? "Environmental conditions (" : "Điều kiện môi trường (")}{conditions.length})
-        </button>
-        <button
-          type="button"
-          className={activeTab === 'risks' ? 'zone-tab-btn active' : 'zone-tab-btn'}
-          onClick={() => setActiveTab('risks')}
-        >
-          {(lang === 'en' ? "Risk records (" : "Hồ sơ rủi ro (")}{riskRecords.length})
-        </button>
-        <button
-          type="button"
-          className={activeTab === 'soil' ? 'zone-tab-btn active' : 'zone-tab-btn'}
-          onClick={() => setActiveTab('soil')}
-        >
-          {(lang === 'en' ? "Soil assessments (" : "Đánh giá đất (")}{soilRecords.length})
-        </button>
-        <button
-          type="button"
-          className={activeTab === 'water' ? 'zone-tab-btn active' : 'zone-tab-btn'}
-          onClick={() => setActiveTab('water')}
-        >
-          {(lang === 'en' ? "Water assessments (" : "Đánh giá nước (")}{waterRecords.length})
-        </button>
-      </div>
+      <TabList idPrefix="block-detail" label={lang === 'en' ? 'Block details' : 'Chi tiết lô sản xuất'}
+            value={activeTab} onChange={setActiveTab} items={[
+              { value: 'overview', label: <>{(lang === 'en' ? "Overview" : "Tổng quan")}</> },
+              { value: 'seasons', label: <>{(lang === 'en' ? "Crop seasons (" : "Mùa vụ canh tác (")}{blockSeasons.length})</> },
+              { value: 'conditions', label: <>{(lang === 'en' ? "Environmental conditions (" : "Điều kiện môi trường (")}{conditions.length})</> },
+              { value: 'risks', label: <>{(lang === 'en' ? "Risk records (" : "Hồ sơ rủi ro (")}{riskRecords.length})</> },
+              { value: 'soil', label: <>{(lang === 'en' ? "Soil assessments (" : "Đánh giá đất (")}{soilRecords.length})</> },
+              { value: 'water', label: <>{(lang === 'en' ? "Water assessments (" : "Đánh giá nước (")}{waterRecords.length})</> },
+            ]} />
 
       {/* =========================================================
-          TAB 1: OVERVIEW (Thông tin Block, Zone trực thuộc & Bản đồ Goong Map)
+          TAB 1: OVERVIEW (Thông tin lô sản xuất, Zone trực thuộc & Bản đồ Goong Map)
          ========================================================= */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          <div className="profile-layout">
+        <div {...tabPanelProps('block-detail', 'overview')} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div className="block-overview-panels">
             {/* Block Info Panel */}
             <div className="panel" style={{ padding: '28px' }}>
               <div className="panel-title" style={{ marginBottom: '18px' }}>
                 <div>
-                  <span className="eyebrow">{(lang === 'en' ? "Block information" : "Thông tin Block")}</span>
+                  <span className="eyebrow">{(lang === 'en' ? "Block information" : "Thông tin lô sản xuất")}</span>
                   <h2 style={{ margin: '4px 0 0' }}>{block.blockName}</h2>
                 </div>
-                <button type="button" className="action-button" onClick={() => setIsEditBlockOpen(true)}>
-                  {(lang === 'en' ? "Edit Block" : "Chỉnh sửa Block")}
-                </button>
+                <Button type="button" variant="secondary" onClick={() => setIsEditBlockOpen(true)}>
+                  {(lang === 'en' ? "Edit Block" : "Chỉnh sửa lô sản xuất")}
+                </Button>
               </div>
 
               <dl className="detail-list" style={{ marginBottom: 0 }}>
@@ -844,13 +749,13 @@ export function BlockDetailPage() {
                   <dd>#{block.blockId}</dd>
                 </div>
                 <div>
-                  <dt>{(lang === 'en' ? "Block code" : "Mã Block")}</dt>
+                  <dt>{(lang === 'en' ? "Block code" : "Mã lô sản xuất")}</dt>
                   <dd>BLK-{String(block.blockId).padStart(3, '0')}</dd>
                 </div>
                 <div>
                   <dt>{(lang === 'en' ? "Area" : "Diện tích")}</dt>
                   <dd>
-                    {block.areaValue.toLocaleString('vi-VN')} {block.areaUnit === 'm2' ? 'm²' : block.areaUnit}
+                    {displayNumber(block.areaValue, lang)} {block.areaUnit === 'm2' ? 'm²' : block.areaUnit}
                   </dd>
                 </div>
                 <div>
@@ -879,7 +784,7 @@ export function BlockDetailPage() {
                   <span className="eyebrow">{(lang === 'en' ? "Parent management zone" : "Khu vực quản lý trực thuộc")}</span>
                   <h2 style={{ margin: '4px 0 0' }}>{resolvedZoneName}</h2>
                 </div>
-                <Link to={`/zones/${block.zoneId}`} className="primary-button">
+                <Link to={`/zones/${block.zoneId}`} className="ui-button ui-button--primary">
                   {(lang === 'en' ? "Zone details →" : "Chi tiết khu vực →")}
                 </Link>
               </div>
@@ -920,9 +825,9 @@ export function BlockDetailPage() {
                 <span className="eyebrow">{(lang === 'en' ? "Production block location map" : "Bản đồ vị trí lô sản xuất")}</span>
                 <h2 style={{ margin: '4px 0 0' }}>{(lang === 'en' ? "Field location: " : "Vị trí thực địa: ")} {block.blockName}</h2>
               </div>
-              <button type="button" className="action-button" onClick={() => setIsEditBlockOpen(true)}>
+              <Button type="button" variant="secondary" onClick={() => setIsEditBlockOpen(true)}>
                 {(lang === 'en' ? "Update coordinates" : "Cập nhật tọa độ")}
-              </button>
+              </Button>
             </div>
             <FarmGoongMap
               farmName={`${block.blockName} (${resolvedZoneName})`}
@@ -940,14 +845,14 @@ export function BlockDetailPage() {
           TAB 2: CROP SEASONS
          ========================================================= */}
       {activeTab === 'seasons' && (
-        <div>
+        <div {...tabPanelProps('block-detail', 'seasons')}>
           <div className="production-filter-panel">
             <label className="form-field" style={{ flex: '1.5 1 240px' }}>
               <span>
                 {(lang === 'en' ? "Search seasons" : "Tìm kiếm mùa vụ")}
-                <small style={{ color: '#059669', fontWeight: 700 }}>{(lang === 'en' ? "Keyword" : "Từ khóa")}</small>
+                <small style={{ color: 'var(--color-primary-text)', fontWeight: 700 }}>{(lang === 'en' ? "Keyword" : "Từ khóa")}</small>
               </span>
-              <input
+              <input className="ui-input"
                 id="block-season-search"
                 type="search"
                 placeholder={lang === 'en' ? 'Search by season name or crop...' : 'Tìm theo tên mùa vụ hoặc cây trồng...'}
@@ -959,9 +864,9 @@ export function BlockDetailPage() {
             <label className="form-field" style={{ flex: '1 1 210px' }}>
               <span>
                 {(lang === 'en' ? "Crop categories" : "Danh mục cây trồng")}
-                <small style={{ color: '#059669', fontWeight: 700 }}>{(lang === 'en' ? "Crop type" : "Loại cây")}</small>
+                <small style={{ color: 'var(--color-primary-text)', fontWeight: 700 }}>{(lang === 'en' ? "Crop type" : "Loại cây")}</small>
               </span>
-              <select
+              <select className="ui-select"
                 id="block-season-cat"
                 value={seasonCategoryFilter}
                 onChange={(e) => setSeasonCategoryFilter(e.target.value)}
@@ -969,7 +874,7 @@ export function BlockDetailPage() {
                 <option value="all">{(lang === 'en' ? "-- All categories --" : "-- Tất cả danh mục --")}</option>
                 {categories.map((cat) => (
                   <option key={cat.id} value={String(cat.id)}>
-                    {translate(cat.categoryName)}
+                    {cat.categoryName}
                   </option>
                 ))}
               </select>
@@ -978,9 +883,9 @@ export function BlockDetailPage() {
             <label className="form-field" style={{ flex: '0.8 1 180px' }}>
               <span>
                 {lang === 'en' ? 'Status' : 'Trạng thái'}
-                <small style={{ color: '#059669', fontWeight: 700 }}>{(lang === 'en' ? "Season status" : "Trạng thái mùa vụ")}</small>
+                <small style={{ color: 'var(--color-primary-text)', fontWeight: 700 }}>{(lang === 'en' ? "Season status" : "Trạng thái mùa vụ")}</small>
               </span>
-              <select
+              <select className="ui-select"
                 id="block-season-status"
                 value={seasonStatusFilter}
                 onChange={(e) => setSeasonStatusFilter(e.target.value)}
@@ -993,10 +898,10 @@ export function BlockDetailPage() {
               </select>
             </label>
 
-            <button
+            <Button
               type="button"
-              className="action-button"
-              style={{ height: '46px' }}
+              variant="secondary"
+
               onClick={() => {
                 setSeasonSearch('');
                 setSeasonCategoryFilter('all');
@@ -1004,24 +909,19 @@ export function BlockDetailPage() {
               }}
             >
               {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
-            </button>
+            </Button>
 
-            <button type="button" className="primary-button" style={{ height: '46px' }} onClick={openCreateSeasonModal}>
+            <Button type="button" variant="primary"  onClick={openCreateSeasonModal}>
               <Icon name="plus" /> {lang === 'en' ? 'Add Season' : 'Thêm mùa vụ'}
-            </button>
+            </Button>
           </div>
 
           {filteredSeasons.length === 0 ? (
-            <div className="panel empty-state">
-              <div className="empty-icon">🌾</div>
-              <h2>{(lang === 'en' ? "No seasons on " : "Chưa có mùa vụ nào trên ")} {block.blockName}</h2>
-              <p>
+            <EmptyState  className="panel" title={<>{(lang === 'en' ? "No seasons on " : "Chưa có mùa vụ nào trên ")} {block.blockName}</>} description={<>
                 {lang === 'en' ? `Click "Add Season" to initialize a new crop season for ${block.blockName}.` : `Nhấn "Thêm mùa vụ" để khởi tạo mùa vụ canh tác mới gắn trực tiếp với ${block.blockName}.`}
-              </p>
-              <button type="button" className="primary-button" onClick={openCreateSeasonModal}>
+              </>} icon={<>🌾</>} action={<><Button type="button" variant="primary" onClick={openCreateSeasonModal}>
                 <Icon name="plus" /> {lang === 'en' ? 'Add Season' : 'Thêm mùa vụ'}
-              </button>
-            </div>
+              </Button></>} />
           ) : (
             <div className="panel" style={{ padding: '24px' }}>
               <div className="panel-title" style={{ marginBottom: '18px' }}>
@@ -1029,21 +929,21 @@ export function BlockDetailPage() {
                   <span className="eyebrow">{(lang === 'en' ? "Crop seasons on " : "Danh sách mùa vụ canh tác trên ")} {block.blockName}</span>
                   <h2 style={{ margin: '4px 0 0' }}>{(lang === 'en' ? "Crop seasons (" : "Mùa vụ canh tác (")}{filteredSeasons.length})</h2>
                 </div>
-                <button type="button" className="primary-button" onClick={openCreateSeasonModal}>
+                <Button type="button" variant="primary" onClick={openCreateSeasonModal}>
                   <Icon name="plus" /> {lang === 'en' ? 'Add Season' : 'Thêm mùa vụ'}
-                </button>
+                </Button>
               </div>
 
-              <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-                <table className="data-table" style={{ minWidth: '880px' }}>
+              <div className="zone-table-wrap ui-table-scroll" style={{ marginBottom: 0 }} tabIndex={0}>
+                <table className="ui-data-table" style={{ }}>
                   <thead>
                     <tr>
-                      <th>{lang === 'en' ? 'Season Name' : 'Tên mùa vụ'}</th>
-                      <th>{lang === 'en' ? 'Crop Category' : 'Danh mục cây trồng'}</th>
-                      <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'}</th>
-                      <th>{lang === 'en' ? 'Timeline (Start → End)' : 'Thời gian (Bắt đầu → Kết thúc)'}</th>
-                      <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
-                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                      <th scope="col">{lang === 'en' ? 'Season Name' : 'Tên mùa vụ'}</th>
+                      <th scope="col">{lang === 'en' ? 'Crop Category' : 'Danh mục cây trồng'}</th>
+                      <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'}</th>
+                      <th scope="col">{lang === 'en' ? 'Timeline (Start → End)' : 'Thời gian (Bắt đầu → Kết thúc)'}</th>
+                      <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
+                      <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1052,13 +952,13 @@ export function BlockDetailPage() {
                         <td>
                           <Link
                             to={`/crop-seasons/${s.cropSeasonId}`}
-                            style={{ fontWeight: 750, fontSize: '15px', color: '#0f172a' }}
+                            style={{ fontWeight: 750, fontSize: '15px', color: 'var(--color-text)' }}
                           >
                             {s.seasonName}
                           </Link>
                         </td>
                         <td>{(lang === 'en' ? s.cropCategoryName || `Group #${s.cropCategoryId}` : s.cropCategoryName || `Nhóm #${s.cropCategoryId}`)}</td>
-                        <td style={{ textAlign: 'center', fontWeight: 700, color: '#059669' }}>
+                        <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-primary-text)' }}>
                           {s.blockMapping?.plantedArea ?? block.areaValue}{' '}
                           {translate(s.blockMapping?.areaUnit || block.areaUnit || 'm²')}
                         </td>
@@ -1106,11 +1006,11 @@ export function BlockDetailPage() {
           TAB 3: BLOCK CONDITIONS
          ========================================================= */}
       {activeTab === 'conditions' && (
-        <div>
+        <div {...tabPanelProps('block-detail', 'conditions')}>
           <div className="production-filter-panel">
             <label className="form-field">
               <span>{(lang === 'en' ? "From date" : "Từ ngày")}</span>
-              <input
+              <input className="ui-input"
                 id="cond-from-date"
                 type="date"
                 value={condFromDate}
@@ -1119,43 +1019,38 @@ export function BlockDetailPage() {
             </label>
             <label className="form-field">
               <span>{(lang === 'en' ? "To date" : "Đến ngày")}</span>
-              <input
+              <input className="ui-input"
                 id="cond-to-date"
                 type="date"
                 value={condToDate}
                 onChange={(e) => setCondToDate(e.target.value)}
               />
             </label>
-            <button
+            <Button
               type="button"
-              className="action-button"
-              style={{ height: '46px' }}
+              variant="secondary"
+
               onClick={() => {
                 setCondFromDate('');
                 setCondToDate('');
               }}
             >
               {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="primary-button"
-              style={{ height: '46px' }}
+              variant="primary"
+
               onClick={() => setIsRecordConditionOpen(true)}
             >
               <Icon name="plus" /> {(lang === 'en' ? " Record conditions" : " Ghi nhận điều kiện")}
-            </button>
+            </Button>
           </div>
 
           {filteredConditions.length === 0 ? (
-            <div className="panel empty-state">
-              <div className="empty-icon">📋</div>
-              <h2>{(lang === 'en' ? "No condition history for " : "Chưa có lịch sử ghi nhận điều kiện trên ")} {block.blockName}</h2>
-              <p>{(lang === 'en' ? "Click \"Record conditions\" to log soil conditions, moisture, or pests in this block." : "Nhấn \"Ghi nhận điều kiện\" để ghi nhận tình trạng đất, độ ẩm hoặc sâu bệnh thực tế tại lô đất này.")}</p>
-              <button type="button" className="primary-button" onClick={() => setIsRecordConditionOpen(true)}>
+            <EmptyState  className="panel" title={<>{(lang === 'en' ? "No condition history for " : "Chưa có lịch sử ghi nhận điều kiện trên ")} {block.blockName}</>} description={<>{(lang === 'en' ? "Click \"Record conditions\" to log soil conditions, moisture, or pests in this block." : "Nhấn \"Ghi nhận điều kiện\" để ghi nhận tình trạng đất, độ ẩm hoặc sâu bệnh thực tế tại lô đất này.")}</>} icon={<>📋</>} action={<><Button type="button" variant="primary" onClick={() => setIsRecordConditionOpen(true)}>
                 <Icon name="plus" /> {(lang === 'en' ? " Record conditions" : " Ghi nhận điều kiện")}
-              </button>
-            </div>
+              </Button></>} />
           ) : (
             <div className="panel" style={{ padding: '24px' }}>
               <div className="panel-title" style={{ marginBottom: '18px' }}>
@@ -1163,32 +1058,32 @@ export function BlockDetailPage() {
                   <span className="eyebrow">{(lang === 'en' ? "Production condition history" : "Lịch sử điều kiện sản xuất")}</span>
                   <h2 style={{ margin: '4px 0 0' }}>{(lang === 'en' ? "Environmental conditions (" : "Điều kiện môi trường (")}{filteredConditions.length})</h2>
                 </div>
-                <button type="button" className="primary-button" onClick={() => setIsRecordConditionOpen(true)}>
+                <Button type="button" variant="primary" onClick={() => setIsRecordConditionOpen(true)}>
                   <Icon name="plus" /> {(lang === 'en' ? " Record conditions" : " Ghi nhận điều kiện")}
-                </button>
+                </Button>
               </div>
 
-              <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-                <table className="data-table" style={{ minWidth: '880px' }}>
+              <div className="zone-table-wrap ui-table-scroll" style={{ marginBottom: 0 }} tabIndex={0}>
+                <table className="ui-data-table" style={{ }}>
                   <thead>
                     <tr>
-                      <th>{lang === 'en' ? 'Recorded At' : 'Thời gian ghi nhận'}</th>
-                      <th>{lang === 'en' ? 'Condition Type' : 'Phân loại điều kiện'}</th>
-                      <th>{lang === 'en' ? 'Description & Notes' : 'Mô tả & Ghi chú'}</th>
-                      <th>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}</th>
-                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                      <th scope="col">{lang === 'en' ? 'Recorded At' : 'Thời gian ghi nhận'}</th>
+                      <th scope="col">{lang === 'en' ? 'Condition Type' : 'Phân loại điều kiện'}</th>
+                      <th scope="col">{lang === 'en' ? 'Description & Notes' : 'Mô tả & Ghi chú'}</th>
+                      <th scope="col">{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}</th>
+                      <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredConditions.map((obs) => (
                       <tr key={obs.observationId}>
                         <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                          {obs.observedAt ? new Date(obs.observedAt).toLocaleString('vi-VN') : 'N/A'}
+                          {obs.observedAt ? displayDateTime(obs.observedAt, lang) : 'N/A'}
                         </td>
                         <td>
                           <span className="knowledge-tag">{translate(obs.conditionType)}</span>
                         </td>
-                        <td style={{ maxWidth: '360px', color: '#334155', lineHeight: 1.5 }}>{obs.description}</td>
+                        <td style={{ maxWidth: '360px', color: 'var(--color-body)', lineHeight: 1.5 }}>{obs.description}</td>
                         <td>{(lang === 'en' ? obs.recorderFullName || "Farm staff" : obs.recorderFullName || 'Nhân sự trang trại')}</td>
                         <td style={{ textAlign: 'right' }}>
                           <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
@@ -1218,11 +1113,11 @@ export function BlockDetailPage() {
           TAB 4: RISK RECORDS
          ========================================================= */}
       {activeTab === 'risks' && (
-        <div>
+        <div {...tabPanelProps('block-detail', 'risks')}>
           <div className="production-filter-panel">
             <label className="form-field">
               <span>{(lang === 'en' ? "From date" : "Từ ngày")}</span>
-              <input
+              <input className="ui-input"
                 type="date"
                 value={riskFromDate}
                 onChange={(e) => setRiskFromDate(e.target.value)}
@@ -1230,7 +1125,7 @@ export function BlockDetailPage() {
             </label>
             <label className="form-field">
               <span>{(lang === 'en' ? "To date" : "Đến ngày")}</span>
-              <input
+              <input className="ui-input"
                 type="date"
                 value={riskToDate}
                 onChange={(e) => setRiskToDate(e.target.value)}
@@ -1238,17 +1133,17 @@ export function BlockDetailPage() {
             </label>
             <label className="form-field">
               <span>{(lang === 'en' ? "Risk level" : "Mức độ rủi ro")}</span>
-              <select value={riskLevelFilter} onChange={(e) => setRiskLevelFilter(e.target.value)}>
+              <select className="ui-select" value={riskLevelFilter} onChange={(e) => setRiskLevelFilter(e.target.value)}>
                 <option value="all">{(lang === 'en' ? "-- All levels --" : "-- Tất cả mức độ --")}</option>
                 <option value="LOW">{(lang === 'en' ? "Low" : "Thấp")}</option>
                 <option value="MEDIUM">{(lang === 'en' ? "Medium" : "Trung bình")}</option>
                 <option value="HIGH">{(lang === 'en' ? "High" : "Cao")}</option>
               </select>
             </label>
-            <button
+            <Button
               type="button"
-              className="action-button"
-              style={{ height: '46px' }}
+              variant="secondary"
+
               onClick={() => {
                 setRiskFromDate('');
                 setRiskToDate('');
@@ -1256,11 +1151,11 @@ export function BlockDetailPage() {
               }}
             >
               {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="primary-button"
-              style={{ height: '46px' }}
+              variant="primary"
+
               onClick={() => {
                 setSelectedRisk(null);
                 setRiskForm({
@@ -1277,7 +1172,7 @@ export function BlockDetailPage() {
               }}
             >
               <Icon name="plus" /> {lang === 'en' ? 'Add Risk Assessment' : 'Thêm đánh giá rủi ro'}
-            </button>
+            </Button>
           </div>
 
           <div className="panel" style={{ padding: '24px' }}>
@@ -1288,15 +1183,15 @@ export function BlockDetailPage() {
               </div>
             </div>
 
-            <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-              <table className="data-table" style={{ minWidth: '880px' }}>
+            <div className="zone-table-wrap ui-table-scroll" style={{ marginBottom: 0 }} tabIndex={0}>
+              <table className="ui-data-table" style={{ }}>
                 <thead>
                   <tr>
-                    <th>{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
-                    <th>{lang === 'en' ? 'Risk & Prior Findings' : 'Rủi ro & Phát hiện trước'}</th>
-                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Risk Level' : 'Mức độ'}</th>
-                    <th>{lang === 'en' ? 'Mitigation Measures' : 'Biện pháp kiểm soát'}</th>
-                    <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                    <th scope="col">{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
+                    <th scope="col">{lang === 'en' ? 'Risk & Prior Findings' : 'Rủi ro & Phát hiện trước'}</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Risk Level' : 'Mức độ'}</th>
+                    <th scope="col">{lang === 'en' ? 'Mitigation Measures' : 'Biện pháp kiểm soát'}</th>
+                    <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1304,18 +1199,18 @@ export function BlockDetailPage() {
                     <tr key={r.riskId}>
                       <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{r.assessedAt}</td>
                       <td style={{ maxWidth: '280px' }}>
-                        <strong style={{ color: '#0f172a', display: 'block', marginBottom: '3px' }}>{r.riskType}</strong>
+                        <strong style={{ color: 'var(--color-text)', display: 'block', marginBottom: '3px' }}>{r.riskType}</strong>
                         {r.priorFindings && (
-                          <small style={{ color: '#64748b', display: 'block' }}>
+                          <small style={{ color: 'var(--color-muted)', display: 'block' }}>
                             {(lang === 'en' ? "Previous findings: " : "Phát hiện trước đây: ")} {r.priorFindings}
                           </small>
                         )}
-                        <span style={{ fontSize: '13.5px', color: '#334155' }}>{r.description}</span>
+                        <span style={{ fontSize: '13.5px', color: 'var(--color-body)' }}>{r.description}</span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span className="knowledge-tag">{translate(r.riskLevel)}</span>
                       </td>
-                      <td style={{ maxWidth: '300px', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.5 }}>
+                      <td style={{ maxWidth: '300px', fontSize: '13.5px', color: 'var(--color-text)', lineHeight: 1.5 }}>
                         {r.controlMeasures}
                       </td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
@@ -1381,31 +1276,31 @@ export function BlockDetailPage() {
           TAB 5: SOIL ASSESSMENTS
          ========================================================= */}
       {activeTab === 'soil' && (
-        <div>
+        <div {...tabPanelProps('block-detail', 'soil')}>
           <div className="production-filter-panel">
             <label className="form-field">
               <span>{(lang === 'en' ? "Date range: From" : "Khoảng thời gian: Từ ngày")}</span>
-              <input type="date" value={soilFromDate} onChange={(e) => setSoilFromDate(e.target.value)} />
+              <input className="ui-input" type="date" value={soilFromDate} onChange={(e) => setSoilFromDate(e.target.value)} />
             </label>
             <label className="form-field">
               <span>{(lang === 'en' ? "Date range: To" : "Khoảng thời gian: Đến ngày")}</span>
-              <input type="date" value={soilToDate} onChange={(e) => setSoilToDate(e.target.value)} />
+              <input className="ui-input" type="date" value={soilToDate} onChange={(e) => setSoilToDate(e.target.value)} />
             </label>
-            <button
+            <Button
               type="button"
-              className="action-button"
-              style={{ height: '46px' }}
+              variant="secondary"
+
               onClick={() => {
                 setSoilFromDate('');
                 setSoilToDate('');
               }}
             >
               {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="primary-button"
-              style={{ height: '46px' }}
+              variant="primary"
+
               onClick={() => {
                 setSelectedSoil(null);
                 setSoilForm({
@@ -1424,7 +1319,7 @@ export function BlockDetailPage() {
               }}
             >
               <Icon name="plus" /> {lang === 'en' ? 'Add Soil Assessment' : 'Thêm đánh giá đất'}
-            </button>
+            </Button>
           </div>
 
           <div className="panel" style={{ padding: '24px' }}>
@@ -1435,16 +1330,16 @@ export function BlockDetailPage() {
               </div>
             </div>
 
-            <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-              <table className="data-table" style={{ minWidth: '880px' }}>
+            <div className="zone-table-wrap ui-table-scroll" style={{ marginBottom: 0 }} tabIndex={0}>
+              <table className="ui-data-table" style={{ }}>
                 <thead>
                   <tr>
-                    <th>{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
-                    <th>{lang === 'en' ? 'Sample Code & Lab' : 'Mã mẫu & Phòng kiểm nghiệm'}</th>
-                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'pH / Organic Matter (%)' : 'Độ pH / Chất hữu cơ (%)'}</th>
-                    <th>{lang === 'en' ? 'Heavy Metals & Microbes' : 'Kim loại nặng & Vi sinh'}</th>
-                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Conclusion' : 'Kết luận'}</th>
-                    <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                    <th scope="col">{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
+                    <th scope="col">{lang === 'en' ? 'Sample Code & Lab' : 'Mã mẫu & Phòng kiểm nghiệm'}</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'pH / Organic Matter (%)' : 'Độ pH / Chất hữu cơ (%)'}</th>
+                    <th scope="col">{lang === 'en' ? 'Heavy Metals & Microbes' : 'Kim loại nặng & Vi sinh'}</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Conclusion' : 'Kết luận'}</th>
+                    <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1452,15 +1347,15 @@ export function BlockDetailPage() {
                     <tr key={s.assessmentId}>
                       <td style={{ fontWeight: 700 }}>{s.assessedAt}</td>
                       <td>
-                        <strong style={{ color: '#0f172a', display: 'block' }}>{s.sampleCode}</strong>
-                        <small style={{ color: '#64748b' }}>{s.laboratoryName}</small>
+                        <strong style={{ color: 'var(--color-text)', display: 'block' }}>{s.sampleCode}</strong>
+                        <small style={{ color: 'var(--color-muted)' }}>{s.laboratoryName}</small>
                       </td>
-                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#059669' }}>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-primary-text)' }}>
                         pH {s.phLevel} · OM {s.organicMatterPct}%
                       </td>
                       <td style={{ maxWidth: '280px', fontSize: '13.5px' }}>
                         <strong>{(lang === 'en' ? "Heavy metals: " : "Kim loại nặng: ")} {(lang === 'en' ? s.heavyMetalResult === 'SAFE' ? "Safe" : s.heavyMetalResult : s.heavyMetalResult === 'SAFE' ? 'An toàn' : s.heavyMetalResult)}</strong>
-                        <div style={{ color: '#475569' }}>{s.microbialStatus}</div>
+                        <div style={{ color: 'var(--color-body)' }}>{s.microbialStatus}</div>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <span className="knowledge-tag">
@@ -1529,31 +1424,31 @@ export function BlockDetailPage() {
           TAB 6: WATER ASSESSMENTS
          ========================================================= */}
       {activeTab === 'water' && (
-        <div>
+        <div {...tabPanelProps('block-detail', 'water')}>
           <div className="production-filter-panel">
             <label className="form-field">
               <span>{(lang === 'en' ? "Date range: From" : "Khoảng thời gian: Từ ngày")}</span>
-              <input type="date" value={waterFromDate} onChange={(e) => setWaterFromDate(e.target.value)} />
+              <input className="ui-input" type="date" value={waterFromDate} onChange={(e) => setWaterFromDate(e.target.value)} />
             </label>
             <label className="form-field">
               <span>{(lang === 'en' ? "Date range: To" : "Khoảng thời gian: Đến ngày")}</span>
-              <input type="date" value={waterToDate} onChange={(e) => setWaterToDate(e.target.value)} />
+              <input className="ui-input" type="date" value={waterToDate} onChange={(e) => setWaterToDate(e.target.value)} />
             </label>
-            <button
+            <Button
               type="button"
-              className="action-button"
-              style={{ height: '46px' }}
+              variant="secondary"
+
               onClick={() => {
                 setWaterFromDate('');
                 setWaterToDate('');
               }}
             >
               {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="primary-button"
-              style={{ height: '46px' }}
+              variant="primary"
+
               onClick={() => {
                 setSelectedWater(null);
                 setWaterForm({
@@ -1574,7 +1469,7 @@ export function BlockDetailPage() {
               }}
             >
               <Icon name="plus" /> {lang === 'en' ? 'Add Water Assessment' : 'Thêm đánh giá nước'}
-            </button>
+            </Button>
           </div>
 
           <div className="panel" style={{ padding: '24px' }}>
@@ -1585,16 +1480,16 @@ export function BlockDetailPage() {
               </div>
             </div>
 
-            <div className="zone-table-wrap" style={{ marginBottom: 0 }}>
-              <table className="data-table" style={{ minWidth: '880px' }}>
+            <div className="zone-table-wrap ui-table-scroll" style={{ marginBottom: 0 }} tabIndex={0}>
+              <table className="ui-data-table" style={{ }}>
                 <thead>
                   <tr>
-                    <th>{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
-                    <th>{lang === 'en' ? 'Water Source & Sample Code' : 'Nguồn nước & Mã mẫu'}</th>
-                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'pH / Conductivity (EC)' : 'pH / Độ dẫn điện EC'}</th>
-                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Coliform & Heavy Metals' : 'Coliform & Kim loại nặng'}</th>
-                    <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Conclusion' : 'Kết luận'}</th>
-                    <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                    <th scope="col">{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
+                    <th scope="col">{lang === 'en' ? 'Water Source & Sample Code' : 'Nguồn nước & Mã mẫu'}</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'pH / Conductivity (EC)' : 'pH / Độ dẫn điện EC'}</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Coliform & Heavy Metals' : 'Coliform & Kim loại nặng'}</th>
+                    <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Conclusion' : 'Kết luận'}</th>
+                    <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1602,12 +1497,12 @@ export function BlockDetailPage() {
                     <tr key={w.assessmentId}>
                       <td style={{ fontWeight: 700 }}>{w.assessedAt}</td>
                       <td>
-                        <strong style={{ color: '#0f172a', display: 'block' }}>{w.waterSource}</strong>
-                        <small style={{ color: '#64748b' }}>
+                        <strong style={{ color: 'var(--color-text)', display: 'block' }}>{w.waterSource}</strong>
+                        <small style={{ color: 'var(--color-muted)' }}>
                           {w.sampleCode} · {w.laboratoryName}
                         </small>
                       </td>
-                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#059669' }}>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--color-primary-text)' }}>
                         pH {w.phLevel} · EC {w.ecValue}
                       </td>
                       <td style={{ textAlign: 'center', fontSize: '13.5px' }}>
@@ -1698,7 +1593,7 @@ export function BlockDetailPage() {
         onClose={() => setIsEditBlockOpen(false)}
         onSuccess={(saved) => {
           setBlock(saved);
-          showToast((lang === 'en' ? `Updated Block "${saved.blockName}" successfully!` : `Đã cập nhật Block "${saved.blockName}" thành công!`));
+          showToast((message("Updated Block \"{value1}\" successfully!", { value1: saved.blockName })));
         }}
       />
 
@@ -1708,14 +1603,13 @@ export function BlockDetailPage() {
         onClose={() => setIsRecordConditionOpen(false)}
         onSuccess={(obs) => {
           setConditions((prev) => [obs, ...prev]);
-          showToast((lang === 'en' ? `Saved condition record (${obs.conditionType}) cho ${block.blockName}!` : `Đã lưu hồ sơ điều kiện (${obs.conditionType}) cho ${block.blockName}!`));
+          showToast((message("Saved condition record ({value1}) for {value2}!", { value1: obs.conditionType, value2: block.blockName })));
         }}
       />
 
       {/* Condition Record Details Modal */}
       {selectedCondition && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ width: 'min(620px, 100%)' }}>
+        <Modal open customLayout onClose={() => setSelectedCondition(null)} style={{ width: 'min(620px, 100%)' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow">{(lang === 'en' ? "Condition record details · #" : "Chi tiết ghi nhận điều kiện · #")}{selectedCondition.observationId}</span>
@@ -1728,7 +1622,7 @@ export function BlockDetailPage() {
             <div className="modal-body">
               <dl className="detail-list" style={{ marginBottom: 0 }}>
                 <div>
-                  <dt>Block</dt>
+                  <dt>{translate("Block")}</dt>
                   <dd>{block.blockName}</dd>
                 </div>
                 <div>
@@ -1737,7 +1631,7 @@ export function BlockDetailPage() {
                 </div>
                 <div>
                   <dt>{(lang === 'en' ? "Recorded at" : "Thời gian ghi nhận")}</dt>
-                  <dd>{new Date(selectedCondition.observedAt).toLocaleString('vi-VN')}</dd>
+                  <dd>{displayDateTime(selectedCondition.observedAt, lang)}</dd>
                 </div>
                 <div>
                   <dt>{(lang === 'en' ? "Recorded by" : "Người ghi nhận")}</dt>
@@ -1749,22 +1643,20 @@ export function BlockDetailPage() {
                 </div>
               </dl>
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="primary-button" onClick={() => setSelectedCondition(null)}>
+                <Button type="button" variant="primary" onClick={() => setSelectedCondition(null)}>
                   {(lang === 'en' ? "Close" : "Đóng")}
-                </button>
+                </Button>
               </div>
             </div>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Create / Edit Crop Season Modal (Auto-filled Block) */}
       {seasonModalMode && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
+        <Modal open customLayout onClose={() => setSeasonModalMode(null)} style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
             <div className="modal-header">
               <div>
-                <span className="eyebrow">{(lang === 'en' ? "Block season" : "Mùa vụ trên Block")}</span>
+                <span className="eyebrow">{(lang === 'en' ? "Block season" : "Mùa vụ trên lô sản xuất")}</span>
                 <h2>
                   {seasonModalMode === 'create'
                     ? (lang === 'en' ? `Add Season to ${block.blockName}` : `Thêm mùa vụ trên ${block.blockName}`)
@@ -1777,14 +1669,14 @@ export function BlockDetailPage() {
             </div>
 
             <form className="modal-body" onSubmit={handleSaveCropSeasonOnBlock}>
-              <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-                <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-                  <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
+              <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+                <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+                  <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
+                    {(lang === 'en' ? "Applicable Block" : "Lô sản xuất áp dụng")}
                   </span>
                   <span className="structured-field-badge">{(lang === 'en' ? "Automatically filled" : "Tự động điền")}</span>
                 </div>
-                <strong style={{ color: '#047857' }}>
+                <strong style={{ color: 'var(--color-primary-text)' }}>
                   🌿 {block.blockName} · {resolvedZoneName} ({block.areaValue} {translate(block.areaUnit)})
                 </strong>
               </div>
@@ -1792,12 +1684,12 @@ export function BlockDetailPage() {
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="cs-name-input" className="structured-field-label">
-                    {(lang === 'en' ? "Season name " : "Tên mùa vụ ")} <span style={{ color: '#dc2626' }}>*</span>
+                    {(lang === 'en' ? "Season name " : "Tên mùa vụ ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
                   </label>
-                  <span className="structured-field-badge">{seasonForm.seasonName.length}{(lang === 'en' ? "/120 characters" : "/120 ký tự")}</span>
+                  <label htmlFor="cs-name-input" className="structured-field-badge">{seasonForm.seasonName.length}{(lang === 'en' ? "/120 characters" : "/120 ký tự")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
+                  <input className="ui-input"
                     id="cs-name-input"
                     type="text"
                     maxLength={120}
@@ -1812,7 +1704,7 @@ export function BlockDetailPage() {
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
                     <label htmlFor="cs-cat-select" className="structured-field-label">
-                      {(lang === 'en' ? "Crop categories " : "Danh mục cây trồng ")} <span style={{ color: '#dc2626' }}>*</span>
+                      {(lang === 'en' ? "Crop categories " : "Danh mục cây trồng ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
                     </label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
@@ -1835,11 +1727,11 @@ export function BlockDetailPage() {
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
                     <label htmlFor="cs-area-input" className="structured-field-label">
-                      {(lang === 'en' ? "Planted area (" : "Diện tích gieo trồng (")}{translate(block.areaUnit)}) <span style={{ color: '#dc2626' }}>*</span>
+                      {(lang === 'en' ? "Planted area (" : "Diện tích gieo trồng (")}{translate(block.areaUnit)}) <span style={{ color: 'var(--color-danger)' }}>*</span>
                     </label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input className="ui-input"
                       id="cs-area-input"
                       type="number"
                       step="0.01"
@@ -1856,11 +1748,11 @@ export function BlockDetailPage() {
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
                     <label htmlFor="cs-start-input" className="structured-field-label">
-                      {(lang === 'en' ? "Start date " : "Ngày bắt đầu ")} <span style={{ color: '#dc2626' }}>*</span>
+                      {(lang === 'en' ? "Start date " : "Ngày bắt đầu ")} <span style={{ color: 'var(--color-danger)' }}>*</span>
                     </label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input className="ui-input"
                       id="cs-start-input"
                       type="date"
                       value={seasonForm.startDate}
@@ -1877,7 +1769,7 @@ export function BlockDetailPage() {
                     </label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input className="ui-input"
                       id="cs-end-input"
                       type="date"
                       value={seasonForm.endDate}
@@ -1900,7 +1792,7 @@ export function BlockDetailPage() {
                   </label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
+                  <textarea className="ui-textarea"
                     id="cs-notes-input"
                     rows={3}
                     value={seasonForm.notes}
@@ -1910,22 +1802,20 @@ export function BlockDetailPage() {
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setSeasonModalMode(null)}>
+                <Button type="button" variant="secondary" onClick={() => setSeasonModalMode(null)}>
                   {(lang === 'en' ? "Cancel" : "Hủy")}
-                </button>
-                <button type="submit" className="primary-button" disabled={savingSeason}>
+                </Button>
+                <Button type="submit" variant="primary" loading={savingSeason}>
                   {(lang === 'en' ? savingSeason ? "Saving..." : seasonModalMode === 'create' ? "Create season" : "Save changes" : savingSeason ? 'Đang lưu...' : seasonModalMode === 'create' ? 'Tạo mùa vụ' : 'Lưu thay đổi')}
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Block Risk Record Modal */}
       {riskModalMode && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+        <Modal open customLayout onClose={() => setRiskModalMode(null)} style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow">{(lang === 'en' ? "Risk assessment · " : "Đánh giá rủi ro · ")} {block.blockName}</span>
@@ -1942,22 +1832,22 @@ export function BlockDetailPage() {
               </button>
             </div>
             <form className="modal-body" onSubmit={handleSaveBlockRisk}>
-              <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-                <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-                  <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
+              <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+                <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+                  <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
+                    {(lang === 'en' ? "Applicable Block" : "Lô sản xuất áp dụng")}
                   </span>
                 </div>
-                <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
+                <strong style={{ color: 'var(--color-primary-text)' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
               </div>
 
               <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</span>
+                    <label htmlFor="block-detail-page-control-14" className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-14" className="ui-input"
                       type="date"
                       value={riskForm.assessedAt}
                       disabled={riskModalMode === 'view'}
@@ -1969,10 +1859,10 @@ export function BlockDetailPage() {
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Risk level" : "Mức độ rủi ro")}</span>
+                    <label htmlFor="block-detail-page-control-15" className="structured-field-label">{(lang === 'en' ? "Risk level" : "Mức độ rủi ro")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <select
+                    <select id="block-detail-page-control-15" className="ui-select"
                       value={riskForm.riskLevel}
                       disabled={riskModalMode === 'view'}
                       onChange={(e) =>
@@ -1989,10 +1879,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Risk type" : "Loại rủi ro")}</span>
+                  <label htmlFor="block-detail-page-control-16" className="structured-field-label">{(lang === 'en' ? "Risk type" : "Loại rủi ro")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
+                  <input id="block-detail-page-control-16" className="ui-input"
                     type="text"
                     value={riskForm.riskType}
                     disabled={riskModalMode === 'view'}
@@ -2004,10 +1894,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Previous findings" : "Phát hiện trước đây")}</span>
+                  <label htmlFor="block-detail-page-control-17" className="structured-field-label">{(lang === 'en' ? "Previous findings" : "Phát hiện trước đây")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
+                  <textarea id="block-detail-page-control-17" className="ui-textarea"
                     rows={2}
                     value={riskForm.priorFindings}
                     disabled={riskModalMode === 'view'}
@@ -2018,10 +1908,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Risk description" : "Mô tả nguy cơ rủi ro")}</span>
+                  <label htmlFor="block-detail-page-control-18" className="structured-field-label">{(lang === 'en' ? "Risk description" : "Mô tả nguy cơ rủi ro")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
+                  <textarea id="block-detail-page-control-18" className="ui-textarea"
                     rows={2}
                     value={riskForm.description}
                     disabled={riskModalMode === 'view'}
@@ -2033,10 +1923,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Control measures" : "Biện pháp kiểm soát")}</span>
+                  <label htmlFor="block-detail-page-control-19" className="structured-field-label">{(lang === 'en' ? "Control measures" : "Biện pháp kiểm soát")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
+                  <textarea id="block-detail-page-control-19" className="ui-textarea"
                     rows={3}
                     value={riskForm.controlMeasures}
                     disabled={riskModalMode === 'view'}
@@ -2047,24 +1937,22 @@ export function BlockDetailPage() {
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setRiskModalMode(null)}>
+                <Button type="button" variant="secondary" onClick={() => setRiskModalMode(null)}>
                   {(lang === 'en' ? riskModalMode === 'view' ? "Close" : "Cancel" : riskModalMode === 'view' ? 'Đóng' : 'Hủy')}
-                </button>
+                </Button>
                 {riskModalMode !== 'view' && (
-                  <button type="submit" className="primary-button">
+                  <Button type="submit" variant="primary">
                     {(lang === 'en' ? "Save record" : "Lưu ghi nhận")}
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Soil Assessment Modal */}
       {soilModalMode && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+        <Modal open customLayout onClose={() => setSoilModalMode(null)} style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow">{(lang === 'en' ? "Soil sample assessment · " : "Đánh giá mẫu đất · ")} {block.blockName}</span>
@@ -2081,22 +1969,22 @@ export function BlockDetailPage() {
               </button>
             </div>
             <form className="modal-body" onSubmit={handleSaveSoil}>
-              <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-                <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-                  <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
+              <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+                <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+                  <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
+                    {(lang === 'en' ? "Applicable Block" : "Lô sản xuất áp dụng")}
                   </span>
                 </div>
-                <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
+                <strong style={{ color: 'var(--color-primary-text)' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
               </div>
 
               <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</span>
+                    <label htmlFor="block-detail-page-control-20" className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-20" className="ui-input"
                       type="date"
                       value={soilForm.assessedAt}
                       disabled={soilModalMode === 'view'}
@@ -2108,10 +1996,10 @@ export function BlockDetailPage() {
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Soil sample code" : "Mã mẫu đất")}</span>
+                    <label htmlFor="block-detail-page-control-21" className="structured-field-label">{(lang === 'en' ? "Soil sample code" : "Mã mẫu đất")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-21" className="ui-input"
                       type="text"
                       value={soilForm.sampleCode}
                       disabled={soilModalMode === 'view'}
@@ -2125,10 +2013,10 @@ export function BlockDetailPage() {
               <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Soil pH" : "Độ pH đất")}</span>
+                    <label htmlFor="block-detail-page-control-22" className="structured-field-label">{(lang === 'en' ? "Soil pH" : "Độ pH đất")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-22" className="ui-input"
                       type="number"
                       step="0.1"
                       value={soilForm.phLevel}
@@ -2141,10 +2029,10 @@ export function BlockDetailPage() {
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Organic matter (%)" : "Chất hữu cơ (%)")}</span>
+                    <label htmlFor="block-detail-page-control-23" className="structured-field-label">{(lang === 'en' ? "Organic matter (%)" : "Chất hữu cơ (%)")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-23" className="ui-input"
                       type="number"
                       step="0.1"
                       value={soilForm.organicMatterPct}
@@ -2158,10 +2046,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Testing laboratory" : "Phòng kiểm nghiệm")}</span>
+                  <label htmlFor="block-detail-page-control-24" className="structured-field-label">{(lang === 'en' ? "Testing laboratory" : "Phòng kiểm nghiệm")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
+                  <input id="block-detail-page-control-24" className="ui-input"
                     type="text"
                     value={soilForm.laboratoryName}
                     disabled={soilModalMode === 'view'}
@@ -2173,10 +2061,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Heavy Metals & Microorganisms" : "Kim loại nặng & Vi sinh")}</span>
+                  <label htmlFor="block-detail-page-control-25" className="structured-field-label">{(lang === 'en' ? "Heavy Metals & Microorganisms" : "Kim loại nặng & Vi sinh")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
+                  <input id="block-detail-page-control-25" className="ui-input"
                     type="text"
                     value={soilForm.microbialStatus}
                     disabled={soilModalMode === 'view'}
@@ -2188,10 +2076,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Notes & Recommendations" : "Ghi chú & Khuyến nghị")}</span>
+                  <label htmlFor="block-detail-page-control-26" className="structured-field-label">{(lang === 'en' ? "Notes & Recommendations" : "Ghi chú & Khuyến nghị")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
+                  <textarea id="block-detail-page-control-26" className="ui-textarea"
                     rows={2}
                     value={soilForm.notes}
                     disabled={soilModalMode === 'view'}
@@ -2201,24 +2089,22 @@ export function BlockDetailPage() {
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setSoilModalMode(null)}>
+                <Button type="button" variant="secondary" onClick={() => setSoilModalMode(null)}>
                   {(lang === 'en' ? soilModalMode === 'view' ? "Close" : "Cancel" : soilModalMode === 'view' ? 'Đóng' : 'Hủy')}
-                </button>
+                </Button>
                 {soilModalMode !== 'view' && (
-                  <button type="submit" className="primary-button">
+                  <Button type="submit" variant="primary">
                     {(lang === 'en' ? "Save assessment" : "Lưu đánh giá")}
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Water Assessment Modal */}
       {waterModalMode && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+        <Modal open customLayout onClose={() => setWaterModalMode(null)} style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow">{(lang === 'en' ? "Water source assessment · " : "Đánh giá nguồn nước · ")} {block.blockName}</span>
@@ -2235,22 +2121,22 @@ export function BlockDetailPage() {
               </button>
             </div>
             <form className="modal-body" onSubmit={handleSaveWater}>
-              <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-                <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-                  <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
+              <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+                <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+                  <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
+                    {(lang === 'en' ? "Applicable Block" : "Lô sản xuất áp dụng")}
                   </span>
                 </div>
-                <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
+                <strong style={{ color: 'var(--color-primary-text)' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
               </div>
 
               <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</span>
+                    <label htmlFor="block-detail-page-control-27" className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-27" className="ui-input"
                       type="date"
                       value={waterForm.assessedAt}
                       disabled={waterModalMode === 'view'}
@@ -2262,10 +2148,10 @@ export function BlockDetailPage() {
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Water sample code" : "Mã mẫu nước")}</span>
+                    <label htmlFor="block-detail-page-control-28" className="structured-field-label">{(lang === 'en' ? "Water sample code" : "Mã mẫu nước")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-28" className="ui-input"
                       type="text"
                       value={waterForm.sampleCode}
                       disabled={waterModalMode === 'view'}
@@ -2278,10 +2164,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Irrigation water source" : "Nguồn nước tưới")}</span>
+                  <label htmlFor="block-detail-page-control-29" className="structured-field-label">{(lang === 'en' ? "Irrigation water source" : "Nguồn nước tưới")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
+                  <input id="block-detail-page-control-29" className="ui-input"
                     type="text"
                     value={waterForm.waterSource}
                     disabled={waterModalMode === 'view'}
@@ -2294,10 +2180,10 @@ export function BlockDetailPage() {
               <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Water pH" : "Độ pH nước")}</span>
+                    <label htmlFor="block-detail-page-control-30" className="structured-field-label">{(lang === 'en' ? "Water pH" : "Độ pH nước")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-30" className="ui-input"
                       type="number"
                       step="0.1"
                       value={waterForm.phLevel}
@@ -2310,10 +2196,10 @@ export function BlockDetailPage() {
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Electrical conductivity EC (dS/m)" : "Độ dẫn điện EC (dS/m)")}</span>
+                    <label htmlFor="block-detail-page-control-31" className="structured-field-label">{(lang === 'en' ? "Electrical conductivity EC (dS/m)" : "Độ dẫn điện EC (dS/m)")}</label>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
+                    <input id="block-detail-page-control-31" className="ui-input"
                       type="number"
                       step="0.01"
                       value={waterForm.ecValue}
@@ -2327,10 +2213,10 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Treatment & Water Filtration" : "Biện pháp xử lý & Lọc nước")}</span>
+                  <label htmlFor="block-detail-page-control-32" className="structured-field-label">{(lang === 'en' ? "Treatment & Water Filtration" : "Biện pháp xử lý & Lọc nước")}</label>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
+                  <textarea id="block-detail-page-control-32" className="ui-textarea"
                     rows={2}
                     value={waterForm.treatmentMeasure}
                     disabled={waterModalMode === 'view'}
@@ -2340,18 +2226,17 @@ export function BlockDetailPage() {
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setWaterModalMode(null)}>
+                <Button type="button" variant="secondary" onClick={() => setWaterModalMode(null)}>
                   {(lang === 'en' ? waterModalMode === 'view' ? "Close" : "Cancel" : waterModalMode === 'view' ? 'Đóng' : 'Hủy')}
-                </button>
+                </Button>
                 {waterModalMode !== 'view' && (
-                  <button type="submit" className="primary-button">
+                  <Button type="submit" variant="primary">
                     {(lang === 'en' ? "Save assessment" : "Lưu đánh giá")}
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       <ConfirmDialog
@@ -2366,9 +2251,9 @@ export function BlockDetailPage() {
 
       <ConfirmDialog
         open={isDeleteBlockOpen}
-        title={(lang === 'en' ? "Confirm Block deletion" : "Xác nhận xóa Block")}
+        title={(lang === 'en' ? "Confirm Block deletion" : "Xác nhận xóa lô sản xuất")}
         description={(lang === 'en' ? `Are you sure you want to delete Block "${block.blockName}"?` : `Bạn có chắc chắn muốn xóa Block "${block.blockName}"?`)}
-        confirmLabel="Xóa Block"
+        confirmLabel="Xóa lô sản xuất"
         tone="danger"
         onClose={() => setIsDeleteBlockOpen(false)}
         onConfirm={handleConfirmDeleteBlock}

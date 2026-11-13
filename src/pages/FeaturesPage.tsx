@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
+
+
 import '../styles/features.css';
 import { useLanguage } from '../shared/i18n/LanguageContext';
 
@@ -53,43 +55,43 @@ const featuresData = {
       icon: 'plots',
       illustration: 'farm',
       title: 'Farm Management',
-      description: 'Centralize farm identity, manage production zones and sub-blocks for synchronized cultivation.',
-      examples: ['Farm profile & certifications', 'Zones, parcels and blocks', 'Staff and worker directory'],
+      description: 'Keep farm information and organize growing areas to track production more easily.',
+      examples: ['Farm information', 'Production zones and blocks', 'Worker profiles'],
     },
     {
       icon: 'book',
       illustration: 'diary',
       title: 'Farming Diary',
-      description: 'Log all field interventions and treatments with tamper-proof timestamps for VietGAP compliance.',
-      examples: ['Planting & land preparation', 'Irrigation, fertilization & pest spraying', 'Comprehensive activity logs'],
+      description: 'Record completed field work and review crop care activities for each season.',
+      examples: ['Planting and crop care', 'Irrigation, fertilization and spraying', 'Farming activity history'],
     },
     {
       icon: 'box',
       illustration: 'materials',
       title: 'Material Inventory',
-      description: 'Track industrial seed batches, fertilizer sacks, and agrochemical bottles with safe pre-harvest intervals.',
-      examples: ['Agrochemical catalog (bags/bottles)', 'Warehouse stock & batch numbers', 'Usage tracking per parcel'],
+      description: 'Track seeds, fertilizers and plant protection products to prepare for field work.',
+      examples: ['Agricultural input list', 'Stock receipts and issues', 'Input usage tracking'],
     },
     {
       icon: 'money',
       illustration: 'costs',
-      title: 'Financial Accounting',
-      description: 'Aggregate production expenditures by season and block to determine exact profit margins.',
-      examples: ['Material & agrochemical costs', 'Labor wages & machine hours', 'Seasonal financial summaries'],
+      title: 'Cost Tracking',
+      description: 'Collect production expenses to review costs and plan for the next crop season.',
+      examples: ['Seed and input costs', 'Labor and production costs', 'Cost summaries by season'],
     },
     {
       icon: 'leaf',
       illustration: 'knowledge',
       title: 'VietGAP Guidelines',
-      description: 'Access official farming standards, safe isolation intervals, and soil/water quality criteria.',
+      description: 'Explore cultivation guides and VietGAP principles in a library organized by topic.',
       examples: ['Keyword and category search', 'Soil, water and seed requirements', 'Harvest safety & traceability'],
     },
     {
       icon: 'bot',
       illustration: 'assistant',
       title: 'AI Farming Assistant',
-      description: 'Ask agronomy questions answered by verified agricultural standards and official documentation.',
-      examples: ['Instant agricultural Q&A', 'Persistent chat history', 'Accuracy feedback review'],
+      description: 'Ask questions and consult guidance from the system\'s approved knowledge sources.',
+      examples: ['Agricultural Q&A', 'Conversation history', 'Feedback on answers'],
     },
   ],
 };
@@ -108,14 +110,14 @@ const highlightsData = {
 };
 
 export function FeaturesPage() {
-  const { lang } = useLanguage();
+  const { t: translate,  lang } = useLanguage();
   const features = featuresData[lang];
   const highlights = highlightsData[lang];
 
   return (
     <main className="features-page">
       <section className="features-hero" aria-labelledby="features-heading">
-        <img className="features-hero-image" src="/images/owner-dashboard/features-hero.jpg" alt="Farmer checking crops with tablet" width="1787" height="880" fetchPriority="high" />
+        <img className="features-hero-image" src="/images/owner-dashboard/features-hero.jpg" alt={translate("Farmer checking crops with tablet")} width="1787" height="880" fetchPriority="high" />
         <div className="features-container features-hero-inner">
           <div className="features-page-heading">
             <span className="features-page-eyebrow">

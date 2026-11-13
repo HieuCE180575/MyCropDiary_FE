@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
+
+
 import '../styles/about.css';
 import { useLanguage } from '../shared/i18n/LanguageContext';
 
@@ -56,7 +58,7 @@ function AboutIcon({ name }: { name: string }) {
 }
 
 export function AboutPage() {
-  const { lang } = useLanguage();
+  const { t: translate,  lang } = useLanguage();
   const values = valuesData[lang];
   const audiences = audiencesData[lang];
   const journey = journeyData[lang];
@@ -71,7 +73,7 @@ export function AboutPage() {
   return (
     <main className="about-page">
       <section className="about-hero" aria-labelledby="about-heading">
-        <img className="about-hero-image" src={`${imageRoot}about-hero.jpg`} alt="Farmer in green farm" width="1536" height="768" fetchPriority="high" />
+        <img className="about-hero-image" src={`${imageRoot}about-hero.jpg`} alt={translate("Farmer in green farm")} width="1536" height="768" fetchPriority="high" />
         <div className="about-container about-hero-inner">
           <div className="about-hero-copy">
             <AboutLabel>{lang === 'en' ? 'ABOUT US' : 'VỀ CHÚNG TÔI'}</AboutLabel>
@@ -115,7 +117,7 @@ export function AboutPage() {
 
       <div className="about-container about-content">
         <section className="about-story" id="about-story" tabIndex={-1} aria-labelledby="about-story-heading">
-          <img className="about-story-image" src={`${imageRoot}about-story.jpg`} alt="Farmer writing diary" width="900" height="600" loading="lazy" />
+          <img className="about-story-image" src={`${imageRoot}about-story.jpg`} alt={translate("Farmer writing diary")} width="900" height="600" loading="lazy" />
           <div>
             <AboutLabel>{lang === 'en' ? 'OUR ORIGIN STORY' : 'CÂU CHUYỆN HÌNH THÀNH'}</AboutLabel>
             <h2 id="about-story-heading">

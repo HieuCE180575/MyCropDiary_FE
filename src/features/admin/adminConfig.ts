@@ -1,3 +1,6 @@
+import type { Language } from '../../shared/i18n/translations';
+import { translateMessage } from '../../shared/i18n/translate';
+import { formatDate, formatDateTime } from '../../shared/format/formatters';
 import type { Collection, CollectionConfig } from './adminTypes';
 
 export const roleLabels = { USER: 'Người dùng', ADMIN: 'Quản trị viên' };
@@ -54,13 +57,16 @@ export const adminConfigs: Record<Collection, CollectionConfig> = {
   },
 };
 
-export function displayValue(key: string, value: string | undefined): string {
-  if (!value) return 'Chưa có thông tin';
+export function displayValue(key: string, value: string | undefined, lang: Language = 'vi'): string {
+  if (!value) return translateMessage('Chưa có thông tin', lang);
   const dictionaries: Record<string, Record<string, string>> = { role: roleLabels, group: { ALL: 'Tất cả nhóm cây', ...cropGroups }, requirement: requirementLabels, activity: activityLabels, field: fieldLabels, rating: ratingLabels, category: articleCategories };
-  if (dictionaries[key]) return dictionaries[key][value] ?? value;
+  if (dictionaries[key]) {
+    const label = dictionaries[key][value];
+    return label ? translateMessage(label, lang) : value;
+  }
   if (key.endsWith('At')) {
     const date = new Date(value.length === 10 ? value + 'T00:00:00' : value);
-    return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) + (value.length > 10 ? ' · ' + date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '');
+    return Number.isNaN(date.getTime()) ? value : value.length > 10 ? formatDateTime(date, lang) : formatDate(value, lang);
   }
   return value;
 }

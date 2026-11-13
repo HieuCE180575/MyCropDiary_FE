@@ -1,10 +1,9 @@
-import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
+import { formatDate } from '../../../shared/format/formatters';
+import { useLanguage } from '../../../shared/i18n/LanguageContext';
+
 import type { StaffAreaAssignment } from '../types';
 
-function formatDate(iso?: string | null): string {
-  return iso ? new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
-}
 
 interface StaffAssignmentsTableProps {
   assignments: StaffAreaAssignment[];
@@ -24,16 +23,16 @@ export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }:
   }
 
   return (
-    <div className="zone-table-wrap">
-      <table className="data-table">
+    <div className="zone-table-wrap ui-table-scroll" tabIndex={0}>
+      <table className="ui-data-table">
         <thead>
           <tr>
-            <th>{(lang === 'en' ? "Staff" : "Nhân viên")}</th>
-            <th>{(lang === 'en' ? "Status" : "Trạng thái")}</th>
-            <th>{(lang === 'en' ? "Start date" : "Ngày bắt đầu")}</th>
-            <th>{(lang === 'en' ? "End date" : "Ngày kết thúc")}</th>
-            <th>{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
-            <th>{(lang === 'en' ? "Actions" : "Hành động")}</th>
+            <th scope="col">{(lang === 'en' ? "Staff" : "Nhân viên")}</th>
+            <th scope="col">{(lang === 'en' ? "Status" : "Trạng thái")}</th>
+            <th scope="col">{(lang === 'en' ? "Start date" : "Ngày bắt đầu")}</th>
+            <th scope="col">{(lang === 'en' ? "End date" : "Ngày kết thúc")}</th>
+            <th scope="col">{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
+            <th scope="col">{(lang === 'en' ? "Actions" : "Hành động")}</th>
           </tr>
         </thead>
         <tbody>
@@ -51,8 +50,8 @@ export function StaffAssignmentsTable({ assignments, loading, endingId, onEnd }:
                     tone={isCurrent ? 'success' : 'neutral'}
                   />
                 </td>
-                <td>{formatDate(assignment.startsAt)}</td>
-                <td>{formatDate(assignment.endsAt)}</td>
+                <td>{formatDate(assignment.startsAt, lang)}</td>
+                <td>{formatDate(assignment.endsAt, lang)}</td>
                 <td>{assignment.notes ?? '—'}</td>
                 <td>
                   {isCurrent ? (

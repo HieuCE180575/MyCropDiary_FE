@@ -1,5 +1,6 @@
-import { useLanguage } from '../i18n/LanguageContext';
 import { Icon } from './Icon';
+import { useLanguage } from '../i18n/LanguageContext';
+
 
 export function Pagination({ page, totalPages, onChange, disabled = false }: {
   page: number;

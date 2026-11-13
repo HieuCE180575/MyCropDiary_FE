@@ -1,3 +1,9 @@
+import { message, type TranslationMessage } from "../../../shared/i18n/translate";
+import { Button } from '../../../shared/components/Button';
+import { Icon } from '../../../shared/components/Icon';
+import { Modal } from '../../../shared/components/Modal';
+import { formatDate as uiFormatDate } from '../../../shared/format/formatters';
+
 import { useState, useEffect } from 'react';
 import type { StaffZoneAssignment, Zone } from '../types';
 import { assignStaffToZone, fetchZoneAssignments, unassignStaffFromZone } from '../zoneBlockService';
@@ -40,7 +46,7 @@ export function AssignStaffModal({
   const [notes, setNotes] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [loadingStaff, setLoadingStaff] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<TranslationMessage | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -112,7 +118,7 @@ export function AssignStaffModal({
     );
     if (alreadyAssigned) {
       const staffName = staffOptions.find((s) => s.memberId === selectedMemberId)?.fullName || 'Nhân sự này';
-      setError((lang === 'en' ? `${staffName} is already assigned to zone "${resolvedZoneName}". Duplicate assignments are not allowed!` : `${staffName} đã và đang được phân công phụ trách phân khu "${resolvedZoneName}". Không thể phân công trùng lặp!`));
+      setError((message("{value1} is already assigned to zone \"{value2}\". Duplicate assignments are not allowed!", { value1: staffName, value2: resolvedZoneName })));
       return;
     }
 
@@ -136,25 +142,22 @@ export function AssignStaffModal({
   };
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true">
-      <div className="modal-card" style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
+    <Modal open customLayout onClose={onClose} style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
             <span className="eyebrow">{lang === 'en' ? 'Staff Assignment' : 'Phân công quản lý'}</span>
             <h2>{lang === 'en' ? 'Assign Staff: ' : 'Phân công nhân sự: '}{resolvedZoneName}</h2>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
-            ✕
-          </button>
+          <button type="button" className="modal-close" onClick={onClose} aria-label={(lang === 'en' ? "Close" : "Đóng")}><Icon name="close" /></button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
           {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
 
-          <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-            <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-              <label htmlFor="assign-zone-select" className="structured-field-label" style={{ color: '#065f46' }}>
-                {lang === 'en' ? 'Assigned Zone' : 'Khu vực phân công'} <span style={{ color: '#dc2626' }}>*</span>
+          <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+            <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
+              <label htmlFor="assign-zone-select" className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
+                {lang === 'en' ? 'Assigned Zone' : 'Khu vực phân công'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
               <span className="structured-field-badge">
                 {availableZones.length > 1 ? (lang === 'en' ? 'Select Zone' : 'Chọn khu vực') : (lang === 'en' ? 'Fixed Zone' : 'Khu vực cố định')}
@@ -162,7 +165,7 @@ export function AssignStaffModal({
             </div>
             {availableZones.length > 1 ? (
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select
+                <select className="ui-select"
                   id="assign-zone-select"
                   value={selectedZoneId}
                   onChange={(e) => setSelectedZoneId(Number(e.target.value))}
@@ -175,7 +178,7 @@ export function AssignStaffModal({
                 </select>
               </div>
             ) : (
-              <div style={{ fontWeight: 700, color: '#047857', fontSize: '15px' }}>🗺️ {resolvedZoneName}</div>
+              <div style={{ fontWeight: 700, color: 'var(--color-primary-text)', fontSize: '15px' }}>🗺️ {resolvedZoneName}</div>
             )}
           </div>
 
@@ -187,7 +190,7 @@ export function AssignStaffModal({
               <span className="structured-field-badge">{currentAssignments.length} {lang === 'en' ? 'staff member(s)' : 'nhân sự'}</span>
             </div>
             {currentAssignments.length === 0 ? (
-              <div style={{ color: '#64748b', fontSize: '13.5px' }}>
+              <div style={{ color: 'var(--color-muted)', fontSize: '13.5px' }}>
                 {lang === 'en' ? 'No staff currently assigned to this zone.' : 'Chưa có nhân sự nào được phân công phụ trách khu vực này.'}
               </div>
             ) : (
@@ -195,21 +198,21 @@ export function AssignStaffModal({
                 {currentAssignments.map((asgn) => (
                   <div key={asgn.assignmentId} className="file-list-item">
                     <div>
-                      <strong style={{ color: '#0f172a', display: 'block', fontSize: '14px' }}>
+                      <strong style={{ color: 'var(--color-text)', display: 'block', fontSize: '14px' }}>
                         {(lang === 'en' ? asgn.staffName || `Staff #${asgn.farmMemberId}` : asgn.staffName || `Nhân sự #${asgn.farmMemberId}`)}
                       </strong>
-                      <small style={{ color: '#64748b' }}>
-                        {(lang === 'en' ? asgn.jobTitle || "Staff" : asgn.jobTitle || 'Nhân viên')} {(lang === 'en' ? " · Assigned date: " : " · Ngày nhận: ")} {new Date(asgn.assignedAt).toLocaleDateString('vi-VN')}
+                      <small style={{ color: 'var(--color-muted)' }}>
+                        {(lang === 'en' ? asgn.jobTitle || "Staff" : asgn.jobTitle || 'Nhân viên')} {(lang === 'en' ? " · Assigned date: " : " · Ngày nhận: ")} {uiFormatDate(asgn.assignedAt, lang)}
                       </small>
                     </div>
-                    <button
+                    <Button
                       type="button"
-                      className="action-button danger"
-                      style={{ minHeight: '34px', padding: '4px 12px', fontSize: '12.5px' }}
+                      variant="danger"
+
                       onClick={() => handleUnassign(asgn.assignmentId)}
                     >
                       {lang === 'en' ? 'Unassign' : 'Thu hồi'}
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -219,19 +222,19 @@ export function AssignStaffModal({
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="assign-staff-select" className="structured-field-label">
-                {lang === 'en' ? 'Select Staff Member' : 'Chọn nhân sự phụ trách'} <span style={{ color: '#dc2626' }}>*</span>
+                {lang === 'en' ? 'Select Staff Member' : 'Chọn nhân sự phụ trách'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
               <span className="structured-field-badge">{lang === 'en' ? 'Farm Staff' : 'Nhân sự trang trại'}</span>
             </div>
             {loadingStaff ? (
-              <div style={{ color: '#64748b', fontSize: '13.5px' }}>{(lang === 'en' ? "⏳ Loading farm staff..." : "⏳ Đang tải danh sách nhân sự trang trại...")}</div>
+              <div style={{ color: 'var(--color-muted)', fontSize: '13.5px' }}>{(lang === 'en' ? "⏳ Loading farm staff..." : "⏳ Đang tải danh sách nhân sự trang trại...")}</div>
             ) : staffOptions.length === 0 ? (
-              <div style={{ color: '#d97706', fontSize: '13.5px' }}>
+              <div style={{ color: 'var(--color-warning)', fontSize: '13.5px' }}>
                 {(lang === 'en' ? "⚠️ The farm has no active staff. Add staff under Staff Management." : "⚠️ Trang trại chưa có nhân sự đang hoạt động. Vui lòng thêm tại mục Quản lý nhân sự.")}
               </div>
             ) : (
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select
+                <select className="ui-select"
                   id="assign-staff-select"
                   value={selectedMemberId}
                   onChange={(e) => setSelectedMemberId(Number(e.target.value))}
@@ -252,10 +255,10 @@ export function AssignStaffModal({
                 <label htmlFor="assign-date-input" className="structured-field-label">
                   {lang === 'en' ? 'Assignment Start Date' : 'Ngày bắt đầu phụ trách'}
                 </label>
-                <span className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</span>
+                <label htmlFor="assign-date-input" className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <input
+                <input className="ui-input"
                   id="assign-date-input"
                   type="date"
                   value={startDate}
@@ -270,10 +273,10 @@ export function AssignStaffModal({
                 <label htmlFor="assign-notes-input" className="structured-field-label">
                   {lang === 'en' ? 'Assignment Notes' : 'Ghi chú nhiệm vụ'}
                 </label>
-                <span className="structured-field-badge">{notes.length}{(lang === 'en' ? "/200 characters" : "/200 ký tự")}</span>
+                <label htmlFor="assign-notes-input" className="structured-field-badge">{notes.length}{(lang === 'en' ? "/200 characters" : "/200 ký tự")}</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <input
+                <input className="ui-input"
                   id="assign-notes-input"
                   type="text"
                   maxLength={200}
@@ -286,19 +289,16 @@ export function AssignStaffModal({
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={onClose} disabled={loading}>
-              Cancel
-            </button>
-            <button
+            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{translate("Cancel")}</Button>
+            <Button
               type="submit"
-              className="primary-button"
+              variant="primary"
               disabled={loading || loadingStaff || staffOptions.length === 0}
             >
               {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Assignment' : 'Lưu phân công')}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 }
