@@ -67,6 +67,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   });
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [listLayout, setListLayout] = useState<'table' | 'cards'>('table');
 
   // Farm detail state
   const [farmDetail, setFarmDetail] = useState<FarmDetail | null>(null);
@@ -548,18 +549,42 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Search & Quick Stats Bar */}
           <div className="panel" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ position: 'relative', width: 'min(420px, 100%)' }}>
-              <input
-                className="ui-input"
-                type="text"
-                placeholder={lang === 'en' ? 'Search farms by name, province, or district...' : 'Tìm kiếm trang trại theo tên, tỉnh thành hoặc quận huyện...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ width: '100%', paddingLeft: '38px', height: '42px' }}
-              />
-              <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, pointerEvents: 'none' }}>
-                <Icon name="search" />
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 320px', maxWidth: '520px' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  className="ui-input"
+                  type="text"
+                  placeholder={lang === 'en' ? 'Search farms by name, province, or district...' : 'Tìm kiếm trang trại theo tên, tỉnh thành hoặc quận huyện...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ width: '100%', paddingLeft: '38px', height: '40px' }}
+                />
+                <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, pointerEvents: 'none' }}>
+                  <Icon name="search" />
+                </span>
+              </div>
+
+              {/* Layout Switcher: List vs Cards */}
+              <div style={{ display: 'flex', alignItems: 'center', background: 'var(--color-page)', padding: '3px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+                <button
+                  type="button"
+                  className={`ui-button ${listLayout === 'table' ? 'ui-button--primary' : 'ui-button--secondary'}`}
+                  style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '8px', minHeight: '32px' }}
+                  onClick={() => setListLayout('table')}
+                  title={lang === 'en' ? 'Table List View' : 'Dạng danh sách bảng'}
+                >
+                  ☰ {lang === 'en' ? 'List' : 'Danh sách'}
+                </button>
+                <button
+                  type="button"
+                  className={`ui-button ${listLayout === 'cards' ? 'ui-button--primary' : 'ui-button--secondary'}`}
+                  style={{ padding: '6px 12px', fontSize: '13px', borderRadius: '8px', minHeight: '32px' }}
+                  onClick={() => setListLayout('cards')}
+                  title={lang === 'en' ? 'Card Grid View' : 'Dạng thẻ lưới'}
+                >
+                  ⊞ {lang === 'en' ? 'Cards' : 'Thẻ'}
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '13.5px', color: 'var(--color-muted)' }}>
@@ -586,7 +611,145 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                 </Button>
               }
             />
+          ) : listLayout === 'table' ? (
+            /* DẠNG LIST / TABLE */
+            <div className="panel ui-table-scroll" style={{ padding: 0, overflowX: 'auto', borderRadius: '16px' }}>
+              <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                <thead>
+                  <tr style={{ background: 'var(--color-page)' }}>
+                    <th scope="col" style={{ padding: '14px 20px', textAlign: 'left' }}>{lang === 'en' ? 'Farm Name' : 'Trang trại'}</th>
+                    <th scope="col" style={{ padding: '14px 20px', textAlign: 'left' }}>{lang === 'en' ? 'Address' : 'Địa chỉ'}</th>
+                    <th scope="col" style={{ padding: '14px 20px', textAlign: 'left' }}>{lang === 'en' ? 'Scale / Area' : 'Quy mô / Diện tích'}</th>
+                    <th scope="col" style={{ padding: '14px 20px', textAlign: 'left' }}>{lang === 'en' ? 'Role' : 'Vai trò'}</th>
+                    <th scope="col" style={{ padding: '14px 20px', textAlign: 'center' }}>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
+                    <th scope="col" style={{ padding: '14px 20px', textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredFarms.map((f) => {
+                    const isCurrentActive = f.id === selectedFarm?.id;
+                    const role = farmRole(f);
+                    return (
+                      <tr
+                        key={f.id}
+                        style={{
+                          borderBottom: '1px solid var(--color-border)',
+                          background: isCurrentActive ? 'rgba(34, 197, 94, 0.05)' : undefined,
+                          transition: 'background 0.15s ease',
+                        }}
+                      >
+                        <td style={{ padding: '16px 20px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '10px',
+                                background: isCurrentActive
+                                  ? 'linear-gradient(135deg, var(--color-primary) 0%, #15803d 100%)'
+                                  : 'var(--color-page)',
+                                color: isCurrentActive ? '#ffffff' : 'var(--color-primary-text)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '18px',
+                                flexShrink: 0,
+                              }}
+                            >
+                              🌱
+                            </div>
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveFarmId(f.id);
+                                  setViewMode('detail');
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  padding: 0,
+                                  fontWeight: 700,
+                                  fontSize: '15px',
+                                  color: 'var(--color-text)',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  display: 'block',
+                                }}
+                              >
+                                {f.farmName}
+                              </button>
+                              <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>Mã: #{f.id}</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '16px 20px', fontSize: '13.5px', color: 'var(--color-body)' }}>
+                          <span>📍 {[f.district, f.province].filter(Boolean).join(', ') || (lang === 'en' ? 'No address specified' : 'Chưa cập nhật địa chỉ')}</span>
+                        </td>
+
+                        <td style={{ padding: '16px 20px', fontSize: '13.5px', color: 'var(--color-body)', fontWeight: 600 }}>
+                          {f.totalAreaM2 ? `${displayNumber(f.totalAreaM2, lang)} m²` : (lang === 'en' ? 'VietGAP standard' : 'Chuẩn VietGAP')}
+                        </td>
+
+                        <td style={{ padding: '16px 20px' }}>
+                          <span className="profile-tag-pill" style={{ fontSize: '12px', padding: '3px 10px' }}>
+                            {role === 'OWNER' ? (lang === 'en' ? 'Farm Owner' : 'Chủ trang trại') : (lang === 'en' ? 'Operations Staff' : 'Nhân sự vận hành')}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                            {isCurrentActive && (
+                              <span className="profile-tag-pill" style={{ background: 'var(--color-success-bg)', color: 'var(--color-primary-text)', fontWeight: 700, fontSize: '11px', padding: '2px 8px' }}>
+                                🌿 {lang === 'en' ? 'Active' : 'Đang làm việc'}
+                              </span>
+                            )}
+                            <StatusBadge tone="success" label={f.status || (lang === 'en' ? 'Active' : 'Hoạt động')} />
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '16px 20px', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: '8px' }}>
+                            <Button
+                              type="button"
+                              variant="primary"
+                              onClick={() => {
+                                setActiveFarmId(f.id);
+                                setViewMode('detail');
+                              }}
+                              style={{ padding: '6px 14px', fontSize: '13px' }}
+                            >
+                              <Icon name="search" /> {lang === 'en' ? 'View Profile & Map' : 'Xem thông tin & Bản đồ'}
+                            </Button>
+
+                            {!isCurrentActive ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => {
+                                  selectFarm(f.id);
+                                  setActionMsg({ text: `Đã chọn trang trại "${f.farmName}" làm không gian làm việc hiện tại.`, type: 'success' });
+                                }}
+                                style={{ padding: '6px 14px', fontSize: '13px' }}
+                              >
+                                {lang === 'en' ? 'Switch' : 'Chọn làm việc'}
+                              </Button>
+                            ) : (
+                              <Button type="button" variant="secondary" disabled style={{ opacity: 0.7, padding: '6px 14px', fontSize: '13px' }}>
+                                ✓ {lang === 'en' ? 'Selected' : 'Đang chọn'}
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           ) : (
+            /* DẠNG THẺ (CARDS) */
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
               {filteredFarms.map((f) => {
                 const isCurrentActive = f.id === selectedFarm?.id;
