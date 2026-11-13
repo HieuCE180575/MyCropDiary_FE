@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
@@ -32,6 +32,8 @@ import {
   fetchVietGapCriteriaApi,
 } from './vietgapComplianceService';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { AlertCircle } from 'lucide-react';
 
 interface ChecklistItem {
   id: string;
@@ -100,6 +102,56 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
     itemScores: {} as Record<number, { score: number; notes: string }>,
   });
   const [submittingAssessment, setSubmittingAssessment] = useState(false);
+  const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const [conductErrors, setConductErrors] = useState<{
+    title?: string;
+    notes?: string;
+    itemScores?: Record<number, string>;
+  }>({});
+
+  const titleRef = useRef<HTMLInputElement>(null);
+  const scoreRefs = useRef<Record<number, HTMLInputElement | null>>({});
+
+  const [trainingErrors, setTrainingErrors] = useState<{
+    trainingTitle?: string;
+    trainingDate?: string;
+  }>({});
+
+  const trainingTitleRef = useRef<HTMLInputElement>(null);
+  const trainingDateRef = useRef<HTMLInputElement>(null);
+
+  type PendingConfirmation = {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => Promise<void>;
+  };
+
+  const [pendingConfirmation, setPendingConfirmation] =
+    useState<PendingConfirmation | null>(null);
+
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const openConfirmDialog = (config: PendingConfirmation) => {
+    setPendingConfirmation(config);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!pendingConfirmation) return;
+
+    setIsConfirming(true);
+
+    try {
+      await pendingConfirmation.onConfirm();
+      setPendingConfirmation(null);
+    } catch {
+      // Keep the dialog open when the action fails.
+      // The individual action handles its own error notification.
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   const loadChecklistRuns = async () => {
     if (!selectedFarm?.id) return;
@@ -145,7 +197,10 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
       setSelectedRunDetail(res);
       setRunItemsDetail(items);
     } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to load inspection details." : err instanceof Error ? err.message : 'Không tải được chi tiết đợt kiểm tra.'));
+      setNotification({
+        text: (lang === 'en' ? err instanceof Error ? err.message : "Unable to load inspection details." : err instanceof Error ? err.message : 'Không tải được chi tiết đợt kiểm tra.'),
+        type: 'error',
+      });
     } finally {
       setLoadingRunDetail(false);
     }
@@ -164,10 +219,16 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
           { resultStatus: 'pass', notes: 'Công nhân trang bị đầy đủ bảo hộ lao động' },
         ],
       });
-      alert((lang === 'en' ? "VietGAP evidence checklist inspection started successfully!" : 'Đã kích hoạt đợt kiểm tra danh mục bằng chứng VietGAP thành công!'));
+      setNotification({
+        text: (lang === 'en' ? "VietGAP evidence checklist inspection started successfully!" : 'Đã kích hoạt đợt kiểm tra danh mục bằng chứng VietGAP thành công!'),
+        type: 'success',
+      });
       void loadChecklistRuns();
     } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to start inspection." : err instanceof Error ? err.message : 'Không thể kích hoạt đợt kiểm tra.'));
+      setNotification({
+        text: (lang === 'en' ? err instanceof Error ? err.message : "Unable to start inspection." : err instanceof Error ? err.message : 'Không thể kích hoạt đợt kiểm tra.'),
+        type: 'error',
+      });
     } finally {
       setIsRunningChecklist(false);
     }
@@ -197,9 +258,97 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
     }
   };
 
+  const validateConductForm = () => {
+    const errors: typeof conductErrors = {};
+    const itemScoreErrors: Record<number, string> = {};
+
+    // Assessment title
+    if (!conductForm.title.trim()) {
+      errors.title =
+        lang === 'en'
+          ? 'Assessment title is required.'
+          : 'Vui lòng nhập tiêu đề đợt đánh giá.';
+    } else if (conductForm.title.trim().length > 150) {
+      errors.title =
+        lang === 'en'
+          ? 'Assessment title cannot exceed 150 characters.'
+          : 'Tiêu đề đợt đánh giá không được vượt quá 150 ký tự.';
+    }
+
+    // Overall comments
+    if (conductForm.notes.length > 1000) {
+      errors.notes =
+        lang === 'en'
+          ? 'Comments cannot exceed 1,000 characters.'
+          : 'Nhận xét không được vượt quá 1.000 ký tự.';
+    }
+
+    // Individual criterion scores and evidence
+    farmCriteria.forEach((c) => {
+      const item = conductForm.itemScores[c.criterionId];
+
+      const score = item?.score;
+      const criterionNotes = item?.notes || '';
+
+      if (
+        score === undefined ||
+        score === null ||
+        !Number.isFinite(score)
+      ) {
+        itemScoreErrors[c.criterionId] =
+          lang === 'en'
+            ? 'Please enter a valid score.'
+            : 'Vui lòng nhập điểm hợp lệ.';
+      } else if (score < 0 || score > c.maxScore) {
+        itemScoreErrors[c.criterionId] =
+          lang === 'en'
+            ? `Score must be between 0 and ${c.maxScore}.`
+            : `Điểm phải nằm trong khoảng từ 0 đến ${c.maxScore}.`;
+      } else if (criterionNotes.length > 500) {
+        itemScoreErrors[c.criterionId] =
+          lang === 'en'
+            ? 'Assessment evidence cannot exceed 500 characters.'
+            : 'Minh chứng đánh giá không được vượt quá 500 ký tự.';
+      }
+    });
+
+    if (Object.keys(itemScoreErrors).length > 0) {
+      errors.itemScores = itemScoreErrors;
+    }
+
+    setConductErrors(errors);
+
+    return errors;
+  };
+
   const handleSubmitConduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFarm?.id || !conductForm.title.trim()) return;
+    if (!selectedFarm?.id) return;
+
+    const validationErrors = validateConductForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      if (validationErrors.title) {
+        titleRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        titleRef.current?.focus();
+      } else if (validationErrors.itemScores) {
+        const firstInvalidId = Number(
+          Object.keys(validationErrors.itemScores)[0]
+        );
+
+        scoreRefs.current[firstInvalidId]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        scoreRefs.current[firstInvalidId]?.focus();
+      }
+
+      return;
+    }
+
     setSubmittingAssessment(true);
     try {
       const itemsPayload = farmCriteria.map((c) => ({
@@ -217,10 +366,16 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         ],
       });
       setIsConductModalOpen(false);
-      alert((lang === 'en' ? "VietGAP internal assessment results recorded successfully!" : 'Đã ghi nhận kết quả đợt đánh giá nội bộ VietGAP thành công!'));
+      setNotification({
+        text: (lang === 'en' ? "VietGAP internal assessment results recorded successfully!" : 'Đã ghi nhận kết quả đợt đánh giá nội bộ VietGAP thành công!'),
+        type: 'success',
+      });
       void loadInternalAssessments();
     } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to save internal assessment." : err instanceof Error ? err.message : 'Không thể lưu đợt đánh giá nội bộ.'));
+      setNotification({
+        text: (lang === 'en' ? err instanceof Error ? err.message : "Unable to save internal assessment." : err instanceof Error ? err.message : 'Không thể lưu đợt đánh giá nội bộ.'),
+        type: 'error',
+      });
     } finally {
       setSubmittingAssessment(false);
     }
@@ -257,23 +412,101 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
       const detail = await fetchTrainingDetailsApi(id);
       setSelectedTrainingDetail(detail);
     } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to load training details." : err instanceof Error ? err.message : 'Không tải được chi tiết đào tạo.'));
+      setNotification({
+        text: (lang === 'en' ? err instanceof Error ? err.message : "Unable to load training details." : err instanceof Error ? err.message : 'Không tải được chi tiết đào tạo.'),
+        type: 'error',
+      });
     }
   };
 
   const handleDeleteTraining = async (id: number) => {
-    if (!window.confirm((lang === 'en' ? "Are you sure you want to delete this training record?" : 'Bạn có chắc chắn muốn xóa hồ sơ đào tạo này?'))) return;
-    try {
-      await deleteTrainingRecordApi(id);
-      void loadTrainings();
-    } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to delete training record." : err instanceof Error ? err.message : 'Không thể xóa hồ sơ đào tạo.'));
+    openConfirmDialog({
+      title: lang === 'en' ? 'Delete training record' : 'Xác nhận xóa hồ sơ đào tạo',
+      description:
+        lang === 'en'
+          ? `Are you sure you want to delete this training record? This action cannot be undone.`
+          : `Bạn có chắc chắn muốn xóa hồ sơ đào tạo này? Hành động này không thể hoàn tác.`,
+      confirmLabel: lang === 'en' ? 'Delete' : 'Xóa',
+      onConfirm: async () => {
+        try {
+          await deleteTrainingRecordApi(id);
+          setNotification({ text: (lang === 'en' ? "Training record deleted successfully." : 'Đã xóa hồ sơ đào tạo thành công.'), type: 'success' });
+          void loadTrainings();
+        } catch (err) {
+          setNotification({
+            text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete training record." : err instanceof Error ? err.message : 'Không thể xóa hồ sơ đào tạo.'),
+            type: 'error',
+          });
+        }
+      },
+    })
+
+  };
+
+  const validateTrainingForm = () => {
+    const errors: typeof trainingErrors = {};
+
+    // Training title
+    if (!createTrainingForm.trainingTitle.trim()) {
+      errors.trainingTitle =
+        lang === 'en'
+          ? 'Training course title is required.'
+          : 'Vui lòng nhập tiêu đề khóa đào tạo.';
+    } else if (createTrainingForm.trainingTitle.trim().length > 150) {
+      errors.trainingTitle =
+        lang === 'en'
+          ? 'Training title cannot exceed 150 characters.'
+          : 'Tiêu đề khóa đào tạo không được vượt quá 150 ký tự.';
     }
+
+    // Training date
+    const today = new Date();
+    const localToday = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    if (!createTrainingForm.trainingDate) {
+      errors.trainingDate =
+        lang === 'en'
+          ? 'Training date is required.'
+          : 'Vui lòng chọn ngày tổ chức đào tạo.';
+    } else if (createTrainingForm.trainingDate > localToday) {
+      errors.trainingDate =
+        lang === 'en'
+          ? 'Training date cannot be in the future.'
+          : 'Ngày đào tạo không được ở tương lai.';
+    }
+
+    setTrainingErrors(errors);
+    return errors;
   };
 
   const handleCreateTraining = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFarm?.id || !createTrainingForm.trainingTitle.trim() || !createTrainingForm.trainingDate) return;
+    if (!selectedFarm?.id) return;
+
+    const errors = validateTrainingForm();
+
+    if (Object.keys(errors).length > 0) {
+      if (errors.trainingTitle) {
+        trainingTitleRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        trainingTitleRef.current?.focus();
+      } else if (errors.trainingDate) {
+        trainingDateRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        trainingDateRef.current?.focus();
+      }
+
+      return;
+    }
+
     setSubmittingTraining(true);
     try {
       await createTrainingRecordApi(selectedFarm.id, {
@@ -289,9 +522,16 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         trainingDate: new Date().toISOString().split('T')[0],
         imageUrl: '',
       });
+      setNotification({
+        text: (lang === 'en' ? "Training record created successfully." : 'Đã tạo hồ sơ đào tạo thành công.'),
+        type: 'success',
+      });
       void loadTrainings();
     } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to create training record." : err instanceof Error ? err.message : 'Không thể tạo hồ sơ đào tạo.'));
+      setNotification({
+        text: (lang === 'en' ? err instanceof Error ? err.message : "Unable to create training record." : err instanceof Error ? err.message : 'Không thể tạo hồ sơ đào tạo.'),
+        type: 'error',
+      });
     } finally {
       setSubmittingTraining(false);
     }
@@ -384,6 +624,24 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
 
   return (
     <section className="vietgap-compliance-page">
+      {/* Status / Notification Banner */}
+      {notification && (
+        <div
+          role={notification.type === 'error' ? 'alert' : 'status'}
+          className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
+          style={{ marginBottom: '16px' }}
+        >
+          <strong>{(lang === 'en' ? notification.type === 'success' ? "✓ Success" : "⚠️ Notice" : notification.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo')}:</strong> {translate(notification.text)}
+          <button
+            type="button"
+            onClick={() => setNotification(null)}
+            style={{ float: 'right', border: 0, background: 'transparent', cursor: 'pointer', fontWeight: 700 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="page-heading">
         <div>
           <h1>{lang === 'en' ? 'VietGAP Compliance & Assessment' : 'Đánh giá & Tuân thủ Tiêu chuẩn VietGAP'}</h1>
@@ -578,11 +836,12 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                           <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                             <button
                               type="button"
-                              className="action-button"
+                              className="table-icon-btn primary"
+                              title={(lang === 'en' ? " View results" : " Xem kết quả")}
                               onClick={() => void handleViewRunDetail(run.runId)}
                               style={{ fontSize: '12.5px', padding: '5px 12px' }}
                             >
-                              {(lang === 'en' ? "👁️ View results" : "👁️ Xem kết quả")}
+                              <Icon name="eye" size={16} />
                             </button>
                           </td>
                         </tr>
@@ -822,7 +1081,8 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                       <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                         <button
                           type="button"
-                          className="action-button"
+                          className="table-icon-btn primary"
+                          title={(lang === 'en' ? " View results" : " Xem kết quả")}
                           onClick={async () => {
                             try {
                               const detail = await fetchInternalAssessmentDetailsApi(a.internalAssessmentId);
@@ -833,7 +1093,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                           }}
                           style={{ fontSize: '12.5px', padding: '5px 12px' }}
                         >
-                          {(lang === 'en' ? "👁️ Details" : "👁️ Chi tiết")}
+                          <Icon name="eye" size={16} />
                         </button>
                       </td>
                     </tr>
@@ -922,28 +1182,93 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "Internal assessment" : "Thẩm định nội bộ")}</span>
                     <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "Conduct VietGAP assessment" : "Tiến hành đánh giá VietGAP")}</h3>
                   </div>
-                  <button type="button" className="modal-close" onClick={() => setIsConductModalOpen(false)}>
+                  <button type="button" className="modal-close" onClick={() => {
+                    setIsConductModalOpen(false)
+                    setConductErrors({})
+                  }}>
                     ✕
                   </button>
                 </div>
-                <form onSubmit={handleSubmitConduct}>
-                  <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto' }}>
+                <form onSubmit={handleSubmitConduct} noValidate>
+                  <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '62vh', overflowY: 'auto' }}>
+                    {Object.keys(conductErrors).length > 0 && (
+                      <div style={{
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#b91c1c',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <AlertCircle size={18} />
+
+                        {lang === 'en'
+                          ? 'Please correct the highlighted fields before saving.'
+                          : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                      </div>
+                    )}
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Assessment title *" : "Tiêu đề đợt đánh giá *")}
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          {(lang === 'en' ? "Assessment title " : "Tiêu đề đợt đánh giá ")} <span style={{ color: '#dc2626' }}>*</span>
+                        </label>
+                        <span className="structured-field-badge">{conductForm.title.length}{(lang === 'en' ? "/150 characters" : "/150 ký tự")}</span>
+                      </div>
                       <input
+                        ref={titleRef}
                         type="text"
                         required
+                        maxLength={150}
                         value={conductForm.title}
-                        onChange={(e) => setConductForm((p) => ({ ...p, title: e.target.value }))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setConductForm((p) => ({ ...p, title: value }));
+
+                          setConductErrors((prev) => {
+                            const updated = { ...prev };
+
+                            // Validate assessed date
+                            if (!value.trim()) {
+                              updated.title = lang === 'en'
+                                ? 'Assessment title is required.'
+                                : 'Vui lòng nhập tiêu đề đợt đánh giá.'
+                            } else if (value.trim().length > 150) {
+                              updated.title =
+                                lang === 'en'
+                                  ? 'Assessment title cannot exceed 150 characters.'
+                                  : 'Tiêu đề đợt đánh giá không được vượt quá 150 ký tự.';
+                            } else {
+                              delete updated.title;
+                            }
+
+                            return updated;
+                          });
+
+                        }}
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
+                      {conductErrors.title && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {conductErrors.title}
+                        </p>
+                      )}
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Comments & Overall conclusion" : "Nhận xét & Kết luận tổng quát")}
-                      </label>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          {(lang === 'en' ? "Comments & Overall conclusion" : "Nhận xét & Kết luận tổng quát")}
+                        </label>
+                        <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                      </div>
                       <textarea
                         rows={3}
                         value={conductForm.notes}
@@ -952,7 +1277,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                       />
                     </div>
 
-                    <h4 style={{ margin: '10px 0 4px', fontSize: '14px', color: '#0f172a' }}>{(lang === 'en' ? "Score VietGAP criteria" : "Chấm điểm các tiêu chí VietGAP")}</h4>
+                    <h4 style={{ margin: '10px 0 4px', fontSize: '14px', color: '#0f172a' }}>{(lang === 'en' ? "Score VietGAP criteria" : "Chấm điểm các tiêu chí VietGAP")} <span style={{ color: '#dc2626' }}>*</span></h4>
                     {loadingCriteria ? (
                       <p style={{ color: '#64748b', fontSize: '13px' }}>{(lang === 'en' ? "⏳ Loading VietGAP criteria..." : "⏳ Đang nạp danh mục tiêu chí VietGAP...")}</p>
                     ) : farmCriteria.length === 0 ? (
@@ -962,16 +1287,22 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                         <div key={c.criterionId} style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                             <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{c.criterionName}</strong>
-                            <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Maximum: " : "Tối đa: ")} {c.maxScore}{(lang === 'en' ? "VND" : "đ")}</span>
+                            <span className="structured-field-badge">
+                              {(lang === 'en' ? "Maximum: " : "Tối đa: ")} {c.maxScore} {(lang === 'en' ? "Points" : "Điểm")}
+                            </span>
                           </div>
                           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                             <input
                               type="number"
-                              min="0"
+                              min={0}
                               max={c.maxScore}
                               value={conductForm.itemScores[c.criterionId]?.score ?? c.maxScore}
+                              ref={(element) => {
+                                scoreRefs.current[c.criterionId] = element;
+                              }}
                               onChange={(e) => {
                                 const val = Number(e.target.value);
+
                                 setConductForm((p) => ({
                                   ...p,
                                   itemScores: {
@@ -982,8 +1313,28 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                                     },
                                   },
                                 }));
+
+                                setConductErrors((prev) => {
+                                  const updated = { ...prev };
+                                  const updatedScores = { ...prev.itemScores };
+
+                                  delete updatedScores[c.criterionId];
+
+                                  if (Object.keys(updatedScores).length > 0) {
+                                    updated.itemScores = updatedScores;
+                                  } else {
+                                    delete updated.itemScores;
+                                  }
+
+                                  return updated;
+                                });
                               }}
-                              style={{ width: '80px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                              style={{
+                                width: '80px',
+                                padding: '6px 10px',
+                                borderRadius: '6px',
+                                border: '1px solid #cbd5e1',
+                              }}
                             />
                             <input
                               type="text"
@@ -1004,13 +1355,26 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                               }}
                               style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                             />
+                            {conductErrors.itemScores?.[c.criterionId] && (
+                              <p className="field-error" style={{
+                                color: '#dc2626',
+                                fontSize: '12px',
+                                marginTop: '5px',
+                                marginBottom: 0
+                              }}>
+                                {conductErrors.itemScores[c.criterionId]}
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))
                     )}
                   </div>
                   <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <button type="button" className="ghost-button" onClick={() => setIsConductModalOpen(false)}>
+                    <button type="button" className="ghost-button" onClick={() => {
+                      setIsConductModalOpen(false)
+                      setConductErrors({})
+                    }}>
                       {(lang === 'en' ? "Cancel" : "Hủy")}
                     </button>
                     <button type="submit" className="action-button solid" disabled={submittingAssessment}>
@@ -1162,7 +1526,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
               </div>
             )}
 
-{/* SubTab 3: Water Assessments */}
+            {/* SubTab 3: Water Assessments */}
             {envSubTab === 'waters' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -1553,19 +1917,20 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <button
                       type="button"
-                      className="action-button"
+                      className="table-icon-btn primary"
+                      title={(lang === 'en' ? " Details & Attendance" : "Chi tiết & Điểm danh")}
                       onClick={() => void handleViewTrainingDetail(item.trainingRecordId)}
                       style={{ fontSize: '13px' }}
                     >
-                      {(lang === 'en' ? "👁️ Details & Attendance" : "👁️ Chi tiết & Điểm danh")}
+                      <Icon name="eye" size={16} />
                     </button>
                     <button
                       type="button"
-                      className="ghost-button"
+                      className="table-icon-btn danger"
+                      title={(lang === 'en' ? "Delete" : "Xóa")}
                       onClick={() => void handleDeleteTraining(item.trainingRecordId)}
-                      style={{ fontSize: '13px', color: '#dc2626' }}
                     >
-                      {(lang === 'en' ? "Delete" : "Xóa")}
+                      <Icon name="trash" size={16} />
                     </button>
                   </div>
                 </div>
@@ -1576,19 +1941,25 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
           {/* Details Modal */}
           {selectedTrainingDetail && (
             <div className="modal-backdrop" style={{ zIndex: 1100 }}>
+
               <div className="modal-card" style={{ maxWidth: '640px', width: '92%' }}>
+
                 <div className="modal-header">
+
                   <div>
                     <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "VietGAP training details" : "Chi tiết khóa đào tạo VietGAP")}</span>
                     <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>
                       {selectedTrainingDetail.trainingTitle}
                     </h3>
                   </div>
+
                   <button type="button" className="modal-close" onClick={() => setSelectedTrainingDetail(null)}>
                     ✕
                   </button>
                 </div>
+
                 <div className="modal-body" style={{ padding: '20px 24px' }}>
+
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
                     <div>
                       <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Training date" : "Ngày đào tạo")}</span>
@@ -1686,47 +2057,182 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
           {/* Create Modal */}
           {isCreateTrainingOpen && (
             <div className="modal-backdrop" style={{ zIndex: 1100 }}>
-              <div className="modal-card" style={{ maxWidth: '520px', width: '92%' }}>
+
+              <div
+                className="modal-card"
+                style={{
+                  maxWidth: '520px',
+                  width: '92%',
+                  maxHeight: '95vh',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                }}
+              >
                 <div className="modal-header">
                   <div>
                     <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "Add training record" : "Thêm hồ sơ đào tạo")}</span>
                     <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "Record VietGAP training" : "Ghi nhận khóa tập huấn VietGAP")}</h3>
                   </div>
-                  <button type="button" className="modal-close" onClick={() => setIsCreateTrainingOpen(false)}>
+                  <button type="button" className="modal-close" onClick={() => {
+                    setIsCreateTrainingOpen(false)
+                    setTrainingErrors({})
+                  }}>
                     ✕
                   </button>
                 </div>
-                <form onSubmit={handleCreateTraining}>
-                  <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                <form onSubmit={handleCreateTraining} noValidate>
+                  <div
+                    className="modal-body"
+                    style={{
+                      padding: '20px 24px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '14px',
+                      overflowY: 'auto',
+                      flex: 1,
+                      minHeight: 0,
+                    }}
+                  >
+                    {Object.keys(trainingErrors).length > 0 && (
+                      <div style={{
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        color: '#b91c1c',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <AlertCircle size={18} />
+
+                        {lang === 'en'
+                          ? 'Please correct the highlighted fields before saving.'
+                          : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                      </div>
+                    )}
+
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Training course title *" : "Tiêu đề khóa đào tạo / tập huấn *")}
-                      </label>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          {(lang === 'en' ? "Training course title" : "Tiêu đề khóa đào tạo / tập huấn")} <span style={{ color: '#dc2626' }}>*</span>
+                        </label>
+                        <span className="structured-field-badge">{createTrainingForm.trainingTitle.length}{(lang === 'en' ? "/150 characters" : "/150 ký tự")}</span>
+                      </div>
+
                       <input
+                        ref={trainingTitleRef}
                         type="text"
                         required
+                        maxLength={150}
                         placeholder={(lang === 'en' ? "Example: VietGAP chemical safety and PHI training 2026" : "VD: Tập huấn quy trình VietGAP về an toàn hóa chất và PHI 2026")}
                         value={createTrainingForm.trainingTitle}
-                        onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, trainingTitle: e.target.value }))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setCreateTrainingForm((prev) => ({
+                            ...prev,
+                            trainingTitle: value,
+                          }));
+
+                          setTrainingErrors((prev) => {
+                            const updated = { ...prev };
+
+                            // Validate assessed date
+                            if (!value.trim()) {
+                              updated.trainingTitle = lang === 'en'
+                                ? 'Training course title is required.'
+                                : 'Vui lòng nhập tiêu đề khóa đào tạo.'
+                            } else if (value.trim().length > 150) {
+                              updated.trainingTitle =
+                                lang === 'en'
+                                  ? 'Training title cannot exceed 150 characters.'
+                                  : 'Tiêu đề khóa đào tạo không được vượt quá 150 ký tự.';
+                            } else {
+                              delete updated.trainingTitle;
+                            }
+
+                            return updated;
+                          });
+                        }}
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
+                      {trainingErrors.trainingTitle && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {trainingErrors.trainingTitle}
+                        </p>
+                      )}
                     </div>
+
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Training date *" : "Ngày tổ chức đào tạo *")}
-                      </label>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          {(lang === 'en' ? "Training date" : "Ngày tổ chức đào tạo")} <span style={{ color: '#dc2626' }}>*</span>
+                        </label>
+                        <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                      </div>
+
                       <input
+                        ref={trainingDateRef}
                         type="date"
                         required
                         value={createTrainingForm.trainingDate}
-                        onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, trainingDate: e.target.value }))}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setCreateTrainingForm((prev) => ({
+                            ...prev,
+                            trainingDate: value,
+                          }));
+
+                          setTrainingErrors((prev) => {
+                            const updated = { ...prev };
+
+                            // Validate assessed date
+                            if (!value) {
+                              updated.trainingDate = lang === 'en'
+                                ? 'Training date is required.'
+                                : 'Vui lòng chọn ngày tổ chức đào tạo.';
+                            } else {
+                              delete updated.trainingDate;
+                            }
+
+                            return updated;
+                          });
+                        }}
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
+                      {trainingErrors.trainingDate && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {trainingErrors.trainingDate}
+                        </p>
+                      )}
                     </div>
+
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Training content & Objectives" : "Nội dung & Mục tiêu tập huấn")}
-                      </label>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          {(lang === 'en' ? "Training content & Objectives" : "Nội dung & Mục tiêu tập huấn")}
+                        </label>
+                        <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                      </div>
+
                       <textarea
                         rows={3}
                         placeholder={(lang === 'en' ? "Summarize course content, training provider, and participant count..." : "Mô tả tóm tắt nội dung khóa học, đơn vị giảng dạy, số lượng công nhân tham gia...")}
@@ -1735,10 +2241,16 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', resize: 'vertical' }}
                       />
                     </div>
+
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Evidence image / Certificate URL (optional)" : "Link ảnh minh chứng / Chứng chỉ (Tùy chọn)")}
-                      </label>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                          {(lang === 'en' ? "Evidence image / Certificate URL" : "Link ảnh minh chứng / Chứng chỉ")}
+                        </label>
+                        <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                      </div>
+
                       <input
                         type="url"
                         placeholder="https://example.com/certificate.jpg"
@@ -1747,16 +2259,33 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
                     </div>
+
                   </div>
-                  <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
+
+                  <div
+                    className="modal-footer"
+                    style={{
+                      padding: '14px 24px',
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      gap: '10px',
+                      borderTop: '1px solid #e2e8f0',
+                      flexShrink: 0,
+                      background: '#fff',
+                    }}
+                  >
                     <button
                       type="button"
                       className="ghost-button"
-                      onClick={() => setIsCreateTrainingOpen(false)}
+                      onClick={() => {
+                        setIsCreateTrainingOpen(false)
+                        setTrainingErrors({})
+                      }}
                       disabled={submittingTraining}
                     >
                       {(lang === 'en' ? "Cancel" : "Hủy")}
                     </button>
+
                     <button
                       type="submit"
                       className="action-button solid"
@@ -1764,11 +2293,26 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     >
                       {(lang === 'en' ? submittingTraining ? "Saving..." : "Save training record" : submittingTraining ? 'Đang lưu...' : 'Lưu hồ sơ đào tạo')}
                     </button>
+
                   </div>
+
                 </form>
               </div>
             </div>
           )}
+
+          <ConfirmDialog
+            open={pendingConfirmation !== null}
+            title={pendingConfirmation?.title ?? ''}
+            description={pendingConfirmation?.description ?? ''}
+            confirmLabel={pendingConfirmation?.confirmLabel ?? 'Confirm'}
+            cancelLabel={lang === 'en' ? 'Cancel' : 'Hủy'}
+            tone="danger"
+            loading={isConfirming}
+            onConfirm={handleConfirmAction}
+            onClose={() => setPendingConfirmation(null)}
+          />
+
         </div>
       )}
     </section>

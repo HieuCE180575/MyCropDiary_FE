@@ -25,6 +25,7 @@ import { fetchZonesByFarm, fetchBlocks } from '../production/zoneBlockService';
 import type { Zone, Block } from '../production/types';
 import { getFarmStaffList, type FarmStaffRecord } from '../staff/staffService';
 import '../../styles/tasks.css';
+import { AlertCircle } from 'lucide-react';
 
 export function TasksPage() {
   const { lang, t: translate } = useLanguage();
@@ -74,6 +75,19 @@ export function TasksPage() {
   const [taskModalError, setTaskModalError] = useState<string | null>(null);
 
   const requestsRef = useRef<{ list?: AbortController }>({});
+
+  const [taskFieldErrors, setTaskFieldErrors] = useState<{
+    taskName?: string;
+    startsAt?: string;
+    dueAt?: string;
+    zone?: string;
+    block?: string;
+  }>({});
+
+  const taskNameRef = useRef<HTMLSelectElement>(null);
+  const startsAtRef = useRef<HTMLInputElement>(null);
+  const dueAtRef = useRef<HTMLInputElement>(null);
+
 
   useEffect(() => {
     if (farmId) {
@@ -206,18 +220,121 @@ export function TasksPage() {
     setIsCreateModalOpen(true);
   };
 
+  const validateTaskForm = () => {
+    const errors: typeof taskFieldErrors = {};
+
+    const trimmedName = formTaskName.trim();
+
+    // Task name
+    if (!trimmedName) {
+      errors.taskName = lang === 'en'
+        ? 'Please enter a task name.'
+        : 'Vui lòng nhập tên nhiệm vụ.';
+    } else if (trimmedName.length > 160) {
+      errors.taskName = lang === 'en'
+        ? 'Task name cannot exceed 160 characters.'
+        : 'Tên nhiệm vụ không được vượt quá 160 ký tự.';
+    }
+
+    // Start date
+    if (formStartsAt && Number.isNaN(Date.parse(formStartsAt))) {
+      errors.startsAt = lang === 'en'
+        ? 'Please enter a valid start date.'
+        : 'Vui lòng nhập thời gian bắt đầu hợp lệ.';
+    }
+
+    // Due date
+    if (formDueAt && Number.isNaN(Date.parse(formDueAt))) {
+      errors.dueAt = lang === 'en'
+        ? 'Please enter a valid deadline.'
+        : 'Vui lòng nhập hạn hoàn thành hợp lệ.';
+    }
+
+    // Date comparison
+    if (
+      formStartsAt &&
+      formDueAt &&
+      !Number.isNaN(Date.parse(formStartsAt)) &&
+      !Number.isNaN(Date.parse(formDueAt)) &&
+      new Date(formDueAt).getTime() < new Date(formStartsAt).getTime()
+    ) {
+      errors.dueAt = lang === 'en'
+        ? 'Deadline cannot be earlier than the start time.'
+        : 'Hạn hoàn thành không được sớm hơn thời gian bắt đầu.';
+    }
+
+    // Zone validation
+    if (formZoneId !== '') {
+      const selectedZone = zones.find(
+        z => z.zoneId === Number(formZoneId)
+      );
+
+      if (!selectedZone) {
+        errors.zone = lang === 'en'
+          ? 'The selected zone is invalid. Please select another zone.'
+          : 'Khu vực đã chọn không hợp lệ. Vui lòng chọn lại.';
+      }
+    }
+
+    // Block validation
+    if (formBlockId !== '') {
+      const selectedBlockId = Number(formBlockId);
+
+      const availableBlocks = seasonBlocks.length > 0
+        ? seasonBlocks
+        : blocks;
+
+      const selectedBlock = availableBlocks.find(
+        b => b.blockId === selectedBlockId
+      );
+
+      if (!selectedBlock) {
+        errors.block = lang === 'en'
+          ? 'The selected block is invalid. Please select another block.'
+          : 'Lô đất đã chọn không hợp lệ. Vui lòng chọn lại.';
+      } else if (
+        formZoneId !== '' &&
+        selectedBlock.zoneId !== Number(formZoneId)
+      ) {
+        errors.block = lang === 'en'
+          ? 'The selected block does not belong to the selected zone.'
+          : 'Lô đất không thuộc khu vực đã chọn.';
+      }
+    }
+
+    setTaskFieldErrors(errors);
+
+    return errors;
+  };
+
   const handleSaveTask = async (e: FormEvent) => {
     e.preventDefault();
     if (!farmId) return;
-
     const trimmedTaskName = formTaskName.trim();
-    if (!trimmedTaskName) {
-      setTaskModalError((lang === 'en' ? "Enter a task name." : 'Vui lòng nhập tên tasks / nhiệm vụ.'));
-      return;
-    }
 
-    if (formStartsAt && formDueAt && formDueAt < formStartsAt) {
-      setTaskModalError((lang === 'en' ? `Due date (${formDueAt}) cannot be before the start time (${formStartsAt}).` : `Hạn hoàn thành (${formDueAt}) không thể trước thời điểm bắt đầu (${formStartsAt}).`));
+    const errors = validateTaskForm();
+
+    if (Object.keys(errors).length > 0) {
+      if (errors.taskName) {
+        taskNameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        taskNameRef.current?.focus();
+      } else if (errors.startsAt) {
+        startsAtRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        startsAtRef.current?.focus();
+      } else if (errors.dueAt) {
+        dueAtRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        dueAtRef.current?.focus();
+      }
+
       return;
     }
 
@@ -977,9 +1094,8 @@ export function TasksPage() {
 
                           <td style={{ padding: '10px 12px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                             <span
-                              className={`status-dot-badge ${
-                                isCompleted ? 'completed' : isInProgress ? 'in_progress' : 'active'
-                              }`}
+                              className={`status-dot-badge ${isCompleted ? 'completed' : isInProgress ? 'in_progress' : 'active'
+                                }`}
                             >
                               <span className="dot" />
                               {translate(getStatusLabel(t.status))}
@@ -1150,31 +1266,111 @@ export function TasksPage() {
       <Modal
         open={isCreateModalOpen}
         onClose={() => {
-          if (!submitting) setIsCreateModalOpen(false);
+          if (!submitting) {
+            setIsCreateModalOpen(false)
+            setTaskModalError(null)
+            setTaskFieldErrors({})
+          };
         }}
         title={editingTask ? (lang === 'en' ? 'Edit Task' : 'Chỉnh sửa tasks') : (lang === 'en' ? 'Assign New Task (VietGAP)' : 'Giao việc mới (VietGAP)')}
       >
-        <form onSubmit={handleSaveTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {taskModalError && (
-            <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
-              {translate(taskModalError)}
-            </p>
+        <form onSubmit={handleSaveTask} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} noValidate>
+
+          {(Object.keys(taskFieldErrors).length > 0 || taskModalError) && (
+            <div
+              role="alert"
+              style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                color: '#b91c1c',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+              }}
+            >
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+
+              <div>
+                {Object.keys(taskFieldErrors).length > 0 && (
+                  <p style={{ margin: 0 }}>
+                    {lang === 'en'
+                      ? 'Please correct the highlighted fields before saving.'
+                      : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                  </p>
+                )}
+
+                {taskModalError && (
+                  <p style={{ margin: 0 }}>
+                    {translate(taskModalError)}
+                  </p>
+                )}
+              </div>
+            </div>
           )}
+
           <div className="task-form-grid">
             <div className="task-form-field task-field-full">
-              <label htmlFor="task-name">{(lang === 'en' ? "Task name *" : "Tên tasks / Nhiệm vụ *")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-name">
+                  {(lang === 'en' ? "Task name" : "Tên Nhiệm vụ ")} <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{formTaskName.length}{(lang === 'en' ? "/160 characters" : "/160 ký tự")}</span>
+              </div>
               <input
                 id="task-name"
                 required
                 maxLength={160}
                 placeholder={(lang === 'en' ? "Example: Prepare nutrient solution and check the drip irrigation system" : "Ví dụ: Pha chế dịch dinh dưỡng và kiểm tra hệ thống tưới nhỏ giọt")}
                 value={formTaskName}
-                onChange={(e) => setFormTaskName(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value
+
+                  setFormTaskName(value);
+
+                  setTaskFieldErrors((prev) => {
+                    const updated = { ...prev };
+
+                    // Validate assessed date
+                    if (!value.trim()) {
+                      updated.taskName = lang === 'en'
+                        ? 'Enter a task name.'
+                        : 'Vui lòng nhập tên nhiệm vụ.'
+                    } else if (value.trim().length > 160) {
+                      updated.taskName =
+                        lang === 'en'
+                          ? 'Task name cannot exceed 160 characters.'
+                          : 'Tên nhiệm vụ không được vượt quá 160 ký tự.';
+                    } else {
+                      delete updated.taskName;
+                    }
+
+                    return updated;
+                  });
+                }}
               />
+              {taskFieldErrors.taskName && (
+                <p className="field-error"
+                  style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                  {taskFieldErrors.taskName}
+                </p>
+              )}
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-type">{(lang === 'en' ? "Task type *" : "Phân loại tasks *")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-type">
+                  {(lang === 'en' ? "Task type" : "Phân loại nhiệm vụ")} <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              </div>
               <select
                 id="task-type"
                 value={formTaskType}
@@ -1192,7 +1388,12 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-priority">{(lang === 'en' ? "Priority *" : "Mức độ ưu tiên *")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-priority">
+                  {(lang === 'en' ? "Priority" : "Mức độ ưu tiên")} <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              </div>
               <select
                 id="task-priority"
                 value={formPriority}
@@ -1206,7 +1407,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-season">{(lang === 'en' ? "Linked crop season" : "Mùa vụ canh tác liên kết")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-season">{(lang === 'en' ? "Linked crop season" : "Mùa vụ canh tác liên kết")}</label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <select
                 id="task-season"
                 value={formSeasonId}
@@ -1222,7 +1426,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-status">{(lang === 'en' ? "Task status" : "Trạng thái tasks")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-status">{(lang === 'en' ? "Task status" : "Trạng thái tasks")}</label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <select
                 id="task-status"
                 value={formStatus}
@@ -1236,84 +1443,261 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-zone">{(lang === 'en' ? "Production zone" : "Khu vực sản xuất (Zone)")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-zone">{(lang === 'en' ? "Production zone" : "Khu vực sản xuất (Zone)")}</label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <select
                 id="task-zone"
                 value={formZoneId}
+                className={taskFieldErrors.zone ? 'input-error' : ''}
+                aria-invalid={!!taskFieldErrors.zone}
                 onChange={(e) => {
-                  setFormZoneId(e.target.value ? Number(e.target.value) : '');
+                  const newZoneId = e.target.value
+                    ? Number(e.target.value)
+                    : '';
+
+                  setFormZoneId(newZoneId);
                   setFormBlockId('');
+
+                  setTaskFieldErrors(prev => {
+                    const updated = { ...prev };
+
+                    // Clear previous Block error because Block is reset
+                    updated.block = undefined;
+
+                    if (newZoneId !== '') {
+                      const selectedZone = zones.find(
+                        z => z.zoneId === newZoneId
+                      );
+
+                      updated.zone = !selectedZone
+                        ? (lang === 'en'
+                          ? 'The selected zone is invalid.'
+                          : 'Khu vực đã chọn không hợp lệ.')
+                        : undefined;
+                    } else {
+                      updated.zone = undefined;
+                    }
+
+                    return updated;
+                  });
                 }}
               >
-                <option value="">{(lang === 'en' ? "Select zone" : "Chọn zone vực")}</option>
-                {zones.map((z) => (
+                <option value="">
+                  {lang === 'en' ? 'Select zone' : 'Chọn khu vực'}
+                </option>
+
+                {zones.map(z => (
                   <option key={z.zoneId} value={z.zoneId}>
                     {z.zoneName}
                   </option>
                 ))}
               </select>
+
+              {taskFieldErrors.zone && (
+                <p className="field-error"
+                  style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                  {taskFieldErrors.zone}
+                </p>
+              )}
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-block">
-                {(lang === 'en' ? "Growing block" : "Lô đất canh tác (Block)")}{' '}
-                {seasonBlocks.length > 0 && (
-                  <span style={{ color: '#059669', fontSize: '11.5px', fontWeight: 700 }}>
-                    {(lang === 'en' ? "(Within season: " : "(Thuộc mùa vụ: ")} {seasonBlocks.length} plot)
-                  </span>
-                )}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="task-block">
+                  {(lang === 'en' ? "Growing block" : "Lô đất canh tác (Block)")}{' '}
+                  {seasonBlocks.length > 0 && (
+                    <span style={{ color: '#059669', fontSize: '11.5px', fontWeight: 700 }}>
+                      {(lang === 'en' ? "(Within season: " : "(Thuộc mùa vụ: ")} {seasonBlocks.length} plot)
+                    </span>
+                  )}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <select
                 id="task-block"
                 value={formBlockId}
                 disabled={seasonBlocks.length === 0 && (!formZoneId || blocks.length === 0)}
+                className={taskFieldErrors.block ? 'input-error' : ''}
+                aria-invalid={!!taskFieldErrors.block}
                 onChange={(e) => {
-                  const val = e.target.value ? Number(e.target.value) : '';
-                  setFormBlockId(val);
-                  if (val && seasonBlocks.length > 0) {
-                    const matched = seasonBlocks.find((sb) => sb.blockId === val);
-                    if (matched?.zoneId) setFormZoneId(matched.zoneId);
+                  const newBlockId = e.target.value
+                    ? Number(e.target.value)
+                    : '';
+
+                  const availableBlocks = seasonBlocks.length > 0
+                    ? seasonBlocks
+                    : blocks;
+
+                  const selectedBlock = newBlockId !== ''
+                    ? availableBlocks.find(b => b.blockId === newBlockId)
+                    : undefined;
+
+                  setFormBlockId(newBlockId);
+
+                  // Automatically derive Zone from selected Block
+                  if (selectedBlock?.zoneId) {
+                    setFormZoneId(selectedBlock.zoneId);
                   }
+
+                  setTaskFieldErrors(prev => {
+                    const updated = { ...prev };
+
+                    if (newBlockId !== '') {
+                      if (!selectedBlock) {
+                        updated.block = lang === 'en'
+                          ? 'The selected block is invalid.'
+                          : 'Lô đất đã chọn không hợp lệ.';
+                      } else if (
+                        formZoneId !== '' &&
+                        selectedBlock.zoneId !== Number(formZoneId)
+                      ) {
+                        updated.block = lang === 'en'
+                          ? 'The selected block does not belong to the selected zone.'
+                          : 'Lô đất không thuộc khu vực đã chọn.';
+                      } else {
+                        updated.block = undefined;
+                      }
+                    } else {
+                      updated.block = undefined;
+                    }
+
+                    updated.zone = undefined;
+
+                    return updated;
+                  });
                 }}
               >
-                <option value="">{(lang === 'en' ? "Select block" : "Chọn plot đất")}</option>
+                <option value="">
+                  {lang === 'en' ? 'Select block' : 'Chọn lô đất'}
+                </option>
+
                 {seasonBlocks.length > 0
-                  ? seasonBlocks.map((sb) => (
+                  ? seasonBlocks.map(sb => (
                     <option key={sb.blockId} value={sb.blockId}>
-                      🌱 {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} · {sb.plantedArea ?? sb.blockArea}{' '}
-                      {translate(sb.areaUnit || 'm²')})
+                      🌱 {sb.blockName} ({sb.zoneName || `Zone #${sb.zoneId}`})
                     </option>
                   ))
-                  : blocks.map((b) => (
+                  : blocks.map(b => (
                     <option key={b.blockId} value={b.blockId}>
                       {b.blockName}
                     </option>
                   ))}
               </select>
+
+              {taskFieldErrors.block && (
+                <p className="field-error"
+                  style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                  {taskFieldErrors.block}
+                </p>
+              )}
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-start">{lang === 'en' ? 'Start Time' : 'Thời gian bắt đầu'}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-start">
+                  {lang === 'en' ? 'Start Time' : 'Thời gian bắt đầu'} <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              </div>
               <input
+                ref={startsAtRef}
                 id="task-start"
                 type="datetime-local"
                 value={formStartsAt}
-                onChange={(e) => setFormStartsAt(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  setFormStartsAt(value);
+
+                  setTaskFieldErrors((prev) => {
+                    const updated = { ...prev };
+
+                    // Validate start date
+                    if (!value) {
+                      updated.startsAt = lang === 'en'
+                        ? 'Please select a start date.'
+                        : 'Vui lòng chọn ngày bắt đầu.';
+                    } else {
+                      delete updated.startsAt;
+                    }
+
+                    return updated;
+                  });
+                }}
               />
+              {taskFieldErrors.startsAt && (
+                <p className="field-error"
+                  style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                  {taskFieldErrors.startsAt}
+                </p>
+              )}
             </div>
 
             <div className="task-form-field">
-              <label htmlFor="task-due">{(lang === 'en' ? "Due date (Deadline)" : "Hạn hoàn thành (Deadline)")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-due">{(lang === 'en' ? "Due date (Deadline)" : "Hạn hoàn thành (Deadline)")}</label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input
+                ref={dueAtRef}
                 id="task-due"
                 type="datetime-local"
                 value={formDueAt}
-                onChange={(e) => setFormDueAt(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  setFormDueAt(value);
+
+                  setTaskFieldErrors((prev) => {
+                    const updated = { ...prev };
+
+                    if (formStartsAt && value <= formStartsAt) {
+                      updated.dueAt = lang === 'en'
+                        ? 'End date must be after the start date.'
+                        : 'Ngày kết thúc phải sau ngày bắt đầu.';
+                    } else {
+                      delete updated.dueAt;
+                    }
+
+                    return updated;
+                  });
+                }}
               />
+              {taskFieldErrors.dueAt && (
+                <p className="field-error"
+                  style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                  {taskFieldErrors.dueAt}
+                </p>
+              )}
             </div>
 
             <div className="task-form-field task-field-full">
-              <label>{(lang === 'en' ? "Assign staff" : "Phân công nhân sự thực hiện")}</label>
+              <div className="structured-field-header">
+                <label>{(lang === 'en' ? "Assign staff" : "Phân công nhân sự thực hiện")} </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <div
                 style={{
                   maxHeight: '140px',
@@ -1367,7 +1751,12 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field task-field-full">
-              <label htmlFor="task-desc">{(lang === 'en' ? "Technical Description & Instructions" : "Mô tả kỹ thuật & Hướng dẫn thực hiện")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-desc">
+                  {(lang === 'en' ? "Technical Description & Instructions" : "Mô tả kỹ thuật & Hướng dẫn thực hiện")}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <textarea
                 id="task-desc"
                 rows={3}
@@ -1383,7 +1772,11 @@ export function TasksPage() {
               type="button"
               className="action-button"
               disabled={submitting}
-              onClick={() => setIsCreateModalOpen(false)}
+              onClick={() => {
+                setIsCreateModalOpen(false)
+                setTaskModalError(null)
+                setTaskFieldErrors({})
+              }}
             >
               {(lang === 'en' ? "Cancel" : "Hủy")}
             </button>
@@ -1396,156 +1789,160 @@ export function TasksPage() {
       </Modal>
 
       {/* Modal 2: Xem chi tiết tasks */}
-      {selectedTaskDetail && (
-        <Modal
-          open
-          onClose={() => setSelectedTaskDetail(null)}
-          title={(lang === 'en' ? `Task details #${selectedTaskDetail.taskId}` : `Chi tiết tasks #${selectedTaskDetail.taskId}`)}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="task-type-pill">{(lang === 'en' ? selectedTaskDetail.taskType || "Crop care" : selectedTaskDetail.taskType || 'Chăm sóc')}</span>
-            {getPriorityBadge(selectedTaskDetail.priority)}
-          </div>
+      {
+        selectedTaskDetail && (
+          <Modal
+            open
+            onClose={() => setSelectedTaskDetail(null)}
+            title={(lang === 'en' ? `Task details #${selectedTaskDetail.taskId}` : `Chi tiết tasks #${selectedTaskDetail.taskId}`)}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="task-type-pill">{(lang === 'en' ? selectedTaskDetail.taskType || "Crop care" : selectedTaskDetail.taskType || 'Chăm sóc')}</span>
+              {getPriorityBadge(selectedTaskDetail.priority)}
+            </div>
 
-          <h2 style={{ fontSize: '19px', color: '#0f172a', margin: '12px 0 6px' }}>
-            {selectedTaskDetail.taskName}
-          </h2>
+            <h2 style={{ fontSize: '19px', color: '#0f172a', margin: '12px 0 6px' }}>
+              {selectedTaskDetail.taskName}
+            </h2>
 
-          <p style={{ margin: 0, color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>
-            {(lang === 'en' ? selectedTaskDetail.description || "No detailed description." : selectedTaskDetail.description || 'Không có mô tả chi tiết.')}
-          </p>
+            <p style={{ margin: 0, color: '#475569', fontSize: '14px', lineHeight: 1.5 }}>
+              {(lang === 'en' ? selectedTaskDetail.description || "No detailed description." : selectedTaskDetail.description || 'Không có mô tả chi tiết.')}
+            </p>
 
-          <dl className="task-detail-grid">
-            <dt>{(lang === 'en' ? "Current status:" : "Trạng thái hiện at:")}</dt>
-            <dd>
-              <span
-                style={{
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  background:
-                    selectedTaskDetail.status === 'completed'
-                      ? '#dcfce7'
-                      : selectedTaskDetail.status === 'in_progress'
-                        ? '#e0f2fe'
-                        : '#fef3c7',
-                  color:
-                    selectedTaskDetail.status === 'completed'
-                      ? '#166534'
-                      : selectedTaskDetail.status === 'in_progress'
-                        ? '#0369a1'
-                        : '#b45309',
-                  fontWeight: 700,
-                  fontSize: '12.5px',
+            <dl className="task-detail-grid">
+              <dt>{(lang === 'en' ? "Current status:" : "Trạng thái hiện at:")}</dt>
+              <dd>
+                <span
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background:
+                      selectedTaskDetail.status === 'completed'
+                        ? '#dcfce7'
+                        : selectedTaskDetail.status === 'in_progress'
+                          ? '#e0f2fe'
+                          : '#fef3c7',
+                    color:
+                      selectedTaskDetail.status === 'completed'
+                        ? '#166534'
+                        : selectedTaskDetail.status === 'in_progress'
+                          ? '#0369a1'
+                          : '#b45309',
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                  }}
+                >
+                  {translate(getStatusLabel(selectedTaskDetail.status))}
+                </span>
+              </dd>
+
+              <dt>{(lang === 'en' ? "Crop season:" : "Mùa vụ canh tác:")}</dt>
+              <dd>{(lang === 'en' ? selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : "No linked season" : selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : 'Chưa liên kết mùa vụ')}</dd>
+
+              <dt>{(lang === 'en' ? "Zone & Block:" : "Khu vực & Thửa đất:")}</dt>
+              <dd>
+                {(lang === 'en' ? selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : "No zone assigned" : selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : 'Chưa gắn zone vực')}
+                {selectedTaskDetail.blockName ? ` / ${selectedTaskDetail.blockName}` : ''}
+              </dd>
+
+              <dt>{lang === 'en' ? 'Assigned Staff' : 'Nhân sự phụ trách'}:</dt>
+              <dd>
+                {selectedTaskDetail.assignees && selectedTaskDetail.assignees.length > 0 ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {selectedTaskDetail.assignees.map((a) => (
+                      <span key={a.workerId} className="task-worker-chip">
+                        👤 {a.fullName} {a.phoneNumber ? `(${a.phoneNumber})` : ''}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  (lang === 'en' ? "No staff assigned" : 'Unassigned nhân sự')
+                )}
+              </dd>
+
+              <dt>{(lang === 'en' ? "Start time:" : "Thời gian bắt đầu:")}</dt>
+              <dd>
+                {(lang === 'en' ? selectedTaskDetail.startsAt ? new Date(selectedTaskDetail.startsAt).toLocaleString('vi-VN') : "Not set" : selectedTaskDetail.startsAt
+                  ? new Date(selectedTaskDetail.startsAt).toLocaleString('vi-VN')
+                  : 'Chưa đặt')}
+              </dd>
+
+              <dt>{(lang === 'en' ? "Due date:" : "Hạn hoàn thành:")}</dt>
+              <dd>
+                {(lang === 'en' ? selectedTaskDetail.dueAt ? new Date(selectedTaskDetail.dueAt).toLocaleString('vi-VN') : "Not set" : selectedTaskDetail.dueAt
+                  ? new Date(selectedTaskDetail.dueAt).toLocaleString('vi-VN')
+                  : 'Chưa đặt')}
+              </dd>
+
+              <dt>{(lang === 'en' ? "Assigned by:" : "Người giao việc:")}</dt>
+              <dd>{(lang === 'en' ? selectedTaskDetail.createdByFullName || "Farm administrator" : selectedTaskDetail.createdByFullName || 'Quản trị trang trại')}</dd>
+            </dl>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+              <button
+                type="button"
+                className="action-button"
+                onClick={() => {
+                  const cur = selectedTaskDetail;
+                  setSelectedTaskDetail(null);
+                  openEditModal(cur);
                 }}
               >
-                {translate(getStatusLabel(selectedTaskDetail.status))}
-              </span>
-            </dd>
-
-            <dt>{(lang === 'en' ? "Crop season:" : "Mùa vụ canh tác:")}</dt>
-            <dd>{(lang === 'en' ? selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : "No linked season" : selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : 'Chưa liên kết mùa vụ')}</dd>
-
-            <dt>{(lang === 'en' ? "Zone & Block:" : "Khu vực & Thửa đất:")}</dt>
-            <dd>
-              {(lang === 'en' ? selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : "No zone assigned" : selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : 'Chưa gắn zone vực')}
-              {selectedTaskDetail.blockName ? ` / ${selectedTaskDetail.blockName}` : ''}
-            </dd>
-
-            <dt>{lang === 'en' ? 'Assigned Staff' : 'Nhân sự phụ trách'}:</dt>
-            <dd>
-              {selectedTaskDetail.assignees && selectedTaskDetail.assignees.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {selectedTaskDetail.assignees.map((a) => (
-                    <span key={a.workerId} className="task-worker-chip">
-                      👤 {a.fullName} {a.phoneNumber ? `(${a.phoneNumber})` : ''}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                (lang === 'en' ? "No staff assigned" : 'Unassigned nhân sự')
-              )}
-            </dd>
-
-            <dt>{(lang === 'en' ? "Start time:" : "Thời gian bắt đầu:")}</dt>
-            <dd>
-              {(lang === 'en' ? selectedTaskDetail.startsAt ? new Date(selectedTaskDetail.startsAt).toLocaleString('vi-VN') : "Not set" : selectedTaskDetail.startsAt
-                ? new Date(selectedTaskDetail.startsAt).toLocaleString('vi-VN')
-                : 'Chưa đặt')}
-            </dd>
-
-            <dt>{(lang === 'en' ? "Due date:" : "Hạn hoàn thành:")}</dt>
-            <dd>
-              {(lang === 'en' ? selectedTaskDetail.dueAt ? new Date(selectedTaskDetail.dueAt).toLocaleString('vi-VN') : "Not set" : selectedTaskDetail.dueAt
-                ? new Date(selectedTaskDetail.dueAt).toLocaleString('vi-VN')
-                : 'Chưa đặt')}
-            </dd>
-
-            <dt>{(lang === 'en' ? "Assigned by:" : "Người giao việc:")}</dt>
-            <dd>{(lang === 'en' ? selectedTaskDetail.createdByFullName || "Farm administrator" : selectedTaskDetail.createdByFullName || 'Quản trị trang trại')}</dd>
-          </dl>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-            <button
-              type="button"
-              className="action-button"
-              onClick={() => {
-                const cur = selectedTaskDetail;
-                setSelectedTaskDetail(null);
-                openEditModal(cur);
-              }}
-            >
-              {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
-            </button>
-            <button
-              type="button"
-              className="primary-button"
-              onClick={() => setSelectedTaskDetail(null)}
-            >
-              {(lang === 'en' ? "Close" : "Đóng")}
-            </button>
-          </div>
-        </Modal>
-      )}
+                {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => setSelectedTaskDetail(null)}
+              >
+                {(lang === 'en' ? "Close" : "Đóng")}
+              </button>
+            </div>
+          </Modal>
+        )
+      }
 
       {/* Modal 3: {lang === 'en' ? 'Delete Task' : 'Xác nhận xóa'} tasks */}
-      {deletingTask && (
-        <Modal
-          open
-          onClose={() => {
-            if (!submitting) setDeletingTask(null);
-          }}
-          title={(lang === 'en' ? "Confirm task deletion" : "Xác nhận xóa tasks")}
-        >
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ fontSize: '38px', marginBottom: '12px' }}>⚠️</div>
-            <h3 style={{ margin: '0 0 8px', fontSize: '17px', color: '#0f172a' }}>
-              {(lang === 'en' ? "Delete task \"" : "Xóa tasks \"")}{deletingTask.taskName}&quot;?
-            </h3>
-            <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
-              {(lang === 'en' ? "This will delete the task and related staff assignments. This cannot be undone." : "Hành động này sẽ xóa tasks và các phân công lao động liên quan. Không thể hoàn tác.")}
-            </p>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
-            <button
-              type="button"
-              className="action-button"
-              disabled={submitting}
-              onClick={() => setDeletingTask(null)}
-            >
-              {(lang === 'en' ? "Cancel" : "Hủy")}
-            </button>
-            <button
-              type="button"
-              className="primary-button"
-              style={{ background: '#dc2626', borderColor: '#dc2626' }}
-              disabled={submitting}
-              onClick={handleDeleteConfirm}
-            >
-              {(lang === 'en' ? submitting ? "Deleting..." : "Confirm deletion" : submitting ? 'Đang xóa...' : 'Xác nhận xóa')}
-            </button>
-          </div>
-        </Modal>
-      )}
-    </section>
+      {
+        deletingTask && (
+          <Modal
+            open
+            onClose={() => {
+              if (!submitting) setDeletingTask(null);
+            }}
+            title={(lang === 'en' ? "Confirm task deletion" : "Xác nhận xóa tasks")}
+          >
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ fontSize: '38px', marginBottom: '12px' }}>⚠️</div>
+              <h3 style={{ margin: '0 0 8px', fontSize: '17px', color: '#0f172a' }}>
+                {(lang === 'en' ? "Delete task \"" : "Xóa tasks \"")}{deletingTask.taskName}&quot;?
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>
+                {(lang === 'en' ? "This will delete the task and related staff assignments. This cannot be undone." : "Hành động này sẽ xóa tasks và các phân công lao động liên quan. Không thể hoàn tác.")}
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
+              <button
+                type="button"
+                className="action-button"
+                disabled={submitting}
+                onClick={() => setDeletingTask(null)}
+              >
+                {(lang === 'en' ? "Cancel" : "Hủy")}
+              </button>
+              <button
+                type="button"
+                className="primary-button"
+                style={{ background: '#dc2626', borderColor: '#dc2626' }}
+                disabled={submitting}
+                onClick={handleDeleteConfirm}
+              >
+                {(lang === 'en' ? submitting ? "Deleting..." : "Confirm deletion" : submitting ? 'Đang xóa...' : 'Xác nhận xóa')}
+              </button>
+            </div>
+          </Modal>
+        )
+      }
+    </section >
   );
 }

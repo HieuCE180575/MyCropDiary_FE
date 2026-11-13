@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import type { Zone, ZoneFormValues } from '../types';
 import { createZone, updateZone } from '../zoneBlockService';
+import { AlertCircle } from 'lucide-react';
 
 interface ZoneModalProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ interface ZoneModalProps {
   farmName?: string;
   initialZone?: Zone | null;
   existingZones?: Zone[];
+  totalBlockAreaM2: number;
+  totalBlockAreaHa: number;
   onClose: () => void;
   onSuccess: (savedZone: Zone) => void;
 }
@@ -21,6 +24,8 @@ export function ZoneModal({
   farmName,
   initialZone,
   existingZones = [],
+  totalBlockAreaM2,
+  totalBlockAreaHa,
   onClose,
   onSuccess,
 }: ZoneModalProps) {
@@ -34,7 +39,13 @@ export function ZoneModal({
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    zoneName?: string;
+    areaValue?: string;
+  }>({});
+
+  const zoneNameRef = useRef<HTMLInputElement>(null);
+  const areaValueRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -55,7 +66,7 @@ export function ZoneModal({
           imageUrl: '',
         });
       }
-      setError(null);
+      setError({});
     }
   }, [isOpen, mode, initialZone]);
 
@@ -63,13 +74,25 @@ export function ZoneModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     const trimmedName = values.zoneName.trim();
     if (!trimmedName) {
-      setError((lang === 'en' ? "Enter a management zone name." : 'Vui lòng nhập tên khu vực quản lý (Zone Name).'));
+      setError(prev => ({ ...prev, zoneName: lang === 'en' ? "Enter a management zone name." : 'Vui lòng nhập tên khu vực quản lý (Zone Name).' }));
+      zoneNameRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      zoneNameRef.current?.focus();
       return;
     }
+
     if (trimmedName.length > 100) {
-      setError((lang === 'en' ? "Zone name must not exceed 100 characters." : 'Tên phân khu (Zone) không được vượt quá 100 ký tự.'));
+      setError(prev => ({ ...prev, zoneName: lang === 'en' ? "Zone name must not exceed 100 characters." : 'Tên phân khu (Zone) không được vượt quá 100 ký tự.' }));
+      zoneNameRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      zoneNameRef.current?.focus();
       return;
     }
 
@@ -80,28 +103,53 @@ export function ZoneModal({
           (mode === 'create' || z.zoneId !== initialZone?.zoneId)
       );
       if (isDuplicate) {
-        setError((lang === 'en' ? `Zone name "${trimmedName}" already exists in this farm. Choose another name.` : `Tên phân khu (Zone) "${trimmedName}" đã tồn tại trong trang trại này. Vui lòng chọn tên khác.`));
+        setError(prev => ({ ...prev, zoneName: lang === 'en' ? `Zone name "${trimmedName}" already exists in this farm. Choose another name.` : `Tên phân khu (Zone) "${trimmedName}" đã tồn tại trong trang trại này. Vui lòng chọn tên khác.` }));
+        zoneNameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        zoneNameRef.current?.focus();
         return;
       }
     }
+
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError((lang === 'en' ? "Zone area must be a valid positive number (> 0)." : 'Area Zone phải là số dương hợp lệ (> 0).'));
+      setError(prev => ({ ...prev, areaValue: lang === 'en' ? "Zone area must be a valid positive number (> 0)." : 'Diện tích phân khu phải là số dương hợp lệ (> 0).' }));
+      areaValueRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      areaValueRef.current?.focus();
       return;
     }
 
-    if (mode === 'edit' && initialZone?.blocks && initialZone.blocks.length > 0) {
-      const currentBlocksTotal = initialZone.blocks.reduce((sum, b) => sum + (b.areaValue || 0), 0);
+    if (mode === 'edit') {
+      const currentBlocksTotal =
+        values.areaUnit === 'ha'
+          ? totalBlockAreaHa
+          : totalBlockAreaM2;
+
       if (areaNum < currentBlocksTotal) {
-        setError(
-          (lang === 'en' ? `Zone area (${areaNum} ${values.areaUnit}) must not be smaller than the total area of existing blocks (${currentBlocksTotal} ${values.areaUnit}).` : `Area phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`)
-        );
+        setError(prev => ({
+          ...prev,
+          areaValue: lang === 'en'
+            ? `Zone area (${areaNum} ${values.areaUnit}) must not be smaller than the total area of existing blocks (${currentBlocksTotal} ${values.areaUnit}).`
+            : `Diện tích phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`
+        }));
+
+        areaValueRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+
+        areaValueRef.current?.focus();
         return;
       }
     }
 
     setLoading(true);
-    setError(null);
+    setError({});
 
     try {
       let saved: Zone;
@@ -114,7 +162,7 @@ export function ZoneModal({
       onSuccess(saved);
       onClose();
     } catch (err) {
-      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Zone information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Zone.'));
+      setError(prev => ({ ...prev, areaValue: lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Zone information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Zone.' }));
     } finally {
       setLoading(false);
     }
@@ -136,7 +184,30 @@ export function ZoneModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
+          {Object.keys(error).length > 0 && (
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <AlertCircle size={18} />
+              <span>
+                {mode === 'create'
+                  ? (lang === 'en'
+                    ? 'Please correct the errors before adding.'
+                    : 'Vui lòng sửa các lỗi trước khi thêm.')
+                  : (lang === 'en'
+                    ? 'Please correct the errors before saving changes.'
+                    : 'Vui lòng sửa các lỗi trước khi lưu thay đổi.')}
+              </span>
+            </div>
+          )}
 
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
@@ -157,16 +228,45 @@ export function ZoneModal({
               </label>
               <span className="structured-field-badge">{values.zoneName.length}/100 {lang === 'en' ? 'chars · Required' : 'ký tự · Bắt buộc'}</span>
             </div>
-            <div className="form-field" style={{ marginBottom: 0 }}>
+            <div
+              className="form-field"
+              style={{
+                marginBottom: 0,
+              }}>
               <input
+                ref={zoneNameRef}
                 id="zone-name-input"
                 type="text"
                 maxLength={100}
                 placeholder={lang === 'en' ? 'e.g. Zone A - Greenhouse Leafy Vegetables' : 'VD: Khu A - Khu trồng rau ăn lá nhà màng'}
                 value={values.zoneName}
-                onChange={(e) => setValues({ ...values, zoneName: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setValues(p => ({ ...p, zoneName: value }));
+
+                  setError(prev => {
+                    const updated = { ...prev };
+                    if (!value.trim()) {
+                      updated.zoneName = lang === 'en'
+                        ? 'Please enter a zone name.'
+                        : 'Vui lòng nhập tên phân khu.';
+                    } else {
+                      delete updated.zoneName;
+                    }
+                    return updated;
+                  });
+                }}
                 required
               />
+              {error.zoneName && (
+                <p style={{
+                  color: '#dc2626',
+                  fontSize: '12px',
+                  margin: '5px 0 0'
+                }}>
+                  {error.zoneName}
+                </p>
+              )}
             </div>
           </div>
 
@@ -180,15 +280,44 @@ export function ZoneModal({
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
+                  ref={areaValueRef}
                   id="zone-area-input"
                   type="number"
                   step="0.01"
                   min="0.01"
                   placeholder={(lang === 'en' ? "e.g. 2500" : "VD: 2500")}
                   value={values.areaValue}
-                  onChange={(e) => setValues({ ...values, areaValue: e.target.value })}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const newAreaNum = parseFloat(newValue);
+
+                    setValues(p => ({ ...p, areaValue: newValue }));
+
+                    setError(prev => {
+                      const updated = { ...prev };
+
+                      if (!newValue || isNaN(newAreaNum) || newAreaNum <= 0) {
+                        updated.areaValue = lang === 'en'
+                          ? 'Zone area must be a valid positive number (> 0).'
+                          : 'Diện tích phân khu phải là số dương hợp lệ (> 0).';
+                      } else {
+                        delete updated.areaValue;
+                      }
+
+                      return updated;
+                    });
+                  }}
                   required
                 />
+                {error && (
+                  <p style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    margin: '5px 0 0'
+                  }}>
+                    {error.areaValue}
+                  </p>
+                )}
               </div>
             </div>
 

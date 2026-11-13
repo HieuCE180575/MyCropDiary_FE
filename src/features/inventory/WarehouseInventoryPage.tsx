@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
@@ -16,6 +16,7 @@ import {
 } from './warehouseService';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
+import { AlertCircle } from 'lucide-react';
 
 export function WarehouseInventoryPage() {
   const { lang, t: translate } = useLanguage();
@@ -58,6 +59,14 @@ export function WarehouseInventoryPage() {
 
   // Toast / Notification banner
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const [warehouseErrors, setWarehouseErrors] = useState<{
+    warehouseName?: string;
+    address?: string;
+  }>({});
+
+  const nameRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setNotification({ text, type });
@@ -117,9 +126,63 @@ export function WarehouseInventoryPage() {
     }
   };
 
+  const validateWarehouseForm = () => {
+    const errors: {
+      warehouseName?: string;
+      address?: string;
+    } = {};
+
+    const name = createWarehouseForm.warehouseName.trim();
+    const address = createWarehouseForm.address.trim();
+
+    if (!name) {
+      errors.warehouseName =
+        lang === 'en'
+          ? 'Please enter a warehouse name.'
+          : 'Vui lòng nhập tên kho hàng.';
+    } else if (name.length > 150) {
+      errors.warehouseName =
+        lang === 'en'
+          ? 'Warehouse name cannot exceed 150 characters.'
+          : 'Tên kho hàng không được vượt quá 150 ký tự.';
+    }
+
+    if (address.length > 250) {
+      errors.address =
+        lang === 'en'
+          ? 'Address cannot exceed 250 characters.'
+          : 'Địa chỉ không được vượt quá 250 ký tự.';
+    }
+
+    setWarehouseErrors(errors);
+    return errors;
+  };
+
+
   const handleCreateWarehouse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFarm?.id || !createWarehouseForm.warehouseName.trim()) return;
+    if (!selectedFarm?.id) return;
+
+    const errors = validateWarehouseForm();
+
+    if (Object.keys(errors).length > 0) {
+      if (errors.warehouseName) {
+        nameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        nameRef.current?.focus();
+      } else if (errors.address) {
+        addressRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        addressRef.current?.focus();
+      }
+
+      return;
+    }
+
     setCreatingWarehouse(true);
     try {
       await createWarehouseApi(selectedFarm.id, {
@@ -773,40 +836,180 @@ export function WarehouseInventoryPage() {
                 <span className="eyebrow" style={{ color: '#059669' }}>{lang === 'en' ? 'New Storage Facility' : 'Tạo kho hàng mới'}</span>
                 <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{lang === 'en' ? 'Add Input Warehouse' : 'Thêm kho lưu trữ vật tư'}</h3>
               </div>
-              <button type="button" className="modal-close" onClick={() => setIsCreateWarehouseOpen(false)}>
+              <button type="button" className="modal-close" onClick={() => {
+                setWarehouseErrors({})
+                setIsCreateWarehouseOpen(false)
+                setCreateWarehouseForm({
+                  warehouseName: '',
+                  address: '',
+                  imageUrl: '',
+                });
+              }}>
                 ✕
               </button>
             </div>
-            <form onSubmit={handleCreateWarehouse}>
+            <form onSubmit={handleCreateWarehouse} noValidate>
+
               <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {(Object.keys(warehouseErrors).length > 0) && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}
+                  >
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
+
+                    <div>
+                      <p style={{ margin: 0 }}>
+                        {lang === 'en'
+                          ? 'Please correct the highlighted fields before saving.'
+                          : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? 'Warehouse Name *' : 'Tên kho hàng *'}
-                  </label>
+                  <div className="structured-field-header">
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? 'Warehouse Name' : 'Tên kho hàng'} <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{createWarehouseForm.warehouseName.length}{(lang === 'en' ? "/150 characters" : "/150 ký tự")}</span>
+                  </div>
                   <input
+                    ref={nameRef}
                     type="text"
                     required
+                    maxLength={150}
                     placeholder={lang === 'en' ? 'e.g. Technical Inputs Warehouse #2, Cold Storage...' : 'VD: Kho vật tư kỹ thuật số 2, Kho lạnh bảo quản...'}
                     value={createWarehouseForm.warehouseName}
-                    onChange={(e) => setCreateWarehouseForm((p) => ({ ...p, warehouseName: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setCreateWarehouseForm((prev) => ({
+                        ...prev,
+                        warehouseName: value,
+                      }));
+
+                      setWarehouseErrors((prev) => {
+                        const updated = { ...prev };
+
+                        // Validate assessed date
+                        if (!value.trim()) {
+                          updated.warehouseName = lang === 'en'
+                            ? 'Please enter a warehouse name.'
+                            : 'Vui lòng nhập tên kho hàng.'
+                        } else if (value.trim().length > 150) {
+                          updated.warehouseName =
+                            lang === 'en'
+                              ? 'Warehouse name cannot exceed 150 characters.'
+                              : 'Tên kho hàng không được vượt quá 150 ký tự.';
+                        } else {
+                          delete updated.warehouseName;
+                        }
+
+                        return updated;
+                      });
+                    }}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                   />
+                  {warehouseErrors.warehouseName && (
+                    <p className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                      {warehouseErrors.warehouseName}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
-                  </label>
+                  <div className="structured-field-header">
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
+                    </label>
+                    <span className="structured-field-badge">{createWarehouseForm.address.length}{(lang === 'en' ? "/250 characters" : "/250 ký tự")}</span>
+                  </div>
                   <input
                     type="text"
-                    placeholder={lang === 'en' ? 'e.g. High-tech Greenhouse Area #1' : 'VD: Khu nhà kính công nghệ cao số 1, Đà Lạt'}
+                    ref={addressRef}
+                    maxLength={250}
+                    placeholder={
+                      lang === 'en'
+                        ? 'e.g. High-tech Greenhouse Area #1'
+                        : 'VD: Khu nhà kính công nghệ cao số 1, Đà Lạt'
+                    }
                     value={createWarehouseForm.address}
-                    onChange={(e) => setCreateWarehouseForm((p) => ({ ...p, address: e.target.value }))}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setCreateWarehouseForm((p) => ({
+                        ...p,
+                        address: value,
+                      }));
+
+                      setWarehouseErrors((prev) => {
+                        const updated = { ...prev };
+
+                        // Validate assessed date
+                        if (value.trim().length > 150) {
+                          updated.address =
+                            lang === 'en'
+                              ? 'Address cannot exceed 250 characters.'
+                              : 'Địa chỉ không được vượt quá 250 ký tự.';
+                        } else {
+                          delete updated.address;
+                        }
+
+                        return updated;
+                      });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '6px',
+                      border: warehouseErrors.address
+                        ? '1px solid #dc2626'
+                        : '1px solid #cbd5e1',
+                    }}
                   />
+
+                  {warehouseErrors.address && (
+                    <p
+                      className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0,
+                      }}
+                    >
+                      {warehouseErrors.address}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
-                <button type="button" className="ghost-button" onClick={() => setIsCreateWarehouseOpen(false)} disabled={creatingWarehouse}>
+                <button type="button" className="ghost-button" onClick={() => {
+                  setWarehouseErrors({})
+                  setIsCreateWarehouseOpen(false)
+                  setCreateWarehouseForm({
+                    warehouseName: '',
+                    address: '',
+                    imageUrl: '',
+                  });
+                }}
+                  disabled={creatingWarehouse}>
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
                 </button>
                 <button type="submit" className="action-button solid" disabled={creatingWarehouse}>

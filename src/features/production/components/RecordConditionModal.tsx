@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Block, BlockConditionObservation, RecordConditionFormValues } from '../types';
 import { recordBlockCondition } from '../zoneBlockService';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
+import { AlertCircle } from 'lucide-react';
 
 interface RecordConditionModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ export function RecordConditionModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -60,6 +62,12 @@ export function RecordConditionModal({
     }
     if (!values.description.trim()) {
       setError((lang === 'en' ? "Enter detailed condition notes." : 'Vui lòng nhập nội dung ghi nhận điều kiện chi tiết.'));
+      descriptionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+
+      descriptionRef.current?.focus();
       return;
     }
 
@@ -98,7 +106,24 @@ export function RecordConditionModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
+          {error && (
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <AlertCircle size={18} />
+              {lang === 'en'
+                ? 'Please correct the errors before saving.'
+                : 'Vui lòng sửa các lỗi trước khi lưu.'}
+            </div>
+          )}
 
           <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
@@ -171,9 +196,37 @@ export function RecordConditionModal({
                 maxLength={1000}
                 placeholder={lang === 'en' ? 'Describe in detail bed conditions, soil moisture, pest signs, or actual environmental factors...' : 'Mô tả chi tiết tình trạng mặt luống, độ ẩm đất, dấu hiệu sâu bệnh hoặc điều kiện môi trường thực tế tại lô đất...'}
                 value={values.description}
-                onChange={(e) => setValues({ ...values, description: e.target.value })}
+                ref={descriptionRef}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  setValues((prev) => ({
+                    ...prev,
+                    description: value,
+                  }));
+
+                  if (value.length > 500) {
+                    setError(
+                      lang === 'en'
+                        ? 'Description must not exceed 500 characters.'
+                        : 'Mô tả không được vượt quá 500 ký tự.'
+                    );
+                  } else {
+                    setError(null);
+                  }
+                }}
                 required
               />
+              {error && (
+                <p style={{
+                  color: '#dc2626',
+                  fontSize: '12px',
+                  marginTop: '5px',
+                  marginBottom: 0
+                }}>
+                  {error}
+                </p>
+              )}
             </div>
           </div>
 

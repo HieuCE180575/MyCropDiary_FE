@@ -17,6 +17,7 @@ import {
   type AIConversationItem,
   type AIFeedbackItem,
 } from './aiService';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 
 interface AIDraft {
   id: string;
@@ -45,6 +46,8 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
   const [isTyping, setIsTyping] = useState(false);
   const [searchHistoryQuery, setSearchHistoryQuery] = useState('');
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState<number | null>(null);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
 
   // Reporting / Feedback state
   const [feedbackHistory, setFeedbackHistory] = useState<AIFeedbackItem[]>([]);
@@ -213,18 +216,40 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     }
   };
 
-  const handleDeleteConversation = async (convId: number) => {
-    if (!window.confirm((lang === 'en' ? "Are you sure you want to delete this conversation?" : 'Bạn có chắc chắn muốn xóa cuộc hội thoại này?'))) return;
+  const handleConfirmDeleteConversation = async () => {
+    if (conversationToDelete === null) return;
+
+    setIsDeletingConversation(true);
+
     try {
-      await deleteAIConversation(convId);
-      showToast((lang === 'en' ? "Conversation deleted successfully." : 'Đã xóa cuộc hội thoại thành công.'));
-      if (activeConversationId === convId) {
+      await deleteAIConversation(conversationToDelete);
+
+      showToast(
+        lang === 'en'
+          ? 'Conversation deleted successfully.'
+          : 'Đã xóa cuộc hội thoại thành công.'
+      );
+
+      if (activeConversationId === conversationToDelete) {
         setActiveConversationId(null);
         setMessages([]);
       }
+
+      setConversationToDelete(null);
       await loadConversations();
     } catch (err) {
-      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete conversation" : err instanceof Error ? err.message : 'Xóa hội thoại thất bại'), 'error');
+      showToast(
+        lang === 'en'
+          ? err instanceof Error
+            ? translate(err.message)
+            : 'Unable to delete conversation'
+          : err instanceof Error
+            ? err.message
+            : 'Xóa hội thoại thất bại',
+        'error'
+      );
+    } finally {
+      setIsDeletingConversation(false);
     }
   };
 
@@ -446,7 +471,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                         </div>
                       )}
                     </div>
-                    
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', padding: '0 6px' }}>
                       <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                         {(lang === 'en' ? m.createdAt ? new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : "Just now" : m.createdAt ? new Date(m.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : 'Vừa xong')}
@@ -641,19 +666,47 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                     >
                       {(lang === 'en' ? "Review & Continue" : "Xem lại & Tiếp tục")}
                     </button>
-                    <button
+                    {/* <button
                       type="button"
                       className="outline-button"
                       style={{ fontSize: '13px', padding: '6px 12px', color: '#dc2626', borderColor: '#fca5a5' }}
                       onClick={() => void handleDeleteConversation(c.conversationId)}
                     >
                       {(lang === 'en' ? "Delete" : "Xóa")}
+                    </button> */}
+                    <button
+                      type="button"
+                      className="action-button danger"
+                      onClick={() => setConversationToDelete(c.conversationId)}
+                      aria-label={lang === 'en' ? 'Delete conversation' : 'Xóa cuộc hội thoại'}
+                      title={lang === 'en' ? 'Delete' : 'Xóa'}
+                    >
+                      <Icon name="trash" size={15} />
                     </button>
                   </div>
                 </div>
               ))}
             </div>
           )}
+          <ConfirmDialog
+            open={conversationToDelete !== null}
+            title={
+              lang === 'en'
+                ? 'Confirm conversation deletion'
+                : 'Xác nhận xóa cuộc hội thoại'
+            }
+            description={
+              lang === 'en'
+                ? 'Are you sure you want to delete this conversation? This action cannot be undone.'
+                : 'Bạn có chắc chắn muốn xóa cuộc hội thoại này? Hành động này không thể hoàn tác.'
+            }
+            confirmLabel={lang === 'en' ? 'Delete' : 'Xóa'}
+            cancelLabel={lang === 'en' ? 'Cancel' : 'Hủy'}
+            tone="danger"
+            loading={isDeletingConversation}
+            onConfirm={handleConfirmDeleteConversation}
+            onClose={() => setConversationToDelete(null)}
+          />
         </div>
       )}
 
@@ -698,11 +751,11 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                         </small>
                         <button
                           type="button"
-                          className="outline-button"
-                          style={{ fontSize: '11.5px', padding: '3px 8px' }}
+                          className="table-icon-btn edit"
+                          title={(lang === 'en' ? "Edit feedback" : "Chỉnh sửa phản hồi")} style={{ fontSize: '11.5px', padding: '3px 8px' }}
                           onClick={() => handleStartEditFeedback(fb)}
                         >
-                          {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
+                          <Icon name="edit" size={16} />
                         </button>
                       </div>
                     </div>

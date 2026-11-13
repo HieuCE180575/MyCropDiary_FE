@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { farmRole } from '../auth/accessPolicy';
 import { Icon } from '../../shared/components/Icon';
@@ -28,6 +28,9 @@ import {
 import type { Zone, StaffZoneAssignment } from '../production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import axios from 'axios';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { AlertCircle } from 'lucide-react';
 
 interface FarmStaffDataCache {
   staffList: FarmStaffRecord[];
@@ -73,7 +76,7 @@ export function StaffManagementPage() {
   const [notification, setNotification] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Add Staff Modal
-    // Candidate Users for Add Staff
+  // Candidate Users for Add Staff
   const [candidates, setCandidates] = useState<CandidateUser[]>([]);
   const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [candidateKeyword, setCandidateKeyword] = useState('');
@@ -108,6 +111,33 @@ export function StaffManagementPage() {
   const [assignModalError, setAssignModalError] = useState<string | null>(null);
 
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
+
+  const [emailError, setEmailError] = useState('');
+  const staffEmailRef = useRef<HTMLInputElement>(null);
+
+  type PendingConfirmation = {
+    title: string;
+    description: string;
+    confirmLabel: string;
+    onConfirm: () => Promise<void>;
+  };
+
+  const [pendingConfirmation, setPendingConfirmation] =
+    useState<PendingConfirmation | null>(null);
+
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const openConfirmDialog = (config: PendingConfirmation) => {
+    setPendingConfirmation(config);
+  };
+
+  const [workerErrors, setWorkerErrors] = useState<{
+    farmMemberId?: string;
+    workerCode?: string;
+  }>({});
+
+  const workerMemberRef = useRef<HTMLSelectElement>(null);
+  const workerCodeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!farmId) return;
@@ -181,12 +211,36 @@ export function StaffManagementPage() {
     }
   }, [farmId, activeTab, workerStatusFilter]);
 
+  const validateWorkerForm = () => {
+    const newErrors: typeof workerErrors = {};
+
+    if (!workerForm.farmMemberId || workerForm.farmMemberId === 0) {
+      newErrors.farmMemberId = lang === 'en'
+        ? 'Please select a farm member.'
+        : 'Vui lòng chọn thành viên trang trại.';
+    }
+
+    if (!workerForm.workerCode.trim()) {
+      newErrors.workerCode = lang === 'en'
+        ? 'Worker code is required.'
+        : 'Vui lòng nhập mã công nhân.';
+    }
+
+    setWorkerErrors(newErrors);
+    return newErrors;
+  };
+
+  const handleCancelWorker = () => {
+    setWorkerErrors({});
+    setIsWorkerModalOpen(false);
+  };
+
   const handleOpenAddWorker = () => {
     setEditingWorker(null);
     setWorkerForm({
       farmMemberId: staffList.length > 0 ? staffList[0].farmMemberId : 0,
-      workerCode: `CN-${String(workers.length + 1).padStart(3, '0')}`,
-      jobTitle: 'Công nhân lao động',
+      workerCode: `WK-GV-${String(workers.length + 1).padStart(3, '0')}`,
+      jobTitle: lang === 'en' ? 'Labor Worker' : 'Công nhân lao động',
       employmentStatus: 'active',
       hiredAt: new Date().toISOString().split('T')[0],
       notes: '',
@@ -210,6 +264,27 @@ export function StaffManagementPage() {
   const handleSaveWorker = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!farmId || !workerForm.workerCode.trim()) return;
+
+    const validationErrors = validateWorkerForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      if (validationErrors.farmMemberId) {
+        workerMemberRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        workerMemberRef.current?.focus();
+      } else if (validationErrors.workerCode) {
+        workerCodeRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        workerCodeRef.current?.focus();
+      }
+
+      return;
+    }
+
     setSavingWorker(true);
     try {
       if (editingWorker) {
@@ -232,16 +307,36 @@ export function StaffManagementPage() {
   };
 
   const handleDeleteWorker = async (workerId: number) => {
-    if (!farmId || !window.confirm((lang === 'en' ? "Are you sure you want to delete this worker profile?" : 'Bạn có chắc chắn muốn xóa hồ sơ công nhân này?'))) return;
+    if (!farmId || !workerId) return;
     try {
       await deleteFarmWorkerApi(farmId, workerId);
       setNotification({ text: (lang === 'en' ? "Worker profile deleted successfully." : 'Đã xóa hồ sơ công nhân thành công.'), type: 'success' });
       void loadWorkers();
     } catch (err) {
+      const backendMessage = axios.isAxiosError(err)
+        ? err.response?.data?.message
+        : err instanceof Error
+          ? err.message
+          : '';
+
+      const errorMap: Record<string, string> = {
+        'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.':
+          'A system error occurred. Please try again later.',
+
+      };
+
       setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete worker profile." : err instanceof Error ? err.message : 'Không thể xóa hồ sơ công nhân.'),
+        text:
+          lang === 'en'
+            ? errorMap[backendMessage] ||
+            backendMessage ||
+            `Unable to delete worker profile.`
+            : backendMessage ||
+            `Không thể xóa hồ sơ công nhân.`,
         type: 'error',
       });
+
+      throw err;
     }
   };
 
@@ -253,7 +348,7 @@ export function StaffManagementPage() {
     setCandidateKeyword('');
     setUseManualEmail(false);
     setRole('STAFF');
-    setJobTitle('Kỹ sư nông nghiệp');
+    setJobTitle(lang === 'en' ? 'Agricultural Engineer' : 'Kỹ sư nông nghiệp');
     if (farmId) {
       setLoadingCandidates(true);
       try {
@@ -267,42 +362,116 @@ export function StaffManagementPage() {
     }
   };
 
+  const handleCancelAddStaff = () => {
+    setEmail('');
+    setRole('MEMBER');
+    setJobTitle('');
+    setEmailError('');
+    setAddStaffError('');
+    setIsAddStaffOpen(false);
+  };
+
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!selectedFarm?.id) return;
+
     const trimmedEmail = email.trim().toLowerCase();
+
+    // Validate required email
     if (!trimmedEmail) {
-      setAddStaffError((lang === 'en' ? "Enter the staff account email address." : 'Vui lòng nhập địa chỉ email tài khoản nhân viên.'));
+      setEmailError(
+        lang === 'en'
+          ? 'Enter the staff account email address.'
+          : 'Vui lòng nhập địa chỉ email tài khoản nhân viên.'
+      );
+
+      staffEmailRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      staffEmailRef.current?.focus();
+
       return;
     }
 
-    const existing = staffList.find((s) => s.email.toLowerCase() === trimmedEmail);
-    if (existing) {
-      setAddStaffError((lang === 'en' ? `Account "${email.trim()}" is already a farm member (Status: ${existing.status || 'Active'}). Duplicate members cannot be added!` : `Tài khoản "${email.trim()}" đã là thành viên of trang trại (Trạng thái: ${existing.status || 'Active'}). Không thể thêm trùng lặp!`));
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailError(
+        lang === 'en'
+          ? 'Please enter a valid email address.'
+          : 'Vui lòng nhập địa chỉ email hợp lệ.'
+      );
+
+      staffEmailRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+      staffEmailRef.current?.focus();
+
       return;
     }
+
+    setEmailError('');
+
+    // Check duplicate members
+    const existing = staffList.find(
+      (s) => s.email.toLowerCase() === trimmedEmail
+    );
+
+    if (existing) {
+
+      staffEmailRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+      staffEmailRef.current?.focus();
+
+      setAddStaffError(
+        lang === 'en'
+          ? `Account "${email.trim()}" is already a farm member (Status: ${existing.status || 'Active'}). Duplicate members cannot be added!`
+          : `Tài khoản "${email.trim()}" đã là thành viên của trang trại (Trạng thái: ${existing.status || 'Active'}). Không thể thêm trùng lặp!`
+      );
+
+
+
+      return;
+    }
+
 
     setSavingStaff(true);
     setAddStaffError(null);
     setNotification(null);
+
     try {
       const created = await addFarmStaffMember(selectedFarm.id, {
-        email: email.trim(),
+        email: trimmedEmail,
         farmRole: role.toLowerCase(),
         jobTitle: jobTitle.trim() || undefined,
       });
+
       setNotification({
-        text: (lang === 'en' ? `Added member "${created.fullName}" (${created.email}) to the farm successfully!` : `Đã thêm thành viên "${created.fullName}" (${created.email}) vào trang trại thành công!`),
+        text: lang === 'en'
+          ? `Added member "${created.fullName}" (${created.email}) to the farm successfully!`
+          : `Đã thêm thành viên "${created.fullName}" (${created.email}) vào trang trại thành công!`,
         type: 'success',
       });
+
       setIsAddStaffOpen(false);
       setEmail('');
       setRole('STAFF');
-      setJobTitle('Kỹ sư nông nghiệp');
+      setJobTitle(lang === 'en' ? 'Agricultural Engineer' : 'Kỹ sư nông nghiệp');
+      setEmailError('');
+
       await loadData();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Không thể thêm nhân viên. Vui lòng kiểm tra email tài khoản đã kích hoạt.';
+      const msg = err instanceof Error
+        ? err.message
+        : 'Không thể thêm nhân viên. Vui lòng kiểm tra email tài khoản đã kích hoạt.';
+
       setAddStaffError(msg);
+
       setNotification({
         text: msg,
         type: 'error',
@@ -312,20 +481,65 @@ export function StaffManagementPage() {
     }
   };
 
-  const handleDeactivate = async (memberId: number, name: string) => {
-    if (!selectedFarm?.id) return;
-    if (!window.confirm((lang === 'en' ? `Deactivate member "${name}" from the farm?` : `Ngừng kích hoạt thành viên "${name}" khỏi trang trại?`))) return;
-    setNotification(null);
-    try {
-      await deactivateFarmStaffMember(selectedFarm.id, memberId);
-      setNotification({ text: (lang === 'en' ? `Suspended access for "${name}".` : `Đã tạm dừng quyền truy cập của "${name}".`), type: 'success' });
-      await loadData();
-    } catch (err) {
-      setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : `Unable to deactivate member "${name}".` : err instanceof Error ? err.message : `Không thể vô hiệu hóa thành viên "${name}".`),
-        type: 'error',
-      });
-    }
+  const handleDeactivate = (memberId: number, name: string) => {
+    openConfirmDialog({
+      title:
+        lang === 'en'
+          ? 'Confirm member deactivation'
+          : 'Xác nhận ngừng kích hoạt thành viên',
+      description:
+        lang === 'en'
+          ? `Are you sure you want to deactivate "${name}" from this farm? Their access will be suspended.`
+          : `Bạn có chắc chắn muốn ngừng kích hoạt "${name}" khỏi trang trại này? Quyền truy cập của thành viên sẽ bị tạm dừng.`,
+      confirmLabel: lang === 'en' ? 'Deactivate' : 'Ngừng kích hoạt',
+      onConfirm: async () => {
+        if (!selectedFarm?.id) return;
+
+        setNotification(null);
+
+        try {
+          await deactivateFarmStaffMember(selectedFarm.id, memberId);
+
+          setNotification({
+            text:
+              lang === 'en'
+                ? `Suspended access for "${name}".`
+                : `Đã tạm dừng quyền truy cập của "${name}".`,
+            type: 'success',
+          });
+
+          await loadData();
+        } catch (err) {
+          const backendMessage = axios.isAxiosError(err)
+            ? err.response?.data?.message
+            : err instanceof Error
+              ? err.message
+              : '';
+
+          const errorMap: Record<string, string> = {
+            'Không thể ngừng hoạt động Chủ trang trại duy nhất của trang trại':
+              'Cannot deactivate the only active farm owner.',
+            'Không tìm thấy thành viên':
+              'Farm member not found.',
+            'Thành viên không thuộc trang trại này':
+              'This member does not belong to this farm.',
+          };
+
+          setNotification({
+            text:
+              lang === 'en'
+                ? errorMap[backendMessage] ||
+                backendMessage ||
+                `Unable to deactivate member "${name}".`
+                : backendMessage ||
+                `Không thể vô hiệu hóa thành viên "${name}".`,
+            type: 'error',
+          });
+
+          throw err;
+        }
+      },
+    });
   };
 
   const handleReactivate = async (memberId: number, name: string) => {
@@ -346,7 +560,7 @@ export function StaffManagementPage() {
   const openEditModal = (staff: FarmStaffRecord) => {
     setEditingStaff(staff);
     setEditRole(staff.farmRole === 'OWNER' ? 'OWNER' : 'STAFF');
-    const isGenericRole = ['chủ trang trại', 'nhân viên kỹ thuật', 'thành viên trang trại'].includes(
+    const isGenericRole = [lang === 'en' ? 'Farm Owner' : 'Chủ trang trại', lang === 'en' ? 'Technical Staff' : 'Nhân viên kỹ thuật', lang === 'en' ? 'Farm Member' : 'Thành viên trang trại'].includes(
       (staff.roleLabel || '').trim().toLowerCase()
     );
     setEditJobTitle(isGenericRole ? '' : staff.roleLabel);
@@ -381,19 +595,49 @@ export function StaffManagementPage() {
   };
 
   const handleDeleteStaff = async (memberId: number, name: string) => {
-    if (!selectedFarm?.id) return;
-    if (!window.confirm((lang === 'en' ? `Confirm removal of member "${name}" from the farm? This revokes all access and assignments.` : `Xác nhận xóa thành viên "${name}" khỏi trang trại? Thao tác này sẽ hủy mọi quyền truy cập và phân công.`))) return;
-    setNotification(null);
-    try {
-      await deleteFarmStaffMember(selectedFarm.id, memberId);
-      setNotification({ text: (lang === 'en' ? `Removed member "${name}" from the farm successfully!` : `Đã xóa thành viên "${name}" khỏi trang trại thành công!`), type: 'success' });
-      await loadData();
-    } catch (err) {
-      setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : `Unable to remove member "${name}".` : err instanceof Error ? err.message : `Không thể xóa thành viên "${name}".`),
-        type: 'error',
-      });
-    }
+    openConfirmDialog({
+      title: lang === 'en' ? 'Remove staff member' : 'Xác nhận xóa nhân viên',
+      description:
+        lang === 'en'
+          ? `Are you sure you want to remove "${name}" from this farm?`
+          : `Bạn có chắc chắn muốn xóa "${name}" khỏi trang trại này?`,
+      confirmLabel: lang === 'en' ? 'Delete' : 'Xóa',
+      onConfirm: async () => {
+        if (!selectedFarm?.id) return;
+        setNotification(null);
+        try {
+          await deleteFarmStaffMember(selectedFarm.id, memberId);
+          setNotification({ text: (lang === 'en' ? `Removed member "${name}" from the farm successfully!` : `Đã xóa thành viên "${name}" khỏi trang trại thành công!`), type: 'success' });
+          await loadData();
+        } catch (err) {
+          const backendMessage = axios.isAxiosError(err)
+            ? err.response?.data?.message
+            : err instanceof Error
+              ? err.message
+              : '';
+
+          const errorMap: Record<string, string> = {
+            'Không thể xóa Chủ trang trại duy nhất của trang trại':
+              'Cannot delete the only owner of the farm.',
+            'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.':
+              'A system error occurred. Please try again later.',
+          };
+
+          setNotification({
+            text:
+              lang === 'en'
+                ? errorMap[backendMessage] ||
+                backendMessage ||
+                `Unable to remove member "${name}".`
+                : backendMessage ||
+                `Không thể xóa thành viên "${name}".`,
+            type: 'error',
+          });
+
+          throw err;
+        }
+      },
+    })
   };
 
   const openAssignModal = () => {
@@ -450,20 +694,49 @@ export function StaffManagementPage() {
     }
   };
 
-  const handleUnassign = async (assignmentId: number) => {
-    if (!selectedFarm?.id) return;
-    if (!window.confirm((lang === 'en' ? "Are you sure you want to cancel this assignment?" : 'Bạn có chắc muốn hủy lượt phân công này?'))) return;
-    setNotification(null);
-    try {
-      await unassignStaffFromZone(selectedFarm.id, assignmentId);
-      setNotification({ text: (lang === 'en' ? "Staff assignment removed from zone successfully." : 'Đã hủy phân công nhân viên khỏi phân khu thành công.'), type: 'success' });
-      await loadData();
-    } catch (err) {
-      setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to cancel assignment." : err instanceof Error ? err.message : 'Không thể hủy phân công.'),
-        type: 'error',
-      });
-    }
+  const handleUnassign = async (assignmentId: number, name: string) => {
+    openConfirmDialog({
+      title: lang === 'en' ? 'Cancel zone assignment' : 'Xác nhận hủy phân công',
+      description:
+        lang === 'en'
+          ? `Are you sure you want to remove ${name}'s assignment from this zone?`
+          : `Bạn có chắc chắn muốn hủy phân công của ${name} khỏi phân khu này?`,
+      confirmLabel: lang === 'en' ? 'Remove assignment' : 'Hủy phân công',
+      onConfirm: async () => {
+        if (!selectedFarm?.id) return;
+        setNotification(null);
+        try {
+          await unassignStaffFromZone(selectedFarm.id, assignmentId);
+          setNotification({ text: (lang === 'en' ? "Staff assignment removed from zone successfully." : 'Đã hủy phân công nhân viên khỏi phân khu thành công.'), type: 'success' });
+          await loadData();
+        } catch (err) {
+          const backendMessage = axios.isAxiosError(err)
+            ? err.response?.data?.message
+            : err instanceof Error
+              ? err.message
+              : '';
+
+          const errorMap: Record<string, string> = {
+            'Phân công này đã kết thúc trước đó':
+              'Cannot cancel an assignment that has already ended.',
+          };
+
+          setNotification({
+            text:
+              lang === 'en'
+                ? errorMap[backendMessage] ||
+                backendMessage ||
+                `Unable to cancel assignment..`
+                : backendMessage ||
+                `Không thể hủy phân công..`,
+            type: 'error',
+          });
+
+          throw err;
+        }
+      },
+    })
+
   };
 
   const filteredStaff = staffList.filter((s) => {
@@ -505,10 +778,26 @@ export function StaffManagementPage() {
       parts.length === 0
         ? 'NS'
         : parts.length === 1
-        ? parts[0].slice(0, 2).toUpperCase()
-        : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+          ? parts[0].slice(0, 2).toUpperCase()
+          : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 
     return { displayName, subTitle, initials };
+  };
+
+  const handleConfirmAction = async () => {
+    if (!pendingConfirmation) return;
+
+    setIsConfirming(true);
+
+    try {
+      await pendingConfirmation.onConfirm();
+      setPendingConfirmation(null);
+    } catch {
+      // Keep the dialog open when the action fails.
+      // The individual action handles its own error notification.
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   return (
@@ -747,184 +1036,183 @@ export function StaffManagementPage() {
                         </tr>
                       ) : (
                         filteredStaff.map((staff) => {
-                        const isActive = staff.status === 'ACTIVE';
-                        const { displayName, subTitle, initials } = parseStaffName(staff.fullName);
+                          const isActive = staff.status === 'ACTIVE';
+                          const { displayName, subTitle, initials } = parseStaffName(staff.fullName);
 
-                        return (
-                          <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
-                              <input type="checkbox" aria-label={(lang === 'en' ? `Select ${displayName}` : `Chọn ${displayName}`)} style={{ cursor: 'pointer' }} />
-                            </td>
+                          return (
+                            <tr key={staff.farmMemberId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <input type="checkbox" aria-label={(lang === 'en' ? `Select ${displayName}` : `Chọn ${displayName}`)} style={{ cursor: 'pointer' }} />
+                              </td>
 
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                                <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
-                                  {initials}
-                                </div>
-                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <strong
-                                      style={{
-                                        color: '#0f172a',
-                                        fontSize: '14px',
-                                        fontWeight: 700,
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                      }}
-                                      title={displayName}
-                                    >
-                                      {displayName}
-                                    </strong>
-                                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', flexShrink: 0 }}>
-                                      #{staff.farmMemberId}
-                                    </span>
+                              <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                  <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
+                                    {initials}
                                   </div>
-                                  {subTitle && (
-                                    <span
-                                      style={{
-                                        display: 'block',
-                                        fontSize: '12px',
-                                        color: '#059669',
-                                        fontWeight: 600,
-                                        marginTop: '2px',
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                      }}
-                                      title={translate(subTitle)}
-                                    >
-                                      {translate(subTitle)}
-                                    </span>
-                                  )}
+                                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <strong
+                                        style={{
+                                          color: '#0f172a',
+                                          fontSize: '14px',
+                                          fontWeight: 700,
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                        }}
+                                        title={displayName}
+                                      >
+                                        {displayName}
+                                      </strong>
+                                      <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', flexShrink: 0 }}>
+                                        #{staff.farmMemberId}
+                                      </span>
+                                    </div>
+                                    {subTitle && (
+                                      <span
+                                        style={{
+                                          display: 'block',
+                                          fontSize: '12px',
+                                          color: '#059669',
+                                          fontWeight: 600,
+                                          marginTop: '2px',
+                                          whiteSpace: 'nowrap',
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                        }}
+                                        title={translate(subTitle)}
+                                      >
+                                        {translate(subTitle)}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
+                              </td>
 
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
-                              <div
-                                style={{
-                                  color: '#0f172a',
-                                  fontSize: '13px',
-                                  fontWeight: 500,
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                }}
-                                title={staff.email}
-                              >
-                                {staff.email}
-                              </div>
-                              <span
-                                style={{
-                                  color: '#64748b',
-                                  fontSize: '12px',
-                                  marginTop: '2px',
-                                  display: 'block',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                }}
-                                title={staff.phoneNumber || ''}
-                              >
-                                {(lang === 'en' ? staff.phoneNumber || "No phone number provided" : staff.phoneNumber || 'Chưa cập nhật SĐT')}
-                              </span>
-                            </td>
+                              <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                                <div
+                                  style={{
+                                    color: '#0f172a',
+                                    fontSize: '13px',
+                                    fontWeight: 500,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                  title={staff.email}
+                                >
+                                  {staff.email}
+                                </div>
+                                <span
+                                  style={{
+                                    color: '#64748b',
+                                    fontSize: '12px',
+                                    marginTop: '2px',
+                                    display: 'block',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                  title={staff.phoneNumber || ''}
+                                >
+                                  {(lang === 'en' ? staff.phoneNumber || "No phone number provided" : staff.phoneNumber || 'Chưa cập nhật SĐT')}
+                                </span>
+                              </td>
 
-                            <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <span
-                                className="crop-cat-pill"
-                                style={{
-                                  background: staff.farmRole === 'OWNER' ? '#ecfdf5' : '#f8fafc',
-                                  color: staff.farmRole === 'OWNER' ? '#047857' : '#334155',
-                                  borderColor: staff.farmRole === 'OWNER' ? '#a7f3d0' : '#cbd5e1',
-                                  fontWeight: 650,
-                                }}
-                              >
-                                {translate(staff.roleLabel)}
-                              </span>
-                            </td>
+                              <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <span
+                                  className="crop-cat-pill"
+                                  style={{
+                                    background: staff.farmRole === 'OWNER' ? '#ecfdf5' : '#f8fafc',
+                                    color: staff.farmRole === 'OWNER' ? '#047857' : '#334155',
+                                    borderColor: staff.farmRole === 'OWNER' ? '#a7f3d0' : '#cbd5e1',
+                                    fontWeight: 650,
+                                  }}
+                                >
+                                  {translate(staff.roleLabel)}
+                                </span>
+                              </td>
 
-                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <span
-                                style={{
-                                  display: 'inline-block',
-                                  padding: '3px 10px',
-                                  borderRadius: '6px',
-                                  background: staff.activeAssignmentCount > 0 ? '#ecfdf5' : '#f1f5f9',
-                                  color: staff.activeAssignmentCount > 0 ? '#047857' : '#64748b',
-                                  fontWeight: 700,
-                                  fontSize: '13px',
-                                }}
-                              >
-                                {staff.activeAssignmentCount} {(lang === 'en' ? " zones" : " vùng")}
-                              </span>
-                            </td>
-
-                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                              {staff.joinedAt ? new Date(staff.joinedAt).toLocaleDateString('vi-VN') : '—'}
-                            </td>
-
-                            <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
-                                <span className="dot" />
-                                {(lang === 'en' ? isActive ? "Active" : "Inactive" : isActive ? 'Active' : 'Đã ngưng')}
-                              </span>
-                            </td>
-
-                            {isOwner && (
                               <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
-                                  <button
-                                    type="button"
-                                    className="table-icon-btn edit"
-                                    title={(lang === 'en' ? "Edit staff information" : "Chỉnh sửa thông tin staff")}
-                                    aria-label={(lang === 'en' ? `Edit ${displayName}` : `Chỉnh sửa ${displayName}`)}
-                                    onClick={() => openEditModal(staff)}
-                                  >
-                                    <Icon name="edit" size={15} />
-                                    <span className="sr-only">{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</span>
-                                  </button>
-                                  {isActive ? (
-                                    <button
-                                      type="button"
-                                      className="table-icon-btn"
-                                      title={(lang === 'en' ? "Suspend staff member" : "Tạm ngưng hoạt động nhân viên")}
-                                      aria-label={(lang === 'en' ? `Suspend ${displayName}` : `Tạm dừng ${displayName}`)}
-                                      onClick={() => handleDeactivate(staff.farmMemberId, displayName)}
-                                    >
-                                      <Icon name="close" size={14} />
-                                      <span className="sr-only">{(lang === 'en' ? "Suspend" : "Tạm ngưng")}</span>
-                                    </button>
-                                  ) : (
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '3px 10px',
+                                    borderRadius: '6px',
+                                    background: staff.activeAssignmentCount > 0 ? '#ecfdf5' : '#f1f5f9',
+                                    color: staff.activeAssignmentCount > 0 ? '#047857' : '#64748b',
+                                    fontWeight: 700,
+                                    fontSize: '13px',
+                                  }}
+                                >
+                                  {staff.activeAssignmentCount} {(lang === 'en' ? " zones" : " vùng")}
+                                </span>
+                              </td>
+
+                              <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                                {staff.joinedAt ? new Date(staff.joinedAt).toLocaleDateString('vi-VN') : '—'}
+                              </td>
+
+                              <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
+                                  <span className="dot" />
+                                  {(lang === 'en' ? isActive ? "Active" : "Inactive" : isActive ? 'Active' : 'Đã ngưng')}
+                                </span>
+                              </td>
+
+                              {isOwner && (
+                                <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div className="table-action-btns" style={{ justifyContent: 'center', gap: '6px' }}>
                                     <button
                                       type="button"
                                       className="table-icon-btn edit"
-                                      title={(lang === 'en' ? "Reactivate staff member" : "Kích hoạt lại nhân viên")}
-                                      aria-label={(lang === 'en' ? `Reactivate ${displayName}` : `Kích hoạt lại ${displayName}`)}
-                                      onClick={() => handleReactivate(staff.farmMemberId, displayName)}
+                                      title={(lang === 'en' ? "Edit staff information" : "Chỉnh sửa thông tin staff")}
+                                      aria-label={(lang === 'en' ? `Edit ${displayName}` : `Chỉnh sửa ${displayName}`)}
+                                      onClick={() => openEditModal(staff)}
                                     >
-                                      <Icon name="check" size={14} />
-                                      <span className="sr-only">{(lang === 'en' ? "Activate" : "Kích hoạt")}</span>
+                                      <Icon name="edit" size={15} />
+                                      <span className="sr-only">{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</span>
                                     </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="table-icon-btn danger"
-                                    title={(lang === 'en' ? "Remove staff from farm" : "Xóa staff khỏi trang trại")}
-                                    aria-label={(lang === 'en' ? `Delete ${displayName}` : `Xóa ${displayName}`)}
-                                    onClick={() => setDeleteWorkerTarget(staff)}
-                                  >
-                                    <Icon name="trash" size={15} />
-                                    <span className="sr-only">{(lang === 'en' ? "Delete" : "Xóa")}</span>
-                                  </button>
-                                </div>
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })
-                    )}
+                                    {isActive ? (
+                                      <button
+                                        type="button"
+                                        className="table-icon-btn"
+                                        title={(lang === 'en' ? "Suspend staff member" : "Tạm ngưng hoạt động nhân viên")}
+                                        aria-label={(lang === 'en' ? `Suspend ${displayName}` : `Tạm dừng ${displayName}`)}
+                                        onClick={() => handleDeactivate(staff.farmMemberId, displayName)}
+                                      >
+                                        <Icon name="close" size={14} />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className="table-icon-btn edit"
+                                        title={(lang === 'en' ? "Reactivate staff member" : "Kích hoạt lại nhân viên")}
+                                        aria-label={(lang === 'en' ? `Reactivate ${displayName}` : `Kích hoạt lại ${displayName}`)}
+                                        onClick={() => handleReactivate(staff.farmMemberId, displayName)}
+                                      >
+                                        <Icon name="check" size={14} />
+                                        <span className="sr-only">{(lang === 'en' ? "Activate" : "Kích hoạt")}</span>
+                                      </button>
+                                    )}
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn danger"
+                                      title={lang === 'en' ? 'Remove staff from farm' : 'Xóa staff khỏi trang trại'}
+                                      aria-label={lang === 'en' ? `Delete ${displayName}` : `Xóa ${displayName}`}
+                                      onClick={() => handleDeleteStaff(staff.farmMemberId, displayName)}
+                                    >
+                                      <Icon name="trash" size={15} />
+                                    </button>
+                                  </div>
+                                </td>
+                              )
+                              }
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1087,105 +1375,105 @@ export function StaffManagementPage() {
                         </tr>
                       ) : (
                         filteredAssignments.map((item) => {
-                        const { displayName, subTitle, initials } = parseStaffName(item.staffName);
+                          const { displayName, subTitle, initials } = parseStaffName(item.staffName);
 
-                        return (
-                          <tr key={item.assignmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
-                              <input
-                                type="checkbox"
-                                aria-label={(lang === 'en' ? `Select assignment for ${displayName}` : `Chọn phân công của ${displayName}`)}
-                                style={{ cursor: 'pointer' }}
-                              />
-                            </td>
+                          return (
+                            <tr key={item.assignmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                              <td style={{ padding: '12px 8px', textAlign: 'center', verticalAlign: 'middle' }}>
+                                <input
+                                  type="checkbox"
+                                  aria-label={(lang === 'en' ? `Select assignment for ${displayName}` : `Chọn phân công của ${displayName}`)}
+                                  style={{ cursor: 'pointer' }}
+                                />
+                              </td>
 
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                                <span
-                                  style={{
-                                    width: '34px',
-                                    height: '34px',
-                                    borderRadius: '10px',
-                                    background: '#ecfdf5',
-                                    color: '#059669',
-                                    display: 'grid',
-                                    placeItems: 'center',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  <Icon name="blocks" size={17} />
-                                </span>
-                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={(lang === 'en' ? item.zoneName || `Zone #${item.zoneId}` : item.zoneName || `Phân khu #${item.zoneId}`)}>
-                                    {(lang === 'en' ? item.zoneName || `Zone #${item.zoneId}` : item.zoneName || `Phân khu #${item.zoneId}`)}
-                                  </strong>
-                                  <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>
-                                    {(lang === 'en' ? "Code: KV-00" : "Mã: KV-00")}{item.zoneId}
-                                  </span>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                                <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
-                                  {initials}
-                                </div>
-                                <div style={{ minWidth: 0, overflow: 'hidden' }}>
-                                  <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={displayName}>
-                                    {displayName}
-                                  </strong>
-                                  <span style={{ fontSize: '12px', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.staffEmail || ''}>
-                                    {(lang === 'en' ? item.staffEmail || "No email" : item.staffEmail || 'Chưa có email')}
-                                  </span>
-                                  {subTitle && (
-                                    <span style={{ display: 'block', fontSize: '11.5px', color: '#059669', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={translate(subTitle)}>
-                                      {translate(subTitle)}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-
-                            <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <span
-                                className="crop-cat-pill"
-                                style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 650 }}
-                              >
-                                {(lang === 'en' ? item.jobTitle || "Assigned technical staff" : item.jobTitle || 'Technical Staff phụ trách')}
-                              </span>
-                            </td>
-
-                            <td style={{ padding: '12px 10px', color: '#64748b', fontSize: '13px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
-                            </td>
-
-                            <td style={{ padding: '12px 12px', color: '#334155', fontSize: '13px', fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden' }}>
-                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }} title={item.assignedByName || 'Farm Owner'}>
-                                {item.assignedByName || 'Farm Owner'}
-                              </span>
-                            </td>
-
-                            {isOwner && (
-                              <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                                <div className="table-action-btns" style={{ justifyContent: 'center' }}>
-                                  <button
-                                    type="button"
-                                    className="table-icon-btn danger"
-                                    title={(lang === 'en' ? "Remove staff assignment from zone" : "Hủy phân công staff khỏi phân khu")}
-                                    aria-label={(lang === 'en' ? `Cancel assignment for ${displayName}` : `Hủy phân công cho ${displayName}`)}
-                                    onClick={() => handleUnassign(item.assignmentId)}
+                              <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                  <span
+                                    style={{
+                                      width: '34px',
+                                      height: '34px',
+                                      borderRadius: '10px',
+                                      background: '#ecfdf5',
+                                      color: '#059669',
+                                      display: 'grid',
+                                      placeItems: 'center',
+                                      flexShrink: 0,
+                                    }}
                                   >
-                                    <Icon name="trash" size={15} />
-                                    <span className="sr-only">{(lang === 'en' ? "Cancel assignment" : "Hủy phân công")}</span>
-                                  </button>
+                                    <Icon name="blocks" size={17} />
+                                  </span>
+                                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                    <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={(lang === 'en' ? item.zoneName || `Zone #${item.zoneId}` : item.zoneName || `Phân khu #${item.zoneId}`)}>
+                                      {(lang === 'en' ? item.zoneName || `Zone #${item.zoneId}` : item.zoneName || `Phân khu #${item.zoneId}`)}
+                                    </strong>
+                                    <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>
+                                      {(lang === 'en' ? "Code: KV-00" : "Mã: KV-00")}{item.zoneId}
+                                    </span>
+                                  </div>
                                 </div>
                               </td>
-                            )}
-                          </tr>
-                        );
-                      })
-                    )}
+
+                              <td style={{ padding: '12px 14px', verticalAlign: 'middle', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                  <div className="staff-initials-avatar" style={{ flexShrink: 0 }}>
+                                    {initials}
+                                  </div>
+                                  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                    <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={displayName}>
+                                      {displayName}
+                                    </strong>
+                                    <span style={{ fontSize: '12px', color: '#64748b', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.staffEmail || ''}>
+                                      {(lang === 'en' ? item.staffEmail || "No email" : item.staffEmail || 'Chưa có email')}
+                                    </span>
+                                    {subTitle && (
+                                      <span style={{ display: 'block', fontSize: '11.5px', color: '#059669', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={translate(subTitle)}>
+                                        {translate(subTitle)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+
+                              <td style={{ padding: '12px 12px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                <span
+                                  className="crop-cat-pill"
+                                  style={{ background: '#f0fdf4', color: '#166534', borderColor: '#bbf7d0', fontWeight: 650 }}
+                                >
+                                  {(lang === 'en' ? item.jobTitle || "Assigned technical staff" : item.jobTitle || 'Technical Staff phụ trách')}
+                                </span>
+                              </td>
+
+                              <td style={{ padding: '12px 10px', color: '#64748b', fontSize: '13px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                {item.assignedAt ? new Date(item.assignedAt).toLocaleDateString('vi-VN') : '—'}
+                              </td>
+
+                              <td style={{ padding: '12px 12px', color: '#334155', fontSize: '13px', fontWeight: 500, verticalAlign: 'middle', overflow: 'hidden' }}>
+                                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }} title={item.assignedByName || 'Farm Owner'}>
+                                  {item.assignedByName || 'Farm Owner'}
+                                </span>
+                              </td>
+
+                              {isOwner && (
+                                <td style={{ padding: '12px 10px', textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
+                                  <div className="table-action-btns" style={{ justifyContent: 'center' }}>
+                                    <button
+                                      type="button"
+                                      className="table-icon-btn danger"
+                                      title={(lang === 'en' ? "Remove staff assignment from zone" : "Hủy phân công staff khỏi phân khu")}
+                                      aria-label={(lang === 'en' ? `Cancel assignment for ${displayName}` : `Hủy phân công cho ${displayName}`)}
+                                      onClick={() => handleUnassign(item.assignmentId, item.assignedByName || displayName)}
+                                    >
+                                      <Icon name="trash" size={15} />
+                                      <span className="sr-only">{(lang === 'en' ? "Cancel assignment" : "Hủy phân công")}</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1221,7 +1509,7 @@ export function StaffManagementPage() {
                 </span>
                 <input
                   type="search"
-                  placeholder={(lang === 'en' ? "Search by worker ID, name, or position..." : "Tìm theo mã công nhân, họ tên, chức danh...")}
+                  placeholder={(lang === 'en' ? "Search by name, or position..." : "Tìm theo họ tên, chức danh...")}
                   value={workerSearch}
                   onChange={(e) => setWorkerSearch(e.target.value)}
                 />
@@ -1243,101 +1531,392 @@ export function StaffManagementPage() {
               <div className="zone-clean-actions">
                 <button
                   type="button"
-                  className="zone-btn zone-btn-primary"
+                  className="primary-button"
                   onClick={handleOpenAddWorker}
+                  style={{
+                    padding: '10px 18px',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                    borderRadius: '10px',
+                    background: '#059669',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+                  }}
                 >
                   <Icon name="plus" size={16} /> {(lang === 'en' ? " Add worker profile" : " Thêm hồ sơ công nhân")}
                 </button>
               </div>
             </div>
 
+
             {loadingWorkers ? (
               <div className="zone-clean-loading">
                 <div className="zone-spinner" />
-                <p>{(lang === 'en' ? "Loading worker profiles..." : "Đang tải danh sách hồ sơ công nhân...")}</p>
-              </div>
-            ) : workers.length === 0 ? (
-              <div className="zone-clean-empty">
-                <Icon name="users" size={48} />
-                <h3>{(lang === 'en' ? "No worker profiles yet" : "Chưa có hồ sơ công nhân")}</h3>
-                <p>{(lang === 'en' ? "Click \"Add worker profile\" to create worker records under VietGAP standards." : "Nhấn nút \"Thêm hồ sơ công nhân\" để thiết lập hồ sơ người lao động theo tiêu chuẩn VietGAP.")}</p>
+                <p>
+                  {lang === 'en'
+                    ? 'Loading worker profiles...'
+                    : 'Đang tải danh sách hồ sơ công nhân...'}
+                </p>
               </div>
             ) : (
-              <div className="zone-clean-table-wrap">
-                <table className="zone-clean-table">
-                  <thead>
-                    <tr>
-                      <th>{(lang === 'en' ? "Worker ID" : "Mã CN")}</th>
-                      <th>{(lang === 'en' ? "Full Name & Phone" : "Họ tên & SĐT")}</th>
-                      <th>{(lang === 'en' ? "Position / Job title" : "Vị trí / Chức danh")}</th>
-                      <th>{(lang === 'en' ? "Employment start date" : "Ngày vào làm")}</th>
-                      <th>{lang === 'en' ? 'Status' : 'Trạng thái'}</th>
-                      <th>{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
-                      <th style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {workers
-                      .filter((w) => {
-                        if (workerStatusFilter !== 'ALL' && w.employmentStatus !== workerStatusFilter) return false;
-                        if (workerSearch.trim()) {
-                          const q = workerSearch.toLowerCase();
-                          const matchCode = w.workerCode?.toLowerCase().includes(q);
-                          const matchName = w.fullName?.toLowerCase().includes(q);
-                          const matchJob = w.jobTitle?.toLowerCase().includes(q);
-                          if (!matchCode && !matchName && !matchJob) return false;
-                        }
-                        return true;
-                      })
-                      .map((w) => (
-                        <tr key={w.workerId}>
-                          <td>
-                            <span className="profile-tag-pill" style={{ fontWeight: 700 }}>
-                              {w.workerCode}
-                            </span>
-                          </td>
-                          <td>
-                            <strong>{w.fullName}</strong>
-                            {w.phoneNumber && (
-                              <div style={{ fontSize: '12px', color: '#64748b' }}>📞 {w.phoneNumber}</div>
-                            )}
-                          </td>
-                          <td>{(lang === 'en' ? w.jobTitle || "Worker" : w.jobTitle || 'Công nhân')}</td>
-                          <td>{w.hiredAt ? new Date(w.hiredAt).toLocaleDateString('vi-VN') : '—'}</td>
-                          <td>
-                            <span className={`status-badge ${w.employmentStatus === 'active' ? 'status-badge--success' : ''}`}>
-                              {(lang === 'en' ? w.employmentStatus === 'active' ? "Active" : w.employmentStatus === 'seasonal' ? "Seasonal" : "Left" : w.employmentStatus === 'active' ? 'Đang làm việc' : w.employmentStatus === 'seasonal' ? 'Thời vụ' : 'Đã nghỉ')}
-                            </span>
-                          </td>
-                          <td style={{ maxWidth: '200px', fontSize: '12.5px', color: '#64748b' }}>
-                            {w.notes || '—'}
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <div style={{ display: 'inline-flex', gap: '8px' }}>
-                              <button
-                                type="button"
-                                className="action-button"
-                                onClick={() => handleOpenEditWorker(w)}
-                                style={{ fontSize: '12px', padding: '4px 8px' }}
+              <>
+                <div
+                  className="zone-table-wrap"
+                  style={{
+                    margin: 0,
+                    border: 'none',
+                    borderRadius: 0,
+                    width: '100%',
+                    overflowX: 'auto',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <table
+                    className="data-table"
+                    style={{
+                      width: '100%',
+                      borderCollapse: 'separate',
+                      borderSpacing: 0,
+                      tableLayout: 'fixed',
+                      minWidth: '900px',
+                    }}
+                  >
+                    <thead>
+                      <tr style={{ background: '#f8fafc' }}>
+                        <th style={{ width: '12%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                          {lang === 'en' ? 'Worker ID' : 'Mã CN'}
+                        </th>
+
+                        <th style={{ width: '22%', padding: '12px 14px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                          {lang === 'en' ? 'Full Name & Phone' : 'Họ tên & SĐT'}
+                        </th>
+
+                        <th style={{ width: '15%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                          {lang === 'en' ? 'Position / Job Title' : 'Vị trí / Chức danh'}
+                        </th>
+
+                        <th style={{ width: '15%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                          {lang === 'en' ? 'Start Date' : 'Ngày vào làm'}
+                        </th>
+
+                        <th style={{ width: '12%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                          {lang === 'en' ? 'Status' : 'Trạng thái'}
+                        </th>
+
+                        <th style={{ width: '16%', padding: '12px 12px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'left' }}>
+                          {lang === 'en' ? 'Notes' : 'Ghi chú'}
+                        </th>
+
+                        <th style={{ width: '8%', padding: '12px 10px', fontSize: '12.5px', fontWeight: 600, color: '#475569', textAlign: 'center' }}>
+                          {lang === 'en' ? 'Actions' : 'Thao tác'}
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {workers.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={7}
+                            style={{
+                              textAlign: 'center',
+                              padding: '56px 20px',
+                              background: '#ffffff',
+                            }}
+                          >
+                            <div
+                              style={{
+                                maxWidth: '440px',
+                                margin: '0 auto',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '56px',
+                                  height: '56px',
+                                  borderRadius: '14px',
+                                  background: '#ecfdf5',
+                                  color: '#059669',
+                                  display: 'grid',
+                                  placeItems: 'center',
+                                  marginBottom: '14px',
+                                }}
                               >
-                                {(lang === 'en' ? "Edit" : "Sửa")}
-                              </button>
-                              <button
-                                type="button"
-                                className="outline-button"
-                                onClick={() => void handleDeleteWorker(w.workerId)}
-                                style={{ fontSize: '12px', padding: '4px 8px', color: '#dc2626', borderColor: '#fca5a5' }}
+                                <Icon name="users" size={28} />
+                              </div>
+
+                              <h3
+                                style={{
+                                  fontSize: '17px',
+                                  fontWeight: 700,
+                                  color: '#0f172a',
+                                  margin: '0 0 6px',
+                                }}
                               >
-                                {(lang === 'en' ? "Delete" : "Xóa")}
-                              </button>
+                                {lang === 'en'
+                                  ? workers.length === 0
+                                    ? 'No worker profiles yet'
+                                    : 'No matching worker profiles'
+                                  : workers.length === 0
+                                    ? 'Chưa có hồ sơ công nhân'
+                                    : 'Không tìm thấy hồ sơ công nhân phù hợp'}
+                              </h3>
+
+                              <p
+                                style={{
+                                  color: '#64748b',
+                                  fontSize: '13.5px',
+                                  margin: '0 0 18px',
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                {lang === 'en'
+                                  ? workers.length === 0
+                                    ? 'Create worker profiles to manage employment information and VietGAP records.'
+                                    : 'Try another keyword or reset the worker status filter.'
+                                  : workers.length === 0
+                                    ? 'Thêm hồ sơ công nhân để quản lý thông tin lao động và hồ sơ theo tiêu chuẩn VietGAP.'
+                                    : 'Hãy thử từ khóa khác hoặc làm mới bộ lọc trạng thái.'}
+                              </p>
                             </div>
                           </td>
                         </tr>
-                      ))}
-                  </tbody>
-                </table>
-              </div>
+                      ) : (
+                        workers.map((w) => (
+                          <tr
+                            key={w.workerId}
+                            style={{ borderBottom: '1px solid #f1f5f9' }}
+                          >
+                            {/* Worker ID */}
+                            <td
+                              style={{
+                                padding: '12px 0px',
+                                verticalAlign: '',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <span
+                                className="profile-tag-pill"
+                                style={{
+                                  display: 'block',
+                                  color: '#0f172a',
+                                  fontSize: '13px',
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {w.workerCode}
+                              </span>
+                            </td>
+
+                            {/* Full Name & Phone */}
+                            <td
+                              style={{
+                                padding: '12px 14px',
+                                verticalAlign: 'middle',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <div style={{ minWidth: 0, overflow: 'hidden' }}>
+                                <strong
+                                  style={{
+                                    display: 'block',
+                                    color: '#0f172a',
+                                    fontSize: '14px',
+                                    fontWeight: 700,
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                  title={w.fullName}
+                                >
+                                  {w.fullName}
+                                </strong>
+
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    color: '#64748b',
+                                    display: 'block',
+                                    marginTop: '3px',
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                  }}
+                                  title={w.phoneNumber || ''}
+                                >
+                                  {w.phoneNumber
+                                    ? `📞 ${w.phoneNumber}`
+                                    : lang === 'en'
+                                      ? 'No phone number'
+                                      : 'Chưa có số điện thoại'}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* Job Title */}
+                            <td
+                              style={{
+                                padding: '12px 12px',
+                                verticalAlign: 'middle',
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <span
+                                className="crop-cat-pill"
+                                style={{
+                                  background: '#f0fdf4',
+                                  color: '#166534',
+                                  borderColor: '#bbf7d0',
+                                  fontWeight: 650,
+                                  display: 'inline-block',
+                                  maxWidth: '100%',
+                                  whiteSpace: 'normal',
+                                  overflowWrap: 'anywhere',
+                                }}
+                              >
+                                {w.jobTitle ||
+                                  (lang === 'en' ? 'Worker' : 'Công nhân')}
+                              </span>
+                            </td>
+
+                            {/* Employment Start Date */}
+                            <td
+                              style={{
+                                padding: '12px 10px',
+                                color: '#64748b',
+                                fontSize: '13px',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {w.hiredAt
+                                ? new Date(w.hiredAt).toLocaleDateString(
+                                  lang === 'en' ? 'en-US' : 'vi-VN'
+                                )
+                                : '—'}
+                            </td>
+
+                            {/* Status */}
+                            <td
+                              style={{
+                                padding: '12px 10px',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                              }}
+                            >
+                              <span
+                                className={`status-dot-badge ${w.employmentStatus === 'active' ? 'active' : ''
+                                  }`}
+                              >
+                                {lang === 'en'
+                                  ? w.employmentStatus === 'active'
+                                    ? 'Active'
+                                    : w.employmentStatus === 'seasonal'
+                                      ? 'Seasonal'
+                                      : 'Left'
+                                  : w.employmentStatus === 'active'
+                                    ? 'Đang làm việc'
+                                    : w.employmentStatus === 'seasonal'
+                                      ? 'Thời vụ'
+                                      : 'Đã nghỉ'}
+                              </span>
+                            </td>
+
+                            {/* Notes */}
+                            <td
+                              style={{
+                                padding: '12px 12px',
+                                color: '#64748b',
+                                fontSize: '12.5px',
+                                verticalAlign: 'middle',
+                                overflow: 'hidden',
+                                whiteSpace: 'normal',
+                                overflowWrap: 'anywhere',
+                                // wordBreak: 'break-word',
+                              }}
+                            >
+                              {w.notes || '—'}
+                            </td>
+
+                            {/* Actions */}
+                            <td
+                              style={{
+                                padding: '12px 10px',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <div
+                                className="table-action-btns"
+                                style={{ justifyContent: 'center' }}
+                              >
+                                <button
+                                  type="button"
+                                  className="table-icon-btn edit"
+                                  title={lang === 'en' ? 'Edit worker' : 'Sửa hồ sơ'}
+                                  aria-label={lang === 'en' ? 'Edit worker' : 'Sửa hồ sơ'}
+                                  onClick={() => handleOpenEditWorker(w)}
+                                >
+                                  <Icon name="edit" size={15} />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  className="table-icon-btn danger"
+                                  title={lang === 'en' ? 'Delete worker' : 'Xóa hồ sơ'}
+                                  aria-label={lang === 'en' ? 'Delete worker' : 'Xóa hồ sơ'}
+                                  onClick={() =>
+                                    openConfirmDialog({
+                                      title:
+                                        lang === 'en'
+                                          ? 'Delete worker profile'
+                                          : 'Xác nhận xóa hồ sơ công nhân',
+
+                                      description:
+                                        lang === 'en'
+                                          ? `Are you sure you want to delete "${w.fullName}"?`
+                                          : `Bạn có chắc chắn muốn xóa hồ sơ của "${w.fullName}"?`,
+
+                                      confirmLabel: lang === 'en' ? 'Delete' : 'Xóa',
+
+                                      onConfirm: async () => {
+                                        await handleDeleteWorker(w.workerId);
+                                      },
+                                    })
+                                  }
+                                >
+                                  <Icon name="trash" size={15} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Table Footer */}
+                <div className="zone-table-footer">
+                  <div>
+                    {lang === 'en'
+                      ? `Showing ${workers.length > 0 ? `1–${workers.length}` : '0'} of ${workers.length} worker profiles`
+                      : `Hiển thị ${workers.length} trên tổng số ${workers.length} hồ sơ công nhân`}
+                  </div>
+                </div>
+              </>
             )}
+
           </>
         )}
       </div>
@@ -1345,19 +1924,40 @@ export function StaffManagementPage() {
       {/* Add Staff Modal */}
       <Modal
         open={isAddStaffOpen}
-        onClose={() => setIsAddStaffOpen(false)}
+        onClose={handleCancelAddStaff}
         title={lang === 'en' ? 'Add Staff to Farm' : 'Thêm nhân viên vào trang trại'}
         headerIcon={<Icon name="users" size={20} />}
       >
         <p style={{ margin: '0 0 16px', fontSize: '13.5px', color: '#64748b', lineHeight: 1.5 }}>
           {(lang === 'en' ? "Enter an existing MyCropDiary user's email to grant farm access." : "Nhập email của người dùng đã có tài khoản trên MyCropDiary để cấp quyền làm việc tại trang trại.")}
         </p>
-        <form onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {addStaffError && (
-            <p className="form-error-banner" role="alert" style={{ margin: '0 0 4px' }}>
-              {translate(addStaffError)}
-            </p>
+        <form noValidate onSubmit={handleAddStaff} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {(emailError || addStaffError) && (
+            <div
+              ref={staffEmailRef}
+              role="alert"
+              style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                color: '#b91c1c',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <AlertCircle size={18} />
+              {emailError
+                ? (lang === 'en'
+                  ? 'Please correct the email error before adding the staff member.'
+                  : 'Vui lòng sửa lỗi email trước khi thêm nhân viên.')
+                : translate(addStaffError!)}
+            </div>
           )}
+
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="add-staff-email" className="structured-field-label">
@@ -1369,18 +1969,52 @@ export function StaffManagementPage() {
               <input
                 id="add-staff-email"
                 type="email"
-                required
                 placeholder="nhanvien@example.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmail(value);
+
+                  if (!value.trim()) {
+                    setEmailError(
+                      lang === 'en'
+                        ? 'Enter the staff account email address.'
+                        : 'Vui lòng nhập địa chỉ email tài khoản nhân viên.'
+                    );
+                  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+                    setEmailError(
+                      lang === 'en'
+                        ? 'Please enter a valid email address.'
+                        : 'Vui lòng nhập địa chỉ email hợp lệ.'
+                    );
+                  } else {
+                    setEmailError('');
+                  }
+
+                  // Clear previous API/duplicate errors when the user edits the email.
+                  setAddStaffError(null);
+                }}
+                style={{
+                  border: emailError ? '1px solid #dc2626' : undefined
+                }}
               />
+
+              {emailError && (
+                <p style={{
+                  color: '#dc2626',
+                  fontSize: '12px',
+                  margin: '5px 0 0'
+                }}>
+                  {emailError}
+                </p>
+              )}
             </div>
           </div>
 
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="add-staff-role" className="structured-field-label">
-                {(lang === 'en' ? "Farm role " : "Vai trò of trang trại ")} <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Farm role " : "Vai trò trong trang trại ")} <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Phân quyền")}</span>
             </div>
@@ -1390,7 +2024,7 @@ export function StaffManagementPage() {
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
               >
-                <option value="STAFF">{(lang === 'en' ? "Technical Staff (STAFF)" : "Nhân viên kỹ thuật (STAFF)")}</option>
+                <option value="MEMBER">{(lang === 'en' ? "Technical Staff (STAFF)" : "Nhân viên kỹ thuật (STAFF)")}</option>
                 <option value="OWNER">{(lang === 'en' ? "Co-Owner (OWNER)" : "Đồng chủ trang trại (OWNER)")}</option>
               </select>
             </div>
@@ -1416,7 +2050,7 @@ export function StaffManagementPage() {
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={() => setIsAddStaffOpen(false)} disabled={savingStaff}>
+            <button type="button" className="ghost-button" onClick={handleCancelAddStaff} disabled={savingStaff}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
             </button>
             <button type="submit" className="primary-button" disabled={savingStaff}>
@@ -1440,7 +2074,7 @@ export function StaffManagementPage() {
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
               <label htmlFor="edit-staff-role" className="structured-field-label">
-                {(lang === 'en' ? "Farm role " : "Vai trò of trang trại ")} <span style={{ color: '#dc2626' }}>*</span>
+                {(lang === 'en' ? "Farm role " : "Vai trò trong trang trại ")} <span style={{ color: '#dc2626' }}>*</span>
               </label>
               <span className="structured-field-badge">{(lang === 'en' ? "Permissions" : "Quyền hạn")}</span>
             </div>
@@ -1641,21 +2275,67 @@ export function StaffManagementPage() {
       {/* Worker Record Modal */}
       <Modal
         open={isWorkerModalOpen}
-        onClose={() => setIsWorkerModalOpen(false)}
+        onClose={handleCancelWorker}
         title={(lang === 'en' ? editingWorker ? "Edit worker profile" : "Add new worker profile" : editingWorker ? 'Chỉnh sửa hồ sơ công nhân' : 'Thêm hồ sơ công nhân mới')}
         headerIcon={<Icon name="users" size={20} />}
       >
-        <form onSubmit={handleSaveWorker} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        {Object.keys(workerErrors).length > 0 && (
+          <div
+            role="alert"
+            style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            <AlertCircle size={18} />
+            {lang === 'en'
+              ? 'Please correct the errors before saving the worker profile.'
+              : 'Vui lòng sửa các lỗi trước khi lưu hồ sơ công nhân.'}
+          </div>
+        )}
+        <form noValidate onSubmit={handleSaveWorker} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
           <div>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
               {(lang === 'en' ? "Farm member *" : "Thành viên trang trại *")}
             </label>
             <select
+              ref={workerMemberRef}
               required
               disabled={!!editingWorker}
               value={workerForm.farmMemberId}
-              onChange={(e) => setWorkerForm((p) => ({ ...p, farmMemberId: Number(e.target.value) }))}
-              style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+              onChange={(e) => {
+                const value = Number(e.target.value);
+
+                setWorkerForm(p => ({ ...p, farmMemberId: value }));
+
+                setWorkerErrors(prev => {
+                  const updated = { ...prev };
+                  if (value === 0) {
+                    updated.farmMemberId = lang === 'en'
+                      ? 'Please select a farm member.'
+                      : 'Vui lòng chọn thành viên trang trại.';
+                  } else {
+                    delete updated.farmMemberId;
+                  }
+                  return updated;
+                });
+              }}
+              style={{
+                width: '100%',
+                padding: '9px 12px',
+                borderRadius: '6px',
+                border: workerErrors.farmMemberId
+                  ? '1px solid #dc2626'
+                  : '1px solid #cbd5e1'
+              }}
             >
               <option value={0}>{(lang === 'en' ? "-- Select staff member --" : "-- Chọn thành viên nhân sự --")}</option>
               {staffList.map((s) => (
@@ -1664,6 +2344,11 @@ export function StaffManagementPage() {
                 </option>
               ))}
             </select>
+            {workerErrors.farmMemberId && (
+              <p style={{ color: '#dc2626', fontSize: '12px', margin: '5px 0 0' }}>
+                {workerErrors.farmMemberId}
+              </p>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -1672,13 +2357,44 @@ export function StaffManagementPage() {
                 {(lang === 'en' ? "Worker code *" : "Mã công nhân *")}
               </label>
               <input
+                ref={workerCodeRef}
                 type="text"
                 required
                 value={workerForm.workerCode}
-                onChange={(e) => setWorkerForm((p) => ({ ...p, workerCode: e.target.value }))}
-                placeholder={(lang === 'en' ? "e.g. CN-001" : "VD: CN-001")}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                onChange={(e) => {
+                  const value = e.target.value;
+
+                  setWorkerForm(p => ({ ...p, workerCode: value }));
+
+                  setWorkerErrors(prev => {
+                    const updated = { ...prev };
+
+                    if (!value.trim()) {
+                      updated.workerCode = lang === 'en'
+                        ? 'Worker code is required.'
+                        : 'Vui lòng nhập mã công nhân.';
+                    } else {
+                      delete updated.workerCode;
+                    }
+
+                    return updated;
+                  });
+                }}
+                placeholder={lang === 'en' ? 'e.g. CN-001' : 'VD: CN-001'}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '6px',
+                  border: workerErrors.workerCode
+                    ? '1px solid #dc2626'
+                    : '1px solid #cbd5e1'
+                }}
               />
+              {workerErrors.workerCode && (
+                <p style={{ color: '#dc2626', fontSize: '12px', margin: '5px 0 0' }}>
+                  {workerErrors.workerCode}
+                </p>
+              )}
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
@@ -1737,7 +2453,7 @@ export function StaffManagementPage() {
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <button type="button" className="ghost-button" onClick={() => setIsWorkerModalOpen(false)}>
+            <button type="button" className="ghost-button" onClick={handleCancelWorker}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
             </button>
             <button type="submit" className="primary-button" disabled={savingWorker}>
@@ -1746,6 +2462,19 @@ export function StaffManagementPage() {
           </div>
         </form>
       </Modal>
-    </section>
+
+      <ConfirmDialog
+        open={pendingConfirmation !== null}
+        title={pendingConfirmation?.title ?? ''}
+        description={pendingConfirmation?.description ?? ''}
+        confirmLabel={pendingConfirmation?.confirmLabel ?? 'Confirm'}
+        cancelLabel={lang === 'en' ? 'Cancel' : 'Hủy'}
+        tone="danger"
+        loading={isConfirming}
+        onConfirm={handleConfirmAction}
+        onClose={() => setPendingConfirmation(null)}
+      />
+
+    </section >
   );
 }

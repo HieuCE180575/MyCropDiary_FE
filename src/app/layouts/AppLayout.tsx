@@ -17,8 +17,11 @@ import { AdminProvider, AdminNotice } from '../../features/admin/AdminProvider';
 import { PublicFooter } from '../../shared/components/PublicFooter';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { LanguageSwitch } from '../../shared/components/LanguageSwitch';
+import { NotificationPopover } from './NotificationPopover';
 
 export function AppLayout() {
+
+
   const { user } = useAuth();
   const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
   return (
@@ -86,6 +89,7 @@ function getInitialTheme(): 'light' | 'dark' {
 }
 
 function WorkspaceLayout() {
+
   const { signOut, user } = useAuth();
   const { lang, t, t: translate } = useLanguage();
   const { farms, selectedFarm, selectFarm } = useFarmWorkspace();
@@ -93,6 +97,7 @@ function WorkspaceLayout() {
   const { pathname } = useLocation();
 
   const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
+
 
   useEffect(() => {
     try {
@@ -120,6 +125,85 @@ function WorkspaceLayout() {
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
 
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+
+  const loadNotifications = async (silent = false) => {
+    if (!silent) setLoadingNotifications(true);
+    try {
+      const result = await fetchMyNotifications(20);
+      setNotifications(result.items);
+      setUnreadCount(result.unreadCount);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      if (!silent) setLoadingNotifications(false);
+    }
+  };
+
+  // Initial load + refresh whenever the popover opens
+  useEffect(() => {
+    void loadNotifications(!notificationsOpen);
+  }, [notificationsOpen, user?.userId]);
+
+  // Keep the badge fresh while the page is open
+  useEffect(() => {
+    const refresh = () => void loadNotifications(true);
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [user?.userId]);
+
+  useRealtimeSync(() => {
+    void loadInvitations();
+    void loadNotifications(true);
+  });
+  
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    try {
+      if (!notification.isRead) {
+        const updated = await markNotificationAsRead(notification.id);
+
+        if (updated) {
+          setNotifications(prev =>
+            prev.map(item =>
+              item.id === notification.id ? updated : item
+            )
+          );
+
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      }
+
+      setNotificationsOpen(false);
+
+      if (notification.actionUrl) {
+        navigate(notification.actionUrl);
+      }
+    } catch (error) {
+      console.error('Failed to update notification:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+
+      setNotifications(prev =>
+        prev.map(item => ({ ...item, isRead: true }))
+      );
+
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  };
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
@@ -141,6 +225,7 @@ function WorkspaceLayout() {
   const [invitations, setInvitations] = useState<FarmInvitation[]>([]);
   const [respondingInvId, setRespondingInvId] = useState<number | null>(null);
 
+  const totalUnread = invitations.length + unreadCount;
   const loadInvitations = async () => {
     if (!user || user?.systemRole?.toUpperCase() === 'ADMIN') return;
     try {
@@ -341,111 +426,26 @@ function WorkspaceLayout() {
                 style={{ position: 'relative' }}
               >
                 <Icon name="bell" />
-                {invitations.length > 0 ? (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '2px',
-                      right: '2px',
-                      background: '#ef4444',
-                      color: '#ffffff',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      borderRadius: '10px',
-                      padding: '1px 5px',
-                      minWidth: '16px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {invitations.length}
+                {totalUnread > 0 && (
+                  <span className="notification-badge">
+                    {totalUnread > 99 ? '99+' : totalUnread}
                   </span>
-                ) : (
-                  <span className="notification-dot" />
                 )}
               </button>
               {notificationsOpen && (
-                <div
-                  className="notification-popover"
-                  role="status"
-                  style={{
-                    width: '360px',
-                    maxWidth: '90vw',
-                    padding: '14px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>
-                    <strong style={{ fontSize: '14px', color: '#0f172a' }}>
-                      System Notifications
-                    </strong>
-                    {invitations.length > 0 && (
-                      <span className="crop-cat-pill" style={{ background: '#fef3c7', color: '#b45309', borderColor: '#fde68a', fontWeight: 700, fontSize: '11px' }}>
-                        {invitations.length} {lang === 'en' ? 'invitations' : 'lời mời'}
-                      </span>
-                    )}
-                  </div>
-
-                  {invitations.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                      All systems operational. No new notifications.
-                    </p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '340px', overflowY: 'auto' }}>
-                      {invitations.map((inv) => (
-                        <div
-                          key={inv.memberId}
-                          style={{
-                            background: '#f8fafc',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            padding: '10px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                            <span style={{ fontSize: '18px' }}>🌿</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <strong style={{ fontSize: '13.5px', color: '#0f172a', display: 'block' }}>
-                                {inv.farmName}
-                              </strong>
-                              <span style={{ fontSize: '12px', color: '#475569', display: 'block', marginTop: '2px' }}>
-                                {lang === 'en' ? 'Invitation to join:' : 'Lời mời tham gia:'} <strong>{(lang === 'en' ? inv.farmRole?.toLowerCase() === 'owner' ? "Co-Owner" : "Technical Staff" : inv.farmRole?.toLowerCase() === 'owner' ? 'Đồng sở hữu (Co-Owner)' : 'Nhân viên kỹ thuật (Staff)')}</strong>
-                              </span>
-                              <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block' }}>
-                                {lang === 'en' ? 'Invited by:' : 'Người mời:'} {inv.ownerName}
-                              </span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                            <button
-                              type="button"
-                              className="primary-button"
-                              disabled={respondingInvId === inv.memberId}
-                              onClick={() => handleRespondInvitation(inv, 'approve')}
-                              style={{ flex: 1, padding: '5px 10px', fontSize: '12px', justifyContent: 'center' }}
-                            >
-                              ✓ {lang === 'en' ? 'Accept' : 'Chấp nhận'}
-                            </button>
-                            <button
-                              type="button"
-                              className="ghost-button"
-                              disabled={respondingInvId === inv.memberId}
-                              onClick={() => handleRespondInvitation(inv, 'reject')}
-                              style={{ padding: '5px 10px', fontSize: '12px', color: '#dc2626' }}
-                            >
-                              ✕ {lang === 'en' ? 'Decline' : 'Từ chối'}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <NotificationPopover
+                  lang={lang}
+                  notifications={notifications}
+                  unreadCount={unreadCount}
+                  loading={loadingNotifications}
+                  invitations={invitations}
+                  respondingInvId={respondingInvId}
+                  onMarkAllAsRead={handleMarkAllAsRead}
+                  onNotificationClick={handleNotificationClick}
+                  onRespond={handleRespondInvitation}
+                />
               )}
             </div>
-
             {/* Profile Avatar / Dropdown Menu */}
             <div className="account-menu" ref={accountMenuRef} style={{ position: 'relative' }}>
               <button
@@ -628,7 +628,7 @@ function WorkspaceLayout() {
           <Outlet />
         </main>
         {!isAdmin && <PublicFooter />}
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

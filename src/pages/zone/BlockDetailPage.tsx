@@ -1,5 +1,5 @@
 import { useLanguage } from '../../shared/i18n/LanguageContext';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 import { farmRole } from '../../features/auth/accessPolicy';
@@ -52,6 +52,7 @@ import type {
   WaterAssessmentRecord,
 } from '../../features/production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
+import { AlertCircle } from 'lucide-react';
 
 type BlockDetailTab = 'overview' | 'seasons' | 'conditions' | 'risks' | 'soil' | 'water';
 
@@ -174,6 +175,65 @@ export function BlockDetailPage() {
     recordedByName: 'Kỹ sư Nông học',
   });
 
+  // Crop Season validation
+  const [seasonErrors, setSeasonErrors] = useState<{
+    seasonName?: string;
+    cropCategoryId?: string;
+    plantedArea?: string;
+    startDate?: string;
+    endDate?: string;
+  }>({});
+
+  const seasonNameRef = useRef<HTMLInputElement>(null);
+  const seasonCategoryRef = useRef<HTMLDivElement>(null);
+  const seasonAreaRef = useRef<HTMLInputElement>(null);
+  const seasonStartDateRef = useRef<HTMLInputElement>(null);
+  const seasonEndDateRef = useRef<HTMLInputElement>(null);
+
+  // Block Risk validation
+  const [riskErrors, setRiskErrors] = useState<{
+    assessedAt?: string;
+    riskType?: string;
+    description?: string;
+    controlMeasures?: string;
+  }>({});
+
+  const riskDateRef = useRef<HTMLInputElement>(null);
+  const riskTypeRef = useRef<HTMLInputElement>(null);
+  const riskDescriptionRef = useRef<HTMLTextAreaElement>(null);
+  const riskControlMeasuresRef = useRef<HTMLTextAreaElement>(null);
+
+  const [soilErrors, setSoilErrors] = useState<{
+    assessedAt?: string;
+    sampleCode?: string;
+    phLevel?: string;
+    organicMatterPct?: string;
+    laboratoryName?: string;
+    microbialStatus?: string;
+  }>({});
+
+  const assessedAtRef = useRef<HTMLInputElement>(null);
+  const sampleCodeRef = useRef<HTMLInputElement>(null);
+  const phLevelRef = useRef<HTMLInputElement>(null);
+  const organicMatterRef = useRef<HTMLInputElement>(null);
+  const laboratoryNameRef = useRef<HTMLInputElement>(null);
+  const microbialStatusRef = useRef<HTMLTextAreaElement>(null);
+
+
+  const [waterErrors, setWaterErrors] = useState<{
+    assessedAt?: string;
+    sampleCode?: string;
+    waterSource?: string;
+    phLevel?: string;
+    ecValue?: string;
+  }>({});
+
+  const waterDateRef = useRef<HTMLInputElement>(null);
+  const waterCodeRef = useRef<HTMLInputElement>(null);
+  const waterSourceRef = useRef<HTMLInputElement>(null);
+  const waterPhLevelRef = useRef<HTMLInputElement>(null);
+  const ecValueRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     void loadBlockDetails(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -277,6 +337,65 @@ export function BlockDetailPage() {
     });
   }, [waterRecords, waterFromDate, waterToDate]);
 
+  const validateCropSeasonForm = () => {
+    const newErrors: typeof seasonErrors = {};
+
+    if (!seasonForm.seasonName.trim()) {
+      newErrors.seasonName =
+        lang === 'en'
+          ? 'Season name is required.'
+          : 'Vui lòng nhập tên mùa vụ.';
+    }
+
+    if (!seasonForm.cropCategoryId || Number(seasonForm.cropCategoryId) <= 0) {
+      newErrors.cropCategoryId =
+        lang === 'en'
+          ? 'Please select a crop category.'
+          : 'Vui lòng chọn danh mục cây trồng.';
+    }
+
+    const area = Number(seasonForm.plantedArea);
+    const blockArea = Number(block?.areaValue);
+
+    if (!seasonForm.plantedArea.trim()) {
+      newErrors.plantedArea =
+        lang === 'en'
+          ? 'Planted area is required.'
+          : 'Vui lòng nhập diện tích gieo trồng.';
+    } else if (!Number.isFinite(area) || area <= 0) {
+      newErrors.plantedArea =
+        lang === 'en'
+          ? 'Planted area must be greater than 0.'
+          : 'Diện tích gieo trồng phải lớn hơn 0.';
+    } else if (area > blockArea) {
+      newErrors.plantedArea =
+        lang === 'en'
+          ? `Planted area cannot exceed the block area (${block?.areaValue} ${block?.areaUnit}).`
+          : `Diện tích gieo trồng không được vượt quá diện tích Block (${block?.areaValue} ${block?.areaUnit}).`;
+    }
+
+    if (!seasonForm.startDate) {
+      newErrors.startDate =
+        lang === 'en'
+          ? 'Start date is required.'
+          : 'Vui lòng chọn ngày bắt đầu.';
+    }
+
+    if (
+      seasonForm.startDate &&
+      seasonForm.endDate &&
+      seasonForm.endDate < seasonForm.startDate
+    ) {
+      newErrors.endDate =
+        lang === 'en'
+          ? 'Expected end date cannot be earlier than the start date.'
+          : 'Ngày kết thúc dự kiến không được trước ngày bắt đầu.';
+    }
+
+    setSeasonErrors(newErrors);
+    return newErrors;
+  };
+
   const openCreateSeasonModal = () => {
     if (!block) return;
     setEditingSeason(null);
@@ -315,6 +434,43 @@ export function BlockDetailPage() {
   const handleSaveCropSeasonOnBlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!block) return;
+    const validationErrors = validateCropSeasonForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      if (validationErrors.seasonName) {
+        seasonNameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        seasonNameRef.current?.focus();
+      } else if (validationErrors.cropCategoryId) {
+        seasonCategoryRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+      } else if (validationErrors.plantedArea) {
+        seasonAreaRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        seasonAreaRef.current?.focus();
+      } else if (validationErrors.startDate) {
+        seasonStartDateRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        seasonStartDateRef.current?.focus();
+      } else if (validationErrors.endDate) {
+        seasonEndDateRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        seasonEndDateRef.current?.focus();
+      }
+
+      return;
+    }
+
     setSavingSeason(true);
     try {
       if (seasonModalMode === 'create') {
@@ -368,9 +524,87 @@ export function BlockDetailPage() {
     }
   };
 
+  const validateBlockRiskForm = () => {
+    const newErrors: typeof riskErrors = {};
+
+    const today = new Date();
+    const todayString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    if (riskForm.assessedAt > todayString) {
+      newErrors.assessedAt =
+        lang === 'en'
+          ? 'Assessment date cannot be in the future.'
+          : 'Ngày đánh giá không được nằm trong tương lai.';
+    }
+
+    if (!riskForm.riskType.trim()) {
+      newErrors.riskType =
+        lang === 'en'
+          ? 'Risk type is required.'
+          : 'Vui lòng nhập loại rủi ro.';
+    }
+
+    if (!riskForm.description.trim()) {
+      newErrors.description =
+        lang === 'en'
+          ? 'Risk description is required.'
+          : 'Vui lòng nhập mô tả nguy cơ rủi ro.';
+    }
+
+    if (!riskForm.controlMeasures.trim()) {
+      newErrors.controlMeasures =
+        lang === 'en'
+          ? 'Control measures are required.'
+          : 'Vui lòng nhập biện pháp kiểm soát.';
+    }
+
+    setRiskErrors(newErrors);
+    return newErrors;
+  };
+
   const handleSaveBlockRisk = (e: React.FormEvent) => {
     e.preventDefault();
     if (!block) return;
+
+    // Validation is only needed when creating or editing.
+    if (riskModalMode === 'view') return;
+
+    const validationErrors = validateBlockRiskForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      if (validationErrors.assessedAt) {
+        riskDateRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        riskDateRef.current?.focus();
+      } else if (validationErrors.riskType) {
+        riskTypeRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        riskTypeRef.current?.focus();
+      } else if (validationErrors.description) {
+        riskDescriptionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        riskDescriptionRef.current?.focus();
+      } else if (validationErrors.controlMeasures) {
+        riskControlMeasuresRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        riskControlMeasuresRef.current?.focus();
+      }
+
+      return;
+    }
+
     const saved = saveRiskRecord({
       riskId: selectedRisk?.riskId,
       targetType: 'BLOCK',
@@ -504,9 +738,138 @@ export function BlockDetailPage() {
     setSoilModalMode('view');
   };
 
+  const validateSoilForm = () => {
+    const errors: typeof soilErrors = {};
+
+    const today = new Date();
+    const todayString = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    const ph = Number(soilForm.phLevel);
+    const organicMatter = Number(soilForm.organicMatterPct);
+
+    // Assessment date
+    if (!soilForm.assessedAt) {
+      errors.assessedAt = lang === 'en'
+        ? 'Please select an assessment date.'
+        : 'Vui lòng chọn ngày đánh giá.';
+    } else if (soilForm.assessedAt > todayString) {
+      errors.assessedAt = lang === 'en'
+        ? 'Assessment date cannot be in the future.'
+        : 'Ngày đánh giá không được nằm trong tương lai.';
+    }
+
+    // Sample code
+    if (!soilForm.sampleCode.trim()) {
+      errors.sampleCode = lang === 'en'
+        ? 'Please enter a soil sample code.'
+        : 'Vui lòng nhập mã mẫu đất.';
+    } else if (soilForm.sampleCode.trim().length > 50) {
+      errors.sampleCode = lang === 'en'
+        ? 'Sample code must not exceed 50 characters.'
+        : 'Mã mẫu đất không được vượt quá 50 ký tự.';
+    }
+
+    // Soil pH
+    if (!soilForm.phLevel.trim() || !Number.isFinite(ph)) {
+      errors.phLevel = lang === 'en'
+        ? 'Please enter a valid soil pH.'
+        : 'Vui lòng nhập độ pH đất hợp lệ.';
+    } else if (ph < 0 || ph > 14) {
+      errors.phLevel = lang === 'en'
+        ? 'Soil pH must be between 0 and 14.'
+        : 'Độ pH đất phải nằm trong khoảng từ 0 đến 14.';
+    }
+
+    // Organic matter
+    if (!soilForm.organicMatterPct.trim() || !Number.isFinite(organicMatter)) {
+      errors.organicMatterPct = lang === 'en'
+        ? 'Please enter a valid organic matter percentage.'
+        : 'Vui lòng nhập tỷ lệ chất hữu cơ hợp lệ.';
+    } else if (organicMatter < 0 || organicMatter > 100) {
+      errors.organicMatterPct = lang === 'en'
+        ? 'Organic matter must be between 0% and 100%.'
+        : 'Chất hữu cơ phải nằm trong khoảng từ 0% đến 100%.';
+    }
+
+    // Testing laboratory
+    if (!soilForm.laboratoryName.trim()) {
+      errors.laboratoryName = lang === 'en'
+        ? 'Please enter the testing laboratory.'
+        : 'Vui lòng nhập tên phòng kiểm nghiệm.';
+    } else if (soilForm.laboratoryName.trim().length > 150) {
+      errors.laboratoryName = lang === 'en'
+        ? 'Laboratory name must not exceed 150 characters.'
+        : 'Tên phòng kiểm nghiệm không được vượt quá 150 ký tự.';
+    }
+
+    // Heavy metals and microorganisms
+    if (!soilForm.microbialStatus.trim()) {
+      errors.microbialStatus = lang === 'en'
+        ? 'Please enter the heavy metals and microorganisms assessment.'
+        : 'Vui lòng nhập kết quả đánh giá kim loại nặng và vi sinh.';
+    } else if (soilForm.microbialStatus.trim().length > 500) {
+      errors.microbialStatus = lang === 'en'
+        ? 'This field must not exceed 500 characters.'
+        : 'Trường này không được vượt quá 500 ký tự.';
+    }
+
+    setSoilErrors(errors);
+
+    return errors;
+  };
+
   const handleSaveSoil = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!block) return;
+
+    const validationErrors = validateSoilForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      if (validationErrors.assessedAt) {
+        assessedAtRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        assessedAtRef.current?.focus();
+      } else if (validationErrors.sampleCode) {
+        sampleCodeRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        sampleCodeRef.current?.focus();
+      } else if (validationErrors.phLevel) {
+        phLevelRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        phLevelRef.current?.focus();
+      } else if (validationErrors.organicMatterPct) {
+        organicMatterRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        organicMatterRef.current?.focus();
+      } else if (validationErrors.laboratoryName) {
+        laboratoryNameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        laboratoryNameRef.current?.focus();
+      } else if (validationErrors.microbialStatus) {
+        microbialStatusRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        microbialStatusRef.current?.focus();
+      }
+
+      return;
+    }
+
     const nutrientObj = {
       sampleCode: soilForm.sampleCode,
       organicMatterPct: parseFloat(soilForm.organicMatterPct) || 3.5,
@@ -576,9 +939,122 @@ export function BlockDetailPage() {
     }
   };
 
+  const validateWaterForm = () => {
+    const errors: typeof waterErrors = {};
+
+    // Assessment date
+    const today = new Date();
+    const localToday = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    if (!waterForm.assessedAt) {
+      errors.assessedAt =
+        lang === 'en'
+          ? 'Assessment date is required.'
+          : 'Vui lòng chọn ngày đánh giá.';
+    } else if (waterForm.assessedAt > localToday) {
+      errors.assessedAt =
+        lang === 'en'
+          ? 'Assessment date cannot be in the future.'
+          : 'Ngày đánh giá không được ở tương lai.';
+    }
+
+    // Sample code
+    if (!waterForm.sampleCode.trim()) {
+      errors.sampleCode =
+        lang === 'en'
+          ? 'Water sample code is required.'
+          : 'Vui lòng nhập mã mẫu nước.';
+    } else if (waterForm.sampleCode.trim().length > 50) {
+      errors.sampleCode =
+        lang === 'en'
+          ? 'Sample code cannot exceed 50 characters.'
+          : 'Mã mẫu nước không được vượt quá 50 ký tự.';
+    }
+
+    // Water source
+    if (!waterForm.waterSource.trim()) {
+      errors.waterSource =
+        lang === 'en'
+          ? 'Irrigation water source is required.'
+          : 'Vui lòng nhập nguồn nước tưới.';
+    } else if (waterForm.waterSource.trim().length > 150) {
+      errors.waterSource =
+        lang === 'en'
+          ? 'Water source cannot exceed 150 characters.'
+          : 'Nguồn nước không được vượt quá 150 ký tự.';
+    }
+
+    // Water pH
+    const ph = Number(waterForm.phLevel);
+
+    if (
+      !String(waterForm.phLevel).trim() ||
+      !Number.isFinite(ph)
+    ) {
+      errors.phLevel =
+        lang === 'en'
+          ? 'Water pH is required.'
+          : 'Vui lòng nhập độ pH nước.';
+    } else if (ph < 0 || ph > 14) {
+      errors.phLevel =
+        lang === 'en'
+          ? 'Water pH must be between 0 and 14.'
+          : 'Độ pH nước phải nằm trong khoảng từ 0 đến 14.';
+    }
+
+    // Electrical conductivity
+    const ec = Number(waterForm.ecValue);
+
+    if (
+      !String(waterForm.ecValue).trim() ||
+      !Number.isFinite(ec)
+    ) {
+      errors.ecValue =
+        lang === 'en'
+          ? 'Electrical conductivity is required.'
+          : 'Vui lòng nhập độ dẫn điện EC.';
+    } else if (ec < 0) {
+      errors.ecValue =
+        lang === 'en'
+          ? 'Electrical conductivity cannot be negative.'
+          : 'Độ dẫn điện EC không được là số âm.';
+    }
+
+    setWaterErrors(errors);
+    return errors;
+  };
+
   const handleSaveWater = (e: React.FormEvent) => {
     e.preventDefault();
     if (!block) return;
+
+    const validationErrors = validateWaterForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      if (validationErrors.assessedAt) {
+        waterDateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        waterDateRef.current?.focus({ preventScroll: true });
+      } else if (validationErrors.sampleCode) {
+        waterCodeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        waterCodeRef.current?.focus({ preventScroll: true });
+      } else if (validationErrors.waterSource) {
+        waterSourceRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        waterSourceRef.current?.focus({ preventScroll: true });
+      } else if (validationErrors.phLevel) {
+        waterPhLevelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        waterPhLevelRef.current?.focus({ preventScroll: true });
+      } else if (validationErrors.ecValue) {
+        ecValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        ecValueRef.current?.focus({ preventScroll: true });
+      }
+
+      return;
+    }
+
     const saved = saveWaterAssessment({
       assessmentId: selectedWater?.assessmentId,
       blockId: block.blockId,
@@ -945,7 +1421,6 @@ export function BlockDetailPage() {
             <label className="form-field" style={{ flex: '1.5 1 240px' }}>
               <span>
                 {(lang === 'en' ? "Search seasons" : "Tìm kiếm mùa vụ")}
-                <small style={{ color: '#059669', fontWeight: 700 }}>{(lang === 'en' ? "Keyword" : "Từ khóa")}</small>
               </span>
               <input
                 id="block-season-search"
@@ -959,7 +1434,6 @@ export function BlockDetailPage() {
             <label className="form-field" style={{ flex: '1 1 210px' }}>
               <span>
                 {(lang === 'en' ? "Crop categories" : "Danh mục cây trồng")}
-                <small style={{ color: '#059669', fontWeight: 700 }}>{(lang === 'en' ? "Crop type" : "Loại cây")}</small>
               </span>
               <select
                 id="block-season-cat"
@@ -978,7 +1452,6 @@ export function BlockDetailPage() {
             <label className="form-field" style={{ flex: '0.8 1 180px' }}>
               <span>
                 {lang === 'en' ? 'Status' : 'Trạng thái'}
-                <small style={{ color: '#059669', fontWeight: 700 }}>{(lang === 'en' ? "Season status" : "Trạng thái mùa vụ")}</small>
               </span>
               <select
                 id="block-season-status"
@@ -1185,11 +1658,18 @@ export function BlockDetailPage() {
                         <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                           {obs.observedAt ? new Date(obs.observedAt).toLocaleString('vi-VN') : 'N/A'}
                         </td>
+
                         <td>
                           <span className="knowledge-tag">{translate(obs.conditionType)}</span>
                         </td>
-                        <td style={{ maxWidth: '360px', color: '#334155', lineHeight: 1.5 }}>{obs.description}</td>
+
+                        <td style={{
+                          maxWidth: '360px', color: '#334155', lineHeight: 1.5, overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}>{obs.description}</td>
+
                         <td>{(lang === 'en' ? obs.recorderFullName || "Farm staff" : obs.recorderFullName || 'Nhân sự trang trại')}</td>
+
                         <td style={{ textAlign: 'right' }}>
                           <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
                             <button
@@ -1771,12 +2251,35 @@ export function BlockDetailPage() {
                     : (lang === 'en' ? `Update season: ${editingSeason?.seasonName}` : `Cập nhật mùa vụ: ${editingSeason?.seasonName}`)}
                 </h2>
               </div>
-              <button type="button" className="modal-close" onClick={() => setSeasonModalMode(null)}>
+              <button type="button" className="modal-close"
+                onClick={() => {
+                  setSeasonModalMode(null);
+                  setSeasonErrors({});
+                }}>
                 ✕
               </button>
             </div>
 
-            <form className="modal-body" onSubmit={handleSaveCropSeasonOnBlock}>
+            <form className="modal-body" onSubmit={handleSaveCropSeasonOnBlock} noValidate>
+              {Object.keys(seasonErrors).length > 0 && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <AlertCircle size={18} />
+
+                  {lang === 'en'
+                    ? 'Please correct the highlighted fields before adding.'
+                    : 'Vui lòng sửa các trường được đánh dấu trước khi thêm.'}
+                </div>
+              )}
               <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
                 <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
                   <span className="structured-field-label" style={{ color: '#065f46' }}>
@@ -1799,12 +2302,48 @@ export function BlockDetailPage() {
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input
                     id="cs-name-input"
+                    ref={seasonNameRef}
                     type="text"
                     maxLength={120}
                     value={seasonForm.seasonName}
-                    onChange={(e) => setSeasonForm({ ...seasonForm, seasonName: e.target.value })}
+                    className={seasonErrors.seasonName ? 'input-error' : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setSeasonForm((prev) => ({
+                        ...prev,
+                        seasonName: value,
+                      }));
+
+                      if (!value.trim()) {
+                        setSeasonErrors((prev) => ({
+                          ...prev,
+                          seasonName: lang === 'en'
+                            ? 'Season name is required.'
+                            : 'Vui lòng nhập tên mùa vụ.'
+                        }));
+                      } else {
+                        setSeasonErrors((prev) => {
+                          const updated = { ...prev };
+                          delete updated.seasonName;
+                          return updated;
+                        });
+                      }
+                    }}
                     required
                   />
+
+                  {seasonErrors.seasonName && (
+                    <p className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                      {seasonErrors.seasonName}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1814,22 +2353,50 @@ export function BlockDetailPage() {
                     <label htmlFor="cs-cat-select" className="structured-field-label">
                       {(lang === 'en' ? "Crop categories " : "Danh mục cây trồng ")} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "VietGAP Standard" : "Tiêu chuẩn VietGAP")}</span>
                   </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
+                  <div ref={seasonCategoryRef}>
                     <CropCategoryCombobox
                       id="cs-cat-select"
                       value={seasonForm.cropCategoryId}
                       categoryName={seasonForm.cropCategoryName}
                       categories={categories}
-                      onChange={(catId, catName) =>
+                      onChange={(catId, catName) => {
                         setSeasonForm((prev) => ({
                           ...prev,
                           cropCategoryId: catId,
                           cropCategoryName: catName,
-                        }))
-                      }
+                        }));
+
+                        if (Number(catId) <= 0) {
+                          setSeasonErrors((prev) => ({
+                            ...prev,
+                            cropCategoryId: lang === 'en'
+                              ? 'Please select a crop category.'
+                              : 'Vui lòng chọn danh mục cây trồng.'
+                          }));
+                        } else {
+                          setSeasonErrors((prev) => {
+                            const updated = { ...prev };
+                            delete updated.cropCategoryId;
+                            return updated;
+                          });
+                        }
+                      }}
                     />
                   </div>
+
+                  {seasonErrors.cropCategoryId && (
+                    <p className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                      {seasonErrors.cropCategoryId}
+                    </p>
+                  )}
                 </div>
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
@@ -1837,17 +2404,60 @@ export function BlockDetailPage() {
                     <label htmlFor="cs-area-input" className="structured-field-label">
                       {(lang === 'en' ? "Planted area (" : "Diện tích gieo trồng (")}{translate(block.areaUnit)}) <span style={{ color: '#dc2626' }}>*</span>
                     </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <input
                       id="cs-area-input"
+                      ref={seasonAreaRef}
                       type="number"
                       step="0.01"
                       min="0.01"
                       value={seasonForm.plantedArea}
-                      onChange={(e) => setSeasonForm({ ...seasonForm, plantedArea: e.target.value })}
+                      className={seasonErrors.plantedArea ? 'input-error' : ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        setSeasonForm((prev) => ({
+                          ...prev,
+                          plantedArea: value,
+                        }));
+
+                        const area = Number(value);
+
+                        if (
+                          !value.trim() ||
+                          !Number.isFinite(area) ||
+                          area <= 0
+                        ) {
+                          setSeasonErrors((prev) => ({
+                            ...prev,
+                            plantedArea: lang === 'en'
+                              ? 'Please enter a valid planted area greater than 0.'
+                              : 'Vui lòng nhập diện tích gieo trồng hợp lệ lớn hơn 0.',
+                          }));
+                        } else {
+                          setSeasonErrors((prev) => {
+                            const updated = { ...prev };
+                            delete updated.plantedArea;
+                            return updated;
+                          });
+                        }
+                      }}
                       required
                     />
+
+                    {seasonErrors.plantedArea && (
+                      <p className="field-error"
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                        {seasonErrors.plantedArea}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1858,15 +2468,52 @@ export function BlockDetailPage() {
                     <label htmlFor="cs-start-input" className="structured-field-label">
                       {(lang === 'en' ? "Start date " : "Ngày bắt đầu ")} <span style={{ color: '#dc2626' }}>*</span>
                     </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <input
                       id="cs-start-input"
+                      ref={seasonStartDateRef}
                       type="date"
                       value={seasonForm.startDate}
-                      onChange={(e) => setSeasonForm({ ...seasonForm, startDate: e.target.value })}
+                      className={seasonErrors.startDate ? 'input-error' : ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        setSeasonForm((prev) => ({
+                          ...prev,
+                          startDate: value,
+                        }));
+
+                        setSeasonErrors((prev) => {
+                          const updated = { ...prev };
+
+                          // Validate start date
+                          if (!value) {
+                            updated.startDate = lang === 'en'
+                              ? 'Please select a start date.'
+                              : 'Vui lòng chọn ngày bắt đầu.';
+                          } else {
+                            delete updated.startDate;
+                          }
+
+                          return updated;
+                        });
+                      }}
                       required
                     />
+
+                    {seasonErrors.startDate && (
+                      <p className="field-error"
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                        {seasonErrors.startDate}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1875,20 +2522,66 @@ export function BlockDetailPage() {
                     <label htmlFor="cs-end-input" className="structured-field-label">
                       {(lang === 'en' ? "Expected end date" : "Ngày kết thúc dự kiến")}
                     </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <input
                       id="cs-end-input"
+                      ref={seasonEndDateRef}
                       type="date"
                       value={seasonForm.endDate}
-                      onChange={(e) =>
-                        setSeasonForm({
-                          ...seasonForm,
-                          endDate: e.target.value,
-                          expectedHarvestAt: e.target.value,
-                        })
-                      }
+                      className={seasonErrors.endDate ? 'input-error' : ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        setSeasonForm((prev) => ({
+                          ...prev,
+                          endDate: value,
+                          expectedHarvestAt: value,
+                        }));
+
+                        setSeasonErrors((prev) => {
+                          const updated = { ...prev };
+
+                          if (seasonForm.startDate && value <= seasonForm.startDate) {
+                            updated.endDate = lang === 'en'
+                              ? 'End date must be after the start date.'
+                              : 'Ngày kết thúc phải sau ngày bắt đầu.';
+                          } else if (seasonForm.startDate) {
+                            const start = new Date(`${seasonForm.startDate}T00:00:00`);
+                            const end = new Date(`${value}T00:00:00`);
+
+                            const durationDays = Math.round(
+                              (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+                            );
+
+                            if (durationDays < 7) {
+                              updated.endDate = lang === 'en'
+                                ? 'A crop season must last at least 7 days.'
+                                : 'Mùa vụ phải kéo dài ít nhất 7 ngày.';
+                            } else {
+                              delete updated.endDate;
+                            }
+                          } else {
+                            delete updated.endDate;
+                          }
+
+                          return updated;
+                        });
+                      }}
                     />
+
+                    {seasonErrors.endDate && (
+                      <p className="field-error"
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                        {seasonErrors.endDate}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1898,6 +2591,7 @@ export function BlockDetailPage() {
                   <label htmlFor="cs-notes-input" className="structured-field-label">
                     {(lang === 'en' ? "Season notes" : "Ghi chú mùa vụ")}
                   </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <textarea
@@ -1910,7 +2604,10 @@ export function BlockDetailPage() {
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setSeasonModalMode(null)}>
+                <button type="button" className="ghost-button" onClick={() => {
+                  setSeasonModalMode(null);
+                  setSeasonErrors({});
+                }}>
                   {(lang === 'en' ? "Cancel" : "Hủy")}
                 </button>
                 <button type="submit" className="primary-button" disabled={savingSeason}>
@@ -1933,15 +2630,37 @@ export function BlockDetailPage() {
                   {riskModalMode === 'create'
                     ? (lang === 'en' ? 'Add Risk Record' : 'Thêm ghi nhận rủi ro')
                     : riskModalMode === 'edit'
-                    ? (lang === 'en' ? "Update control measures" : 'Cập nhật biện pháp kiểm soát')
-                    : (lang === 'en' ? "Risk record details" : 'Chi tiết hồ sơ rủi ro')}
+                      ? (lang === 'en' ? "Update control measures" : 'Cập nhật biện pháp kiểm soát')
+                      : (lang === 'en' ? "Risk record details" : 'Chi tiết hồ sơ rủi ro')}
                 </h2>
               </div>
-              <button type="button" className="modal-close" onClick={() => setRiskModalMode(null)}>
+              <button type="button" className="modal-close" onClick={() => {
+                setRiskErrors({});
+                setRiskModalMode(null);
+              }}>
                 ✕
               </button>
             </div>
-            <form className="modal-body" onSubmit={handleSaveBlockRisk}>
+            <form className="modal-body" onSubmit={handleSaveBlockRisk} noValidate>
+              {Object.keys(riskErrors).length > 0 && (
+                <div style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <AlertCircle size={18} />
+
+                  {lang === 'en'
+                    ? 'Please correct the highlighted fields before adding.'
+                    : 'Vui lòng sửa các trường được đánh dấu trước khi thêm.'}
+                </div>
+              )}
               <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
                 <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
                   <span className="structured-field-label" style={{ color: '#065f46' }}>
@@ -1954,22 +2673,67 @@ export function BlockDetailPage() {
               <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</span>
+                    <span className="structured-field-label">
+                      {(lang === 'en' ? "Assessment date" : "Ngày đánh giá")} <span style={{ color: '#dc2626' }}>*</span>
+                    </span>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <input
+                      ref={riskDateRef}
                       type="date"
                       value={riskForm.assessedAt}
                       disabled={riskModalMode === 'view'}
-                      onChange={(e) => setRiskForm({ ...riskForm, assessedAt: e.target.value })}
+                      className={riskErrors.assessedAt ? 'input-error' : ''}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const today = new Date();
+                        const todayString = [
+                          today.getFullYear(),
+                          String(today.getMonth() + 1).padStart(2, '0'),
+                          String(today.getDate()).padStart(2, '0'),
+                        ].join('-');
+
+                        setRiskForm((prev) => ({
+                          ...prev,
+                          assessedAt: value,
+                        }));
+
+                        setRiskErrors((prev) => {
+                          const updated = { ...prev };
+
+                          // Validate assessed date
+                          if (value > todayString) {
+                            updated.assessedAt = lang === 'en'
+                              ? 'Assessment date cannot be in the future.'
+                              : 'Ngày đánh giá không được nằm trong tương lai.';
+                          } else {
+                            delete updated.assessedAt;
+                          }
+
+                          return updated;
+                        });
+                      }}
                       required
                     />
+
+                    {riskErrors.assessedAt && (
+                      <p className="field-error" style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>{riskErrors.assessedAt}</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Risk level" : "Mức độ rủi ro")}</span>
+                    <span className="structured-field-label">
+                      {(lang === 'en' ? "Risk level" : "Mức độ rủi ro")} <span style={{ color: '#dc2626' }}>*</span>
+                    </span>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <select
@@ -1989,22 +2753,62 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Risk type" : "Loại rủi ro")}</span>
+                  <span className="structured-field-label">
+                    {(lang === 'en' ? "Risk type" : "Loại rủi ro")} <span style={{ color: '#dc2626' }}>*</span>
+                  </span>
+                  <span className="structured-field-badge">{riskForm.riskType.length}{(lang === 'en' ? "/150 characters" : "/150 ký tự")}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input
+                    ref={riskTypeRef}
                     type="text"
+                    maxLength={150}
                     value={riskForm.riskType}
                     disabled={riskModalMode === 'view'}
-                    onChange={(e) => setRiskForm({ ...riskForm, riskType: e.target.value })}
+                    className={riskErrors.riskType ? 'input-error' : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setRiskForm((prev) => ({
+                        ...prev,
+                        riskType: value,
+                      }));
+
+                      if (!value.trim()) {
+                        setRiskErrors((prev) => ({
+                          ...prev,
+                          riskType: lang === 'en'
+                            ? 'Risk type is required.'
+                            : 'Vui lòng nhập loại rủi ro.'
+                        }));
+                      } else {
+                        setRiskErrors((prev) => {
+                          const updated = { ...prev };
+                          delete updated.riskType;
+                          return updated;
+                        });
+                      }
+                    }}
                     required
                   />
+
+                  {riskErrors.riskType && (
+                    <p className="field-error" style={{
+                      color: '#dc2626',
+                      fontSize: '12px',
+                      marginTop: '5px',
+                      marginBottom: 0
+                    }}>
+                      {riskErrors.riskType}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <span className="structured-field-label">{(lang === 'en' ? "Previous findings" : "Phát hiện trước đây")}</span>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <textarea
@@ -2018,36 +2822,116 @@ export function BlockDetailPage() {
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Risk description" : "Mô tả nguy cơ rủi ro")}</span>
+                  <span className="structured-field-label">
+                    {(lang === 'en' ? "Risk description" : "Mô tả nguy cơ rủi ro")} <span style={{ color: '#dc2626' }}>*</span>
+                  </span>
+                  <span className="structured-field-badge">{riskForm.description.length}{(lang === 'en' ? "/1500 characters" : "/1500 ký tự")}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <textarea
+                    ref={riskDescriptionRef}
                     rows={2}
+                    maxLength={1500}
                     value={riskForm.description}
                     disabled={riskModalMode === 'view'}
-                    onChange={(e) => setRiskForm({ ...riskForm, description: e.target.value })}
+                    className={riskErrors.description ? 'input-error' : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setRiskForm((prev) => ({
+                        ...prev,
+                        description: value,
+                      }));
+
+                      if (!value.trim()) {
+                        setRiskErrors((prev) => ({
+                          ...prev,
+                          description: lang === 'en'
+                            ? 'Risk description is required.'
+                            : 'Vui lòng nhập mô tả nguy cơ rủi ro.'
+                        }));
+                      } else {
+                        setRiskErrors((prev) => {
+                          const updated = { ...prev };
+                          delete updated.description;
+                          return updated;
+                        });
+                      }
+                    }}
                     required
                   />
+
+                  {riskErrors.description && (
+                    <p className="field-error" style={{
+                      color: '#dc2626',
+                      fontSize: '12px',
+                      marginTop: '5px',
+                      marginBottom: 0
+                    }}>
+                      {riskErrors.description}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Control measures" : "Biện pháp kiểm soát")}</span>
+                  <span className="structured-field-label">
+                    {(lang === 'en' ? "Control measures" : "Biện pháp kiểm soát")} <span style={{ color: '#dc2626' }}>*</span>
+                  </span>
+                  <span className="structured-field-badge">{riskForm.controlMeasures.length}{(lang === 'en' ? "/1500 characters" : "/1500 ký tự")}</span>
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <textarea
+                    ref={riskControlMeasuresRef}
                     rows={3}
                     value={riskForm.controlMeasures}
                     disabled={riskModalMode === 'view'}
-                    onChange={(e) => setRiskForm({ ...riskForm, controlMeasures: e.target.value })}
+                    className={riskErrors.controlMeasures ? 'input-error' : ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setRiskForm((prev) => ({
+                        ...prev,
+                        controlMeasures: value,
+                      }));
+
+                      if (!value.trim()) {
+                        setRiskErrors((prev) => ({
+                          ...prev,
+                          controlMeasures: lang === 'en'
+                            ? 'Control measures is required.'
+                            : 'Vui lòng nhập biện pháp kiểm soát.'
+                        }));
+                      } else {
+                        setRiskErrors((prev) => {
+                          const updated = { ...prev };
+                          delete updated.controlMeasures;
+                          return updated;
+                        });
+                      }
+                    }}
                     required
                   />
+
+                  {riskErrors.controlMeasures && (
+                    <p className="field-error" style={{
+                      color: '#dc2626',
+                      fontSize: '12px',
+                      marginTop: '5px',
+                      marginBottom: 0
+                    }}>
+                      {riskErrors.controlMeasures}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setRiskModalMode(null)}>
+                <button type="button" className="ghost-button" onClick={() => {
+                  setRiskErrors({});
+                  setRiskModalMode(null);
+                }}>
                   {(lang === 'en' ? riskModalMode === 'view' ? "Close" : "Cancel" : riskModalMode === 'view' ? 'Đóng' : 'Hủy')}
                 </button>
                 {riskModalMode !== 'view' && (
@@ -2058,301 +2942,844 @@ export function BlockDetailPage() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        </div >
+      )
+      }
 
       {/* Soil Assessment Modal */}
-      {soilModalMode && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
-            <div className="modal-header">
-              <div>
-                <span className="eyebrow">{(lang === 'en' ? "Soil sample assessment · " : "Đánh giá mẫu đất · ")} {block.blockName}</span>
-                <h2>
-                  {soilModalMode === 'create'
-                    ? (lang === 'en' ? 'Add Soil Assessment' : 'Thêm đánh giá đất')
-                    : soilModalMode === 'edit'
-                    ? (lang === 'en' ? "Update soil assessment" : 'Cập nhật đánh giá đất')
-                    : (lang === 'en' ? "Soil assessment details" : 'Chi tiết đánh giá đất')}
-                </h2>
-              </div>
-              <button type="button" className="modal-close" onClick={() => setSoilModalMode(null)}>
-                ✕
-              </button>
-            </div>
-            <form className="modal-body" onSubmit={handleSaveSoil}>
-              <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-                <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-                  <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
-                  </span>
+      {
+        soilModalMode && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+              <div className="modal-header">
+                <div>
+                  <span className="eyebrow">{(lang === 'en' ? "Soil sample assessment · " : "Đánh giá mẫu đất · ")} {block.blockName}</span>
+                  <h2>
+                    {soilModalMode === 'create'
+                      ? (lang === 'en' ? 'Add Soil Assessment' : 'Thêm đánh giá đất')
+                      : soilModalMode === 'edit'
+                        ? (lang === 'en' ? "Update soil assessment" : 'Cập nhật đánh giá đất')
+                        : (lang === 'en' ? "Soil assessment details" : 'Chi tiết đánh giá đất')}
+                  </h2>
                 </div>
-                <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
-              </div>
-
-              <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="date"
-                      value={soilForm.assessedAt}
-                      disabled={soilModalMode === 'view'}
-                      onChange={(e) => setSoilForm({ ...soilForm, assessedAt: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Soil sample code" : "Mã mẫu đất")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="text"
-                      value={soilForm.sampleCode}
-                      disabled={soilModalMode === 'view'}
-                      onChange={(e) => setSoilForm({ ...soilForm, sampleCode: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Soil pH" : "Độ pH đất")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={soilForm.phLevel}
-                      disabled={soilModalMode === 'view'}
-                      onChange={(e) => setSoilForm({ ...soilForm, phLevel: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Organic matter (%)" : "Chất hữu cơ (%)")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={soilForm.organicMatterPct}
-                      disabled={soilModalMode === 'view'}
-                      onChange={(e) => setSoilForm({ ...soilForm, organicMatterPct: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Testing laboratory" : "Phòng kiểm nghiệm")}</span>
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
-                    type="text"
-                    value={soilForm.laboratoryName}
-                    disabled={soilModalMode === 'view'}
-                    onChange={(e) => setSoilForm({ ...soilForm, laboratoryName: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Heavy Metals & Microorganisms" : "Kim loại nặng & Vi sinh")}</span>
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
-                    type="text"
-                    value={soilForm.microbialStatus}
-                    disabled={soilModalMode === 'view'}
-                    onChange={(e) => setSoilForm({ ...soilForm, microbialStatus: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Notes & Recommendations" : "Ghi chú & Khuyến nghị")}</span>
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
-                    rows={2}
-                    value={soilForm.notes}
-                    disabled={soilModalMode === 'view'}
-                    onChange={(e) => setSoilForm({ ...soilForm, notes: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setSoilModalMode(null)}>
-                  {(lang === 'en' ? soilModalMode === 'view' ? "Close" : "Cancel" : soilModalMode === 'view' ? 'Đóng' : 'Hủy')}
+                <button type="button" className="modal-close" onClick={() => {
+                  setSoilModalMode(null);
+                  setSoilErrors({});
+                }}>
+                  ✕
                 </button>
-                {soilModalMode !== 'view' && (
-                  <button type="submit" className="primary-button">
-                    {(lang === 'en' ? "Save assessment" : "Lưu đánh giá")}
-                  </button>
-                )}
               </div>
-            </form>
+              <form className="modal-body" onSubmit={handleSaveSoil} noValidate>
+                {Object.keys(soilErrors).length > 0 && (
+                  <div style={{
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#b91c1c',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <AlertCircle size={18} />
+
+                    {lang === 'en'
+                      ? 'Please correct the highlighted fields before saving.'
+                      : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                  </div>
+                )}
+                <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
+                  <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
+                    <span className="structured-field-label" style={{ color: '#065f46' }}>
+                      {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
+                    </span>
+                  </div>
+                  <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
+                </div>
+
+                <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")} <span style={{ color: '#dc2626' }}>*</span> </span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={assessedAtRef}
+                        type="date"
+                        value={soilForm.assessedAt}
+                        disabled={soilModalMode === 'view'}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const today = new Date();
+                          const todayString = [
+                            today.getFullYear(),
+                            String(today.getMonth() + 1).padStart(2, '0'),
+                            String(today.getDate()).padStart(2, '0'),
+                          ].join('-');
+
+                          setSoilForm((prev) => ({
+                            ...prev,
+                            assessedAt: value,
+                          }));
+
+                          setSoilErrors((prev) => {
+                            const updated = { ...prev };
+
+                            // Validate assessed date
+                            if (value > todayString) {
+                              updated.assessedAt = lang === 'en'
+                                ? 'Assessment date cannot be in the future.'
+                                : 'Ngày đánh giá không được nằm trong tương lai.';
+                            } else {
+                              delete updated.assessedAt;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {soilErrors.assessedAt && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {soilErrors.assessedAt}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">
+                        {(lang === 'en' ? "Soil sample code" : "Mã mẫu đất")} <span style={{ color: '#dc2626' }}>*</span>
+                      </span>
+                      <span className="structured-field-badge">{soilForm.sampleCode.length}{(lang === 'en' ? "/50 chars" : "/50 ký tự")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={sampleCodeRef}
+                        type="text"
+                        maxLength={50}
+                        value={soilForm.sampleCode}
+                        disabled={soilModalMode === 'view'}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setSoilForm((prev) => ({
+                            ...prev,
+                            sampleCode: value,
+                          }));
+
+                          setSoilErrors((prev) => {
+                            const updated = { ...prev };
+
+                            // Validate assessed date
+                            if (!value.trim()) {
+                              updated.sampleCode = lang === 'en'
+                                ? 'Soil sample code is required.'
+                                : 'Vui lòng nhập mã mẫu đất.'
+                            } else {
+                              delete updated.sampleCode;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {soilErrors.sampleCode && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {soilErrors.sampleCode}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">
+                        {(lang === 'en' ? "Soil pH" : "Độ pH đất")} <span style={{ color: '#dc2626' }}>*</span>
+                      </span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={phLevelRef}
+                        type="number"
+                        step="0.1"
+                        max="14"
+                        min="0"
+                        value={soilForm.phLevel}
+                        disabled={soilModalMode === 'view'}
+                        onKeyDown={(e) => {
+                          if (['e', 'E', '+', '-'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setSoilForm((prev) => ({
+                            ...prev,
+                            phLevel: value,
+                          }));
+
+                          setSoilErrors((prev) => {
+                            const updated = { ...prev };
+
+                            if (!value.trim()) {
+                              updated.phLevel =
+                                lang === 'en'
+                                  ? 'Soil pH is required.'
+                                  : 'Vui lòng nhập độ pH đất.';
+                            } else if (Number(value) < 0 || Number(value) > 14) {
+                              updated.phLevel =
+                                lang === 'en'
+                                  ? 'Soil pH must be between 0 and 14.'
+                                  : 'Độ pH đất phải nằm trong khoảng từ 0 đến 14.';
+                            } else {
+                              delete updated.phLevel;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {soilErrors.phLevel && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {soilErrors.phLevel}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">
+                        {(lang === 'en' ? "Organic matter (%)" : "Chất hữu cơ (%)")} <span style={{ color: '#dc2626' }}>*</span>
+                      </span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={organicMatterRef}
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={soilForm.organicMatterPct}
+                        disabled={soilModalMode === 'view'}
+                        onKeyDown={(e) => {
+                          if (['e', 'E', '+', '-'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setSoilForm((prev) => ({
+                            ...prev,
+                            organicMatterPct: value,
+                          }));
+
+                          setSoilErrors((prev) => {
+                            const updated = { ...prev };
+
+                            if (!value.trim()) {
+                              updated.organicMatterPct =
+                                lang === 'en'
+                                  ? 'Organic matter percentage is required.'
+                                  : 'Vui lòng nhập tỷ lệ chất hữu cơ.';
+                            } else if (
+                              !Number.isFinite(Number(value)) ||
+                              Number(value) < 0 ||
+                              Number(value) > 100
+                            ) {
+                              updated.organicMatterPct =
+                                lang === 'en'
+                                  ? 'Organic matter must be between 0 and 100%.'
+                                  : 'Tỷ lệ chất hữu cơ phải nằm trong khoảng từ 0 đến 100%.';
+                            } else {
+                              delete updated.organicMatterPct;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {soilErrors.organicMatterPct && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {soilErrors.organicMatterPct}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <div className="structured-field-header">
+                    <span className="structured-field-label">
+                      {(lang === 'en' ? "Testing laboratory" : "Phòng kiểm nghiệm")} <span style={{ color: '#dc2626' }}>*</span>
+                    </span>
+                    <span className="structured-field-badge">{soilForm.laboratoryName.length}{(lang === 'en' ? "/150 characters" : "/150 ký tự")}</span>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <input
+                      ref={laboratoryNameRef}
+                      type="text"
+                      maxLength={150}
+                      value={soilForm.laboratoryName}
+                      disabled={soilModalMode === 'view'}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        setSoilForm((prev) => ({
+                          ...prev,
+                          laboratoryName: value,
+                        }));
+
+                        setSoilErrors((prev) => {
+                          const updated = { ...prev };
+
+                          if (!value.trim()) {
+                            updated.laboratoryName =
+                              lang === 'en'
+                                ? 'Laboratory name is required.'
+                                : 'Vui lòng nhập tên phòng thí nghiệm.';
+                          } else if (value.trim().length > 150) {
+                            updated.laboratoryName =
+                              lang === 'en'
+                                ? 'Laboratory name cannot exceed 150 characters.'
+                                : 'Tên phòng thí nghiệm không được vượt quá 150 ký tự.';
+                          } else {
+                            delete updated.laboratoryName;
+                          }
+
+                          return updated;
+                        });
+                      }}
+                      required
+                    />
+                    {soilErrors.laboratoryName && (
+                      <p className="field-error" style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                        {soilErrors.laboratoryName}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <div className="structured-field-header">
+                    <span className="structured-field-label">
+                      {(lang === 'en' ? "Heavy Metals & Microorganisms" : "Kim loại nặng & Vi sinh")} <span style={{ color: '#dc2626' }}>*</span>
+                    </span>
+                    <span className="structured-field-badge">{soilForm.microbialStatus.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <textarea
+                      ref={microbialStatusRef}
+                      rows={3}
+                      maxLength={500}
+                      value={soilForm.microbialStatus}
+                      disabled={soilModalMode === 'view'}
+                      placeholder={
+                        lang === 'en'
+                          ? 'Enter heavy metals and microorganisms test results...'
+                          : 'Nhập kết quả kiểm tra kim loại nặng và vi sinh vật...'
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        setSoilForm((prev) => ({
+                          ...prev,
+                          microbialStatus: value,
+                        }));
+
+                        setSoilErrors((prev) => {
+                          const updated = { ...prev };
+
+                          if (!value.trim()) {
+                            updated.microbialStatus =
+                              lang === 'en'
+                                ? 'Heavy metals and microorganisms status is required.'
+                                : 'Vui lòng nhập tình trạng kim loại nặng và vi sinh vật.';
+                          } else {
+                            delete updated.microbialStatus;
+                          }
+
+                          return updated;
+                        });
+                      }}
+                      required
+                    />
+                    {soilErrors.microbialStatus && (
+                      <p className="field-error" style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                        {soilErrors.microbialStatus}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <div className="structured-field-header">
+                    <span className="structured-field-label">{(lang === 'en' ? "Notes & Recommendations" : "Ghi chú & Khuyến nghị")}</span>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <textarea
+                      rows={2}
+                      value={soilForm.notes}
+                      disabled={soilModalMode === 'view'}
+                      onChange={(e) => setSoilForm({ ...soilForm, notes: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+                  <button type="button" className="ghost-button" onClick={() => { setSoilModalMode(null); setSoilErrors({}); }}>
+                    {(lang === 'en' ? soilModalMode === 'view' ? "Close" : "Cancel" : soilModalMode === 'view' ? 'Đóng' : 'Hủy')}
+                  </button>
+                  {soilModalMode !== 'view' && (
+                    <button type="submit" className="primary-button">
+                      {(lang === 'en' ? "Save assessment" : "Lưu đánh giá")}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Water Assessment Modal */}
-      {waterModalMode && (
-        <div className="modal-overlay" role="dialog" aria-modal="true">
-          <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
-            <div className="modal-header">
-              <div>
-                <span className="eyebrow">{(lang === 'en' ? "Water source assessment · " : "Đánh giá nguồn nước · ")} {block.blockName}</span>
-                <h2>
-                  {waterModalMode === 'create'
-                    ? (lang === 'en' ? 'Add Water Assessment' : 'Thêm đánh giá nước')
-                    : waterModalMode === 'edit'
-                    ? (lang === 'en' ? "Update water assessment" : 'Cập nhật đánh giá nước')
-                    : (lang === 'en' ? "Water assessment details" : 'Chi tiết đánh giá nước')}
-                </h2>
-              </div>
-              <button type="button" className="modal-close" onClick={() => setWaterModalMode(null)}>
-                ✕
-              </button>
-            </div>
-            <form className="modal-body" onSubmit={handleSaveWater}>
-              <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
-                <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
-                  <span className="structured-field-label" style={{ color: '#065f46' }}>
-                    {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
-                  </span>
+      {
+        waterModalMode && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="modal-card" style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+              <div className="modal-header">
+                <div>
+                  <span className="eyebrow">{(lang === 'en' ? "Water source assessment · " : "Đánh giá nguồn nước · ")} {block.blockName}</span>
+                  <h2>
+                    {waterModalMode === 'create'
+                      ? (lang === 'en' ? 'Add Water Assessment' : 'Thêm đánh giá nước')
+                      : waterModalMode === 'edit'
+                        ? (lang === 'en' ? "Update water assessment" : 'Cập nhật đánh giá nước')
+                        : (lang === 'en' ? "Water assessment details" : 'Chi tiết đánh giá nước')}
+                  </h2>
                 </div>
-                <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
-              </div>
-
-              <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="date"
-                      value={waterForm.assessedAt}
-                      disabled={waterModalMode === 'view'}
-                      onChange={(e) => setWaterForm({ ...waterForm, assessedAt: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Water sample code" : "Mã mẫu nước")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="text"
-                      value={waterForm.sampleCode}
-                      disabled={waterModalMode === 'view'}
-                      onChange={(e) => setWaterForm({ ...waterForm, sampleCode: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Irrigation water source" : "Nguồn nước tưới")}</span>
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <input
-                    type="text"
-                    value={waterForm.waterSource}
-                    disabled={waterModalMode === 'view'}
-                    onChange={(e) => setWaterForm({ ...waterForm, waterSource: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Water pH" : "Độ pH nước")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={waterForm.phLevel}
-                      disabled={waterModalMode === 'view'}
-                      onChange={(e) => setWaterForm({ ...waterForm, phLevel: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <span className="structured-field-label">{(lang === 'en' ? "Electrical conductivity EC (dS/m)" : "Độ dẫn điện EC (dS/m)")}</span>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={waterForm.ecValue}
-                      disabled={waterModalMode === 'view'}
-                      onChange={(e) => setWaterForm({ ...waterForm, ecValue: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                <div className="structured-field-header">
-                  <span className="structured-field-label">{(lang === 'en' ? "Treatment & Water Filtration" : "Biện pháp xử lý & Lọc nước")}</span>
-                </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
-                  <textarea
-                    rows={2}
-                    value={waterForm.treatmentMeasure}
-                    disabled={waterModalMode === 'view'}
-                    onChange={(e) => setWaterForm({ ...waterForm, treatmentMeasure: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <button type="button" className="ghost-button" onClick={() => setWaterModalMode(null)}>
-                  {(lang === 'en' ? waterModalMode === 'view' ? "Close" : "Cancel" : waterModalMode === 'view' ? 'Đóng' : 'Hủy')}
+                <button type="button" className="modal-close" onClick={() => {
+                  setWaterModalMode(null)
+                  setWaterErrors({})
+                }}>
+                  ✕
                 </button>
-                {waterModalMode !== 'view' && (
-                  <button type="submit" className="primary-button">
-                    {(lang === 'en' ? "Save assessment" : "Lưu đánh giá")}
-                  </button>
-                )}
               </div>
-            </form>
+              <form className="modal-body" onSubmit={handleSaveWater}>
+                {Object.keys(waterErrors).length > 0 && (
+                  <div style={{
+                    padding: '12px 16px',
+                    borderRadius: '8px',
+                    background: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    color: '#b91c1c',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <AlertCircle size={18} />
+
+                    {lang === 'en'
+                      ? 'Please correct the highlighted fields before saving.'
+                      : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                  </div>
+                )}
+                <div className="structured-field-card" style={{ background: '#ecfdf5', borderColor: '#a7f3d0', marginBottom: 0 }}>
+                  <div className="structured-field-header" style={{ borderBottomColor: '#a7f3d0' }}>
+                    <span className="structured-field-label" style={{ color: '#065f46' }}>
+                      {(lang === 'en' ? "Applicable Block" : "Block áp dụng")}
+                    </span>
+                  </div>
+                  <strong style={{ color: '#047857' }}>🌿 {block.blockName} · {resolvedZoneName}</strong>
+                </div>
+
+                <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">
+                        {(lang === 'en' ? "Assessment date" : "Ngày đánh giá")} <span style={{ color: '#dc2626' }}>*</span>
+                      </span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={waterDateRef}
+                        type="date"
+                        value={waterForm.assessedAt}
+                        disabled={waterModalMode === 'view'}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const today = new Date();
+                          const todayString = [
+                            today.getFullYear(),
+                            String(today.getMonth() + 1).padStart(2, '0'),
+                            String(today.getDate()).padStart(2, '0'),
+                          ].join('-');
+
+                          setWaterForm((prev) => ({
+                            ...prev,
+                            assessedAt: value,
+                          }));
+
+                          setWaterErrors((prev) => {
+                            const updated = { ...prev };
+
+                            // Validate assessed date
+                            if (value > todayString) {
+                              updated.assessedAt = lang === 'en'
+                                ? 'Assessment date cannot be in the future.'
+                                : 'Ngày đánh giá không được nằm trong tương lai.';
+                            } else {
+                              delete updated.assessedAt;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {waterErrors.assessedAt && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {waterErrors.assessedAt}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">
+                        {(lang === 'en' ? "Water sample code" : "Mã mẫu nước")} <span style={{ color: '#dc2626' }}>*</span>
+                      </span>
+                      <span className="structured-field-badge">{waterForm.sampleCode.length}{(lang === 'en' ? "/50 chars" : "/50 ký tự")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={waterCodeRef}
+                        type="text"
+                        maxLength={50}
+                        value={waterForm.sampleCode}
+                        disabled={waterModalMode === 'view'}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setWaterForm((prev) => ({
+                            ...prev,
+                            sampleCode: value,
+                          }));
+
+                          setWaterErrors((prev) => {
+                            const updated = { ...prev };
+
+                            // Validate assessed date
+                            if (!value.trim()) {
+                              updated.sampleCode = lang === 'en'
+                                ? 'Water sample code is required.'
+                                : 'Vui lòng nhập mã mẫu đất.'
+                            } else if (value.trim().length > 50) {
+                              updated.sampleCode =
+                                lang === 'en'
+                                  ? 'Sample code cannot exceed 50 characters.'
+                                  : 'Mã mẫu nước không được vượt quá 50 ký tự.';
+                            } else {
+                              delete updated.sampleCode;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {waterErrors.sampleCode && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {waterErrors.sampleCode}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <div className="structured-field-header">
+                    <span className="structured-field-label">
+                      {(lang === 'en' ? "Irrigation water source" : "Nguồn nước tưới")} <span style={{ color: '#dc2626' }}>*</span>
+                    </span>
+                    <span className="structured-field-badge">{waterForm.waterSource.length}{(lang === 'en' ? "/150 characters" : "/150 ký tự")}</span>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <input
+                      ref={waterSourceRef}
+                      type="text"
+                      maxLength={150}
+                      value={waterForm.waterSource}
+                      disabled={waterModalMode === 'view'}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        setWaterForm((prev) => ({
+                          ...prev,
+                          laboratoryName: value,
+                        }));
+
+                        setWaterErrors((prev) => {
+                          const updated = { ...prev };
+
+                          if (!value.trim()) {
+                            updated.waterSource =
+                              lang === 'en'
+                                ? 'Irrigation water source is required.'
+                                : 'Vui lòng nhập nguồn nước tưới.';
+                          } else if (value.trim().length > 150) {
+                            updated.waterSource =
+                              lang === 'en'
+                                ? 'Water source cannot exceed 150 characters.'
+                                : 'Nguồn nước không được vượt quá 150 ký tự.';
+                          } else {
+                            delete updated.waterSource;
+                          }
+
+                          return updated;
+                        });
+                      }}
+                      required
+                    />
+                    {waterErrors.waterSource && (
+                      <p className="field-error" style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                        {waterErrors.waterSource}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">
+                        {(lang === 'en' ? "Water pH" : "Độ pH nước")} <span style={{ color: '#dc2626' }}>*</span>
+                      </span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={waterPhLevelRef}
+                        type="number"
+                        step="0.1"
+                        min={0}
+                        max={14}
+                        value={waterForm.phLevel}
+                        disabled={waterModalMode === 'view'}
+                        onKeyDown={(e) => {
+                          if (['e', 'E', '+', '-'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setWaterForm((prev) => ({
+                            ...prev,
+                            phLevel: value,
+                          }));
+
+                          setWaterErrors((prev) => {
+                            const updated = { ...prev };
+
+                            if (!value.trim()) {
+                              updated.phLevel =
+                                lang === 'en'
+                                  ? 'Water pH is required.'
+                                  : 'Vui lòng nhập độ pH đất.';
+                            } else if (Number(value) < 0 || Number(value) > 14) {
+                              updated.phLevel =
+                                lang === 'en'
+                                  ? 'Water pH must be between 0 and 14.'
+                                  : 'Độ pH nước phải nằm trong khoảng từ 0 đến 14.';
+                            } else {
+                              delete updated.phLevel;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {waterErrors.phLevel && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {waterErrors.phLevel}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <span className="structured-field-label">
+                        {(lang === 'en' ? "EC (dS/m)" : "Độ dẫn điện EC (dS/m)")} <span style={{ color: '#dc2626' }}>*</span>
+                      </span>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <div className="form-field" style={{ marginBottom: 0 }}>
+                      <input
+                        ref={ecValueRef}
+                        type="number"
+                        step="0.01"
+                        min={0}
+                        value={waterForm.ecValue}
+                        disabled={waterModalMode === 'view'}
+                        onKeyDown={(e) => {
+                          if (['e', 'E', '+', '-'].includes(e.key)) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setWaterForm((prev) => ({
+                            ...prev,
+                            ecValue: value,
+                          }));
+
+                          setWaterErrors((prev) => {
+                            const updated = { ...prev };
+
+                            const ec = Number(value);
+
+                            if (!value.trim()) {
+                              updated.ecValue =
+                                lang === 'en'
+                                  ? 'Electrical conductivity is required.'
+                                  : 'Vui lòng nhập độ dẫn điện EC.';
+                            } else if (!Number.isFinite(ec)) {
+                              updated.ecValue =
+                                lang === 'en'
+                                  ? 'Please enter a valid number.'
+                                  : 'Vui lòng nhập một số hợp lệ.';
+                            } else if (ec < 0) {
+                              updated.ecValue =
+                                lang === 'en'
+                                  ? 'Electrical conductivity cannot be negative.'
+                                  : 'Độ dẫn điện EC không được là số âm.';
+                            } else {
+                              delete updated.ecValue;
+                            }
+
+                            return updated;
+                          });
+                        }}
+                        required
+                      />
+                      {waterErrors.ecValue && (
+                        <p className="field-error" style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                          {waterErrors.ecValue}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <div className="structured-field-header">
+                    <span className="structured-field-label">{(lang === 'en' ? "Treatment & Water Filtration" : "Biện pháp xử lý & Lọc nước")}</span>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                  </div>
+                  <div className="form-field" style={{ marginBottom: 0 }}>
+                    <textarea
+                      rows={2}
+                      value={waterForm.treatmentMeasure}
+                      disabled={waterModalMode === 'view'}
+                      onChange={(e) => setWaterForm({ ...waterForm, treatmentMeasure: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+                  <button type="button" className="ghost-button" onClick={() => {
+                    setWaterModalMode(null)
+                    setWaterErrors({})
+                  }}>
+                    {(lang === 'en' ? waterModalMode === 'view' ? "Close" : "Cancel" : waterModalMode === 'view' ? 'Đóng' : 'Hủy')}
+                  </button>
+                  {waterModalMode !== 'view' && (
+                    <button type="submit" className="primary-button">
+                      {(lang === 'en' ? "Save assessment" : "Lưu đánh giá")}
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <ConfirmDialog
         open={Boolean(soilToDelete)}
@@ -2373,6 +3800,6 @@ export function BlockDetailPage() {
         onClose={() => setIsDeleteBlockOpen(false)}
         onConfirm={handleConfirmDeleteBlock}
       />
-    </section>
+    </section >
   );
 }

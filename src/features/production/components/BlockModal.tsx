@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Block, BlockFormValues, Zone } from '../types';
 import { createBlock, updateBlock } from '../zoneBlockService';
 import { FarmGoongMap } from '../../farm-management/components/FarmGoongMap';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
+import { AlertCircle } from 'lucide-react';
 
 interface BlockModalProps {
   isOpen: boolean;
@@ -12,6 +13,7 @@ interface BlockModalProps {
   availableZones?: Zone[];
   lockZone?: boolean;
   initialBlock?: Block | null;
+  blocks?: Block[];
   onClose: () => void;
   onSuccess: (savedBlock: Block) => void;
 }
@@ -24,6 +26,7 @@ export function BlockModal({
   availableZones = [],
   lockZone = false,
   initialBlock,
+  blocks = [],
   onClose,
   onSuccess,
 }: BlockModalProps) {
@@ -42,11 +45,20 @@ export function BlockModal({
   });
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    blockName?: string;
+    areaValue?: string;
+  }>({});
+
+  const blockNameRef = useRef<HTMLInputElement>(null);
+  const areaValueRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedZoneId(initialBlock?.zoneId || zoneId || availableZones[0]?.zoneId || 1);
+      setSelectedZoneId(
+        initialBlock?.zoneId || zoneId || availableZones[0]?.zoneId || 1
+      );
+
       if (mode === 'edit' && initialBlock) {
         setValues({
           blockName: initialBlock.blockName || '',
@@ -55,8 +67,12 @@ export function BlockModal({
           soilType: initialBlock.soilType || '',
           description: initialBlock.description || '',
           imageUrl: initialBlock.imageUrl || '',
-          latitude: initialBlock.latitude != null ? String(initialBlock.latitude) : '',
-          longitude: initialBlock.longitude != null ? String(initialBlock.longitude) : '',
+          latitude: initialBlock.latitude != null
+            ? String(initialBlock.latitude)
+            : '',
+          longitude: initialBlock.longitude != null
+            ? String(initialBlock.longitude)
+            : '',
           status: initialBlock.status || 'AVAILABLE',
         });
       } else {
@@ -72,9 +88,10 @@ export function BlockModal({
           status: 'AVAILABLE',
         });
       }
-      setError(null);
+
+      setError({});
     }
-  }, [isOpen, mode, initialBlock, zoneId, availableZones]);
+  }, [isOpen, mode, initialBlock, zoneId]);
 
   if (!isOpen) return null;
 
@@ -90,38 +107,116 @@ export function BlockModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedBlockName = values.blockName.trim();
+
+    const trimmedBlockName = values.blockName.trim().toLowerCase();
     if (!trimmedBlockName) {
-      setError((lang === 'en' ? "Enter a production block name." : 'Vui lòng nhập tên Lô sản xuất (Block Name).'));
-      return;
-    }
-    const areaNum = parseFloat(values.areaValue);
-    if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
-      setError((lang === 'en' ? "Block area must be greater than 0." : 'Area Block (Area) phải lớn hơn 0.'));
+      setError(prev => ({ ...prev, blockName: lang === 'en' ? "Enter a production block name." : 'Vui lòng nhập tên Lô sản xuất (Block Name).' }));
+      blockNameRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      blockNameRef.current?.focus();
       return;
     }
 
-    const targetZone = availableZones.find((z) => z.zoneId === selectedZoneId);
-    if (targetZone?.blocks && targetZone.blocks.length > 0) {
-      const isDuplicate = targetZone.blocks.some(
-        (b) =>
-          b.blockName.trim().toLowerCase() === trimmedBlockName.toLowerCase() &&
-          (mode === 'create' || b.blockId !== initialBlock?.blockId)
-      );
-      if (isDuplicate) {
-        setError((lang === 'en' ? `Block name "${trimmedBlockName}" already exists in zone "${targetZone.zoneName}". Choose another name.` : `Tên lô / thửa đất "${trimmedBlockName}" đã tồn tại trong khu vực "${targetZone.zoneName}". Vui lòng đặt tên khác.`));
-        return;
-      }
+    const targetZoneBlocks = blocks.filter(
+      (block) => block.zoneId === selectedZoneId
+    );
+    console.log('name', trimmedBlockName);
+    console.log('targetZoneBlocks', targetZoneBlocks);
+    const isDuplicate = targetZoneBlocks.some(
+      (block) =>
+        block.blockName.trim().toLowerCase() === trimmedBlockName &&
+        (mode === 'create' || block.blockId !== initialBlock?.blockId)
+    );
+
+    if (isDuplicate) {
+      setError((prev) => ({
+        ...prev,
+        blockName: lang === 'en'
+          ? 'A Block with this name already exists in this Zone.'
+          : 'Tên Block này đã tồn tại trong Zone.',
+      }));
+      blockNameRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      blockNameRef.current?.focus();
+      return;
     }
-    if (targetZone && targetZone.areaValue && areaNum > targetZone.areaValue) {
-      setError(
-        (lang === 'en' ? `Block area (${areaNum} ${values.areaUnit}) must not exceed the zone area ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).` : `Diện tích Block (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`)
-      );
+
+    const areaNum = parseFloat(values.areaValue);
+    if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
+      setError(prev => ({ ...prev, areaValue: lang === 'en' ? "Block area must be a valid positive number (> 0)." : 'Diện tích lô sản xuất (Area) phải là số dương hợp lệ (> 0).' }));
+      areaValueRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      areaValueRef.current?.focus();
+      return;
+    }
+
+    const otherBlocksArea = targetZoneBlocks
+      .filter(
+        (block) =>
+          mode === 'create' || block.blockId !== initialBlock?.blockId
+      )
+      .reduce((total, block) => {
+        const areaInM2 =
+          block.areaUnit === 'ha'
+            ? block.areaValue * 10000
+            : block.areaValue;
+
+        return total + areaInM2;
+      }, 0);
+
+    const newBlockAreaM2 =
+      values.areaUnit === 'ha'
+        ? areaNum * 10000
+        : areaNum;
+
+    const targetZone = availableZones.find(
+      (zone) => zone.zoneId === selectedZoneId
+    );
+
+    if (!targetZone) {
+      return;
+    }
+
+    const zoneAreaM2 = targetZone
+      ? targetZone.areaUnit === 'ha'
+        ? targetZone.areaValue * 10000
+        : targetZone.areaValue
+      : 0;
+
+    if (otherBlocksArea + newBlockAreaM2 > zoneAreaM2) {
+      const remainingAreaM2 = zoneAreaM2 - otherBlocksArea;
+
+      const displayRemainingArea =
+        values.areaUnit === 'ha'
+          ? remainingAreaM2 / 10000
+          : remainingAreaM2;
+
+      const displayUnit = values.areaUnit === 'ha' ? 'ha' : 'm²';
+
+      setError((prev) => ({
+        ...prev,
+        areaValue: lang === 'en'
+          ? `The Block area cannot exceed the remaining available area (${displayRemainingArea.toFixed(2)} ${displayUnit}).`
+          : `Diện tích Block không được vượt quá diện tích còn lại (${displayRemainingArea.toFixed(2)} ${displayUnit}).`,
+      }));
+
+      areaValueRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+
+      areaValueRef.current?.focus();
       return;
     }
 
     setLoading(true);
-    setError(null);
+    setError({});
 
     try {
       let saved: Block;
@@ -134,7 +229,7 @@ export function BlockModal({
       onSuccess(saved);
       onClose();
     } catch (err) {
-      setError((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Block information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Block.'));
+      setError(prev => ({ ...prev, areaValue: lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to save Block information." : err instanceof Error ? err.message : 'Có lỗi xảy ra khi lưu thông tin Block.' }));
     } finally {
       setLoading(false);
     }
@@ -156,9 +251,30 @@ export function BlockModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
-
-          {/* Parent Zone Field */}
+          {Object.keys(error).length > 0 && (
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <AlertCircle size={18} />
+              <span>
+                {mode === 'create'
+                  ? (lang === 'en'
+                    ? 'Please correct the errors before adding.'
+                    : 'Vui lòng sửa các lỗi trước khi thêm.')
+                  : (lang === 'en'
+                    ? 'Please correct the errors before saving changes.'
+                    : 'Vui lòng sửa các lỗi trước khi lưu thay đổi.')}
+              </span>
+            </div>
+          )}
           <div
             className="structured-field-card"
             style={{
@@ -209,14 +325,39 @@ export function BlockModal({
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input
+                ref={blockNameRef}
                 id="block-name-input"
                 type="text"
                 maxLength={100}
                 placeholder={lang === 'en' ? 'e.g. Block B01 - Cabbage cultivation block' : 'VD: Lô B01 - Lô sản xuất rau cải'}
                 value={values.blockName}
-                onChange={(e) => setValues({ ...values, blockName: e.target.value })}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setValues(p => ({ ...p, blockName: value }));
+
+                  setError(prev => {
+                    const updated = { ...prev };
+                    if (!value.trim()) {
+                      updated.blockName = lang === 'en'
+                        ? 'Please enter a block name.'
+                        : 'Vui lòng nhập tên lô sản xuất.';
+                    } else {
+                      delete updated.blockName;
+                    }
+                    return updated;
+                  });
+                }}
                 required
               />
+              {error.blockName && (
+                <p style={{
+                  color: '#dc2626',
+                  fontSize: '12px',
+                  margin: '5px 0 0'
+                }}>
+                  {error.blockName}
+                </p>
+              )}
             </div>
           </div>
 
@@ -231,15 +372,44 @@ export function BlockModal({
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input
+                  ref={areaValueRef}
                   id="block-area-input"
                   type="number"
                   step="0.01"
                   min="0.01"
                   placeholder={(lang === 'en' ? "e.g. 500" : "VD: 500")}
                   value={values.areaValue}
-                  onChange={(e) => setValues({ ...values, areaValue: e.target.value })}
+                  onChange={(e) => {
+                    const newValue = e.target.value;
+                    const newAreaNum = parseFloat(newValue);
+
+                    setValues(p => ({ ...p, areaValue: newValue }));
+
+                    setError(prev => {
+                      const updated = { ...prev };
+
+                      if (!newValue || isNaN(newAreaNum) || newAreaNum <= 0) {
+                        updated.areaValue = lang === 'en'
+                          ? 'Block area must be a valid positive number (> 0).'
+                          : 'Diện tích lô sản xuất phải là số dương hợp lệ (> 0).';
+                      } else {
+                        delete updated.areaValue;
+                      }
+
+                      return updated;
+                    });
+                  }}
                   required
                 />
+                {error && (
+                  <p style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    margin: '5px 0 0'
+                  }}>
+                    {error.areaValue}
+                  </p>
+                )}
               </div>
             </div>
 

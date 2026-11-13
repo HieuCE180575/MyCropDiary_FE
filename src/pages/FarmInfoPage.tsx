@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useFarmWorkspace } from '../features/farm-management/FarmWorkspace';
 import { farmRole } from '../features/auth/accessPolicy';
@@ -22,6 +22,7 @@ import {
 import { FarmGoongMap } from '../features/farm-management/components/FarmGoongMap';
 import { useRealtimeSync } from '../shared/realtime/realtimeSync';
 import { useLanguage } from '../shared/i18n/LanguageContext';
+import { AlertCircle } from 'lucide-react';
 
 export function FarmInfoPage() {
   const { lang, t: translate } = useLanguage();
@@ -58,6 +59,26 @@ export function FarmInfoPage() {
   const [createLng, setCreateLng] = useState<number | null>(null);
   const [createBoundary, setCreateBoundary] = useState<LatLngPoint[]>([]);
   const [creatingFarm, setCreatingFarm] = useState(false);
+
+  const [errors, setErrors] = useState<{
+    name?: string;
+    address?: string;
+    description?: string;
+    email?: string;
+  }>({});
+  const farmNameRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+
+  const [createFarmErrors, setCreateFarmErrors] = useState<{
+    name?: string;
+    address?: string;
+    description?: string;
+  }>({});
+
+  const createFarmNameRef = useRef<HTMLInputElement>(null);
+  const createFarmAddressRef = useRef<HTMLInputElement>(null);
+  const createFarmDescriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : false;
 
@@ -137,14 +158,159 @@ export function FarmInfoPage() {
         }
         setMembers(memberList);
       })
-      .catch(() => {});
+      .catch(() => { });
   });
+
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
+
+    if (!editName.trim()) {
+      newErrors.name = lang === 'en'
+        ? 'Farm name is required.'
+        : 'Vui lòng nhập tên trang trại.';
+    }
+
+    if (!editAddress.trim()) {
+      newErrors.address = lang === 'en'
+        ? 'Address is required.'
+        : 'Vui lòng nhập địa chỉ.';
+    }
+
+    if (editDesc.length > 500) {
+      newErrors.description = lang === 'en'
+        ? 'Description must not exceed 500 characters.'
+        : 'Mô tả không được vượt quá 500 ký tự.';
+    }
+
+    setErrors(newErrors);
+
+    return newErrors;
+  };
+
+  const validateAddMemberForm = () => {
+    const newErrors: typeof errors = {};
+
+    if (!newMemberEmail.trim()) {
+      newErrors.email = lang === 'en'
+        ? 'Account email is required.'
+        : 'Vui lòng nhập email tài khoản.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newMemberEmail.trim())) {
+      newErrors.email = lang === 'en'
+        ? 'Please enter a valid email address.'
+        : 'Vui lòng nhập địa chỉ email hợp lệ.';
+    }
+
+    setErrors(newErrors);
+    return newErrors;
+  };
+
+  const validateCreateFarmForm = () => {
+    const newErrors: typeof createFarmErrors = {};
+
+    if (!createFarmName.trim()) {
+      newErrors.name = lang === 'en'
+        ? 'Farm name is required.'
+        : 'Vui lòng nhập tên trang trại.';
+    }
+
+    if (!createFarmAddress.trim()) {
+      newErrors.address = lang === 'en'
+        ? 'Address is required.'
+        : 'Vui lòng nhập địa chỉ.';
+    }
+
+    if (createFarmDesc.length > 500) {
+      newErrors.description = lang === 'en'
+        ? 'Description must not exceed 500 characters.'
+        : 'Mô tả không được vượt quá 500 ký tự.';
+    }
+
+    setCreateFarmErrors(newErrors);
+    return newErrors;
+  };
+
+
+  const handleOpenEditFarm = () => {
+    setErrors({});
+    setIsEditOpen(true);
+  };
+
+  const handleCancelEdit = () => {
+    // Reset form fields to original farm information
+    setEditName(farmDetail?.farmName || '');
+    setEditAddress(farmDetail?.address || '');
+    setEditDesc(farmDetail?.description || '');
+    setEditLat(farmDetail?.latitude ?? null);
+    setEditLng(farmDetail?.longitude ?? null);
+    setEditBoundary(farmDetail?.boundaryCoordinates ? parseBoundaryCoordinates(farmDetail.boundaryCoordinates) : []);
+
+    // Clear validation errors
+    setErrors({});
+
+    // Close modal
+    setIsEditOpen(false);
+  };
+
+  const handleCancelAddMember = () => {
+    setNewMemberEmail('');
+    setNewMemberRole('STAFF');
+    setErrors({});
+    setIsAddMemberOpen(false);
+  };
+
+  const handleOpenCreateFarm = () => {
+    setCreateFarmErrors({});
+    setIsCreateFarmOpen(true);
+  };
+
+  const handleCancelCreateFarm = () => {
+    setCreateFarmName('');
+    setCreateFarmAddress('');
+    setCreateFarmDesc('');
+    setCreateLat(null);
+    setCreateLng(null);
+    setCreateFarmErrors({});
+    setEditBoundary(farmDetail?.boundaryCoordinates ? parseBoundaryCoordinates(farmDetail.boundaryCoordinates) : []);
+
+    setIsCreateFarmOpen(false);
+  };
 
   const handleUpdateFarm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFarm?.id) return;
-    setUpdating(true);
     setActionMsg(null);
+
+    const validationErrors = validateForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      // Find the first invalid field in form order
+      if (validationErrors.name) {
+        farmNameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        farmNameRef.current?.focus();
+      }
+      else if (validationErrors.address) {
+        addressRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        addressRef.current?.focus();
+      }
+      else if (validationErrors.description) {
+        descriptionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        descriptionRef.current?.focus();
+      }
+
+      return;
+    }
+
+    setUpdating(true);
+
     try {
       const updated = await updateFarm(selectedFarm.id, {
         farmName: editName.trim(),
@@ -168,6 +334,13 @@ export function FarmInfoPage() {
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedFarm?.id || !newMemberEmail.trim()) return;
+
+    const validationErrors = validateAddMemberForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
     setAddingMember(true);
     setActionMsg(null);
     try {
@@ -200,9 +373,31 @@ export function FarmInfoPage() {
 
   const handleCreateFarm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createFarmName.trim()) return;
-    setCreatingFarm(true);
+    if (!selectedFarm?.id) return;
     setActionMsg(null);
+
+    const validationErrors = validateCreateFarmForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      if (validationErrors.name) {
+        createFarmNameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        createFarmNameRef.current?.focus();
+      } else if (validationErrors.description) {
+        createFarmDescriptionRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        createFarmDescriptionRef.current?.focus();
+      }
+
+      return;
+    }
+
+    setCreatingFarm(true);
+
     try {
       const newFarm = await createFarm({
         farmName: createFarmName.trim(),
@@ -241,20 +436,31 @@ export function FarmInfoPage() {
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
           {selectedFarm && isOwner && (
-            <button type="button" className="primary-button" onClick={() => setIsEditOpen(true)}>
+            <button type="button" className="primary-button" onClick={() => handleOpenEditFarm()}>
               <Icon name="check" /> {lang === 'en' ? 'Edit Farm & Map' : 'Chỉnh sửa trang trại & Bản đồ'}
             </button>
           )}
-          <button type="button" className="action-button" onClick={() => setIsCreateFarmOpen(true)}>
+          <button type="button" className="action-button" onClick={() => handleOpenCreateFarm()}>
             <Icon name="plus" /> {lang === 'en' ? 'Add New Farm' : 'Thêm trang trại mới'}
           </button>
         </div>
       </div>
 
       {actionMsg && (
-        <div className={`notification-popover ${actionMsg.type === 'error' ? 'form-error-banner' : ''}`} style={{ marginBottom: '16px', position: 'static' }}>
+        <div
+          className={actionMsg.type === 'error' ? 'form-error-banner' : 'status-note'}
+          style={{ marginBottom: '16px', position: 'static' }}
+        >
           <strong>{(lang === 'en' ? actionMsg.type === 'success' ? "✓ Success" : "⚠️ Notice" : actionMsg.type === 'success' ? '✓ Thành công' : '⚠️ Thông báo')}:</strong> {translate(actionMsg.text)}
+          <button
+            type="button"
+            onClick={() => setActionMsg(null)}
+            style={{ float: 'right', border: 0, background: 'transparent', cursor: 'pointer', fontWeight: 700 }}
+          >
+            ✕
+          </button>
         </div>
+
       )}
 
       {!selectedFarm ? (
@@ -286,7 +492,7 @@ export function FarmInfoPage() {
             </div>
           ) : (
             <div style={{ marginTop: '20px', display: 'flex', gap: '12px' }}>
-              <button type="button" className="primary-button" onClick={() => setIsCreateFarmOpen(true)}>
+              <button type="button" className="primary-button" onClick={() => handleOpenCreateFarm()}>
                 {lang === 'en' ? '+ Create Farm Now' : '+ Tạo trang trại ngay'}
               </button>
               <Link to="/farm-registration" className="action-button">
@@ -447,19 +653,120 @@ export function FarmInfoPage() {
         </div>
       ) : null}
 
+
       {/* Edit Farm Modal */}
       {isEditOpen && (
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
           <div className="panel" role="dialog" aria-modal="true" aria-label={(lang === 'en' ? "Edit farm information" : "Chỉnh sửa thông tin trang trại")} style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>{lang === 'en' ? 'Edit Farm Information & Map' : 'Chỉnh sửa thông tin & Bản đồ trang trại'}</h2>
+            {Object.keys(errors).length > 0 && (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                color: '#b91c1c',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <AlertCircle size={18} />
+
+                {lang === 'en'
+                  ? 'Please correct the errors before saving.'
+                  : 'Vui lòng sửa các lỗi trước khi lưu.'}
+              </div>
+            )}
             <form onSubmit={handleUpdateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Farm Name' : 'Tên trang trại'}</label>
-                <input type="text" required value={editName} onChange={(e) => setEditName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <label>
+                  {lang === 'en' ? 'Farm Name' : 'Tên trang trại'}
+                </label>
+
+                <input
+                  ref={farmNameRef}
+                  type="text"
+                  value={editName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditName(value);
+
+                    setErrors(prev => {
+                      const updated = { ...prev };
+
+                      if (!value.trim()) {
+                        updated.name = lang === 'en'
+                          ? 'Farm name is required.'
+                          : 'Vui lòng nhập tên trang trại.';
+                      } else {
+                        delete updated.name;
+                      }
+
+                      return updated;
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: errors.name
+                      ? '1px solid #dc2626'
+                      : '1px solid #cbd5e1',
+                    fontSize: '14px'
+                  }}
+                />
+
+                {errors.name && (
+                  <p style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                    {errors.name}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Address' : 'Địa chỉ'}</label>
-                <input type="text" value={editAddress} onChange={(e) => setEditAddress(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <input
+                  ref={addressRef}
+                  type="text"
+                  value={editAddress}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditAddress(value);
+
+                    setErrors(prev => {
+                      const updated = { ...prev };
+
+                      if (!value.trim()) {
+                        updated.address = lang === 'en'
+                          ? 'Address is required.'
+                          : 'Vui lòng nhập địa chỉ.';
+                      } else {
+                        delete updated.address;
+                      }
+
+                      return updated;
+                    });
+                  }}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '8px', border: errors.address
+                      ? '1px solid #dc2626'
+                      : '1px solid #cbd5e1', fontSize: '14px'
+                  }} />
+                {errors.address && (
+                  <p style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                    {errors.address}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Location Map & Boundary Layout' : 'Bản đồ tọa độ & Vẽ ranh giới trang trại'}</label>
@@ -483,10 +790,45 @@ export function FarmInfoPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Scale Description / Overview' : 'Mô tả quy mô / Giới thiệu'}</label>
-                <textarea rows={3} value={editDesc} onChange={(e) => setEditDesc(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <textarea
+                  ref={descriptionRef}
+                  rows={3} value={editDesc}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEditDesc(value);
+
+                    setErrors(prev => {
+                      const updated = { ...prev };
+
+                      if (value.length > 500) {
+                        updated.description = lang === 'en'
+                          ? 'Description must not exceed 500 characters.'
+                          : 'Mô tả không được vượt quá 500 ký tự.';
+                      } else {
+                        delete updated.description;
+                      }
+
+                      return updated;
+                    });
+                  }}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '8px', border: errors.description
+                      ? '1px solid #dc2626'
+                      : '1px solid #cbd5e1', fontSize: '14px'
+                  }} />
+                {errors.description && (
+                  <p style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                    {errors.description}
+                  </p>
+                )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button type="button" className="action-button" onClick={() => setIsEditOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</button>
+                <button type="button" className="action-button" onClick={handleCancelEdit}>{lang === 'en' ? 'Cancel' : 'Hủy'}</button>
                 <button type="submit" className="primary-button" disabled={updating}>
                   {updating ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
                 </button>
@@ -501,10 +843,74 @@ export function FarmInfoPage() {
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px' }}>
           <div className="panel" style={{ width: '100%', maxWidth: '460px', borderRadius: '16px', padding: '28px' }}>
             <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>{lang === 'en' ? 'Add Member' : 'Thêm thành viên'} {(lang === 'en' ? " new" : " mới")}</h2>
+            {Object.keys(errors).length > 0 && (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                color: '#b91c1c',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <AlertCircle size={18} />
+                {lang === 'en'
+                  ? 'Please correct the errors before adding the member.'
+                  : 'Vui lòng sửa các lỗi trước khi thêm thành viên.'}
+              </div>
+            )}
             <form onSubmit={handleAddMember} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Account Email' : 'Email tài khoản'}</label>
-                <input type="email" required placeholder="nhanvien@example.com" value={newMemberEmail} onChange={(e) => setNewMemberEmail(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <input
+                  type="email"
+                  placeholder="nhanvien@example.com"
+                  value={newMemberEmail}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNewMemberEmail(value);
+
+                    setErrors(prev => {
+                      const updated = { ...prev };
+
+                      if (!value.trim()) {
+                        updated.email = lang === 'en'
+                          ? 'Account email is required.'
+                          : 'Vui lòng nhập email tài khoản.';
+                      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+                        updated.email = lang === 'en'
+                          ? 'Please enter a valid email address.'
+                          : 'Vui lòng nhập địa chỉ email hợp lệ.';
+                      } else {
+                        delete updated.email;
+                      }
+
+                      return updated;
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: errors.email
+                      ? '1px solid #dc2626'
+                      : '1px solid #cbd5e1',
+                    fontSize: '14px'
+                  }}
+                />
+
+                {errors.email && (
+                  <p style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                    {errors.email}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Farm Role' : 'Vai trò trong trang trại'}</label>
@@ -514,7 +920,7 @@ export function FarmInfoPage() {
                 </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button type="button" className="action-button" onClick={() => setIsAddMemberOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</button>
+                <button type="button" className="action-button" onClick={handleCancelAddMember}>{lang === 'en' ? 'Cancel' : 'Hủy'}</button>
                 <button type="submit" className="primary-button" disabled={addingMember}>
                   {addingMember ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Confirm Add' : 'Xác nhận thêm')}
                 </button>
@@ -529,14 +935,109 @@ export function FarmInfoPage() {
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
           <div className="panel" style={{ width: '100%', maxWidth: '720px', borderRadius: '16px', padding: '28px', maxHeight: '90vh', overflowY: 'auto' }}>
             <h2 style={{ marginTop: 0, fontSize: '20px', color: '#0f172a' }}>{lang === 'en' ? 'Create New Farm Workspace' : 'Tạo không gian trang trại mới'}</h2>
+            {Object.keys(createFarmErrors).length > 0 && (
+              <div style={{
+                padding: '12px 16px',
+                borderRadius: '8px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                color: '#b91c1c',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <AlertCircle size={18} />
+                {lang === 'en'
+                  ? 'Please correct the errors before creating the farm.'
+                  : 'Vui lòng sửa các lỗi trước khi tạo trang trại.'}
+              </div>
+            )}
             <form onSubmit={handleCreateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Farm Name *' : 'Tên trang trại *'}</label>
-                <input type="text" required placeholder={(lang === 'en' ? "Example: An Nhien Organic Farm" : "Ví dụ: Nông trại Hữu cơ An Nhiên")} value={createFarmName} onChange={(e) => setCreateFarmName(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <input
+                  ref={createFarmNameRef}
+                  type="text"
+                  placeholder={lang === 'en'
+                    ? 'Example: An Nhien Organic Farm'
+                    : 'Ví dụ: Nông trại Hữu cơ An Nhiên'}
+                  value={createFarmName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCreateFarmName(value);
+
+                    setCreateFarmErrors(prev => {
+                      const created = { ...prev };
+
+                      if (!value.trim()) {
+                        created.name = lang === 'en'
+                          ? 'Farm name is required.'
+                          : 'Vui lòng nhập tên trang trại.';
+                      } else {
+                        delete created.name;
+                      }
+
+                      return created;
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: createFarmErrors.name
+                      ? '1px solid #dc2626'
+                      : '1px solid #cbd5e1',
+                    fontSize: '14px'
+                  }}
+                />
+
+                {createFarmErrors.name && (
+                  <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '5px', marginBottom: 0 }}>
+                    {createFarmErrors.name}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Address' : 'Địa chỉ'}</label>
-                <input type="text" placeholder={(lang === 'en' ? "Commune / District / Province..." : "Xã/Huyện/Tỉnh...")} value={createFarmAddress} onChange={(e) => setCreateFarmAddress(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <input
+                  placeholder={(lang === 'en' ? "Commune / District / Province..." : "Xã/Huyện/Tỉnh...")}
+                  ref={addressRef}
+                  type="text"
+                  value={createFarmAddress}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCreateFarmAddress(value);
+
+                    setCreateFarmErrors(prev => {
+                      const created = { ...prev };
+
+                      if (!value.trim()) {
+                        created.address = lang === 'en'
+                          ? 'Address is required.'
+                          : 'Vui lòng nhập địa chỉ.';
+                      } else {
+                        delete created.address;
+                      }
+
+                      return created;
+                    });
+                  }}
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: '8px', border: createFarmErrors.address
+                      ? '1px solid #dc2626'
+                      : '1px solid #cbd5e1', fontSize: '14px'
+                  }} />
+                {createFarmErrors.address && (
+                  <p style={{
+                    color: '#dc2626',
+                    fontSize: '12px',
+                    marginTop: '5px',
+                    marginBottom: 0
+                  }}>
+                    {createFarmErrors.address}
+                  </p>
+                )}
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Location & Farm Boundary Plan' : 'Vẽ vị trí & Sơ đồ ranh giới trang trại'}</label>
@@ -560,10 +1061,52 @@ export function FarmInfoPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: '#334155' }}>{lang === 'en' ? 'Scale & Description' : 'Mô tả quy mô'}</label>
-                <textarea rows={3} placeholder={(lang === 'en' ? "Describe crop types and planned area..." : "Mô tả các loại cây trồng và diện tích dự kiến...")} value={createFarmDesc} onChange={(e) => setCreateFarmDesc(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px' }} />
+                <textarea
+                  ref={createFarmDescriptionRef}
+                  rows={3}
+                  placeholder={lang === 'en'
+                    ? 'Describe crop types and planned area...'
+                    : 'Mô tả các loại cây trồng và diện tích dự kiến...'}
+                  value={createFarmDesc}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setCreateFarmDesc(value);
+
+                    setCreateFarmErrors(prev => {
+                      const created = { ...prev };
+
+                      if (value.length > 500) {
+                        created.description = lang === 'en'
+                          ? 'Description must not exceed 500 characters.'
+                          : 'Mô tả không được vượt quá 500 ký tự.';
+                      } else {
+                        delete created.description;
+                      }
+
+                      return created;
+                    });
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: createFarmErrors.description
+                      ? '1px solid #dc2626'
+                      : '1px solid #cbd5e1',
+                    fontSize: '14px'
+                  }}
+                />
+
+                {createFarmErrors.description && (
+                  <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '5px', marginBottom: 0 }}>
+                    {createFarmErrors.description}
+                  </p>
+                )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button type="button" className="action-button" onClick={() => setIsCreateFarmOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</button>
+                <button type="button" className="action-button" onClick={handleCancelCreateFarm}>
+                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                </button>
                 <button type="submit" className="primary-button" disabled={creatingFarm}>
                   {creatingFarm ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Create Farm' : 'Tạo trang trại')}
                 </button>

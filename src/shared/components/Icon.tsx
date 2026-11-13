@@ -7,7 +7,7 @@ import {
   Phone, Check, Award, Sparkles, Star, TrendingUp, Sprout, ExternalLink, FileText,
   Sun, Moon, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2,
   Activity, Layers, Zap, Database, Building2, Trash2, Weight, FlaskConical, Grip, Users, Gauge, MapPin, Bug, Thermometer, ArrowUp,
-  Target, Telescope, Settings, CirclePlay, Cloud,
+  Target, Telescope, Settings, CirclePlay, Cloud, ChevronUp,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -30,7 +30,7 @@ const icons: Record<string, LucideIcon> = {
   filter: SlidersHorizontal, expand: Maximize2,
   activity: Activity, layers: Layers, zap: Zap, database: Database, building: Building2, trash: Trash2,
   weight: Weight, flask: FlaskConical, granules: Grip, help: CircleHelp,
-  users: Users, gauge: Gauge, 'map-pin': MapPin, bug: Bug, thermometer: Thermometer, 'arrow-up': ArrowUp,
+  users: Users, gauge: Gauge, 'map-pin': MapPin, bug: Bug, thermometer: Thermometer, 'arrow-up': ArrowUp, 'chevron-up': ChevronUp, 'chevron-down': ChevronDown
 };
 
 export function Icon({ name, className, ...props }: LucideProps & { name: string }) {

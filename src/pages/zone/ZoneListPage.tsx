@@ -211,6 +211,21 @@ export function ZoneListPage() {
   const activeZonesCount = zones.filter((z) => (z.status || 'active').toLowerCase() === 'active').length;
   const statsReady = !loading && !error;
 
+  const totalBlockAreaM2 = blocks.reduce(
+    (sum, block) => {
+      const area = Number(block.areaValue) || 0;
+
+      return sum + (
+        block.areaUnit === 'ha'
+          ? area * 10000
+          : area
+      );
+    },
+    0
+  );
+
+  const totalBlockAreaHa = totalBlockAreaM2 / 10000;
+
   const handleResetZoneFilters = () => {
     setZoneKeyword('');
     setAssignedStaffFilter('all');
@@ -923,6 +938,8 @@ export function ZoneListPage() {
         farmName={farmName}
         initialZone={zoneToEdit}
         existingZones={zones}
+        totalBlockAreaM2={totalBlockAreaM2}
+        totalBlockAreaHa={totalBlockAreaHa}
         onClose={() => setIsZoneModalOpen(false)}
         onSuccess={(saved) => {
           if (zoneToEdit) {
@@ -943,6 +960,7 @@ export function ZoneListPage() {
         availableZones={visibleZones}
         lockZone={Boolean(blockToEdit)}
         initialBlock={blockToEdit}
+        blocks={blocks}
         onClose={() => setIsBlockModalOpen(false)}
         onSuccess={(saved) => {
           if (blockToEdit) {

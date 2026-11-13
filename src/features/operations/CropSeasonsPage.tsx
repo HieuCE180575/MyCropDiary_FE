@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { farmRole } from '../auth/accessPolicy';
@@ -25,6 +25,7 @@ import { fetchBlocks } from '../production/zoneBlockService';
 import type { Block } from '../production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { AlertCircle } from 'lucide-react';
 
 interface SelectedBlockConfig {
   blockId: number;
@@ -89,6 +90,32 @@ export function CropSeasonsPage() {
   // Delete Season Dialog
   const [seasonToDelete, setSeasonToDelete] = useState<CropSeasonResp | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [seasonErrors, setSeasonErrors] = useState<{
+    seasonName?: string;
+    cropCategory?: string;
+    startDate?: string;
+    endDate?: string;
+    plantedAreas?: Record<number, string>;
+  }>({});
+
+  const seasonNameRef = useRef<HTMLInputElement>(null);
+  const cropCategoryRef = useRef<HTMLDivElement>(null);
+  const startDateRef = useRef<HTMLInputElement>(null);
+  const endDateRef = useRef<HTMLInputElement>(null);
+  const modalRef = useRef<HTMLInputElement>(null);
+
+  const [assignBlockErrors, setAssignBlockErrors] = useState<{
+    blockId?: string;
+    plantedArea?: string;
+    plantedAt?: string;
+    expectedHarvestAt?: string;
+  }>({});
+
+  const blockIdRef = useRef<HTMLSelectElement>(null);
+  const plantedAreaRef = useRef<HTMLDivElement>(null);
+  const plantedAtRef = useRef<HTMLInputElement>(null);
+  const expectedHarvestAtRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void loadData(false);
@@ -311,11 +338,109 @@ export function CropSeasonsPage() {
     return null;
   };
 
+  const validateSeasonForm = () => {
+    const errors: typeof seasonErrors = {};
+
+    // Season name
+    const seasonName = formValues.seasonName.trim();
+
+    if (!seasonName) {
+      errors.seasonName =
+        lang === 'en'
+          ? 'Please enter a season name.'
+          : 'Vui lòng nhập tên mùa vụ.';
+    } else if (seasonName.length > 100) {
+      errors.seasonName =
+        lang === 'en'
+          ? 'Season name cannot exceed 100 characters.'
+          : 'Tên mùa vụ không được vượt quá 100 ký tự.';
+    }
+
+    // Crop category
+    if (!formValues.cropCategoryId) {
+      errors.cropCategory =
+        lang === 'en'
+          ? 'Please select a crop category.'
+          : 'Vui lòng chọn danh mục cây trồng.';
+    }
+
+    // Start date
+    if (!formValues.startDate) {
+      errors.startDate =
+        lang === 'en'
+          ? 'Please select a season start date.'
+          : 'Vui lòng chọn ngày bắt đầu mùa vụ.';
+    }
+
+    // End date
+    if (formValues.endDate && formValues.startDate) {
+      if (formValues.endDate <= formValues.startDate) {
+        errors.endDate =
+          lang === 'en'
+            ? 'Expected end date must be later than the start date.'
+            : 'Ngày kết thúc dự kiến phải sau ngày bắt đầu.';
+      }
+    }
+
+    // Validate planted areas of selected blocks
+    const plantedAreaErrors: Record<number, string> = {};
+
+    Object.entries(selectedBlockConfigs).forEach(([blockId, config]) => {
+      const area = Number(config.plantedArea);
+
+      if (
+        !String(config.plantedArea).trim() ||
+        !Number.isFinite(area) ||
+        area <= 0
+      ) {
+        plantedAreaErrors[Number(blockId)] =
+          lang === 'en'
+            ? 'Planted area must be greater than zero.'
+            : 'Diện tích trồng phải lớn hơn 0.';
+      }
+    });
+
+    if (Object.keys(plantedAreaErrors).length > 0) {
+      errors.plantedAreas = plantedAreaErrors;
+    }
+
+    setSeasonErrors(errors);
+
+    return errors;
+  };
+
   const handleSaveSeason = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedSeasonName = formValues.seasonName.trim();
-    if (!trimmedSeasonName) {
-      setSeasonModalError((lang === 'en' ? "Enter a crop season name." : 'Vui lòng nhập tên mùa vụ canh tác.'));
+    const errors = validateSeasonForm();
+
+    if (Object.keys(errors).length > 0) {
+      if (errors.seasonName) {
+        seasonNameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        seasonNameRef.current?.focus();
+      } else if (errors.cropCategory) {
+        cropCategoryRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        cropCategoryRef.current?.focus();
+      } else if (errors.startDate) {
+        startDateRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        startDateRef.current?.focus();
+      } else if (errors.endDate) {
+        endDateRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        endDateRef.current?.focus();
+      }
+
       return;
     }
 
@@ -327,13 +452,11 @@ export function CropSeasonsPage() {
     );
     if (duplicateSeason) {
       const msg = (lang === 'en' ? `Season Name "${trimmedSeasonName}" already exists in this farm. Choose another name.` : `Season Name "${trimmedSeasonName}" đã tồn tại trong nông trại này. Vui lòng đặt tên khác.`);
-      setSeasonModalError(msg);
-      showToast(msg, 'error');
-      return;
-    }
-
-    if (formValues.endDate && formValues.endDate < formValues.startDate) {
-      const msg = (lang === 'en' ? `Season end date (${formValues.endDate}) cannot be before the start date (${formValues.startDate}).` : `End Date mùa vụ (${formValues.endDate}) không thể trước ngày bắt đầu (${formValues.startDate}).`);
+      seasonNameRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      seasonNameRef.current?.focus();
       setSeasonModalError(msg);
       showToast(msg, 'error');
       return;
@@ -344,11 +467,24 @@ export function CropSeasonsPage() {
 
     for (const cfg of chosenConfigs) {
       const blk = allFarmBlocks.find((b) => b.blockId === cfg.blockId);
-      const plantedAreaNum = parseFloat(cfg.plantedArea) || 0;
+      const plantedAreaNum = Number(cfg.plantedArea);
+
+      if (
+        !Number.isFinite(plantedAreaNum) ||
+        plantedAreaNum <= 0
+      ) {
+        continue; // Already handled by the validation above
+      }
+
       if (blk && blk.areaValue && plantedAreaNum > blk.areaValue) {
         const msg = (lang === 'en' ? `Block "${blk.blockName}": planted area (${plantedAreaNum} ${cfg.areaUnit}) exceeds the block's actual area (${blk.areaValue} ${(blk.areaUnit || "m²")}).` : `Lô "${blk.blockName}": Diện tích trồng (${plantedAreaNum} ${cfg.areaUnit}) vượt quá diện tích thực tế của lô đất (${blk.areaValue} ${blk.areaUnit || 'm²'}).`);
         setSeasonModalError(msg);
         showToast(msg, 'error');
+        modalRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        modalRef.current?.focus();
         return;
       }
 
@@ -362,6 +498,11 @@ export function CropSeasonsPage() {
         const msg = (lang === 'en' ? `Block "${(blk?.blockName || '#' + cfg.blockId)}" is already scheduled in season "${conflict.seasonName}" (${conflict.startDate} → ${(conflict.endDate || "Current")}). Overlapping allocations are not allowed!` : `Lô "${blk?.blockName || '#' + cfg.blockId}" đang có lịch canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Không thể phân bổ trùng thời gian!`);
         setSeasonModalError(msg);
         showToast(msg, 'error');
+        modalRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        modalRef.current?.focus();
         return;
       }
     }
@@ -497,33 +638,105 @@ export function CropSeasonsPage() {
     e.preventDefault();
     if (!selectedSeason || !assignBlockForm.blockId) return;
 
+    const errors: typeof assignBlockErrors = {};
+
+    const selectedBlock = allFarmBlocks.find(
+      b => b.blockId === Number(assignBlockForm.blockId)
+    );
+
+    // Validate selected Block
+    if (!selectedBlock) {
+      errors.blockId = lang === 'en'
+        ? 'Please select a production block.'
+        : 'Vui lòng chọn lô sản xuất.';
+    }
+
+    // Validate planted area
+    const plantedArea = Number(assignBlockForm.plantedArea);
+
+    if (!assignBlockForm.plantedArea.trim()) {
+      errors.plantedArea = lang === 'en'
+        ? 'Planted area is required.'
+        : 'Vui lòng nhập diện tích gieo trồng.';
+    } else if (
+      !Number.isFinite(plantedArea) ||
+      plantedArea <= 0
+    ) {
+      errors.plantedArea = lang === 'en'
+        ? 'Planted area must be greater than zero.'
+        : 'Diện tích gieo trồng phải lớn hơn 0.';
+    } else if (
+      selectedBlock &&
+      plantedArea > selectedBlock.areaValue
+    ) {
+      errors.plantedArea = lang === 'en'
+        ? `Planted area cannot exceed ${selectedBlock.areaValue} ${selectedBlock.areaUnit || 'm²'}.`
+        : `Diện tích gieo trồng không được vượt quá ${selectedBlock.areaValue} ${selectedBlock.areaUnit || 'm²'}.`;
+    }
+
+    // Validate planting and harvest dates
+    if (
+      assignBlockForm.plantedAt &&
+      assignBlockForm.expectedHarvestAt &&
+      assignBlockForm.expectedHarvestAt < assignBlockForm.plantedAt
+    ) {
+      errors.expectedHarvestAt = lang === 'en'
+        ? 'Expected harvest date cannot be earlier than the planting date.'
+        : 'Ngày dự kiến thu hoạch không được trước ngày xuống giống.';
+    }
+
+    setAssignBlockErrors(errors);
+
+    // Stop submission if validation fails
+    if (Object.keys(errors).length > 0) {
+      if (errors.blockId) {
+        blockIdRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        blockIdRef.current?.focus();
+      } else if (errors.plantedArea) {
+        plantedAreaRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        plantedAreaRef.current?.focus();
+      } else if (errors.plantedAt) {
+        plantedAtRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        plantedAtRef.current?.focus();
+      } else if (errors.expectedHarvestAt) {
+        expectedHarvestAtRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        expectedHarvestAtRef.current?.focus();
+      }
+
+      return;
+    }
+
+
     const blockIdNum = Number(assignBlockForm.blockId);
     const chosenBlock = allFarmBlocks.find((b) => b.blockId === blockIdNum);
-    const plantedAreaNum = parseFloat(assignBlockForm.plantedArea) || 0;
 
     // BR: Check if block already in this season
     if (seasonBlocks.some((b) => b.blockId === blockIdNum)) {
       const msg = (lang === 'en' ? `Block "${(chosenBlock?.blockName || '#' + blockIdNum)}" is already assigned to season "${selectedSeason.seasonName}". Duplicate assignments are not allowed!` : `Lô đất "${chosenBlock?.blockName || '#' + blockIdNum}" đã được phân bổ vào mùa vụ "${selectedSeason.seasonName}" rồi. Không thể gán trùng lặp!`);
       setAssignBlockModalError(msg);
       showToast(msg, 'error');
-      return;
-    }
-
-    if (chosenBlock && chosenBlock.areaValue && plantedAreaNum > chosenBlock.areaValue) {
-      const msg = (lang === 'en' ? `Assigned area (${plantedAreaNum} ${assignBlockForm.areaUnit}) must not exceed the block's actual area (${chosenBlock.areaValue} ${(chosenBlock.areaUnit || "m²")}).` : `Diện tích phân bổ (${plantedAreaNum} ${assignBlockForm.areaUnit}) không được lớn hơn diện tích thực tế của lô đất (${chosenBlock.areaValue} ${chosenBlock.areaUnit || 'm²'}).`);
-      setAssignBlockModalError(msg);
-      showToast(msg, 'error');
+      blockIdRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      blockIdRef.current?.focus();
       return;
     }
 
     const plantedAt = assignBlockForm.plantedAt || selectedSeason.startDate;
     const expectedHarvest = assignBlockForm.expectedHarvestAt || selectedSeason.endDate;
-    if (plantedAt && expectedHarvest && expectedHarvest < plantedAt) {
-      const msg = (lang === 'en' ? `Expected harvest date (${expectedHarvest}) cannot be before the planting date (${plantedAt}) in the block.` : `Ngày dự kiến thu hoạch (${expectedHarvest}) không thể trước ngày xuống giống (${plantedAt}) tại lô đất.`);
-      setAssignBlockModalError(msg);
-      showToast(msg, 'error');
-      return;
-    }
 
     const conflict = findBlockScheduleConflict(
       blockIdNum,
@@ -535,6 +748,11 @@ export function CropSeasonsPage() {
       const msg = (lang === 'en' ? `This block is already growing crops in season "${conflict.seasonName}" (${conflict.startDate} → ${(conflict.endDate || "Current")}). Assignment to overlapping seasons is not allowed!` : `Lô đất này đang được canh tác trong mùa vụ "${conflict.seasonName}" (${conflict.startDate} → ${conflict.endDate || 'Hiện tại'}). Không thể gán vào mùa vụ trùng thời gian!`);
       setAssignBlockModalError(msg);
       showToast(msg, 'error');
+      plantedAtRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      plantedAtRef.current?.focus();
       return;
     }
 
@@ -610,17 +828,121 @@ export function CropSeasonsPage() {
               <span className="eyebrow">{lang === 'en' ? 'Season Profile & Block Allocation (N-N)' : 'Hồ sơ mùa vụ & Phân bổ lô đất (N-N)'}</span>
               <h2>{modalMode === 'create' ? (lang === 'en' ? 'Create New Crop Season' : 'Create Season canh tác mới') : (lang === 'en' ? 'Update Season & Blocks' : 'Update Season & lô đất áp dụng')}</h2>
             </div>
-            <button type="button" className="modal-close" onClick={() => setModalMode(null)} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
+            <button type="button" className="modal-close" onClick={() => {
+              setModalMode(null)
+              setSeasonErrors({});
+              setSeasonModalError(null);
+            }}
+              aria-label={(lang === 'en' ? "Close" : "Đóng")}>
               ✕
             </button>
           </div>
 
           <form className="modal-body" onSubmit={handleSaveSeason} noValidate>
-            {seasonModalError && (
-              <p className="form-error-banner" role="alert" style={{ margin: '0 0 16px' }}>
-                {translate(seasonModalError)}
-              </p>
+            {(Object.keys(seasonErrors).length > 0 || seasonModalError) && (
+              <div
+                role="alert"
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  color: '#b91c1c',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}
+              >
+                <AlertCircle size={18} style={{ flexShrink: 0 }} />
+
+                <div>
+                  {Object.keys(seasonErrors).length > 0 && (
+                    <p style={{ margin: 0 }}>
+                      {lang === 'en'
+                        ? 'Please correct the highlighted fields before saving.'
+                        : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                    </p>
+                  )}
+
+                  {seasonModalError && (
+                    <p style={{ margin: 0 }}>
+                      {translate(seasonModalError)}
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
+
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
+                <label htmlFor="modal-cs-name" className="structured-field-label">
+                  {lang === 'en' ? 'Season Name' : 'Tên mùa vụ'}
+                  <span style={{ color: '#dc2626' }}> *</span>
+                </label>
+
+                <span className="structured-field-badge">
+                  {formValues.seasonName.length}/100
+                </span>
+              </div>
+
+              <div className="form-field" style={{ marginBottom: 0 }}>
+                <input
+                  ref={seasonNameRef}
+                  id="modal-cs-name"
+                  type="text"
+                  maxLength={100}
+                  placeholder={
+                    lang === 'en'
+                      ? 'e.g. Summer 2026 - Tomato Season'
+                      : 'Ví dụ: Vụ hè 2026 - Cà chua'
+                  }
+                  value={formValues.seasonName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+
+                    setFormValues((prev) => ({
+                      ...prev,
+                      seasonName: value,
+                    }));
+
+                    setSeasonErrors((prev) => {
+                      const updated = { ...prev };
+
+                      // Validate assessed date
+                      if (!value.trim()) {
+                        updated.seasonName = lang === 'en'
+                          ? 'Enter a crop season name.'
+                          : 'Vui lòng nhập tên mùa vụ canh tác.'
+                      } else if (value.trim().length > 100) {
+                        updated.seasonName =
+                          lang === 'en'
+                            ? 'Crop seasons name cannot exceed 100 characters.'
+                            : 'Tên mùa vụ canh tác không được vượt quá 100 ký tự.';
+                      } else {
+                        delete updated.seasonName;
+                      }
+
+                      return updated;
+                    });
+                  }}
+                  required
+                />
+
+                {seasonErrors.seasonName && (
+                  <p className="field-error"
+                    style={{
+                      color: '#dc2626',
+                      fontSize: '12px',
+                      marginTop: '5px',
+                      marginBottom: 0
+                    }}>
+                    {seasonErrors.seasonName}
+                  </p>
+                )}
+              </div>
+            </div>
+
             <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
@@ -629,20 +951,47 @@ export function CropSeasonsPage() {
                   </label>
                   <span className="structured-field-badge">{lang === 'en' ? 'VietGAP Standard' : 'Tiêu chuẩn VietGAP'}</span>
                 </div>
-                <div className="form-field" style={{ marginBottom: 0 }}>
+
+                <div ref={cropCategoryRef} className="form-field" style={{ marginBottom: 0 }}>
                   <CropCategoryCombobox
                     id="modal-cs-cat"
                     value={formValues.cropCategoryId}
                     categoryName={formValues.cropCategoryName}
                     categories={categories}
-                    onChange={(catId, catName) =>
+                    onChange={(catId, catName) => {
                       setFormValues((prev) => ({
                         ...prev,
                         cropCategoryId: catId,
                         cropCategoryName: catName,
-                      }))
-                    }
+                      }));
+
+                      if (Number(catId) <= 0) {
+                        setSeasonErrors((prev) => ({
+                          ...prev,
+                          cropCategory: lang === 'en'
+                            ? 'Please select a crop category.'
+                            : 'Vui lòng chọn danh mục cây trồng.'
+                        }));
+                      } else {
+                        setSeasonErrors((prev) => {
+                          const updated = { ...prev };
+                          delete updated.cropCategory;
+                          return updated;
+                        });
+                      }
+                    }}
                   />
+                  {seasonErrors.cropCategory && (
+                    <p className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                      {seasonErrors.cropCategory}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -657,12 +1006,46 @@ export function CropSeasonsPage() {
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input
+                    ref={startDateRef}
                     id="modal-cs-start"
                     type="date"
                     value={formValues.startDate}
-                    onChange={(e) => setFormValues({ ...formValues, startDate: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setFormValues((prev) => ({
+                        ...prev,
+                        startDate: value,
+                      }));
+
+                      setSeasonErrors((prev) => {
+                        const updated = { ...prev };
+
+                        // Validate start date
+                        if (!value) {
+                          updated.startDate = lang === 'en'
+                            ? 'Please select a start date.'
+                            : 'Vui lòng chọn ngày bắt đầu.';
+                        } else {
+                          delete updated.startDate;
+                        }
+
+                        return updated;
+                      });
+                    }}
                     required
                   />
+                  {seasonErrors.startDate && (
+                    <p className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                      {seasonErrors.startDate}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -675,11 +1058,59 @@ export function CropSeasonsPage() {
                 </div>
                 <div className="form-field" style={{ marginBottom: 0 }}>
                   <input
+                    ref={endDateRef}
                     id="modal-cs-end"
                     type="date"
                     value={formValues.endDate}
-                    onChange={(e) => setFormValues({ ...formValues, endDate: e.target.value })}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setFormValues((prev) => ({
+                        ...prev,
+                        endDate: value,
+                      }));
+
+                      setSeasonErrors((prev) => {
+                        const updated = { ...prev };
+
+                        if (formValues.startDate && value <= formValues.startDate) {
+                          updated.endDate = lang === 'en'
+                            ? 'End date must be after the start date.'
+                            : 'Ngày kết thúc phải sau ngày bắt đầu.';
+                        } else if (formValues.startDate) {
+                          const start = new Date(`${formValues.startDate}T00:00:00`);
+                          const end = new Date(`${value}T00:00:00`);
+
+                          const durationDays = Math.round(
+                            (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+                          );
+
+                          if (durationDays < 7) {
+                            updated.endDate = lang === 'en'
+                              ? 'A crop season must last at least 7 days.'
+                              : 'Mùa vụ phải kéo dài ít nhất 7 ngày.';
+                          } else {
+                            delete updated.endDate;
+                          }
+                        } else {
+                          delete updated.endDate;
+                        }
+
+                        return updated;
+                      });
+                    }}
                   />
+                  {seasonErrors.endDate && (
+                    <p className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                      {seasonErrors.endDate}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -876,10 +1307,62 @@ export function CropSeasonsPage() {
                                 type="number"
                                 step="0.01"
                                 min="0.01"
+                                max={block.areaValue}
                                 value={cfg.plantedArea}
-                                onChange={(e) =>
-                                  updateSelectedBlockConfig(block.blockId, { plantedArea: e.target.value })
-                                }
+                                onChange={(e) => {
+                                  const value = e.target.value;
+
+                                  // Update the selected Block configuration
+                                  updateSelectedBlockConfig(block.blockId, {
+                                    plantedArea: value,
+                                  });
+
+                                  // Validate planted area
+                                  setSeasonErrors((prev) => {
+                                    const updated = { ...prev };
+                                    const area = Number(value);
+                                    const unit = cfg.areaUnit
+
+                                    if (!value.trim()) {
+                                      updated.plantedAreas = {
+                                        ...prev.plantedAreas,
+                                        [block.blockId]:
+                                          lang === 'en'
+                                            ? 'Planted area is required.'
+                                            : 'Vui lòng nhập diện tích trồng.',
+                                      };
+                                    } else if (
+                                      !Number.isFinite(area) ||
+                                      area <= 0 ||
+                                      area > block.areaValue
+                                    ) {
+                                      updated.plantedAreas = {
+                                        ...prev.plantedAreas,
+                                        [block.blockId]:
+                                          lang === 'en'
+                                            ? `Planted area must be greater than 0 and cannot exceed ${block.areaValue} ${unit}.`
+                                            : `Diện tích trồng phải lớn hơn 0 và không được vượt quá ${block.areaValue} ${unit}.`,
+                                      };
+                                    } else {
+                                      const nextPlantedAreaErrors = { ...prev.plantedAreas };
+                                      delete nextPlantedAreaErrors[block.blockId];
+
+                                      if (Object.keys(nextPlantedAreaErrors).length > 0) {
+                                        updated.plantedAreas = nextPlantedAreaErrors;
+                                      } else {
+                                        delete updated.plantedAreas;
+                                      }
+                                    }
+
+                                    return updated;
+                                  });
+                                }}
+                                onKeyDown={(e) => {
+                                  if (['e', 'E', '+', '-'].includes(e.key)) {
+                                    e.preventDefault();
+                                  }
+                                }}
+
                                 style={{
                                   width: '100%',
                                   padding: '7px 10px',
@@ -889,6 +1372,18 @@ export function CropSeasonsPage() {
                                   fontSize: '13px',
                                 }}
                               />
+                              {seasonErrors.plantedAreas?.[block.blockId] && (
+                                <p className="field-error"
+                                  style={{
+                                    color: '#dc2626',
+                                    fontSize: '12px',
+                                    marginTop: '5px',
+                                    marginBottom: 0
+                                  }}>
+                                  {seasonErrors.plantedAreas[block.blockId]}
+                                </p>
+                              )}
+
                             </div>
                             <div>
                               <label
@@ -947,7 +1442,11 @@ export function CropSeasonsPage() {
             </div>
 
             <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-              <button type="button" className="ghost-button" onClick={() => setModalMode(null)} disabled={saving}>
+              <button type="button" className="ghost-button" onClick={() => {
+                setSeasonErrors({});
+                setSeasonModalError(null);
+                setModalMode(null)
+              }} disabled={saving}>
                 Cancel
               </button>
               <button type="submit" className="primary-button" disabled={saving}>
@@ -1312,24 +1811,62 @@ export function CropSeasonsPage() {
 
         {/* Assign Block Modal */}
         {isAssignBlockOpen && (
-          <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => setIsAssignBlockOpen(false)}>
+          <div className="modal-overlay" role="dialog" aria-modal="true" onClick={() => {
+            setAssignBlockModalError(null)
+            setAssignBlockErrors({})
+            setIsAssignBlockOpen(false)
+          }}>
             <div className="modal-card" style={{ width: 'min(580px, 100%)', maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div>
                   <span className="eyebrow">{lang === 'en' ? 'Block Allocation' : 'Phân công lô đất canh tác'}</span>
                   <h2>{lang === 'en' ? 'Allocate Block to: ' : 'Gán lô đất vào: '}{selectedSeason.seasonName}</h2>
                 </div>
-                <button type="button" className="modal-close" onClick={() => setIsAssignBlockOpen(false)} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
+                <button type="button" className="modal-close" onClick={() => {
+                  setIsAssignBlockOpen(false)
+                  setAssignBlockModalError(null)
+                  setAssignBlockErrors({})
+                }} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
                   ✕
                 </button>
               </div>
 
               <form className="modal-body" onSubmit={handleAssignBlock} noValidate>
-                {assignBlockModalError && (
-                  <p className="form-error-banner" role="alert" style={{ margin: '0 0 16px' }}>
-                    {translate(assignBlockModalError)}
-                  </p>
+                {(Object.keys(assignBlockErrors).length > 0 || assignBlockModalError) && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}
+                  >
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
+
+                    <div>
+                      {Object.keys(assignBlockErrors).length > 0 && (
+                        <p style={{ margin: 0 }}>
+                          {lang === 'en'
+                            ? 'Please correct the highlighted fields before saving.'
+                            : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                        </p>
+                      )}
+
+                      {assignBlockModalError && (
+                        <p style={{ margin: '0' }}>
+                          {translate(assignBlockModalError)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 )}
+
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <div className="structured-field-header">
                     <label htmlFor="assign-block-select" className="structured-field-label">
@@ -1339,17 +1876,51 @@ export function CropSeasonsPage() {
                   </div>
                   <div className="form-field" style={{ marginBottom: 0 }}>
                     <select
+                      ref={blockIdRef}
                       id="assign-block-select"
                       value={assignBlockForm.blockId}
                       onChange={(e) => {
                         const bid = Number(e.target.value);
-                        const found = allFarmBlocks.find((b) => b.blockId === bid);
-                        setAssignBlockForm({
-                          ...assignBlockForm,
+
+                        // Find the newly selected Block
+                        const chosenBlock = allFarmBlocks.find(
+                          b => b.blockId === bid
+                        );
+
+                        // Check whether this Block is already assigned to this season
+                        const isAlreadyAssigned = seasonBlocks.some(
+                          b => b.blockId === bid
+                        );
+
+                        // Update the selected Block
+                        setAssignBlockForm(prev => ({
+                          ...prev,
                           blockId: bid,
-                          plantedArea: found ? String(found.areaValue) : assignBlockForm.plantedArea,
-                          areaUnit: found?.areaUnit || assignBlockForm.areaUnit,
-                        });
+                          plantedArea: chosenBlock
+                            ? String(chosenBlock.areaValue)
+                            : prev.plantedArea,
+                          areaUnit: chosenBlock?.areaUnit || prev.areaUnit,
+                        }));
+
+                        // Show duplicate assignment error
+                        if (isAlreadyAssigned) {
+                          setAssignBlockErrors(prev => ({
+                            ...prev,
+                            blockId: lang === 'en'
+                              ? `Block "${chosenBlock?.blockName || '#' + bid}" is already assigned to season "${selectedSeason.seasonName}". Duplicate assignments are not allowed!`
+                              : `Lô đất "${chosenBlock?.blockName || '#' + bid}" đã được phân bổ vào mùa vụ "${selectedSeason.seasonName}" rồi. Không thể gán trùng lặp!`,
+                            plantedArea: undefined,
+                          }));
+
+                          return;
+                        }
+
+                        // Clear previous errors when a valid Block is selected
+                        setAssignBlockErrors(prev => ({
+                          ...prev,
+                          blockId: undefined,
+                          plantedArea: undefined,
+                        }));
                       }}
                     >
                       {allFarmBlocks.map((b) => (
@@ -1358,6 +1929,17 @@ export function CropSeasonsPage() {
                         </option>
                       ))}
                     </select>
+                    {assignBlockErrors.blockId && (
+                      <p className="field-error"
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                        {assignBlockErrors.blockId}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1374,11 +1956,72 @@ export function CropSeasonsPage() {
                       type="number"
                       step="0.01"
                       min="0.01"
-                      placeholder={(lang === 'en' ? "e.g. 500" : "VD: 500")}
+                      max={
+                        allFarmBlocks.find(
+                          b => b.blockId === Number(assignBlockForm.blockId)
+                        )?.areaValue
+                      }
+                      placeholder={lang === 'en' ? 'e.g. 500' : 'VD: 500'}
                       value={assignBlockForm.plantedArea}
-                      onChange={(e) => setAssignBlockForm({ ...assignBlockForm, plantedArea: e.target.value })}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        // Update the Allocate Block form
+                        setAssignBlockForm(prev => ({
+                          ...prev,
+                          plantedArea: value,
+                        }));
+
+                        // Validate planted area
+                        setAssignBlockErrors(prev => {
+                          const updated = { ...prev };
+
+                          const selectedBlock = allFarmBlocks.find(
+                            b => b.blockId === Number(assignBlockForm.blockId)
+                          );
+
+                          const area = Number(value);
+
+                          if (!value.trim()) {
+                            updated.plantedArea =
+                              lang === 'en'
+                                ? 'Planted area is required.'
+                                : 'Vui lòng nhập diện tích gieo trồng.';
+                          } else if (!Number.isFinite(area) || area <= 0) {
+                            updated.plantedArea =
+                              lang === 'en'
+                                ? 'Planted area must be greater than zero.'
+                                : 'Diện tích gieo trồng phải lớn hơn 0.';
+                          } else if (selectedBlock && area > selectedBlock.areaValue) {
+                            updated.plantedArea =
+                              lang === 'en'
+                                ? `Planted area cannot exceed ${selectedBlock.areaValue} ${selectedBlock.areaUnit || 'm²'}.`
+                                : `Diện tích gieo trồng không được vượt quá ${selectedBlock.areaValue} ${selectedBlock.areaUnit || 'm²'}.`;
+                          } else {
+                            delete updated.plantedArea;
+                          }
+
+                          return updated;
+                        });
+                      }}
+                      onKeyDown={(e) => {
+                        if (['e', 'E', '+', '-'].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                       required
                     />
+                    {assignBlockErrors.plantedArea && (
+                      <p className="field-error"
+                        style={{
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          marginTop: '5px',
+                          marginBottom: 0
+                        }}>
+                        {assignBlockErrors.plantedArea}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1386,7 +2029,7 @@ export function CropSeasonsPage() {
                   <div className="structured-field-card" style={{ marginBottom: 0 }}>
                     <div className="structured-field-header">
                       <label htmlFor="assign-block-planted-at" className="structured-field-label">
-                        {(lang === 'en' ? "Planting date" : "Ngày xuống giống")}
+                        {(lang === 'en' ? "Planting date" : "Ngày xuống giống")} <span style={{ color: '#dc2626' }}>*</span>
                       </label>
                       <span className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</span>
                     </div>
@@ -1395,8 +2038,30 @@ export function CropSeasonsPage() {
                         id="assign-block-planted-at"
                         type="date"
                         value={assignBlockForm.plantedAt}
-                        onChange={(e) => setAssignBlockForm({ ...assignBlockForm, plantedAt: e.target.value })}
+                        onChange={(e) => {
+                          setAssignBlockForm(prev => ({
+                            ...prev,
+                            plantedAt: e.target.value,
+                          }));
+
+                          setAssignBlockErrors(prev => ({
+                            ...prev,
+                            plantedAt: undefined,
+                            expectedHarvestAt: undefined,
+                          }));
+                        }}
                       />
+                      {assignBlockErrors.plantedAt && (
+                        <p className="field-error"
+                          style={{
+                            color: '#dc2626',
+                            fontSize: '12px',
+                            marginTop: '5px',
+                            marginBottom: 0
+                          }}>
+                          {assignBlockErrors.plantedAt}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -1412,8 +2077,55 @@ export function CropSeasonsPage() {
                         id="assign-block-harvest-at"
                         type="date"
                         value={assignBlockForm.expectedHarvestAt}
-                        onChange={(e) => setAssignBlockForm({ ...assignBlockForm, expectedHarvestAt: e.target.value })}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setAssignBlockForm((prev) => ({
+                            ...prev,
+                            expectedHarvestAt: value,
+                          }));
+
+                          setAssignBlockErrors((prev) => {
+                            const updated = { ...prev };
+
+                            if (assignBlockForm.plantedAt && value <= assignBlockForm.plantedAt) {
+                              updated.expectedHarvestAt = lang === 'en'
+                                ? 'Expected end date must be after the planting date.'
+                                : 'Ngày kết thúc phải sau ngày bắt đầu.';
+                            } else if (assignBlockForm.plantedAt) {
+                              const start = new Date(`${assignBlockForm.plantedAt}T00:00:00`);
+                              const end = new Date(`${value}T00:00:00`);
+
+                              const durationDays = Math.round(
+                                (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+                              );
+
+                              if (durationDays < 7) {
+                                updated.expectedHarvestAt = lang === 'en'
+                                  ? 'A crop season must last at least 7 days.'
+                                  : 'Mùa vụ phải kéo dài ít nhất 7 ngày.';
+                              } else {
+                                delete updated.expectedHarvestAt;
+                              }
+                            } else {
+                              delete updated.expectedHarvestAt;
+                            }
+
+                            return updated;
+                          });
+                        }}
                       />
+                      {assignBlockErrors.expectedHarvestAt && (
+                        <p className="field-error"
+                          style={{
+                            color: '#dc2626',
+                            fontSize: '12px',
+                            marginTop: '5px',
+                            marginBottom: 0
+                          }}>
+                          {assignBlockErrors.expectedHarvestAt}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
