@@ -3119,170 +3119,216 @@ button:disabled {
   color: #0f172a;
 }
 
-/* Uploaded Preview Card */
-.file-upload-preview-card {
+/* Multi-file Upload List Card & Rows */
+.file-upload-list-card {
+  margin-top: 14px;
+  background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  background: #ffffff;
-  padding: 16px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  gap: 12px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
 }
 
-.file-upload-image-box {
-  position: relative;
-  width: 100%;
-  max-height: 280px;
-  border-radius: 10px;
-  overflow: hidden;
-  background: #0f172a;
+.file-upload-list-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.file-upload-thumbnail {
-  max-width: 100%;
-  max-height: 280px;
-  object-fit: contain;
-  display: block;
-}
-
-.file-upload-image-overlay {
-  position: absolute;
-  bottom: 10px;
-  right: 10px;
-  display: flex;
-  gap: 8px;
-}
-
-.file-upload-action-btn {
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(4px);
-  color: #ffffff;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
+.file-upload-list-title {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition: background 0.15s;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 650;
+  color: #0f172a;
 }
 
-.file-upload-action-btn:hover {
-  background: rgba(15, 23, 42, 0.95);
-  color: #ffffff;
+.file-upload-list-badge {
+  font-size: 12px;
+  color: #047857;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
-/* Document Badge */
-.file-upload-doc-badge {
+.file-upload-items-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Individual File Frame / Card (Ngăn cách rõ ràng, viền và bóng hợp mắt) */
+.file-upload-item-row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
+  justify-content: space-between;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
+  padding: 12px 16px;
+  gap: 16px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.file-upload-doc-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  background: #fee2e2;
-  color: #dc2626;
+.file-upload-item-row:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.file-upload-item-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.file-upload-item-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  font-size: 20px;
+  transition: transform 0.15s ease;
 }
 
-.file-upload-doc-info {
+.file-upload-item-row:hover .file-upload-item-icon {
+  transform: scale(1.04);
+}
+
+.file-upload-item-icon.is-img {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.file-upload-item-icon.is-doc {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.file-upload-item-details {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
+  min-width: 0;
   overflow: hidden;
 }
 
-.file-upload-doc-name {
-  font-size: 14px;
+.file-upload-item-name {
+  font-size: 13.5px;
+  font-weight: 600;
   color: #0f172a;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 460px;
 }
 
-.file-upload-doc-size {
+.file-upload-item-size {
   font-size: 12px;
   color: #64748b;
-}
-
-.file-upload-doc-link {
-  font-size: 12.5px;
-  color: #059669;
-  font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  text-decoration: none;
-  margin-top: 2px;
+  gap: 6px;
 }
 
-.file-upload-doc-link:hover {
-  text-decoration: underline;
-}
-
-.file-upload-actions {
+.file-upload-item-actions {
   display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
-.file-upload-btn-secondary {
-  font-size: 13px !important;
+.file-upload-item-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 6px 12px !important;
-}
-
-.file-upload-btn-danger {
-  font-size: 13px !important;
-  padding: 6px 12px !important;
-  color: #dc2626 !important;
-  border-color: #fecaca !important;
-}
-
-.file-upload-btn-danger:hover {
-  background: #fef2f2 !important;
-}
-
-.file-upload-manual-toggle {
-  margin-top: 4px;
-}
-
-.file-upload-link-btn {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 12.5px;
-  color: #64748b;
+  font-size: 12.5px !important;
+  font-weight: 550 !important;
+  color: #0f172a !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 6px !important;
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  transition: all 0.15s ease;
 }
 
-.file-upload-link-btn:hover {
-  color: #0f172a;
+.file-upload-item-view-btn:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0284c7 !important;
+}
+
+.file-upload-item-del-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+  background: #ffffff;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.file-upload-item-del-btn:hover:not(:disabled) {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.file-upload-item-del-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.file-upload-list-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+
+@media (max-width: 640px) {
+  .file-upload-item-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .file-upload-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .file-upload-item-name {
+    max-width: 240px;
+  }
 }
 
 /* Evidence list in registration status and admin details */
 .status-evidence-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 10px;
+  margin-top: 8px;
   width: 100%;
 }
 
@@ -3290,23 +3336,24 @@ button:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 12px 16px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  gap: 12px;
-  transition: all 0.15s ease;
+  border-radius: 10px;
+  gap: 14px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .status-evidence-item:hover {
-  background: #f1f5f9;
+  background: #ffffff;
   border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
 
 .status-evidence-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
   flex: 1;
 }

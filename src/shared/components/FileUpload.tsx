@@ -179,10 +179,11 @@ export function FileUpload({
       {fileList.length > 0 && (
         <div className="file-upload-list-card">
           <div className="file-upload-list-header">
-            <span style={{ fontWeight: 650, color: '#0f172a', fontSize: '13.5px' }}>
+            <span className="file-upload-list-title">
+              <Icon name="check-circle" style={{ color: '#059669', fontSize: '15px' }} />
               Danh sách tài liệu đã tải lên ({fileList.length} tập tin)
             </span>
-            <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+            <span className="file-upload-list-badge">
               Tổng dung lượng: <strong>{formatFileSize(totalBytes) || '< 1MB'}</strong> / {maxSizeMB}MB
             </span>
           </div>
@@ -219,6 +220,16 @@ export function FileUpload({
                     >
                       <Icon name="eye" /> Xem trực tiếp
                     </button>
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="action-button file-preview-open-link"
+                      style={{ fontSize: '12.5px', padding: '6px 12px' }}
+                      title="Mở liên kết gốc Cloudinary trong tab mới"
+                    >
+                      <Icon name="external-link" /> Mở link
+                    </a>
                     <button
                       type="button"
                       className="icon-button file-upload-item-del-btn"
@@ -234,7 +245,7 @@ export function FileUpload({
             })}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+          <div className="file-upload-list-footer">
             <button
               type="button"
               className="action-button"

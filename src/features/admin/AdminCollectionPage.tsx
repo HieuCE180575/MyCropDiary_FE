@@ -363,10 +363,10 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
                     target="_blank"
                     rel="noreferrer"
                     className="action-button file-preview-open-link"
-                    style={{ fontSize: '12.5px', padding: '5px 8px' }}
+                    style={{ fontSize: '12.5px', padding: '5px 10px' }}
                     title={lang === 'en' ? 'Open original Cloudinary link' : 'Mở liên kết gốc Cloudinary'}
                   >
-                    <Icon name="external-link" />
+                    <Icon name="external-link" /> {lang === 'en' ? 'Open link' : 'Mở link'}
                   </a>
                 </div>
               </div>
