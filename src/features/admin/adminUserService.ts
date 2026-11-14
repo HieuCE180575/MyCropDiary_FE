@@ -13,6 +13,8 @@ export interface AdminUserResponse {
   lastLoginAt: string | null;
   createdAt: string;
   updatedAt: string;
+  farmsSummary?: string | null;
+  zonesSummary?: string | null;
 }
 
 async function request<T>(path: string, options: Parameters<typeof apiRequest>[1] = {}): Promise<T> {
@@ -45,5 +47,15 @@ export function updateAdminUserStatus(
   return request<AdminUserResponse>(`/admin/users/${userId}/status`, {
     method: 'PUT',
     data: { status: status.toUpperCase() },
+  });
+}
+
+export function updateAdminUserProfile(
+  userId: string | number,
+  payload: { fullName?: string; phone?: string; systemRole?: string; accountStatus?: string }
+): Promise<AdminUserResponse> {
+  return request<AdminUserResponse>(`/admin/users/${userId}`, {
+    method: 'PUT',
+    data: payload,
   });
 }

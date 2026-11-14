@@ -823,11 +823,31 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      {/* ================= COMMAND HUB: 6 CORE SHORTCUTS ================= */}
+      {/* ================= COMMAND HUB: CORE SHORTCUTS ================= */}
       <section className="admin-quick-links" aria-label={(lang === 'en' ? "Administration shortcuts" : "Trung tâm phím tắt quản trị")}>
         <Link to="/admin/registrations">
           <Icon name="plots" />
           <span>{(lang === 'en' ? "Review registrations (" : "Duyệt đăng ký (")}{pendingCount})</span>
+          <Icon name="arrow" />
+        </Link>
+        <Link to="/admin/farms">
+          <Icon name="home" />
+          <span>{(lang === 'en' ? "Manage farms (" : "Quản lý trang trại (")}{state.farms.length})</span>
+          <Icon name="arrow" />
+        </Link>
+        <Link to="/admin/zones">
+          <Icon name="plots" />
+          <span>{(lang === 'en' ? "Manage zones (" : "Quản lý phân khu (")}{state.zones.length})</span>
+          <Icon name="arrow" />
+        </Link>
+        <Link to="/admin/blocks">
+          <Icon name="leaf" />
+          <span>{(lang === 'en' ? "Manage blocks (" : "Quản lý lô đất (")}{state.blocks.length})</span>
+          <Icon name="arrow" />
+        </Link>
+        <Link to="/admin/compliance">
+          <Icon name="check" />
+          <span>{(lang === 'en' ? "Season & VietGAP oversight (" : "Giám sát mùa vụ & VietGAP (")}{state.compliance.length})</span>
           <Icon name="arrow" />
         </Link>
         <Link to="/admin/crops">

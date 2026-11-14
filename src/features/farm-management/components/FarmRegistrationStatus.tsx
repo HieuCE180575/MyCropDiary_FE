@@ -3,10 +3,10 @@ import { ConfirmDialog } from '../../../shared/components/ConfirmDialog';
 import { StatusBadge } from '../../../shared/components/StatusBadge';
 import { FarmGoongMap } from './FarmGoongMap';
 import { formatDateTime as uiFormatDateTime } from '../../../shared/format/formatters';
-
 import { useState } from 'react';
-
-
+import { Icon } from '../../../shared/components/Icon';
+import { parseEvidenceFiles, formatFileSize, getFileTypeInfo } from '../../../shared/api/fileUploadService';
+import { FilePreviewModal } from '../../../shared/components/FilePreviewModal';
 import { FARM_REGISTRATION_STATUS_LABEL, FARM_REGISTRATION_STATUS_TONE } from '../constants';
 import { parseBoundaryCoordinates } from '../goongMapService';
 import type { FarmRegistration } from '../types';
@@ -34,10 +34,12 @@ export function FarmRegistrationStatus({
 }: FarmRegistrationStatusProps) {
   const { lang, t: translate } = useLanguage();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
 
   const canCancel = registration.status === 'pending';
   const canStartNew = registration.status === 'rejected' || registration.status === 'cancelled';
   const boundaryPoints = parseBoundaryCoordinates(registration.boundaryCoordinates);
+  const evidenceFiles = parseEvidenceFiles(registration.documentUrl);
 
   return (
     <div className="panel farm-registration-status">
@@ -70,13 +72,50 @@ export function FarmRegistrationStatus({
             <dd>{registration.latitude.toFixed(6)}, {registration.longitude.toFixed(6)}</dd>
           </div>
         ) : null}
-        {registration.documentUrl && /^https?:\/\//i.test(registration.documentUrl) && (
+        {evidenceFiles.length > 0 && (
           <div>
-            <dt>{lang === 'en' ? 'Supporting Document' : 'Tài liệu minh chứng'}</dt>
+            <dt>{lang === 'en' ? `Supporting Documents (${evidenceFiles.length} files)` : `Tài liệu minh chứng (${evidenceFiles.length} tệp)`}</dt>
             <dd>
-              <a href={registration.documentUrl} target="_blank" rel="noreferrer">
-                {lang === 'en' ? 'Open supporting document' : 'Mở tài liệu minh chứng'}
-              </a>
+              <div className="status-evidence-list">
+                {evidenceFiles.map((file, idx) => {
+                  const typeInfo = getFileTypeInfo(file);
+
+                  return (
+                    <div key={`${file.url}-${idx}`} className="status-evidence-item">
+                      <div className="status-evidence-info">
+                        <span className={`file-upload-item-icon ${typeInfo.badgeClass}`}>
+                          <Icon name={typeInfo.iconName} />
+                        </span>
+                        <div>
+                          <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{file.name}</strong>
+                          <div style={{ fontSize: '12px', color: '#64748b' }}>
+                            {formatFileSize(file.size) || (typeInfo.isPdf ? 'PDF • Cloudinary' : typeInfo.isImage ? 'Image • Cloudinary' : 'Cloudinary Document')}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          type="button"
+                          className="action-button file-upload-item-view-btn"
+                          onClick={() => setPreviewIndex(idx)}
+                          title={lang === 'en' ? 'Preview on web' : 'Xem trực tiếp trên web'}
+                        >
+                          <Icon name="eye" /> {lang === 'en' ? 'Preview' : 'Xem trực tiếp'}
+                        </button>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="action-button file-preview-open-link"
+                          title={lang === 'en' ? 'Open original Cloudinary link in new tab' : 'Mở liên kết gốc Cloudinary trong tab mới'}
+                        >
+                          <Icon name="external-link" /> {lang === 'en' ? 'Open link' : 'Mở link'}
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </dd>
           </div>
         )}
@@ -166,6 +205,14 @@ export function FarmRegistrationStatus({
         }}
         onClose={() => setConfirmOpen(false)}
       />
+
+      {previewIndex !== null && (
+        <FilePreviewModal
+          files={evidenceFiles}
+          initialIndex={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+        />
+      )}
     </div>
   );
 }

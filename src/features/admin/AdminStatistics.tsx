@@ -1,30 +1,51 @@
 import { AdminPageHeading } from './AdminComponents';
+import { Button } from '../../shared/components/Button';
+import { Icon } from '../../shared/components/Icon';
 import { formatNumber } from '../../shared/format/formatters';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 import { useState, useEffect } from 'react';
 import { useAdmin } from './AdminProvider';
+import { useAuth } from '../auth';
 
 import { fetchAdminStatistics, type AdminStatisticsData } from './adminService';
 
-const types = { overview: 'Tổng quan hệ thống', users: 'Tài khoản', seasons: 'Mùa vụ', registrations: 'Hồ sơ trang trại', feedback: 'Phản hồi AI' };
+const types = {
+  overview: 'Tổng quan hệ thống',
+  users: 'Tài khoản',
+  farms: 'Trang trại & Vùng trồng',
+  seasons: 'Mùa vụ',
+  costs: 'Chi phí',
+  registrations: 'Hồ sơ trang trại',
+  feedback: 'Phản hồi AI',
+};
 type StatisticType = keyof typeof types;
 
 export function AdminStatistics() {
   const { lang, t: translate } = useLanguage();
   const number = (value: number) => formatNumber(value, lang);
   const { state } = useAdmin();
+  const { user } = useAuth();
   const [type, setType] = useState<StatisticType>('overview');
+  const [fromMonth, setFromMonth] = useState('2026-04');
+  const [toMonth, setToMonth] = useState('2026-09');
   const [statsData, setStatsData] = useState<AdminStatisticsData | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
 
   useEffect(() => {
+    if (user?.userId === 900) return;
     setLoadingStats(true);
     fetchAdminStatistics()
       .then((data) => setStatsData(data))
       .catch(() => setStatsData(null))
       .finally(() => setLoadingStats(false));
-  }, []);
+  }, [user?.userId]);
+
+  const invalidMonthRange = Boolean(fromMonth && toMonth && fromMonth > toMonth);
+  const filteredSeasons = invalidMonthRange
+    ? []
+    : state.seasons.filter((s) => (!fromMonth || s.month >= fromMonth) && (!toMonth || s.month <= toMonth));
+  const totalSeasonCost = filteredSeasons.reduce((acc, s) => acc + s.cost, 0);
 
   const totalUsers = statsData?.accounts?.totalUsers ?? state.users.length;
   const activeUsers = statsData?.accounts?.activeUsers ?? state.users.filter((u) => u.status === 'ACTIVE').length;
@@ -35,8 +56,10 @@ export function AdminStatistics() {
   const approvedReg = statsData?.registrations?.approvedRegistrations ?? state.registrations.filter((r) => r.status === 'APPROVED').length;
   const rejectedReg = statsData?.registrations?.rejectedRegistrations ?? state.registrations.filter((r) => r.status === 'REJECTED').length;
 
-  const totalFarms = statsData?.farms?.totalFarms ?? 25;
-  const activeFarms = statsData?.farms?.activeFarms ?? 22;
+  const totalFarms = statsData?.farms?.totalFarms ?? (state.farms.length || 25);
+  const activeFarms = statsData?.farms?.activeFarms ?? (state.farms.filter((f) => f.status === 'ACTIVE').length || 22);
+  const totalZones = state.zones.length;
+  const totalBlocks = state.blocks.length;
 
   const totalSeasons = statsData?.seasons?.totalSeasons ?? 48;
   const activeSeasons = statsData?.seasons?.activeSeasons ?? 18;
@@ -47,12 +70,40 @@ export function AdminStatistics() {
   const resolvedFeedbacks = statsData?.aiFeedback?.resolvedFeedbacks ?? state.feedback.filter((f) => f.status === 'RESOLVED').length;
   const avgRating = statsData?.aiFeedback?.averageRating ?? 4.6;
 
+  const exportStatsCsv = () => {
+    const rows = [
+      ['Chỉ tiêu thống kê', 'Giá trị', 'Ghi chú'],
+      ['Tổng tài khoản người dùng', String(totalUsers), `${activeUsers} hoạt động, ${lockedUsers} đã khóa`],
+      ['Hồ sơ đăng ký trang trại', String(totalReg), `${pendingReg} chờ duyệt, ${approvedReg} đã duyệt, ${rejectedReg} từ chối`],
+      ['Trang trại vận hành', String(totalFarms), `${activeFarms} đang hoạt động`],
+      ['Phân khu sản xuất (Zone)', String(totalZones), 'Toàn hệ thống'],
+      ['Lô đất canh tác (Block)', String(totalBlocks), 'Toàn hệ thống'],
+      ['Mùa vụ canh tác', String(totalSeasons), `${activeSeasons} đang trồng, ${completedSeasons} đã thu hoạch`],
+      ['Tổng chi phí mùa vụ (kỳ lọc)', `${totalSeasonCost} VND`, `${filteredSeasons.length} tháng`],
+      ['Phản hồi trợ lý AI', String(totalFeedbacks), `${openFeedbacks} đang mở, ${resolvedFeedbacks} đã giải quyết, Điểm TB: ${avgRating}/5`],
+    ];
+    const escapeCell = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
+    const csv = rows.map(r => r.map(escapeCell).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `mycropdiary-statistics-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section className="admin-page">
       <AdminPageHeading
         title={(lang === 'en' ? "System statistics" : "Thống kê hệ thống")}
-        description={(lang === 'en' ? "Monitor users, farm registrations, crop seasons, and AI feedback quality." : "Theo dõi toàn diện số liệu về người dùng, hồ sơ đăng ký trang trại, mùa vụ canh tác và chất lượng phản hồi AI.")}
-      />
+        description={(lang === 'en' ? "Monitor users, farm registrations, farms, zones, blocks, crop seasons, and AI feedback quality." : "Theo dõi toàn diện số liệu về người dùng, hồ sơ đăng ký, trang trại, phân khu, lô đất, mùa vụ canh tác và chất lượng phản hồi AI.")}
+      >
+        <Button variant="secondary" onClick={exportStatsCsv}>
+          <Icon name="report" />
+          {lang === 'en' ? 'Export CSV' : 'Xuất báo cáo CSV'}
+        </Button>
+      </AdminPageHeading>
 
       <div className="admin-stat-tabs" role="group" aria-label={(lang === 'en' ? "Statistics group" : "Nhóm thống kê")}>
         {Object.entries(types).map(([key, label]) => (
@@ -67,6 +118,29 @@ export function AdminStatistics() {
           </button>
         ))}
       </div>
+
+      <div className="admin-stat-filters admin-filters">
+        <label>
+          <span>{(lang === 'en' ? "From month" : "Từ tháng")}</span>
+          <input className="ui-input" type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} />
+        </label>
+        <label>
+          <span>{(lang === 'en' ? "To month" : "Đến tháng")}</span>
+          <input className="ui-input" type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} />
+        </label>
+      </div>
+
+      {invalidMonthRange && (
+        <p className="admin-form-error" role="alert">
+          {(lang === 'en' ? "Start month must not be after end month." : "Tháng bắt đầu không được sau tháng kết thúc.")}
+        </p>
+      )}
+
+      {!invalidMonthRange && filteredSeasons.length === 0 && (
+        <p role="status" className="admin-subtle">
+          {(lang === 'en' ? "No data available for this period." : "Chưa có số liệu trong khoảng thời gian này.")}
+        </p>
+      )}
 
       {loadingStats && (
         <div style={{ padding: '16px', color: '#64748b' }}>
@@ -93,9 +167,9 @@ export function AdminStatistics() {
           </article>
           <article className="admin-summary-card">
             <div>
-              <span>{(lang === 'en' ? "Farms" : "Trang trại nông nghiệp")}</span>
+              <span>{(lang === 'en' ? "Farms, Zones & Blocks" : "Trang trại · Phân khu · Lô đất")}</span>
               <strong className="admin-stat-value">{number(totalFarms)}</strong>
-              <p>{number(activeFarms)} {(lang === 'en' ? " active farms" : " trang trại đang canh tác")}</p>
+              <p>{number(activeFarms)} {(lang === 'en' ? " active · " : " trang trại · ")} {number(totalZones)} {(lang === 'en' ? " zones · " : " phân khu · ")} {number(totalBlocks)} {(lang === 'en' ? " blocks" : " lô đất")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
@@ -137,6 +211,53 @@ export function AdminStatistics() {
               <span>{(lang === 'en' ? "Access locked" : "Đã khóa truy cập")}</span>
               <strong className="admin-stat-value" style={{ color: '#dc2626' }}>{number(lockedUsers)}</strong>
               <p>{(lang === 'en' ? "Accounts temporarily locked for security" : "Tài khoản bị tạm khóa bảo mật")}</p>
+            </div>
+          </article>
+        </div>
+      )}
+
+      {/* Farm, Zone & Block Statistics (UC-45.3) */}
+      {type === 'farms' && (
+        <div className="admin-summary-grid">
+          <article className="admin-summary-card">
+            <div>
+              <span>{(lang === 'en' ? "Total Farms" : "Tổng số trang trại")}</span>
+              <strong className="admin-stat-value" style={{ color: '#059669' }}>{number(totalFarms)}</strong>
+              <p>{number(activeFarms)} {(lang === 'en' ? " active member farms" : " trang trại đang hoạt động")}</p>
+            </div>
+          </article>
+          <article className="admin-summary-card">
+            <div>
+              <span>{(lang === 'en' ? "Production Zones" : "Phân khu sản xuất (Zone)")}</span>
+              <strong className="admin-stat-value">{number(totalZones)}</strong>
+              <p>{(lang === 'en' ? "Managed zones across farms" : "Phân khu đã gán chủ sở hữu & nhân sự")}</p>
+            </div>
+          </article>
+          <article className="admin-summary-card">
+            <div>
+              <span>{(lang === 'en' ? "Cultivation Blocks" : "Lô đất canh tác (Block)")}</span>
+              <strong className="admin-stat-value" style={{ color: '#2563eb' }}>{number(totalBlocks)}</strong>
+              <p>{(lang === 'en' ? "Standardized VietGAP plots" : "Lô đất chuẩn hóa thổ nhưỡng & diện tích")}</p>
+            </div>
+          </article>
+          <article className="admin-summary-card">
+            <div>
+              <span>{(lang === 'en' ? "VietGAP Monitored Seasons" : "Hồ sơ mùa vụ & VietGAP")}</span>
+              <strong className="admin-stat-value">{number(state.compliance.length)}</strong>
+              <p>{(lang === 'en' ? "Active checklist & PHI tracking" : "Giám sát bảng kiểm & cách ly PHI")}</p>
+            </div>
+          </article>
+        </div>
+      )}
+
+      {/* Costs Statistics */}
+      {type === 'costs' && (
+        <div className="admin-summary-grid">
+          <article className="admin-summary-card">
+            <div>
+              <span>{(lang === 'en' ? "Total season costs" : "Tổng chi phí")}</span>
+              <strong className="admin-stat-value">{number(totalSeasonCost)} ₫</strong>
+              <p>{number(filteredSeasons.length)} {(lang === 'en' ? " recorded months" : " tháng ghi nhận")}</p>
             </div>
           </article>
         </div>

@@ -45,6 +45,7 @@ import {
 
 import { useRealtimeSync } from '../shared/realtime/realtimeSync';
 import { useLanguage } from '../shared/i18n/LanguageContext';
+import { FileUpload } from '../shared/components/FileUpload';
 
 export interface FarmInfoPageProps {
   defaultTab?: 'list' | 'detail' | 'register';
@@ -95,6 +96,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const [editLat, setEditLat] = useState<number | null>(null);
   const [editLng, setEditLng] = useState<number | null>(null);
   const [editBoundary, setEditBoundary] = useState<LatLngPoint[]>([]);
+  const [editCoverImage, setEditCoverImage] = useState('');
   const [updating, setUpdating] = useState(false);
 
   // Add Member Modal state
@@ -195,6 +197,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
           setEditLat(detail.latitude ?? null);
           setEditLng(detail.longitude ?? null);
           setEditBoundary(parseBoundaryCoordinates(detail.boundaryCoordinates));
+          setEditCoverImage(detail.coverImageUrl || '');
         } else if (activeFarmSummary) {
           setFarmDetail({
             id: activeFarmSummary.id,
@@ -284,6 +287,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
         latitude: editLat,
         longitude: editLng,
         boundaryCoordinates: stringifyBoundaryCoordinates(editBoundary) || null,
+        coverImageUrl: editCoverImage.trim() || undefined,
       });
       setFarmDetail(updated);
       setIsEditOpen(false);
@@ -904,6 +908,11 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
                     {/* Main Info Card */}
                     <div className="panel" style={{ padding: '24px' }}>
+                      {farmDetail.coverImageUrl && (
+                        <div style={{ width: '100%', maxHeight: '240px', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px', border: '1px solid var(--color-border)' }}>
+                          <img src={farmDetail.coverImageUrl} alt={farmDetail.farmName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        </div>
+                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                           <div
@@ -1210,6 +1219,17 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                 }
               }}
               onBoundaryChange={setEditBoundary}
+            />
+          </div>
+          <div>
+            <FileUpload
+              value={editCoverImage}
+              onChange={setEditCoverImage}
+              label={lang === 'en' ? 'Farm Cover / Photos (Cloudinary)' : 'Ảnh bìa / Ảnh thực tế nông trại (Cloudinary)'}
+              hint={lang === 'en' ? 'Upload farm photos to Cloudinary to display on the profile.' : 'Tải ảnh chụp thực tế trang trại lên Cloudinary để hiển thị trên hồ sơ.'}
+              folder="mycropdiary/farms"
+              accept="image/*"
+              disabled={updating}
             />
           </div>
           <div className="structured-field-card">

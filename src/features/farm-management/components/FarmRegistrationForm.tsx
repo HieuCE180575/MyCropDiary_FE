@@ -23,8 +23,8 @@ import {
   type LatLngPoint,
   type WardOption,
 } from '../goongMapService';
-
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
+import { FileUpload } from '../../../shared/components/FileUpload';
 
 const INITIAL_VALUES: FarmRegistrationFormValues = {
   proposedFarmName: '',
@@ -742,24 +742,17 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         {errors.description ? <small className="field-error">{translate(errors.description)}</small> : null}
       </label>
 
-      <label className="form-field structured-field-card">
-        <span>{lang === 'en' ? 'Supporting Document URL' : 'Đường dẫn tài liệu minh chứng'}</span>
-        <input className="ui-input"
-          type="url"
-          value={values.documentUrl ?? ''}
-          maxLength={1000}
-          onChange={(event) => updateField('documentUrl', event.target.value)}
-          onBlur={() => handleBlur('documentUrl')}
-          placeholder="https://..."
+      <div className="form-field">
+        <FileUpload
+          value={values.documentUrl}
+          onChange={(url) => updateField('documentUrl', url)}
+          error={touched.documentUrl ? errors.documentUrl : undefined}
+          label={lang === 'en' ? 'Supporting Farm Documents & Images' : 'Tài liệu & Hình ảnh minh chứng trang trại'}
+          hint={lang === 'en' ? 'Upload farm photos or PDF certificates (VietGAP, land use right documents). Files are stored securely on Cloudinary.' : 'Tải lên ảnh chụp thực tế nông trại hoặc file tài liệu PDF chứng nhận VietGAP, hồ sơ quyền sử dụng đất. Tệp sẽ được lưu an toàn lên Cloudinary.'}
+          folder="mycropdiary/evidence"
+          disabled={submitting}
         />
-        {errors.documentUrl ? (
-          <small className="field-error">{errors.documentUrl}</small>
-        ) : (
-          <small className="field-hint">
-            {lang === 'en' ? 'Link to farm certificates or legal documents. Ensure admin has view permissions.' : 'Link giấy chứng nhận hoặc tài liệu trang trại. Hãy bảo đảm quản trị viên có quyền xem.'}
-          </small>
-        )}
-      </label>
+      </div>
 
       <Button type="submit" variant="primary" loading={submitting}>
         {submitting ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...') : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
