@@ -1,3 +1,4 @@
+import '../styles/farm-profile.css';
 import { message, type TranslationMessage } from "../shared/i18n/translate";
 import { EmptyState } from '../shared/components/EmptyState';
 import { Modal } from '../shared/components/Modal';
@@ -6,16 +7,16 @@ import { StatusBadge } from '../shared/components/StatusBadge';
 import { PageHeading } from '../shared/components/PageHeading';
 import { Button } from '../shared/components/Button';
 import { TablePagination } from '../shared/components/TablePagination';
-import { TabList } from '../shared/components/TabList';
-import { Link } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
 import { FarmGoongMap } from '../features/farm-management/components/FarmGoongMap';
 import { FarmRegistrationForm } from '../features/farm-management/components/FarmRegistrationForm';
+import { FarmRegistrationHistory } from '../features/farm-management/components/FarmRegistrationHistory';
 import { FarmRegistrationStatus } from '../features/farm-management/components/FarmRegistrationStatus';
 
-import { formatDate as displayDate, formatNumber as displayNumber } from '../shared/format/formatters';
+import { formatNumber as displayNumber } from '../shared/format/formatters';
 import { usePagination } from '../shared/hooks/usePagination';
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useFarmWorkspace } from '../features/farm-management/FarmWorkspace';
 import { farmRole } from '../features/auth/accessPolicy';
@@ -26,7 +27,6 @@ import {
   getFarmMembers,
   addFarmMember,
   removeFarmMember,
-  createFarm,
   type FarmDetail,
   type FarmMemberItem,
 } from '../features/farm-management/api';
@@ -53,11 +53,14 @@ export interface FarmInfoPageProps {
 
 export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const { lang, t: translate } = useLanguage();
+  const navigate = useNavigate();
+  const { farmId: routeFarmId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const { selectedFarm, farms, selectFarm, retry } = useFarmWorkspace();
 
   // Tab & View management: 'list' (Danh sách), 'detail' (Hồ sơ & Bản đồ), 'register' (Đăng ký VietGAP)
   const [viewMode, setViewMode] = useState<'list' | 'detail' | 'register'>(() => {
+    if (routeFarmId) return 'detail';
     if (defaultTab === 'register' || searchParams.get('tab') === 'register') return 'register';
     if (farms.length === 0) return 'register';
     if (searchParams.get('farmId') || searchParams.get('view') === 'detail') return 'detail';
@@ -65,10 +68,14 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   });
 
   const [activeFarmId, setActiveFarmId] = useState<number | null>(() => {
-    const urlFarmId = searchParams.get('farmId');
+    const urlFarmId = routeFarmId || searchParams.get('farmId');
     if (urlFarmId && !isNaN(Number(urlFarmId))) return Number(urlFarmId);
     return selectedFarm?.id ?? (farms.length > 0 ? farms[0].id : null);
   });
+
+  useEffect(() => {
+    if (routeFarmId) { setActiveFarmId(Number(routeFarmId)); setViewMode('detail'); }
+  }, [routeFarmId]);
 
   // Filters for Farm List
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,9 +84,13 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   // Notification Toast
   const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
 
+  const notificationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (notificationTimer.current) clearTimeout(notificationTimer.current); }, []);
+
   const showToast = (text: TranslationMessage, type: 'success' | 'error' = 'success') => {
     setNotification({ text, type });
-    setTimeout(() => setNotification(null), 4000);
+    if (notificationTimer.current) clearTimeout(notificationTimer.current);
+    notificationTimer.current = setTimeout(() => setNotification(null), 4000);
   };
 
   // Farm detail state
@@ -107,16 +118,6 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const [removeMemberTarget, setRemoveMemberTarget] = useState<{ id: number; name: string; farmId: number } | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
 
-  // Create Farm Modal state
-  const [isCreateFarmOpen, setIsCreateFarmOpen] = useState(false);
-  const [createFarmName, setCreateFarmName] = useState('');
-  const [createFarmAddress, setCreateFarmAddress] = useState('');
-  const [createFarmDesc, setCreateFarmDesc] = useState('');
-  const [createLat, setCreateLat] = useState<number | null>(null);
-  const [createLng, setCreateLng] = useState<number | null>(null);
-  const [createBoundary, setCreateBoundary] = useState<LatLngPoint[]>([]);
-  const [creatingFarm, setCreatingFarm] = useState(false);
-
   // VietGAP Registration State
   const [registration, setRegistration] = useState<FarmRegistration | null>(null);
   const [loadingReg, setLoadingReg] = useState(false);
@@ -127,8 +128,9 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const [cancellingReg, setCancellingReg] = useState(false);
   const [cancelRegError, setCancelRegError] = useState<string | null>(null);
 
-  const activeFarmSummary = farms.find((f) => f.id === activeFarmId) || selectedFarm || (farms.length > 0 ? farms[0] : null);
-  const isOwner = activeFarmSummary ? farmRole(activeFarmSummary) === 'OWNER' : false;
+  const activeFarmSummary = farms.find((f) => f.id === activeFarmId) || (routeFarmId ? null : selectedFarm || (farms.length > 0 ? farms[0] : null));
+  const profileTitle = `${lang === 'en' ? 'Farm Profile' : 'Hồ sơ'}: ${farmDetail?.farmName || activeFarmSummary?.farmName || `#${activeFarmId}`}`;
+  const isOwner = farmDetail?.id === activeFarmId && farmDetail.status?.toUpperCase() === 'ACTIVE' && farmDetail.currentUserRole?.toUpperCase() === 'OWNER';
 
   // Filtered farms list matching layout of ZoneListPage / StaffManagementPage
   const filteredFarms = useMemo(() => {
@@ -153,10 +155,10 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
 
   // Auto sync viewMode if user has 0 farms
   useEffect(() => {
-    if (farms.length === 0 && viewMode !== 'register') {
+    if (!routeFarmId && farms.length === 0 && viewMode !== 'register') {
       setViewMode('register');
     }
-  }, [farms.length, viewMode]);
+  }, [farms.length, viewMode, routeFarmId]);
 
   // Keep activeFarmId in sync with selectedFarm if not set
   useEffect(() => {
@@ -180,11 +182,12 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
     }
 
     let active = true;
+    setFarmDetail(null);
     setLoadingDetail(true);
     setDetailError(null);
 
     Promise.all([
-      getFarmById(activeFarmId).catch(() => null),
+      getFarmById(activeFarmId),
       getFarmMembers(activeFarmId).catch(() => []),
     ])
       .then(([detail, memberList]) => {
@@ -198,21 +201,6 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
           setEditLng(detail.longitude ?? null);
           setEditBoundary(parseBoundaryCoordinates(detail.boundaryCoordinates));
           setEditCoverImage(detail.coverImageUrl || '');
-        } else if (activeFarmSummary) {
-          setFarmDetail({
-            id: activeFarmSummary.id,
-            farmName: activeFarmSummary.farmName,
-            description: 'Trang trại chuẩn VietGAP',
-            address: [activeFarmSummary.district, activeFarmSummary.province].filter(Boolean).join(', ') || 'Chưa cập nhật',
-            latitude: null,
-            longitude: null,
-            boundaryCoordinates: null,
-            coverImageUrl: null,
-            status: activeFarmSummary.status || 'ACTIVE',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            currentUserRole: activeFarmSummary.currentUserRole,
-          });
         }
         setMembers(memberList);
       })
@@ -302,7 +290,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeFarmId || !newMemberEmail.trim()) return;
+    if (!activeFarmId || !isOwner || !newMemberEmail.trim()) return;
     setAddingMember(true);
     try {
       const newMember = await addFarmMember(activeFarmId, {
@@ -321,7 +309,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   };
 
   const handleRemoveMember = async (memberId: number, memberName: string) => {
-    if (removingMember || !activeFarmId) return;
+    if (removingMember || !activeFarmId || !isOwner || removeMemberTarget?.farmId !== activeFarmId) return;
     setRemovingMember(true);
     try {
       await removeFarmMember(activeFarmId, memberId);
@@ -332,38 +320,6 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
     } finally {
       setRemovingMember(false);
       setRemoveMemberTarget(null);
-    }
-  };
-
-  const handleCreateFarm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!createFarmName.trim()) return;
-    setCreatingFarm(true);
-    try {
-      const newFarm = await createFarm({
-        farmName: createFarmName.trim(),
-        address: createFarmAddress.trim(),
-        description: createFarmDesc.trim(),
-        latitude: createLat,
-        longitude: createLng,
-        boundaryCoordinates: stringifyBoundaryCoordinates(createBoundary) || null,
-      });
-      setIsCreateFarmOpen(false);
-      setCreateFarmName('');
-      setCreateFarmAddress('');
-      setCreateFarmDesc('');
-      setCreateLat(null);
-      setCreateLng(null);
-      setCreateBoundary([]);
-      showToast(message("Created farm \"{value1}\" successfully!", { value1: newFarm.farmName }));
-      retry();
-      selectFarm(newFarm.id);
-      setActiveFarmId(newFarm.id);
-      setViewMode('detail');
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Tạo trang trại thất bại', 'error');
-    } finally {
-      setCreatingFarm(false);
     }
   };
 
@@ -437,7 +393,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
 
       {/* Main Page Heading */}
       <PageHeading
-        title={<>{lang === 'en' ? 'Farm Management' : 'Quản lý trang trại'}</>}
+        title={viewMode === 'detail' ? profileTitle : (lang === 'en' ? 'Farm Management' : 'Quản lý trang trại')}
         description={<>
           {lang === 'en'
             ? `${farms.length} farms registered · Active Workspace: ${selectedFarm ? selectedFarm.farmName : 'Personal'}`
@@ -447,13 +403,13 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {viewMode === 'detail' && (
-            <Button type="button" variant="secondary" onClick={() => setViewMode('list')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <Button type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
               <Icon name="arrow-left" size={16} /> {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
             </Button>
           )}
 
           {viewMode === 'register' && farms.length > 0 && (
-            <Button type="button" variant="secondary" onClick={() => setViewMode('list')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <Button type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
               <Icon name="arrow-left" size={16} /> {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
             </Button>
           )}
@@ -464,16 +420,14 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
             </Button>
           )}
 
-          <Button type="button" variant="primary" onClick={() => setIsCreateFarmOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Farm' : 'Thêm trang trại'}
-          </Button>
+
         </div>
       </PageHeading>
 
       {/* ========================================================================= */}
       {/* CASE 1: USER HAS NO FARMS -> SHOW REGISTRATION OR DIRECT CREATION         */}
       {/* ========================================================================= */}
-      {farms.length === 0 ? (
+      {!routeFarmId && farms.length === 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           <div className="panel" style={{ padding: '24px', background: 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(34,197,94,0.02) 100%)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -483,12 +437,12 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                 </h3>
                 <p style={{ margin: 0, color: 'var(--color-body)', fontSize: '14px', lineHeight: 1.5 }}>
                   {lang === 'en'
-                    ? 'Submit a VietGAP farm registration request for official review, or create a farm directly to start testing.'
+                    ? 'Submit a VietGAP farm registration request for official review, and track its approval status.'
                     : 'Hãy điền đơn đăng ký trang trại VietGAP để ban quản trị thẩm định, hoặc bạn có thể tạo nhanh trang trại trực tiếp để trải nghiệm ngay.'}
                 </p>
               </div>
               <div style={{ display: 'flex', gap: '12px' }}>
-                <Button type="button" variant="primary" onClick={() => setIsCreateFarmOpen(true)}>
+                <Button type="button" variant="primary" onClick={() => navigate('/farms/new')}>
                   <Icon name="plus" /> {lang === 'en' ? 'Create Farm Instantly' : 'Tạo trang trại trực tiếp'}
                 </Button>
                 <Button
@@ -535,46 +489,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
         /* CASE 2: MAIN UNIFIED CLEAN CARD CONTAINER (MATCHING ZONE & STAFF PAGES)   */
         /* ========================================================================= */
         <div className="zone-clean-card">
-          {/* Integrated Tabs */}
-          <TabList
-            idPrefix="farm-mgmt"
-            label={lang === 'en' ? 'Farm management sections' : 'Các mục quản lý trang trại'}
-            inset
-            value={viewMode}
-            onChange={(val) => setViewMode(val as 'list' | 'detail' | 'register')}
-            items={[
-              {
-                value: 'list',
-                label: (
-                  <>
-                    <Icon name="home" size={17} /> {lang === 'en' ? 'Farm List' : 'Danh sách trang trại'}{' '}
-                    <span className="tab-count">({farms.length})</span>
-                  </>
-                ),
-              },
-              ...(activeFarmId && viewMode === 'detail'
-                ? [
-                    {
-                      value: 'detail',
-                      label: (
-                        <>
-                          <Icon name="leaf" size={17} /> {lang === 'en' ? 'Farm Profile' : 'Hồ sơ'}:{' '}
-                          {activeFarmSummary?.farmName || `#${activeFarmId}`}
-                        </>
-                      ),
-                    },
-                  ]
-                : []),
-              {
-                value: 'register',
-                label: (
-                  <>
-                    <Icon name="book" size={17} /> {lang === 'en' ? 'VietGAP Registration' : 'Hồ sơ đăng ký VietGAP'}
-                  </>
-                ),
-              },
-            ]}
-          />
+
 
           {/* =========================================================
               VIEW 1: LIST / TABLE VIEW (DANH SÁCH BẢNG ĐỒNG BỘ)
@@ -636,7 +551,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                   description={<>{lang === 'en' ? 'Try adjusting your search query or add a new farm workspace.' : 'Thử đổi từ khóa tìm kiếm hoặc bấm Thêm trang trại mới.'}</>}
                   icon={<>🔍</>}
                   action={
-                    <Button type="button" variant="primary" onClick={() => setIsCreateFarmOpen(true)}>
+                    <Button type="button" variant="primary" onClick={() => navigate('/farms/new')}>
                       <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Farm' : 'Thêm trang trại'}
                     </Button>
                   }
@@ -849,65 +764,15 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
              ========================================================= */}
           {viewMode === 'detail' && (
             <div style={{ padding: '24px' }}>
-              {/* Detail Header / Farm Switcher */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Button type="button" variant="secondary" onClick={() => setViewMode('list')} style={{ padding: '8px 14px' }}>
-                    <Icon name="arrow-left" size={16} /> {lang === 'en' ? 'Back to List' : 'Quay lại danh sách'}
-                  </Button>
-                  {farms.length > 1 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <label htmlFor="farm-detail-switcher" style={{ fontSize: '13.5px', color: 'var(--color-muted)' }}>
-                        {lang === 'en' ? 'Switch Farm:' : 'Xem trang trại khác:'}
-                      </label>
-                      <select
-                        id="farm-detail-switcher"
-                        className="ui-select"
-                        value={activeFarmId ?? ''}
-                        onChange={(e) => setActiveFarmId(Number(e.target.value))}
-                        style={{ padding: '6px 12px', fontSize: '13.5px' }}
-                      >
-                        {farms.map((f) => (
-                          <option key={f.id} value={f.id}>
-                            {f.farmName} #{f.id}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {activeFarmId !== selectedFarm?.id ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        if (activeFarmId) {
-                          selectFarm(activeFarmId);
-                          showToast(`Đã chọn trang trại này làm không gian làm việc hiện tại.`);
-                        }
-                      }}
-                    >
-                      🌿 {lang === 'en' ? 'Set as Active Workspace' : 'Đặt làm trang trại làm việc'}
-                    </Button>
-                  ) : (
-                    <span className="profile-tag-pill" style={{ background: 'var(--color-success-bg)', color: 'var(--color-primary-text)', fontWeight: 700 }}>
-                      🌿 {lang === 'en' ? 'Active Workspace' : 'Đang làm việc tại đây'}
-                    </span>
-                  )}
-                </div>
-              </div>
-
               {loadingDetail ? (
                 <EmptyState className="panel" title={<>{lang === 'en' ? 'Loading farm profile...' : 'Đang tải hồ sơ trang trại...'}</>} icon={<>⏳</>} />
               ) : detailError ? (
                 <EmptyState className="panel" title={<>{lang === 'en' ? 'Failed to load farm information' : 'Không thể tải thông tin'}</>} description={<>{translate(detailError)}</>} icon={<>⚠️</>} />
               ) : farmDetail ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: '24px' }}>
                     {/* Main Info Card */}
-                    <div className="panel" style={{ padding: '24px' }}>
+                    <div className="panel farm-profile-info" style={{ padding: '24px' }}>
                       {farmDetail.coverImageUrl && (
                         <div style={{ width: '100%', maxHeight: '240px', borderRadius: '12px', overflow: 'hidden', marginBottom: '20px', border: '1px solid var(--color-border)' }}>
                           <img src={farmDetail.coverImageUrl} alt={farmDetail.farmName} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
@@ -945,39 +810,29 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                         </div>
                       </div>
 
-                      <p
-                        style={{
-                          margin: '18px 0',
-                          color: 'var(--color-body)',
-                          fontSize: '14px',
-                          lineHeight: 1.6,
-                          background: 'var(--color-page)',
-                          padding: '14px',
-                          borderRadius: '10px',
-                        }}
-                      >
+                      <dl className="detail-list farm-profile-fields">
+                        <div className="farm-profile-field-wide"><dt>{lang === 'en' ? 'Description' : 'Mô tả'}</dt><dd>
                         {lang === 'en'
                           ? (farmDetail.description || 'The farm follows VietGAP Good Agricultural Practices for safe produce, transparency, and digital traceability.')
                           : (farmDetail.description || 'Trang trại áp dụng quy chuẩn Thực hành nông nghiệp tốt (VietGAP) hướng đến nông sản an toàn, minh bạch và truy xuất nguồn gốc số.')}
-                      </p>
-
-                      <dl style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px 16px', margin: '16px 0 0', fontSize: '13.5px' }}>
-                        <dt style={{ color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'Address:' : 'Địa chỉ:'}</dt>
-                        <dd style={{ margin: 0, color: 'var(--color-text)', fontWeight: 500 }}>
+                        </dd></div>
+                        <div><dt>{lang === 'en' ? 'Address:' : 'Địa chỉ:'}</dt>
+                        <dd>
                           {lang === 'en' ? (farmDetail.address || 'Not updated') : (farmDetail.address || 'Chưa cập nhật')}
-                        </dd>
+                        </dd></div>
 
+                        {([['province', lang === 'en' ? 'Province / City:' : 'Tỉnh / thành phố:'], ['district', lang === 'en' ? 'District:' : 'Quận / huyện:']] as const).map(([field, label]) => activeFarmSummary?.[field] ? (
+                          <div key={field}><dt>{label}</dt><dd>{activeFarmSummary[field]}</dd></div>
+                        ) : null)}
                         {farmDetail.latitude != null && farmDetail.longitude != null && (
-                          <>
-                            <dt style={{ color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'Coordinates:' : 'Tọa độ:'}</dt>
-                            <dd style={{ margin: 0, color: 'var(--color-primary-text)', fontWeight: 600 }}>
-                              {farmDetail.latitude.toFixed(6)}, {farmDetail.longitude.toFixed(6)}
-                            </dd>
-                          </>
+                          <div>
+                            <dt>{lang === 'en' ? 'Coordinates:' : 'Tọa độ:'}</dt>
+                            <dd>{farmDetail.latitude.toFixed(6)}, {farmDetail.longitude.toFixed(6)}</dd>
+                          </div>
                         )}
 
-                        <dt style={{ color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'Total Area:' : 'Diện tích:'}</dt>
-                        <dd style={{ margin: 0, color: 'var(--color-text)', fontWeight: 500 }}>
+                        <div><dt>{lang === 'en' ? 'Total Area:' : 'Diện tích:'}</dt>
+                        <dd>
                           {lang === 'en'
                             ? (activeFarmSummary?.totalAreaM2
                               ? `${displayNumber(activeFarmSummary.totalAreaM2, lang)} m²`
@@ -989,34 +844,19 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                               : polygonAreaM2 > 0
                                 ? `${displayNumber(polygonAreaM2, lang)} m² (~${displayNumber(polygonAreaM2 / 10000, lang, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha theo sơ đồ bản đồ)`
                                 : 'Quy mô đạt chuẩn')}
-                        </dd>
+                        </dd></div>
 
-                        <dt style={{ color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'Status:' : 'Trạng thái:'}</dt>
-                        <dd style={{ margin: 0 }}>
+                        <div><dt>{lang === 'en' ? 'Status:' : 'Trạng thái:'}</dt>
+                        <dd>
                           <StatusBadge tone="success" label={<>{farmDetail.status ? (lang === 'en' && farmDetail.status === 'ACTIVE' ? 'Active' : farmDetail.status) : (lang === 'en' ? 'Active' : 'Đang hoạt động')}</>} />
-                        </dd>
+                        </dd></div>
 
-                        <dt style={{ color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'Created At:' : 'Tạo lúc:'}</dt>
-                        <dd style={{ margin: 0, color: 'var(--color-muted)' }}>
-                          {displayDate(farmDetail.createdAt, lang)}
-                        </dd>
+
                       </dl>
 
-                      {/* Quick Links inside Farm */}
-                      <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid var(--color-border)', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        <Link to="/production-areas" className="ui-button ui-button--secondary" style={{ fontSize: '13px', padding: '6px 12px' }}>
-                          {lang === 'en' ? '🗺️ Zones & Blocks' : '🗺️ Vùng & Lô đất'}
-                        </Link>
-                        <Link to="/crop-seasons" className="ui-button ui-button--secondary" style={{ fontSize: '13px', padding: '6px 12px' }}>
-                          {lang === 'en' ? '🌾 Crop Seasons' : '🌾 Mùa vụ'}
-                        </Link>
-                        <Link to="/activities" className="ui-button ui-button--secondary" style={{ fontSize: '13px', padding: '6px 12px' }}>
-                          {lang === 'en' ? '📖 Farming Activities' : '📖 Nhật ký canh tác'}
-                        </Link>
-                        <Link to="/harvests" className="ui-button ui-button--secondary" style={{ fontSize: '13px', padding: '6px 12px' }}>
-                          {lang === 'en' ? '📦 Harvest & Batches' : '📦 Thu hoạch & Truy xuất'}
-                        </Link>
-                      </div>
+                      {farmDetail.currentUserRole?.toUpperCase() === 'OWNER' && (
+                        <FarmRegistrationHistory farmId={farmDetail.id} />
+                      )}
                     </div>
 
                     {/* Members Panel */}
@@ -1111,6 +951,8 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
           {/* =========================================================
               VIEW 3: VIETGAP REGISTRATION VIEW
              ========================================================= */}
+
+
           {viewMode === 'register' && (
             <div style={{ padding: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', paddingBottom: '14px', borderBottom: '1px solid var(--color-border)' }}>
@@ -1294,84 +1136,6 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
             </Button>
             <Button type="submit" variant="primary" disabled={addingMember}>
               {addingMember ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Confirm Add' : 'Xác nhận thêm')}
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Create Farm Modal */}
-      <Modal
-        open={isCreateFarmOpen}
-        onClose={() => setIsCreateFarmOpen(false)}
-        title={lang === 'en' ? 'Create New Farm Workspace' : 'Tạo không gian trang trại mới'}
-        style={{ width: 'min(720px, 100%)' }}
-      >
-        <form onSubmit={handleCreateFarm} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="structured-field-card">
-            <label htmlFor="farm-field-6">{lang === 'en' ? 'Farm Name *' : 'Tên trang trại *'}</label>
-            <input
-              id="farm-field-6"
-              className="ui-input"
-              type="text"
-              required
-              placeholder={lang === 'en' ? 'Example: An Nhien Organic Farm' : 'Ví dụ: Nông trại Hữu cơ An Nhiên'}
-              value={createFarmName}
-              onChange={(e) => setCreateFarmName(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px' }}
-            />
-          </div>
-          <div className="structured-field-card">
-            <label htmlFor="farm-field-7">{lang === 'en' ? 'Address' : 'Địa chỉ'}</label>
-            <input
-              id="farm-field-7"
-              className="ui-input"
-              type="text"
-              placeholder={lang === 'en' ? 'Commune / District / Province...' : 'Xã/Huyện/Tỉnh...'}
-              value={createFarmAddress}
-              onChange={(e) => setCreateFarmAddress(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px' }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 600, color: 'var(--color-body)' }}>
-              {lang === 'en' ? 'Location & Farm Boundary Plan' : 'Vẽ vị trí & Sơ đồ ranh giới trang trại'}
-            </label>
-            <FarmGoongMap
-              farmName={createFarmName || 'Trang trại mới'}
-              address={createFarmAddress}
-              latitude={createLat}
-              longitude={createLng}
-              boundary={createBoundary}
-              editable={true}
-              height={320}
-              onLocationChange={(lat, lng, rev) => {
-                setCreateLat(lat);
-                setCreateLng(lng);
-                if (!createFarmAddress.trim() && rev?.formattedAddress) {
-                  setCreateFarmAddress(rev.formattedAddress);
-                }
-              }}
-              onBoundaryChange={setCreateBoundary}
-            />
-          </div>
-          <div className="structured-field-card">
-            <label htmlFor="farm-field-8">{lang === 'en' ? 'Scale & Description' : 'Mô tả quy mô'}</label>
-            <textarea
-              id="farm-field-8"
-              className="ui-textarea"
-              rows={3}
-              placeholder={lang === 'en' ? 'Describe crop types and planned area...' : 'Mô tả các loại cây trồng và diện tích dự kiến...'}
-              value={createFarmDesc}
-              onChange={(e) => setCreateFarmDesc(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px' }}
-            />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Button type="button" variant="secondary" onClick={() => setIsCreateFarmOpen(false)}>
-              {lang === 'en' ? 'Cancel' : 'Hủy'}
-            </Button>
-            <Button type="submit" variant="primary" loading={creatingFarm}>
-              {creatingFarm ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Create Farm' : 'Tạo trang trại')}
             </Button>
           </div>
         </form>

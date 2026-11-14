@@ -1,0 +1,35 @@
+.farm-profile-info {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.farm-profile-info .farm-profile-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 20px 0 0;
+}
+
+.farm-profile-info .farm-profile-fields > div {
+  min-width: 0;
+}
+
+.farm-profile-info .farm-profile-fields dd {
+  overflow-wrap: anywhere;
+}
+
+.farm-profile-field-wide {
+  grid-column: 1 / -1;
+}
+
+.farm-profile-info .status-evidence-item {
+  flex-wrap: wrap;
+}
+
+.farm-profile-info .status-evidence-info {
+  flex-basis: 180px;
+}
+
+@container (max-width: 420px) {
+  .farm-profile-info .farm-profile-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

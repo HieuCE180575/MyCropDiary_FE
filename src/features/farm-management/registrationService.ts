@@ -57,6 +57,20 @@ export async function fetchMyLatestRegistration(signal?: AbortSignal): Promise<F
   return toRegistration(await request<RegistrationResponse>(`/farm-registrations/${page.items[0].registrationId}`, { signal }));
 }
 
+export async function fetchMyRegistrations(signal?: AbortSignal): Promise<FarmRegistration[]> {
+  const records: FarmRegistration[] = [];
+  for (let page = 0; ; page++) {
+    const data = await request<PageResponse<RegistrationResponse>>(`/farm-registrations?page=${page}&size=100&sort=createdAt,desc&sort=id,desc`, { signal });
+    if (!Array.isArray(data.items)) throw new Error('farms.loadError');
+    records.push(...data.items.map(toRegistration));
+    if (data.last || page + 1 >= data.totalPages) return records;
+  }
+}
+
+export async function fetchMyRegistrationById(id: string, signal?: AbortSignal): Promise<FarmRegistration> {
+  return toRegistration(await request<RegistrationResponse>(`/farm-registrations/${encodeURIComponent(id)}`, { signal }));
+}
+
 export async function submitFarmRegistration(values: FarmRegistrationFormValues): Promise<FarmRegistration> {
   const payload: Record<string, unknown> = {
     farmName: values.proposedFarmName.trim(),

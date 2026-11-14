@@ -2,7 +2,9 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layouts/AppLayout';
 import { PublicLayout } from './layouts/PublicLayout';
 import { DashboardPage } from '../pages/DashboardPage';
-import { FarmInfoPage } from '../pages/FarmInfoPage';
+import { FarmRegistrationNewPage } from '../pages/FarmRegistrationNewPage';
+import { FarmRegistrationDetailPage } from '../pages/FarmRegistrationDetailPage';
+import { FarmDetailRoute, LegacyFarmRoute } from '../pages/FarmRoutes';
 import { KnowledgePage } from '../pages/KnowledgePage';
 import { LoginPage } from '../pages/LoginPage';
 import { HomePage } from '../pages/HomePage';
@@ -20,6 +22,8 @@ import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 import { LanguageProvider } from '../shared/i18n/LanguageContext';
 
 import { moduleDefinitions } from './routes/moduleDefinitions';
+
+const farmModule = moduleDefinitions.find(module => module.key === 'farm')!;
 
 export function App() {
   return (
@@ -44,8 +48,11 @@ export function App() {
               element={<DashboardPage />}
             />
 
-            <Route path="/farm-registration" element={<FarmInfoPage defaultTab="register" />} />
-            <Route path="/farm" element={<FarmInfoPage />} />
+            <Route path="/farm-registration" element={<Navigate to="/farms/new" replace />} />
+            <Route path="/farm" element={<LegacyFarmRoute />} />
+            <Route path="/farms/new" element={<ModuleAccess module={farmModule}><FarmRegistrationNewPage /></ModuleAccess>} />
+            <Route path="/farms/registrations/:registrationId" element={<ModuleAccess module={farmModule}><FarmRegistrationDetailPage /></ModuleAccess>} />
+            <Route path="/farms/:farmId" element={<ModuleAccess module={farmModule}><FarmDetailRoute /></ModuleAccess>} />
             <Route path="/workers" element={<Navigate to="/members" replace />} />
             <Route path="/zones" element={<ZoneListPage />} />
             <Route path="/zones/new" element={<ZoneFormPage mode="create" />} />

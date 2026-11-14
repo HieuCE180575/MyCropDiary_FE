@@ -4,6 +4,8 @@ import type { ApiResponse } from '../../shared/types/api';
 export interface FarmSummary {
   id: number;
   farmCode: string;
+  address?: string | null;
+  createdAt?: string | null;
   farmName: string;
   province: string | null;
   district: string | null;

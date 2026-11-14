@@ -4,7 +4,7 @@ import type { ModuleDefinition } from '../../shared/types/module';
 export const moduleDefinitions: ModuleDefinition[] = [
   {
     "key": "farm",
-    "path": "farm",
+    "path": "farms",
     "title": "Farm Management",
     "ucRange": "UC-09 & UC-13",
     "group": "farm",
