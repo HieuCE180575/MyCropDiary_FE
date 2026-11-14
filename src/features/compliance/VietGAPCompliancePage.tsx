@@ -709,20 +709,6 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 </table>
               </div>
             )}
-
-            {/* Table Footer */}
-            <div className="zone-table-footer" style={{ margin: '16px 0 0', padding: '14px 20px', borderTop: '1px solid var(--color-border)' }}>
-              <span>
-                {lang === 'en'
-                  ? `Showing 1–${activeAuditRuns.length} of ${fullAuditRuns.length} VietGAP audit runs`
-                  : `Hiển thị 1–${activeAuditRuns.length} trong ${fullAuditRuns.length} đợt tự đánh giá`}
-              </span>
-              <div className="zone-pagination-wrap">
-                <button type="button" className="zone-page-btn" disabled>&lt;</button>
-                <button type="button" className="zone-page-btn active">1</button>
-                <button type="button" className="zone-page-btn" disabled>&gt;</button>
-              </div>
-            </div>
           </div>
         </div>
       )}
