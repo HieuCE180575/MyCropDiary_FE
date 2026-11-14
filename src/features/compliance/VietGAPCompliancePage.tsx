@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
@@ -19,28 +19,17 @@ import {
 } from './trainingService';
 import {
   ChecklistRunResp,
-  ChecklistResultItemResp,
   InternalAssessmentResp,
   VietGapCriterionResp,
   fetchChecklistHistoryApi,
-  fetchChecklistResultApi,
-  fetchChecklistItemDetailsApi,
-  runChecklistApi,
   fetchInternalAssessmentHistoryApi,
   fetchInternalAssessmentDetailsApi,
   conductInternalAssessmentApi,
   fetchVietGapCriteriaApi,
 } from './vietgapComplianceService';
+import { VietGapInitRunModal } from './VietGapInitRunModal';
+import { VietGapAuditWorkspaceModal } from './VietGapAuditWorkspaceModal';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
-
-interface ChecklistItem {
-  id: string;
-  category: string;
-  title: string;
-  requirement: string;
-  status: 'COMPLIANT' | 'MINOR_NC' | 'MAJOR_NC';
-  evidence: string;
-}
 
 interface VietGAPComplianceProps {
   initialTab?: 'checklists' | 'assessments' | 'environment' | 'training';
@@ -77,14 +66,15 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   });
   const [submittingTraining, setSubmittingTraining] = useState(false);
 
-  // Checklist runs state
+  // Checklist runs state (Full 33-criteria audits)
   const [checklistRuns, setChecklistRuns] = useState<ChecklistRunResp[]>([]);
   const [loadingChecklists, setLoadingChecklists] = useState(false);
-  const [selectedRunDetail, setSelectedRunDetail] = useState<ChecklistRunResp | null>(null);
-  const [runItemsDetail, setRunItemsDetail] = useState<ChecklistResultItemResp[]>([]);
-  const [loadingRunDetail, setLoadingRunDetail] = useState(false);
-  const [checklistSubTab, setChecklistSubTab] = useState<'runs' | 'criteria'>('runs');
-  const [isRunningChecklist, setIsRunningChecklist] = useState(false);
+  const [checklistSearch, setChecklistSearch] = useState('');
+  const [auditStatusFilter, setAuditStatusFilter] = useState<'all' | 'in_progress' | 'completed'>('all');
+
+  // VietGAP 33-criteria audit workspace state
+  const [isInitRunOpen, setIsInitRunOpen] = useState(false);
+  const [auditWorkspaceRun, setAuditWorkspaceRun] = useState<ChecklistRunResp | null>(null);
 
   // Internal assessment state
   const [internalAssessments, setInternalAssessments] = useState<InternalAssessmentResp[]>([]);
@@ -100,6 +90,39 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
     itemScores: {} as Record<number, { score: number; notes: string }>,
   });
   const [submittingAssessment, setSubmittingAssessment] = useState(false);
+
+  const isFullAuditRun = (run: ChecklistRunResp) => {
+    return (
+      run.ruleCategory === 'VIETGAP_FULL_AUDIT' ||
+      run.totalItems === 33 ||
+      Boolean(run.ruleName && run.ruleName.toLowerCase().includes('toàn diện')) ||
+      Boolean(run.ruleName && run.ruleName.toLowerCase().includes('33'))
+    );
+  };
+
+  const fullAuditRuns = useMemo(() => {
+    return checklistRuns.filter(isFullAuditRun);
+  }, [checklistRuns]);
+
+  const activeAuditRuns: ChecklistRunResp[] = useMemo(() => {
+    return fullAuditRuns.filter((run: ChecklistRunResp) => {
+      const q = checklistSearch.toLowerCase().trim();
+      const season = (run.seasonName || '').toLowerCase();
+      const rule = (run.ruleName || '').toLowerCase();
+      const id = `#${run.runId}`;
+      const auditor = (run.assignedToName || '').toLowerCase();
+      const block = (run.blockName || '').toLowerCase();
+      const matchKw = !q || season.includes(q) || rule.includes(q) || id.includes(q) || auditor.includes(q) || block.includes(q);
+
+      const isCompleted = run.runStatus === 'completed';
+      const matchStatus =
+        auditStatusFilter === 'all' ||
+        (auditStatusFilter === 'completed' && isCompleted) ||
+        (auditStatusFilter === 'in_progress' && !isCompleted);
+
+      return matchKw && matchStatus;
+    });
+  }, [fullAuditRuns, checklistSearch, auditStatusFilter]);
 
   const loadChecklistRuns = async () => {
     if (!selectedFarm?.id) return;
@@ -128,50 +151,16 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   };
 
   useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
     if (activeTab === 'checklists' && selectedFarm?.id) {
       void loadChecklistRuns();
     } else if (activeTab === 'assessments' && selectedFarm?.id) {
       void loadInternalAssessments();
     }
   }, [activeTab, selectedFarm?.id]);
-
-  const handleViewRunDetail = async (runId: number) => {
-    setLoadingRunDetail(true);
-    try {
-      const [res, items] = await Promise.all([
-        fetchChecklistResultApi(runId),
-        fetchChecklistItemDetailsApi(runId),
-      ]);
-      setSelectedRunDetail(res);
-      setRunItemsDetail(items);
-    } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to load inspection details." : err instanceof Error ? err.message : 'Không tải được chi tiết đợt kiểm tra.'));
-    } finally {
-      setLoadingRunDetail(false);
-    }
-  };
-
-  const handleTriggerRunChecklist = async () => {
-    if (!selectedFarm?.id) return;
-    setIsRunningChecklist(true);
-    try {
-      await runChecklistApi(selectedFarm.id, {
-        checklistRuleId: 1, // Default standard VietGAP rule
-        notes: 'Kiểm tra hiện trường định kỳ theo quy chuẩn VietGAP TCVN 11892-1:2017',
-        items: [
-          { resultStatus: 'pass', notes: 'Hệ thống nước tưới đạt chuẩn pH 6.5, EC 1.8' },
-          { resultStatus: 'pass', notes: 'Ghi nhật ký sử dụng vật tư phân bón đầy đủ' },
-          { resultStatus: 'pass', notes: 'Công nhân trang bị đầy đủ bảo hộ lao động' },
-        ],
-      });
-      alert((lang === 'en' ? "VietGAP evidence checklist inspection started successfully!" : 'Đã kích hoạt đợt kiểm tra danh mục bằng chứng VietGAP thành công!'));
-      void loadChecklistRuns();
-    } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to start inspection." : err instanceof Error ? err.message : 'Không thể kích hoạt đợt kiểm tra.'));
-    } finally {
-      setIsRunningChecklist(false);
-    }
-  };
 
   const handleOpenConductModal = async () => {
     if (!selectedFarm?.id) return;
@@ -316,432 +305,480 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
     }
   }, [activeTab, selectedFarm?.id]);
 
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([
-    {
-      id: 'VG-01',
-      category: '1. Đất & Giá thể canh tác',
-      title: 'Đánh giá nguy cơ ô nhiễm đất',
-      requirement: 'Có phiếu kết quả phân tích mẫu đất không chứa dư lượng kim loại nặng vượt ngưỡng quy định.',
-      status: 'COMPLIANT',
-      evidence: 'Phiếu kiểm nghiệm số 2026/KN-ĐAT ngày 15/01/2026 (Viện Khoa học Nông nghiệp)',
-    },
-    {
-      id: 'VG-02',
-      category: '2. Nước tưới tiêu',
-      title: 'Nguồn nước tưới đạt chuẩn QCVN 39:2011/BTNMT',
-      requirement: 'Nước mặt hoặc nước ngầm không bị ô nhiễm bởi nước thải sinh hoạt hoặc công nghiệp.',
-      status: 'COMPLIANT',
-      evidence: 'Hệ thống giếng khoan tầng sâu + bể lắng lọc cát thạch anh đã kiểm định',
-    },
-    {
-      id: 'VG-03',
-      category: '3. Phân bón & Dinh dưỡng',
-      title: 'Sử dụng phân bón trong danh mục cho phép',
-      requirement: 'Chỉ dùng phân bón có nguồn gốc rõ ràng, ghi chép sổ nhật ký đầy đủ số lượng và thời gian.',
-      status: 'COMPLIANT',
-      evidence: 'Nhật ký vật tư số #2026-VTTU, hóa đơn nhà cung cấp VermiFarm',
-    },
-    {
-      id: 'VG-04',
-      category: '4. Thuốc BVTV & Thời gian cách ly (PHI)',
-      title: 'Tuân thủ thời gian cách ly thu hoạch',
-      requirement: 'Thu hoạch phải sau thời gian cách ly tối thiểu ghi trên nhãn thuốc bảo vệ thực vật.',
-      status: 'COMPLIANT',
-      evidence: 'Đợt phun Neem Oil cách ngày hái 7 ngày (quy định 5 ngày)',
-    },
-    {
-      id: 'VG-05',
-      category: '5. Thu hoạch & Bảo quản sau thu hoạch',
-      title: 'Vệ sinh dụng cụ chứa đựng và bao bì',
-      requirement: 'Thùng sọt, bao bì đựng rau quả phải sạch sẽ, không dùng lại bao bì từng đựng hóa chất/phân bón.',
-      status: 'COMPLIANT',
-      evidence: 'Khay nhựa HDPE nguyên sinh chuyên dụng có khử khuẩn cồn y tế',
-    },
-    {
-      id: 'VG-06',
-      category: '6. An toàn lao động & Phúc lợi',
-      title: 'Trang bị bảo hộ lao động đầy đủ',
-      requirement: 'Công nhân được cấp khẩu trang, găng tay, ủng và khám sức khỏe định kỳ hàng năm.',
-      status: 'MINOR_NC',
-      evidence: 'Đã cấp bảo hộ, đang lên lịch khám sức khỏe đợt 2 cho 4 công nhân mới',
-    },
-  ]);
-
-  const compliantCount = checklist.filter((c) => c.status === 'COMPLIANT').length;
-  const complianceScore = Math.round((compliantCount / checklist.length) * 100);
-
-  const handleToggleItem = (id: string) => {
-    setChecklist((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const nextStatus = item.status === 'COMPLIANT' ? 'MINOR_NC' : 'COMPLIANT';
-          return { ...item, status: nextStatus };
-        }
-        return item;
-      })
-    );
+  const getHeaderMeta = () => {
+    switch (activeTab) {
+      case 'assessments':
+        return {
+          breadcrumb: lang === 'en' ? 'Quality & Compliance' : 'Chất lượng & Tuân thủ',
+          breadcrumbSub: lang === 'en' ? 'Internal Assessments' : 'Đánh giá nội bộ',
+          title: lang === 'en' ? 'Internal Farm Assessments' : 'Hồ sơ Đánh giá Nội bộ VietGAP',
+          subtitle: lang === 'en'
+            ? 'Internal inspection history, compliance scoring, and audit reports · '
+            : 'Lịch sử các đợt thanh tra nội bộ, chấm điểm và biên bản hiện trường · ',
+        };
+      case 'environment':
+        return {
+          breadcrumb: lang === 'en' ? 'Production & Environment' : 'Sản xuất & Môi trường',
+          breadcrumbSub: lang === 'en' ? 'Conditions & Environment' : 'Đất, Nước & Nguy cơ',
+          title: lang === 'en' ? 'Soil, Water & Environmental Conditions' : 'Điều kiện Đất, Nước & Môi trường',
+          subtitle: lang === 'en'
+            ? 'Laboratory test records for soil, irrigation water, and contamination risks · '
+            : 'Hồ sơ xét nghiệm mẫu đất, nguồn nước tưới và đánh giá nguy cơ ô nhiễm · ',
+        };
+      case 'training':
+        return {
+          breadcrumb: lang === 'en' ? 'Staff & Compliance' : 'Nhân sự & Tuân thủ',
+          breadcrumbSub: lang === 'en' ? 'Safety Training' : 'Đào tạo an toàn lao động',
+          title: lang === 'en' ? 'Safety Training & Certifications' : 'Đào tạo & Chứng chỉ An toàn Lao động',
+          subtitle: lang === 'en'
+            ? 'Technical training sessions, food safety certificates, and worker records · '
+            : 'Quản lý các khóa tập huấn kỹ thuật, an toàn thực phẩm và chứng nhận công nhân · ',
+        };
+      case 'checklists':
+      default:
+        return {
+          breadcrumb: lang === 'en' ? 'Quality & Compliance' : 'Chất lượng & Tuân thủ',
+          breadcrumbSub: 'VietGAP (TCVN 11892-1:2017)',
+          title: lang === 'en' ? 'VietGAP Checklists & Assessment' : 'Đánh giá & Tuân thủ Tiêu chuẩn VietGAP',
+          subtitle: lang === 'en'
+            ? 'Quality control records and 33-criteria VietGAP compliance dossiers · '
+            : 'Hồ sơ kiểm soát chất lượng và thẩm định 33 tiêu chí VietGAP (TCVN 11892-1:2017) · ',
+        };
+    }
   };
+
+  const headerMeta = getHeaderMeta();
 
   return (
     <section className="vietgap-compliance-page">
-      <div className="page-heading">
+      <div className="page-heading" style={{ marginBottom: '20px' }}>
         <div>
-          <h1>{lang === 'en' ? 'VietGAP Compliance & Assessment' : 'Đánh giá & Tuân thủ Tiêu chuẩn VietGAP'}</h1>
-          <p className="page-subtitle">
-            {(lang === 'en' ? "Quality control records, internal assessments, and farm safety inspections " : "Hồ sơ kiểm soát chất lượng, đánh giá nội bộ và kiểm định an toàn nông trại ")} {selectedFarm?.farmName || ''}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
+            <span>{headerMeta.breadcrumb}</span>
+            <span>/</span>
+            <span style={{ fontWeight: 600, color: '#334155' }}>{headerMeta.breadcrumbSub}</span>
+          </div>
+          <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 750, color: '#0f172a', letterSpacing: '-0.02em' }}>
+            {headerMeta.title}
+          </h1>
+          <p className="page-subtitle" style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13.5px' }}>
+            {headerMeta.subtitle}
+            <strong style={{ color: '#334155' }}>{selectedFarm?.farmName || ''}</strong>
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button type="button" className="action-button" onClick={() => window.print()}>
-            {lang === 'en' ? '📄 Export VietGAP Dossier' : '📄 Xuất hồ sơ VietGAP'}
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => window.print()}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              fontSize: '13px',
+              fontWeight: 500,
+              background: '#ffffff',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              color: '#334155',
+              cursor: 'pointer',
+            }}
+          >
+            <Icon name="file-text" size={14} />
+            <span>{lang === 'en' ? 'Export Dossier' : 'Xuất hồ sơ VietGAP'}</span>
           </button>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #e2e8f0', marginBottom: '20px' }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('checklists')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'checklists' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'checklists' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "✓ Criteria checklist (" : "✓ Bảng kiểm tiêu chí (")}{checklist.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('assessments')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'assessments' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'assessments' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "📋 Internal assessments" : "📋 Đánh giá nội bộ")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('environment')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'environment' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'environment' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "🌍 Soil, Water & Environment" : "🌍 Đất, Nước & Môi trường")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('training')}
-          style={{
-            padding: '10px 18px',
-            fontSize: '14px',
-            fontWeight: 650,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'training' ? '3px solid #10b981' : '3px solid transparent',
-            color: activeTab === 'training' ? '#059669' : '#64748b',
-            marginBottom: '-2px',
-          }}
-        >
-          {(lang === 'en' ? "🎓 Occupational safety training" : "🎓 Đào tạo an toàn lao động")}
-        </button>
       </div>
 
       {/* Tab: Checklists */}
       {activeTab === 'checklists' && (
         <div>
-          {/* Sub Navigation between Checklist Runs and Standard Criteria */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Main Page Heading */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '22px' }}>
+            <div>
+              <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+                {lang === 'en' ? 'VietGAP 33-Criteria Audit History' : 'Lịch sử tự đánh giá VietGAP'}
+              </h1>
+              <p style={{ margin: 0, fontSize: '14px', color: '#64748b', fontWeight: 500 }}>
+                {lang === 'en'
+                  ? 'Periodic 33-criteria VietGAP compliance audits by crop season, evidence records, and acceptance dossier.'
+                  : 'Theo dõi tiến độ thẩm định 33 tiêu chí VietGAP theo mùa vụ canh tác, hồ sơ minh chứng và biên bản nghiệm thu.'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <button
                 type="button"
-                className={checklistSubTab === 'runs' ? 'action-button solid' : 'action-button'}
-                onClick={() => setChecklistSubTab('runs')}
+                className="primary-button"
+                onClick={() => setIsInitRunOpen(true)}
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  borderRadius: '10px',
+                  background: '#059669',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#ffffff',
+                }}
               >
-                {(lang === 'en' ? "📋 Inspection history (" : "📋 Lịch sử đợt kiểm tra (")}{checklistRuns.length})
-              </button>
-              <button
-                type="button"
-                className={checklistSubTab === 'criteria' ? 'action-button solid' : 'action-button'}
-                onClick={() => setChecklistSubTab('criteria')}
-              >
-                {(lang === 'en' ? "✓ VietGAP standards checklist" : "✓ Bảng kiểm quy chuẩn VietGAP")}
+                <Icon name="plus" size={17} />
+                <span>{lang === 'en' ? 'New VietGAP Audit' : 'Khởi tạo đợt tự đánh giá'}</span>
               </button>
             </div>
+          </div>
+
+          {/* Clean Horizontal Filter Bar (Input Search + Status Dropdown + Refresh) */}
+          <div className="crops-clean-filter-bar">
+            <div className="crops-clean-search-wrap">
+              <span className="search-icon">
+                <Icon name="search" size={17} />
+              </span>
+              <input
+                type="search"
+                placeholder={lang === 'en' ? 'Search season, auditor, #ID...' : 'Tìm mùa vụ, người đánh giá, mã đợt...'}
+                value={checklistSearch}
+                onChange={(e) => setChecklistSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="crops-clean-select-wrap">
+              <span className="select-lead-icon" style={{ color: '#475569' }}>
+                <Icon name="check" size={16} />
+              </span>
+              <select
+                value={auditStatusFilter}
+                onChange={(e) => setAuditStatusFilter(e.target.value as 'all' | 'in_progress' | 'completed')}
+                aria-label={lang === 'en' ? 'Filter by status' : 'Lọc theo trạng thái'}
+              >
+                <option value="all">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>
+                <option value="in_progress">{lang === 'en' ? 'Active / In Progress' : 'Đang thực hiện'}</option>
+                <option value="completed">{lang === 'en' ? 'Completed' : 'Đã hoàn thành'}</option>
+              </select>
+              <span className="select-chevron">
+                <Icon name="chevron" size={16} />
+              </span>
+            </div>
+
+            {(checklistSearch || auditStatusFilter !== 'all') && (
+              <button
+                type="button"
+                className="filter-reset-btn"
+                onClick={() => {
+                  setChecklistSearch('');
+                  setAuditStatusFilter('all');
+                }}
+                style={{ height: '44px' }}
+              >
+                {lang === 'en' ? '✕ Reset' : '✕ Đặt lại'}
+              </button>
+            )}
+
             <button
               type="button"
-              className="action-button solid"
-              disabled={isRunningChecklist}
-              onClick={handleTriggerRunChecklist}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => void loadChecklistRuns()}
+              title={lang === 'en' ? 'Refresh list' : 'Tải lại danh sách'}
+              style={{
+                height: '44px',
+                padding: '0 14px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#475569',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
             >
-              <span>▶</span> {(lang === 'en' ? isRunningChecklist ? "Running..." : "Run new inspection" : isRunningChecklist ? 'Đang thực thi...' : 'Chạy đợt kiểm tra mới')}
+              <Icon name="refresh" size={15} />
+              <span>{lang === 'en' ? 'Refresh' : 'Làm mới'}</span>
             </button>
           </div>
 
-          {checklistSubTab === 'runs' ? (
-            <div className="panel" style={{ padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "VietGAP field inspection history" : "Lịch sử đợt kiểm tra hiện trường VietGAP")}</h2>
-                  <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13.5px' }}>
-                    {(lang === 'en' ? "Track evidence checklist inspections, pass rates, and missing evidence" : "Theo dõi các đợt thực thi kiểm tra danh mục bằng chứng, tỷ lệ đạt và bằng chứng còn thiếu")}
-                  </p>
-                </div>
-                <button type="button" className="action-button" onClick={() => void loadChecklistRuns()}>
-                  {(lang === 'en' ? "Refresh" : "Làm mới")}
-                </button>
+          {/* Card Content & Table */}
+          <div className="zone-clean-card" style={{ padding: '20px 24px', minHeight: '520px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '17px', fontWeight: 750, color: '#0f172a', margin: 0 }}>
+                  {lang === 'en' ? 'VietGAP Audit List' : 'Danh sách đợt tự đánh giá'}
+                </h2>
+                <span style={{ fontSize: '13px', fontWeight: 500, color: '#64748b' }}>
+                  {activeAuditRuns.length} {lang === 'en' ? 'records' : 'đợt đánh giá'}
+                </span>
               </div>
 
-              {loadingChecklists ? (
-                <div style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
-                  <p>{(lang === 'en' ? "⏳ Loading inspection history..." : "⏳ Đang tải lịch sử các đợt kiểm tra...")}</p>
-                </div>
-              ) : checklistRuns.length === 0 ? (
-                <div className="empty-state" style={{ padding: '36px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
-                  <h3 style={{ margin: '0 0 6px', color: '#1e293b' }}>{(lang === 'en' ? "No inspections yet" : "Chưa có đợt kiểm tra nào")}</h3>
-                  <p style={{ margin: 0, color: '#64748b', fontSize: '13.5px' }}>
-                    {(lang === 'en' ? "Click \"Run new inspection\" above to start your first field inspection." : "Nhấn \"Chạy đợt kiểm tra mới\" ở góc trên để kích hoạt đợt kiểm tra hiện trường đầu tiên.")}
-                  </p>
-                </div>
-              ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13.5px' }}>
-                    <thead>
-                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                        <th style={{ padding: '12px 14px' }}>{(lang === 'en' ? "Inspection ID" : "Mã đợt")}</th>
-                        <th style={{ padding: '12px 14px' }}>{(lang === 'en' ? "Inspection rule name" : "Tên quy tắc kiểm tra")}</th>
-                        <th style={{ padding: '12px 14px' }}>{(lang === 'en' ? "Season / Block" : "Mùa vụ / Lô đất")}</th>
-                        <th style={{ padding: '12px 14px' }}>{(lang === 'en' ? "Performed by" : "Người thực hiện")}</th>
-                        <th style={{ padding: '12px 14px' }}>{(lang === 'en' ? "Status" : "Trạng thái")}</th>
-                        <th style={{ padding: '12px 14px' }}>{(lang === 'en' ? "Inspection results" : "Kết quả kiểm tra")}</th>
-                        <th style={{ padding: '12px 14px', textAlign: 'center' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {checklistRuns.map((run) => (
-                        <tr key={run.runId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>#{run.runId}</td>
-                          <td style={{ padding: '12px 14px' }}>
-                            <strong style={{ color: '#0f172a', display: 'block' }}>{(lang === 'en' ? run.ruleName || "VietGAP field inspection" : run.ruleName || 'Kiểm tra hiện trường VietGAP')}</strong>
-                            <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? run.ruleCategory || "Quality assurance" : run.ruleCategory || 'Đảm bảo chất lượng')}</span>
-                          </td>
-                          <td style={{ padding: '12px 14px', color: '#475569' }}>
-                            {(lang === 'en' ? run.seasonName || "General season" : run.seasonName || 'Mùa vụ chung')} {run.blockName ? `· ${run.blockName}` : ''}
-                          </td>
-                          <td style={{ padding: '12px 14px', color: '#64748b' }}>{(lang === 'en' ? run.assignedToName || "Inspection team" : run.assignedToName || 'Ban kiểm soát')}</td>
-                          <td style={{ padding: '12px 14px' }}>
-                            <span style={{
-                              padding: '3px 10px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 650,
-                              background: run.runStatus === 'completed' ? '#dcfce7' : '#fef3c7',
-                              color: run.runStatus === 'completed' ? '#15803d' : '#b45309',
-                            }}>
-                              {(lang === 'en' ? run.runStatus === 'completed' ? "Completed" : "Open" : run.runStatus === 'completed' ? 'Hoàn thành' : 'Đang mở')}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px 14px' }}>
-                            <span style={{ color: '#16a34a', fontWeight: 650 }}>{run.passedItems} {(lang === 'en' ? " passed" : " đạt")}</span>
-                            {run.failedItems > 0 && <span style={{ color: '#dc2626', fontWeight: 650, marginLeft: '6px' }}>· {run.failedItems} {(lang === 'en' ? " failed" : " lỗi")}</span>}
-                            {run.missingEvidenceCount > 0 && (
-                              <span style={{ color: '#f59e0b', fontSize: '11.5px', display: 'block', marginTop: '2px' }}>
-                                {(lang === 'en' ? "Missing " : "Thiếu ")} {run.missingEvidenceCount} {(lang === 'en' ? " evidence images" : " ảnh minh chứng")}
-                              </span>
-                            )}
-                          </td>
-                          <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              className="action-button"
-                              onClick={() => void handleViewRunDetail(run.runId)}
-                              style={{ fontSize: '12.5px', padding: '5px 12px' }}
-                            >
-                              {(lang === 'en' ? "👁️ View results" : "👁️ Xem kết quả")}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+              {fullAuditRuns.length > 0 && (
+                <span style={{ fontSize: '12.5px', color: '#64748b' }}>
+                  {lang === 'en'
+                    ? `Showing ${activeAuditRuns.length} of ${fullAuditRuns.length} season audits`
+                    : `Hiển thị ${activeAuditRuns.length} trong ${fullAuditRuns.length} đợt tự đánh giá`}
+                </span>
               )}
             </div>
-          ) : (
-            <>
-              {/* Score summary panel */}
-              <div className="panel" style={{ padding: '24px', marginBottom: '24px', background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%)', borderColor: '#a7f3d0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-                  <div>
-                    <span className="profile-tag-pill" style={{ background: '#10b981', color: '#ffffff', fontWeight: 700 }}>
-                      {(lang === 'en' ? "NATIONAL STANDARD CERTIFICATION TCVN 11892-1:2017" : "CHỨNG NHẬN TIÊU CHUẨN QUỐC GIA TCVN 11892-1:2017")}
-                    </span>
-                    <h2 style={{ margin: '10px 0 4px', fontSize: '24px', color: '#064e3b' }}>
-                      {(lang === 'en' ? "VietGAP compliance score: " : "Chỉ số tuân thủ VietGAP: ")} <span style={{ color: '#059669', fontWeight: 800 }}>{complianceScore}%</span>
-                    </h2>
-                    <p style={{ margin: 0, color: '#047857', fontSize: '14px' }}>
-                      {(lang === 'en' ? "Pass " : "Đạt ")} {compliantCount} / {checklist.length} {(lang === 'en' ? " strict criteria · Eligible to maintain VietGAP certification" : " tiêu chí khắt khe · Đủ điều kiện duy trì chứng chỉ VietGAP")}
-                    </p>
-                  </div>
 
-                  <div style={{ textAlign: 'right' }}>
-                    <span className="status-badge status-badge--success" style={{ fontSize: '14px', padding: '6px 14px' }}>
-                      {(lang === 'en' ? "✓ COMPLIANT" : "✓ ĐẠT TIÊU CHUẨN")}
-                    </span>
-                    <small style={{ display: 'block', color: '#059669', marginTop: '6px' }}>{(lang === 'en' ? "Next inspection due: 15/10/2026" : "Hạn kiểm tra tiếp theo: 15/10/2026")}</small>
-                  </div>
-                </div>
+            {loadingChecklists ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="loader" size={24} className="spin" style={{ color: '#059669', marginBottom: '10px' }} />
+                <p className="muted" style={{ margin: 0, fontSize: '14px' }}>
+                  {lang === 'en' ? 'Loading inspection records...' : 'Đang tải danh sách các đợt tự đánh giá VietGAP...'}
+                </p>
               </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {checklist.map((item) => (
-                  <div
-                    key={item.id}
-                    className="panel"
-                    style={{
-                      padding: '20px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: '16px',
-                      borderLeft: `4px solid ${item.status === 'COMPLIANT' ? '#10b981' : '#f59e0b'}`,
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <strong style={{ fontSize: '13px', color: '#059669' }}>{item.category}</strong>
-                        <span style={{ color: '#94a3b8' }}>•</span>
-                        <span style={{ fontSize: '12.5px', color: '#64748b' }}>{(lang === 'en' ? "Criterion ID: " : "Mã tiêu chí: ")} {item.id}</span>
-                      </div>
-                      <h3 style={{ margin: '0 0 6px', fontSize: '16px', color: '#0f172a' }}>{translate(item.title)}</h3>
-                      <p style={{ margin: '0 0 10px', color: '#475569', fontSize: '13.5px', lineHeight: 1.5 }}>
-                        {item.requirement}
-                      </p>
-                      <div style={{ background: '#f8fafc', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', color: '#334155' }}>
-                        📎 <strong>{(lang === 'en' ? "Inspection evidence:" : "Minh chứng kiểm tra:")}</strong> {item.evidence}
-                      </div>
-                    </div>
-
-                    <div style={{ textAlign: 'right' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleItem(item.id)}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid',
-                          fontSize: '12.5px',
-                          fontWeight: 650,
-                          cursor: 'pointer',
-                          background: item.status === 'COMPLIANT' ? '#ecfdf5' : '#fef3c7',
-                          borderColor: item.status === 'COMPLIANT' ? '#10b981' : '#f59e0b',
-                          color: item.status === 'COMPLIANT' ? '#059669' : '#b45309',
-                        }}
-                      >
-                        {(lang === 'en' ? item.status === 'COMPLIANT' ? "✓ Compliant" : "⚠️ Improvement required" : item.status === 'COMPLIANT' ? '✓ Đạt chuẩn' : '⚠️ Điểm cần khắc phục')}
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            ) : activeAuditRuns.length === 0 ? (
+              <div className="panel empty-state" style={{ border: 'none', boxShadow: 'none', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 20px' }}>
+                <div className="empty-icon" style={{ fontSize: '36px', marginBottom: '12px' }}>📋</div>
+                <h2 style={{ fontSize: '17px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px' }}>
+                  {lang === 'en' ? 'No 33-criteria VietGAP audits found' : 'Chưa có đợt đánh giá toàn diện 33 tiêu chí nào'}
+                </h2>
+                <p style={{ color: '#64748b', fontSize: '13.5px', maxWidth: '480px', margin: '0 0 20px', lineHeight: 1.5 }}>
+                  {lang === 'en'
+                    ? 'Click "New VietGAP Audit" above to launch a 33-criteria evaluation for your crop season.'
+                    : 'Nhấn nút "Khởi tạo đợt tự đánh giá" ở trên để bắt đầu tiến hành kiểm tra 33 tiêu chí VietGAP cho mùa vụ.'}
+                </p>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => setIsInitRunOpen(true)}
+                  style={{
+                    padding: '9px 18px',
+                    fontSize: '13.5px',
+                    fontWeight: 650,
+                    borderRadius: '8px',
+                    background: '#059669',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Icon name="plus" size={16} />
+                  <span>{lang === 'en' ? 'New VietGAP Audit' : 'Khởi tạo đợt tự đánh giá'}</span>
+                </button>
               </div>
-            </>
-          )}
+            ) : (
+              <div className="zone-table-wrap" style={{ marginBottom: 0, flex: 1, overflowX: 'hidden' }}>
+                <table className="data-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
+                  <colgroup>
+                    <col style={{ width: '28%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '18%' }} />
+                    <col style={{ width: '18%' }} />
+                  </colgroup>
+                  <thead>
+                    <tr style={{ background: '#f8fafc' }}>
+                      <th style={{ padding: '12px 14px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                        {lang === 'en' ? 'CODE & AUDIT RUN ↕' : 'MÃ & ĐỢT TỰ ĐÁNH GIÁ ↕'}
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                        {lang === 'en' ? 'SEASON & BLOCK' : 'MÙA VỤ & LÔ ĐẤT'}
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                        {lang === 'en' ? 'AUDITOR & DATE ↕' : 'NGƯỜI THỰC HIỆN & NGÀY ↕'}
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                        {lang === 'en' ? 'EVALUATION PROGRESS' : 'TIẾN ĐỘ (33 TIÊU CHÍ)'}
+                      </th>
+                      <th style={{ padding: '12px 14px', fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
+                        {lang === 'en' ? 'ACTIONS' : 'THAO TÁC'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeAuditRuns.map((run) => {
+                      const isDone = run.runStatus === 'completed';
+                      const evaluatedCount = run.passedItems + run.failedItems;
+                      const totalCount = run.totalItems || 33;
+                      const progressPercent = Math.min(100, Math.round((evaluatedCount / totalCount) * 100));
+                      const pendingCount = Math.max(0, totalCount - evaluatedCount);
 
-          {/* Checklist Result Details Modal */}
-          {selectedRunDetail && (
-            <div className="modal-backdrop" style={{ zIndex: 1100 }}>
-              <div className="modal-card" style={{ maxWidth: '680px', width: '92%' }}>
-                <div className="modal-header">
-                  <div>
-                    <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "Checklist inspection results" : "Kết quả đợt kiểm tra danh mục")}</span>
-                    <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>
-                      #{selectedRunDetail.runId} · {selectedRunDetail.ruleName}
-                    </h3>
-                  </div>
-                  <button type="button" className="modal-close" onClick={() => setSelectedRunDetail(null)}>
-                    ✕
-                  </button>
-                </div>
-                <div className="modal-body" style={{ padding: '20px 24px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Status" : "Trạng thái")}</span>
-                      <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#059669' }}>{selectedRunDetail.runStatus.toUpperCase()}</p>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Items passed" : "Số mục đạt")}</span>
-                      <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#16a34a' }}>{selectedRunDetail.passedItems} / {selectedRunDetail.totalItems}</p>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Evidence images" : "Ảnh minh chứng")}</span>
-                      <p style={{ margin: '2px 0 0', fontWeight: 700, color: selectedRunDetail.missingEvidenceCount > 0 ? '#dc2626' : '#16a34a' }}>
-                        {(lang === 'en' ? selectedRunDetail.missingEvidenceCount > 0 ? `Missing ${selectedRunDetail.missingEvidenceCount} images` : "Complete" : selectedRunDetail.missingEvidenceCount > 0 ? `Thiếu ${selectedRunDetail.missingEvidenceCount} ảnh` : 'Đầy đủ')}
-                      </p>
-                    </div>
-                  </div>
+                      return (
+                        <tr key={run.runId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                          {/* Mã & Tên đợt đánh giá */}
+                          <td style={{ padding: '12px 14px', whiteSpace: 'normal' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div
+                                className="crop-avatar-circle"
+                                style={{
+                                  background: isDone ? '#ecfdf5' : '#eff6ff',
+                                  color: isDone ? '#059669' : '#2563eb',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: '36px',
+                                  height: '36px',
+                                  borderRadius: '50%',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <Icon name="shield" size={17} />
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setAuditWorkspaceRun(run)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: 0,
+                                    fontWeight: 750,
+                                    color: '#0f172a',
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    display: 'block',
+                                    lineHeight: 1.3,
+                                    transition: 'color 0.15s ease',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    maxWidth: '100%',
+                                  }}
+                                  onMouseEnter={(e) => ((e.target as HTMLElement).style.color = '#059669')}
+                                  onMouseLeave={(e) => ((e.target as HTMLElement).style.color = '#0f172a')}
+                                  title={run.seasonName || ''}
+                                >
+                                  {run.seasonName || (lang === 'en' ? 'General Season Audit' : 'Đợt tự đánh giá mùa vụ')}
+                                </button>
+                                <span style={{ fontSize: '11.5px', color: '#94a3b8', fontWeight: 600, display: 'block', marginTop: '2px', fontFamily: 'ui-monospace, monospace' }}>
+                                  #{run.runId} · {run.ruleName || 'TCVN 11892-1:2017'}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
 
-                  <h4 style={{ margin: '0 0 10px', fontSize: '14.5px', color: '#0f172a' }}>{(lang === 'en' ? "Inspection criteria and evidence details" : "Chi tiết các tiêu chí kiểm tra & Minh chứng")}</h4>
-                  {runItemsDetail.length === 0 ? (
-                    <p style={{ color: '#64748b', fontSize: '13px' }}>{(lang === 'en' ? "No detailed inspection item records yet." : "Chưa có ghi chép chi tiết từng mục kiểm tra.")}</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {runItemsDetail.map((it) => (
-                        <div key={it.resultId} style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <span style={{
-                              padding: '2px 8px',
-                              borderRadius: '6px',
-                              fontSize: '11px',
-                              fontWeight: 700,
-                              background: it.resultStatus === 'pass' ? '#dcfce7' : '#fee2e2',
-                              color: it.resultStatus === 'pass' ? '#15803d' : '#b91c1c',
-                            }}>
-                              {(lang === 'en' ? it.resultStatus === 'pass' ? "PASS" : "FAIL" : it.resultStatus === 'pass' ? 'ĐẠT' : 'KHÔNG ĐẠT')}
+                          {/* Mùa vụ & Lô đất */}
+                          <td style={{ padding: '12px 14px', color: '#334155', fontSize: '13px', fontWeight: 600, whiteSpace: 'normal' }}>
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={run.seasonName || ''}>
+                              {run.seasonName || (lang === 'en' ? 'Entire Farm' : 'Toàn trang trại')}
+                            </div>
+                            <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 400, display: 'block', marginTop: '2px' }}>
+                              {run.blockName ? `Lô: ${run.blockName}` : (lang === 'en' ? 'All active blocks' : 'Tất cả lô đất')}
                             </span>
-                            <p style={{ margin: '6px 0 0', fontSize: '13.5px', color: '#1e293b' }}>{(lang === 'en' ? it.notes || "No additional notes." : it.notes || 'Không có ghi chú thêm.')}</p>
-                            <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>{(lang === 'en' ? "Inspected by: " : "Người kiểm tra: ")} {(lang === 'en' ? it.checkedByName || "Inspection team" : it.checkedByName || 'Ban kiểm soát')}</span>
-                          </div>
-                          {it.evidenceImageUrl && (
-                            <img src={it.evidenceImageUrl} alt="Evidence" style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover' }} />
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0' }}>
-                  <button type="button" className="ghost-button" onClick={() => setSelectedRunDetail(null)}>
-                    {(lang === 'en' ? "Close" : "Đóng")}
-                  </button>
-                </div>
+                          </td>
+
+                          {/* Người thực hiện & Ngày */}
+                          <td style={{ padding: '12px 14px', color: '#334155', fontSize: '13px', whiteSpace: 'normal' }}>
+                            <div style={{ fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {run.assignedToName || (lang === 'en' ? 'Audit Team' : 'Ban kiểm soát')}
+                            </div>
+                            <span style={{ fontSize: '11.5px', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                              {run.completedAt || run.scheduledAt || run.createdAt
+                                ? new Date(run.completedAt || run.scheduledAt || run.createdAt!).toLocaleDateString('vi-VN')
+                                : (lang === 'en' ? 'Today' : 'Hôm nay')}
+                            </span>
+                          </td>
+
+                          {/* Tiến độ thẩm định (33 tiêu chí) */}
+                          <td style={{ padding: '12px 14px', whiteSpace: 'normal' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#334155' }}>
+                                {evaluatedCount}/{totalCount} ({progressPercent}%)
+                              </span>
+                              <span style={{ fontSize: '11px', fontWeight: 600, color: isDone ? '#059669' : '#64748b' }}>
+                                {isDone ? (lang === 'en' ? 'Done' : 'Hoàn thành') : (lang === 'en' ? 'In progress' : 'Đang mở')}
+                              </span>
+                            </div>
+                            <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden', marginBottom: '5px' }}>
+                              <div
+                                style={{
+                                  width: `${progressPercent}%`,
+                                  height: '100%',
+                                  background: isDone ? '#10b981' : '#3b82f6',
+                                  borderRadius: '2px',
+                                  transition: 'width 0.3s ease',
+                                }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
+                              <span style={{ color: '#059669', fontWeight: 600 }}>
+                                {run.passedItems} {lang === 'en' ? 'pass' : 'đạt'}
+                              </span>
+                              {run.failedItems > 0 && (
+                                <span style={{ color: '#dc2626', fontWeight: 600 }}>
+                                  · {run.failedItems} {lang === 'en' ? 'fail' : 'chưa đạt'}
+                                </span>
+                              )}
+                              {pendingCount > 0 && (
+                                <span style={{ color: '#64748b' }}>
+                                  · {pendingCount} {lang === 'en' ? 'pending' : 'chờ'}
+                                </span>
+                              )}
+                              {run.missingEvidenceCount > 0 && (
+                                <span style={{ color: '#ea580c', fontWeight: 600 }}>
+                                  · {lang === 'en' ? `Missing ${run.missingEvidenceCount} photos` : `Thiếu ${run.missingEvidenceCount} ảnh`}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Thao tác (kèm badge trạng thái gọn gàng) */}
+                          <td style={{ padding: '12px 14px', textAlign: 'right', whiteSpace: 'normal' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
+                              <span className={`status-dot-badge ${isDone ? 'completed' : 'in_progress'}`} style={{ margin: 0, padding: '2px 8px', fontSize: '11px' }}>
+                                <span className="dot" />
+                                {isDone
+                                  ? (lang === 'en' ? 'Completed' : 'Hoàn thành')
+                                  : (lang === 'en' ? 'Active' : 'Đang mở')}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() => setAuditWorkspaceRun(run)}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '7px 13px',
+                                  borderRadius: '8px',
+                                  fontSize: '12.5px',
+                                  fontWeight: 650,
+                                  border: isDone ? '1px solid #cbd5e1' : 'none',
+                                  background: isDone ? '#ffffff' : '#059669',
+                                  color: isDone ? '#334155' : '#ffffff',
+                                  cursor: 'pointer',
+                                  boxShadow: isDone ? 'none' : '0 1px 3px rgba(5, 150, 105, 0.25)',
+                                  transition: 'all 0.15s ease',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                <Icon name={isDone ? 'file-text' : 'edit'} size={13} />
+                                <span>
+                                  {isDone
+                                    ? (lang === 'en' ? 'View / Export PDF' : 'Xem hồ sơ & PDF')
+                                    : (lang === 'en' ? 'Continue Audit' : 'Tiếp tục đánh giá')}
+                                </span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Table Footer */}
+            <div className="zone-table-footer" style={{ margin: '16px -24px -24px' }}>
+              <span>
+                {lang === 'en'
+                  ? `Showing 1–${activeAuditRuns.length} of ${fullAuditRuns.length} VietGAP audit runs`
+                  : `Hiển thị 1–${activeAuditRuns.length} trong ${fullAuditRuns.length} đợt tự đánh giá`}
+              </span>
+              <div className="zone-pagination-wrap">
+                <button type="button" className="zone-page-btn" disabled>&lt;</button>
+                <button type="button" className="zone-page-btn active">1</button>
+                <button type="button" className="zone-page-btn" disabled>&gt;</button>
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -1770,6 +1807,32 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
             </div>
           )}
         </div>
+      )}
+
+      {/* VietGAP 33-criteria Init Run Modal */}
+      {isInitRunOpen && selectedFarm?.id && (
+        <VietGapInitRunModal
+          farmId={selectedFarm.id}
+          onClose={() => setIsInitRunOpen(false)}
+          onSuccess={(newRun) => {
+            setIsInitRunOpen(false);
+            setChecklistRuns((prev) => [newRun, ...prev]);
+            setAuditWorkspaceRun(newRun);
+          }}
+        />
+      )}
+
+      {/* VietGAP Audit Workspace Modal */}
+      {auditWorkspaceRun && selectedFarm?.id && (
+        <VietGapAuditWorkspaceModal
+          run={auditWorkspaceRun}
+          farmId={selectedFarm.id}
+          onClose={() => setAuditWorkspaceRun(null)}
+          onRunUpdated={(updated) => {
+            setAuditWorkspaceRun(updated);
+            setChecklistRuns((prev) => prev.map((r) => r.runId === updated.runId ? updated : r));
+          }}
+        />
       )}
     </section>
   );
