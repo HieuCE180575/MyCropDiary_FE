@@ -3,8 +3,10 @@ import {
   type EvidenceFileItem,
   formatFileSize,
   getWebPreviewUrl,
+  getFileTypeInfo,
 } from '../api/fileUploadService';
 import { Icon } from './Icon';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export interface FilePreviewModalProps {
   files: EvidenceFileItem[];
@@ -17,6 +19,7 @@ export function FilePreviewModal({
   initialIndex = 0,
   onClose,
 }: FilePreviewModalProps) {
+  const { lang } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(
     Math.max(0, Math.min(initialIndex, files.length - 1))
   );
@@ -40,6 +43,7 @@ export function FilePreviewModal({
 
   const currentFile = files[currentIndex] || files[0];
   const { previewUrl, isConvertedPdf, isImage } = getWebPreviewUrl(currentFile.url);
+  const typeInfo = getFileTypeInfo(currentFile);
 
   return (
     <div
@@ -49,19 +53,19 @@ export function FilePreviewModal({
       }}
       role="dialog"
       aria-modal="true"
-      aria-label="Xem chi tiết tài liệu minh chứng"
+      aria-label={lang === 'en' ? 'Supporting Document Preview' : 'Xem chi tiết tài liệu minh chứng'}
     >
       <div className="file-preview-modal-panel">
         {/* Header */}
         <div className="file-preview-header">
           <div className="file-preview-header-info">
-            <span className="file-preview-icon">
-              <Icon name={isImage ? 'eye' : 'file-text'} />
+            <span className={`file-preview-icon ${typeInfo.badgeClass}`}>
+              <Icon name={typeInfo.iconName} />
             </span>
             <div>
               <h3 className="file-preview-title">{currentFile.name}</h3>
               <span className="file-preview-subtitle">
-                {formatFileSize(currentFile.size)} • Tập tin {currentIndex + 1} / {files.length}
+                {formatFileSize(currentFile.size) || (typeInfo.isPdf ? 'PDF • Cloudinary' : typeInfo.isImage ? 'Image • Cloudinary' : 'Cloudinary Document')} • {lang === 'en' ? `File ${currentIndex + 1} of ${files.length}` : `Tập tin ${currentIndex + 1} / ${files.length}`}
               </span>
             </div>
           </div>
@@ -72,15 +76,15 @@ export function FilePreviewModal({
               target="_blank"
               rel="noreferrer"
               className="action-button file-preview-open-link"
-              title="Mở liên kết gốc trong tab mới"
+              title={lang === 'en' ? 'Open original link in new tab' : 'Mở liên kết gốc trong tab mới'}
             >
-              <Icon name="external-link" /> Mở liên kết gốc
+              <Icon name="external-link" /> {lang === 'en' ? 'Open link' : 'Mở liên kết gốc'}
             </a>
             <button
               type="button"
               className="icon-button file-preview-close-btn"
               onClick={onClose}
-              title="Đóng cửa sổ xem"
+              title={lang === 'en' ? 'Close preview' : 'Đóng cửa sổ xem'}
             >
               <Icon name="close" />
             </button>
@@ -90,17 +94,20 @@ export function FilePreviewModal({
         {/* Multi-file tabs selector */}
         {files.length > 1 && (
           <div className="file-preview-tabs">
-            {files.map((file, idx) => (
-              <button
-                key={`${file.url}-${idx}`}
-                type="button"
-                className={`file-preview-tab ${idx === currentIndex ? 'active' : ''}`}
-                onClick={() => setCurrentIndex(idx)}
-              >
-                <Icon name={/\.(jpe?g|png|webp|gif|svg)$/i.test(file.url) ? 'eye' : 'file-text'} />
-                <span className="file-preview-tab-name">{file.name}</span>
-              </button>
-            ))}
+            {files.map((file, idx) => {
+              const itemType = getFileTypeInfo(file);
+              return (
+                <button
+                  key={`${file.url}-${idx}`}
+                  type="button"
+                  className={`file-preview-tab ${idx === currentIndex ? 'active' : ''}`}
+                  onClick={() => setCurrentIndex(idx)}
+                >
+                  <Icon name={itemType.iconName} />
+                  <span className="file-preview-tab-name">{file.name}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -110,10 +117,13 @@ export function FilePreviewModal({
             <div className="file-preview-pdf-notice">
               <Icon name="check-circle" />
               <span>
-                <strong>Xem trước tài liệu PDF:</strong> Trang đầu của tài liệu được chuyển đổi hiển thị sắc nét trực tiếp trên web.
+                <strong>{lang === 'en' ? 'PDF Document Preview:' : 'Xem trước tài liệu PDF:'}</strong>{' '}
+                {lang === 'en'
+                  ? 'First page rendered as high-resolution preview directly on web.'
+                  : 'Trang đầu của tài liệu được chuyển đổi hiển thị sắc nét trực tiếp trên web.'}
               </span>
               <a href={currentFile.url} target="_blank" rel="noreferrer" className="file-preview-raw-link">
-                Tải file PDF gốc
+                {lang === 'en' ? 'Download original PDF' : 'Tải file PDF gốc'}
               </a>
             </div>
           )}
@@ -148,10 +158,10 @@ export function FilePreviewModal({
                   disabled={currentIndex === 0}
                   onClick={() => setCurrentIndex((prev) => prev - 1)}
                 >
-                  <Icon name="chevron-left" /> File trước
+                  <Icon name="chevron-left" /> {lang === 'en' ? 'Previous file' : 'File trước'}
                 </button>
                 <span style={{ fontSize: '13px', color: '#64748b' }}>
-                  {currentIndex + 1} trên {files.length}
+                  {lang === 'en' ? `${currentIndex + 1} of ${files.length}` : `${currentIndex + 1} trên ${files.length}`}
                 </span>
                 <button
                   type="button"
@@ -159,14 +169,14 @@ export function FilePreviewModal({
                   disabled={currentIndex === files.length - 1}
                   onClick={() => setCurrentIndex((prev) => prev + 1)}
                 >
-                  File kế tiếp <Icon name="chevron-right" />
+                  {lang === 'en' ? 'Next file' : 'File kế tiếp'} <Icon name="chevron-right" />
                 </button>
               </>
             )}
           </div>
 
           <button type="button" className="primary-button" onClick={onClose}>
-            Đóng
+            {lang === 'en' ? 'Close' : 'Đóng'}
           </button>
         </div>
       </div>

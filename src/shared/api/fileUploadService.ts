@@ -148,6 +148,61 @@ export function getWebPreviewUrl(url: string): { previewUrl: string; isConverted
     return { previewUrl: jpgUrl, isConvertedPdf: true, isImage: true };
   }
 
-  const isImage = /\.(jpe?g|png|webp|gif|svg)(\?.*)?$/i.test(url) || /\/image\/upload\//i.test(url);
+  const isImage = /\.(jpe?g|png|webp|gif|svg|avif|bmp|ico)(\?.*)?$/i.test(url);
   return { previewUrl: url, isConvertedPdf: false, isImage };
+}
+
+/**
+ * Phân loại định dạng tệp để hiển thị đúng icon (PDF / Ảnh / Tài liệu khác) và màu sắc tương ứng.
+ */
+export function getFileTypeInfo(file: { name?: string; url?: string; type?: string }): {
+  isImage: boolean;
+  isPdf: boolean;
+  iconName: string;
+  badgeClass: string;
+  label: string;
+} {
+  const name = (file.name || '').toLowerCase();
+  const url = (file.url || '').toLowerCase();
+  const type = (file.type || '').toLowerCase();
+
+  // Kiểm tra file PDF trước
+  const isPdf =
+    name.endsWith('.pdf') ||
+    /\.pdf(\?.*)?$/i.test(url) ||
+    type === 'application/pdf';
+
+  if (isPdf) {
+    return {
+      isImage: false,
+      isPdf: true,
+      iconName: 'file-text',
+      badgeClass: 'is-pdf',
+      label: 'PDF',
+    };
+  }
+
+  // Kiểm tra file ảnh thực sự (tránh nhầm lẫn do Cloudinary chứa /image/upload/ trong URL của PDF)
+  const isImage =
+    /\.(jpe?g|png|webp|gif|svg|avif|bmp|ico)(\?.*)?$/i.test(name) ||
+    /\.(jpe?g|png|webp|gif|svg|avif|bmp|ico)(\?.*)?$/i.test(url) ||
+    type.startsWith('image/');
+
+  if (isImage) {
+    return {
+      isImage: true,
+      isPdf: false,
+      iconName: 'image',
+      badgeClass: 'is-img',
+      label: 'IMG',
+    };
+  }
+
+  return {
+    isImage: false,
+    isPdf: false,
+    iconName: 'file-text',
+    badgeClass: 'is-doc',
+    label: 'DOC',
+  };
 }

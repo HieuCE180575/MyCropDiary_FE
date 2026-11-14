@@ -17,7 +17,7 @@ import { filterRecords } from './adminModel';
 import type { AdminCommand, AdminRecord, Collection, EditableCollection, StatusCollection } from './adminTypes';
 
 import { parseBoundaryCoordinates } from '../farm-management/goongMapService';
-import { parseEvidenceFiles, formatFileSize, type EvidenceFileItem } from '../../shared/api/fileUploadService';
+import { parseEvidenceFiles, formatFileSize, getFileTypeInfo, type EvidenceFileItem } from '../../shared/api/fileUploadService';
 import { FilePreviewModal } from '../../shared/components/FilePreviewModal';
 
 const ADMIN_COL_EN: Record<string, string> = {
@@ -331,40 +331,38 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
       return (
         <div className="status-evidence-list admin-evidence-list">
           {evidenceFiles.map((file, idx) => {
-            const isImg =
-              /\.(jpe?g|png|webp|gif|svg)$/i.test(file.url) ||
-              (file.type && file.type.startsWith('image/')) ||
-              /\/image\/upload\//i.test(file.url);
+            const typeInfo = getFileTypeInfo(file);
             return (
               <div key={`${file.url}-${idx}`} className="status-evidence-item">
                 <div className="status-evidence-info">
-                  <span className={`file-upload-item-icon ${isImg ? 'is-img' : 'is-doc'}`} style={{ width: '32px', height: '32px' }}>
-                    <Icon name={isImg ? 'eye' : 'file-text'} />
+                  <span className={`file-upload-item-icon ${typeInfo.badgeClass}`}>
+                    <Icon name={typeInfo.iconName} />
                   </span>
                   <div>
                     <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{file.name}</strong>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>{formatFileSize(file.size)}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                      {formatFileSize(file.size) || (typeInfo.isPdf ? 'PDF • Cloudinary' : typeInfo.isImage ? 'Image • Cloudinary' : 'Cloudinary Document')}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <button
                     type="button"
-                    className="action-button"
-                    style={{ fontSize: '12.5px', padding: '5px 10px' }}
+                    className="action-button file-upload-item-view-btn"
                     onClick={() => {
                       setPreviewFiles(evidenceFiles);
                       setPreviewIndex(idx);
                     }}
+                    title={lang === 'en' ? 'Preview on web' : 'Xem trực tiếp trên web'}
                   >
-                    <Icon name="eye" /> {lang === 'en' ? 'Preview' : 'Xem trên web'}
+                    <Icon name="eye" /> {lang === 'en' ? 'Preview' : 'Xem trực tiếp'}
                   </button>
                   <a
                     href={file.url}
                     target="_blank"
                     rel="noreferrer"
                     className="action-button file-preview-open-link"
-                    style={{ fontSize: '12.5px', padding: '5px 10px' }}
-                    title={lang === 'en' ? 'Open original Cloudinary link' : 'Mở liên kết gốc Cloudinary'}
+                    title={lang === 'en' ? 'Open original Cloudinary link in new tab' : 'Mở liên kết gốc Cloudinary trong tab mới'}
                   >
                     <Icon name="external-link" /> {lang === 'en' ? 'Open link' : 'Mở link'}
                   </a>

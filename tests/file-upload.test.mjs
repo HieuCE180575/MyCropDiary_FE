@@ -142,6 +142,20 @@ test('fileUploadService: parseEvidenceFiles parses JSON, comma-separated and sin
     assert.equal(imgPreview.isConvertedPdf, false);
     assert.equal(imgPreview.isImage, true);
     assert.equal(imgPreview.previewUrl, 'https://res.cloudinary.com/drajm922/image/upload/v1/photo.png');
+
+    // 6. getFileTypeInfo classifies PDF vs Image vs Document
+    const { getFileTypeInfo } = await server.ssrLoadModule('/src/shared/api/fileUploadService.ts');
+    const pdfInfo = getFileTypeInfo({ name: 'vietgap.pdf', url: 'https://res.cloudinary.com/drajm922/image/upload/v1/vietgap.pdf' });
+    assert.equal(pdfInfo.isPdf, true);
+    assert.equal(pdfInfo.isImage, false);
+    assert.equal(pdfInfo.iconName, 'file-text');
+    assert.equal(pdfInfo.badgeClass, 'is-pdf');
+
+    const imgInfo = getFileTypeInfo({ name: 'farm.jpg', url: 'https://res.cloudinary.com/drajm922/image/upload/v1/farm.jpg' });
+    assert.equal(imgInfo.isPdf, false);
+    assert.equal(imgInfo.isImage, true);
+    assert.equal(imgInfo.iconName, 'image');
+    assert.equal(imgInfo.badgeClass, 'is-img');
   } finally {
     await server.close();
   }
