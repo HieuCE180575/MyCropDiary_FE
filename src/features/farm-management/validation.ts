@@ -26,13 +26,24 @@ export function validateFarmRegistrationForm(values: FarmRegistrationFormValues)
   }
   const documentUrl = values.documentUrl?.trim();
   if (documentUrl) {
-    try {
-      const url = new URL(documentUrl);
-      if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
-    } catch {
-      errors.documentUrl = 'Vui lòng nhập đường dẫn bắt đầu bằng http:// hoặc https://.';
+    if (documentUrl.startsWith('[')) {
+      try {
+        const items = JSON.parse(documentUrl);
+        if (!Array.isArray(items)) {
+          errors.documentUrl = 'Dữ liệu tài liệu minh chứng không hợp lệ.';
+        }
+      } catch {
+        errors.documentUrl = 'Dữ liệu tài liệu minh chứng không hợp lệ.';
+      }
+    } else {
+      try {
+        const url = new URL(documentUrl);
+        if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+      } catch {
+        errors.documentUrl = 'Vui lòng nhập đường dẫn bắt đầu bằng http:// hoặc https://.';
+      }
+      if (documentUrl.length > 2000) errors.documentUrl = 'Đường dẫn tài liệu không vượt quá 2000 ký tự.';
     }
-    if (documentUrl.length > 1000) errors.documentUrl = 'Đường dẫn tài liệu không vượt quá 1000 ký tự.';
   }
   return errors;
 }

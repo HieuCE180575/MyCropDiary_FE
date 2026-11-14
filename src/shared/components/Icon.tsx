@@ -7,15 +7,14 @@ import {
   Phone, Check, Award, Sparkles, Star, TrendingUp, Sprout, ExternalLink, FileText,
   Sun, Moon, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2,
   Activity, Layers, Zap, Database, Building2, Trash2, Weight, FlaskConical, Grip, Users, Gauge, MapPin, Bug, Thermometer, ArrowUp,
-  Target, Telescope, Settings, CirclePlay, Cloud, Camera, QrCode,
+  Target, Telescope, Settings, CirclePlay, Cloud, Camera, QrCode, ChevronUp, Image as ImageIcon,
   type LucideIcon, type LucideProps,
-  ChevronUp,
 } from 'lucide-react';
 
 // Explicit imports keep the bundle limited to the icons used by this app.
 const icons: Record<string, LucideIcon> = {
   target: Target, telescope: Telescope, settings: Settings, 'play-circle': CirclePlay, cloud: Cloud,
-  camera: Camera, qr: QrCode,
+  camera: Camera, qr: QrCode, image: ImageIcon,
   home: House, leaf: Leaf, plots: Map, calendar: CalendarDays, book: BookOpen,
   box: Package, money: CircleDollarSign, check: ListChecks, report: ChartColumn,
   bot: Bot, user: UserRound, bell: Bell, plus: Plus, arrow: ArrowRight,

@@ -4,6 +4,10 @@ export const translations = {
   en: {
     'Select': 'Select',
     'View': 'View',
+    'Farm Directory': 'Farm Directory',
+    'Zone Directory': 'Zone Directory',
+    'Block Directory': 'Block Directory',
+    'Season & VietGAP Oversight': 'Season & VietGAP Oversight',
     'Unable to deactivate member "{value1}".': 'Unable to deactivate member "{value1}".',
     'Unable to reactivate "{value1}".': 'Unable to reactivate "{value1}".',
     'Unable to remove member "{value1}".': 'Unable to remove member "{value1}".',
@@ -1272,6 +1276,7 @@ export const translations = {
   vi: {
     'Select': 'Chọn',
     'View': 'Xem',
+    'Season & VietGAP Oversight': 'Giám sát mùa vụ & VietGAP',
     'Unable to deactivate member "{value1}".': 'Không thể vô hiệu hóa thành viên "{value1}".',
     'Unable to reactivate "{value1}".': 'Không thể kích hoạt lại "{value1}".',
     'Unable to remove member "{value1}".': 'Không thể xóa thành viên "{value1}".',
@@ -1869,6 +1874,9 @@ export const translations = {
     "Material Purchases": "Nhập vật tư",
     "Costs & Expenses": "Chi phí sản xuất",
     "Farm Registrations": "Đăng ký trang trại",
+    "Farm Directory": "Quản lý trang trại",
+    "Zone Directory": "Quản lý phân khu",
+    "Block Directory": "Quản lý lô đất",
     "User Accounts": "Tài khoản người dùng",
     "Crop Categories": "Danh mục cây trồng",
     "Checklist Rules": "Tiêu chí kiểm tra",

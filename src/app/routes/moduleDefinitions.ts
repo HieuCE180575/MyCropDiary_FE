@@ -253,6 +253,46 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "access": "admin"
   },
   {
+    "key": "admin-farms",
+    "path": "admin/farms",
+    "title": "Farm Directory",
+    "ucRange": "UC-38A",
+    "icon": "home",
+    "description": "View and edit farms, owners, assigned technical staff, and scale across the system.",
+    "group": "admin",
+    "access": "admin"
+  },
+  {
+    "key": "admin-zones",
+    "path": "admin/zones",
+    "title": "Zone Directory",
+    "ucRange": "UC-38B",
+    "icon": "plots",
+    "description": "View and edit production zones, parent farms, farm owners, assigned staff, and blocks.",
+    "group": "admin",
+    "access": "admin"
+  },
+  {
+    "key": "admin-blocks",
+    "path": "admin/blocks",
+    "title": "Block Directory",
+    "ucRange": "UC-38C",
+    "icon": "leaf",
+    "description": "View and edit cultivation blocks, parent zones, farms, owners, soil types, and area.",
+    "group": "admin",
+    "access": "admin"
+  },
+  {
+    "key": "admin-compliance",
+    "path": "admin/compliance",
+    "title": "Season & VietGAP Oversight",
+    "ucRange": "UC-27–29, UC-42, UC-45.4",
+    "icon": "check",
+    "description": "Monitor crop seasons, VietGAP checklist compliance, PHI safety intervals, and harvest traceability across farms.",
+    "group": "admin",
+    "access": "admin"
+  },
+  {
     "key": "admin-users",
     "path": "admin/users",
     "title": "User Accounts",

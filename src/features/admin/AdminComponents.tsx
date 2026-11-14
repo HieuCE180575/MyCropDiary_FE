@@ -18,6 +18,10 @@ const ADMIN_STATUS_EN: Record<string, string> = {
   'Mới tiếp nhận': 'Open',
   'Đang xử lý': 'In Review',
   'Đã giải quyết': 'Resolved',
+  'Đang canh tác': 'Growing',
+  'Đã thu hoạch': 'Harvested',
+  'Cần rà soát VietGAP': 'Needs VietGAP Review',
+  'Tạm ngưng': 'Inactive',
 };
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
@@ -31,7 +35,7 @@ import type { Collection, Field } from './adminTypes';
 
 export function AdminBadge({ collection, status }: { collection: Collection; status: string }) {
   const { lang, t: translate } = useLanguage();
-  const tone = ['ACTIVE', 'APPROVED', 'RESOLVED', 'RECORDED'].includes(status) ? 'green' : ['REJECTED', 'LOCKED'].includes(status) ? 'red' : ['PENDING', 'OPEN', 'DRAFT'].includes(status) ? 'amber' : status === 'IN_REVIEW' ? 'blue' : 'gray';
+  const tone = ['ACTIVE', 'APPROVED', 'RESOLVED', 'RECORDED'].includes(status) ? 'green' : ['REJECTED', 'LOCKED'].includes(status) ? 'red' : ['PENDING', 'OPEN', 'DRAFT', 'NEEDS_REVIEW'].includes(status) ? 'amber' : ['IN_REVIEW', 'HARVESTED'].includes(status) ? 'blue' : 'gray';
   const raw = adminConfigs[collection].statuses[status] ?? 'Chưa xác định';
   const label = lang === 'en' ? (ADMIN_STATUS_EN[raw] || raw) : raw;
   const tones: Record<string, BadgeTone> = { green: 'success', red: 'danger', amber: 'warning', blue: 'info', gray: 'neutral' };
