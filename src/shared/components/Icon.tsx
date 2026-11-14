@@ -8,6 +8,7 @@ import {
   Sun, Moon, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2,
   Activity, Layers, Zap, Database, Building2, Trash2, Weight, FlaskConical, Grip, Users, Gauge, MapPin, Bug, Thermometer, ArrowUp,
   Target, Telescope, Settings, CirclePlay, Cloud, Camera, QrCode, Image as ImageIcon,
+  LockKeyholeOpen, Power, Ban,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -20,7 +21,7 @@ const icons: Record<string, LucideIcon> = {
   bot: Bot, user: UserRound, bell: Bell, plus: Plus, arrow: ArrowRight,
   'arrow-left': ArrowLeft, chevron: ChevronDown, logout: LogOut,
   warning: TriangleAlert, drop: Droplet, history: History, message: MessageSquare,
-  lock: LockKeyhole, search: Search, eye: Eye, 'eye-off': EyeOff,
+  lock: LockKeyhole, unlock: LockKeyholeOpen, power: Power, ban: Ban, search: Search, eye: Eye, 'eye-off': EyeOff,
   mail: Mail, globe: Globe, login: LogIn, close: X, hand: Hand,
   loader: LoaderCircle, edit: Pencil, refresh: RotateCcw, save: Save,
   'user-plus': UserRoundPlus, shield: ShieldCheck, menu: Menu,

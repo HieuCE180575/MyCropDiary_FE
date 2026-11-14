@@ -128,6 +128,13 @@ export function applyAdminCommand(state: AdminState, command: AdminCommand, meta
       if (existing.status === command.status) throw new Error('Bản ghi đã ở trạng thái này.');
       if (command.collection === 'users' && existing.role === 'ADMIN') throw new Error('Không thể khóa tài khoản quản trị trong bản xem trước.');
       next = { ...existing, status: command.status, updatedAt: meta.now };
+      if (command.collection === 'users') {
+        if (command.status === 'LOCKED') {
+          next.lockReason = command.reason ? command.reason.trim() : (existing.lockReason || 'Vi phạm điều khoản hoặc chính sách hệ thống');
+        } else {
+          next.lockReason = '';
+        }
+      }
       if (command.collection !== 'users' && command.collection !== 'farms' && command.collection !== 'zones' && command.collection !== 'blocks' && command.collection !== 'compliance') {
         validateRecord(state, command.collection, next);
       }
@@ -152,7 +159,10 @@ export function applyAdminCommand(state: AdminState, command: AdminCommand, meta
       break;
     }
   }
-  const log: AdminRecord = { id: `NK-${meta.id}`, name: action, status: 'RECORDED', createdAt: meta.now, actor: meta.actor, resource: config.title, resourceId: next.id, description: `${next.name}: ${config.statuses[next.status]}. Thao tác trong bản xem trước.` };
+  const logDescription = (command.type === 'status' && command.collection === 'users' && command.status === 'LOCKED' && command.reason)
+    ? `${next.name}: Khóa tài khoản. Lý do: ${command.reason}`
+    : `${next.name}: ${config.statuses[next.status]}. Thao tác trong bản xem trước.`;
+  const log: AdminRecord = { id: `NK-${meta.id}`, name: action, status: 'RECORDED', createdAt: meta.now, actor: meta.actor, resource: config.title, resourceId: next.id, description: logDescription };
   return { ...state, [command.collection]: existing ? state[command.collection].map(item => item.id === next.id ? next : item) : [next, ...state[command.collection]], audit: [log, ...state.audit] };
 }
 

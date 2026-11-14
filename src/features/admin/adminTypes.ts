@@ -59,6 +59,6 @@ export interface CollectionConfig {
 
 export type AdminCommand =
   | { type: 'save'; collection: EditableCollection; id?: string; values: Record<string, string> }
-  | { type: 'status'; collection: StatusCollection; id: string; status: string }
+  | { type: 'status'; collection: StatusCollection; id: string; status: string; reason?: string }
   | { type: 'review'; collection: 'registrations'; id: string; status: 'APPROVED' | 'REJECTED'; reason: string }
   | { type: 'feedback'; collection: 'feedback'; id: string; status: string; reply: string };
