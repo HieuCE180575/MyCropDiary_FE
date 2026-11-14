@@ -826,10 +826,6 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 const it = selectedInventoryItem;
                 setSelectedInventoryItem(null);
                 setEditingInventory(it);
-                setUpdateInventoryForm({
-                  quantityOnHand: Number(it.quantityOnHand),
-                  reorderLevel: Number(it.reorderLevel),
-                });
               }}
             >
               <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit Inventory' : 'Chỉnh sửa'}

@@ -70,7 +70,6 @@ export function RecordConditionModal({
         behavior: 'smooth',
         block: 'center',
       });
-
       descriptionRef.current?.focus();
       return;
     }
@@ -117,12 +116,11 @@ export function RecordConditionModal({
               fontSize: '13px',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              marginBottom: '12px'
             }}>
               <AlertCircle size={18} />
-              {lang === 'en'
-                ? 'Please correct the errors before saving.'
-                : 'Vui lòng sửa các lỗi trước khi lưu.'}
+              <span>{typeof error === 'string' ? error : translate(error)}</span>
             </div>
           )}
 
@@ -192,42 +190,15 @@ export function RecordConditionModal({
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <textarea className="ui-textarea"
+                ref={descriptionRef}
                 id="cond-desc-input"
                 rows={4}
                 maxLength={1000}
                 placeholder={lang === 'en' ? 'Describe in detail bed conditions, soil moisture, pest signs, or actual environmental factors...' : 'Mô tả chi tiết tình trạng mặt luống, độ ẩm đất, dấu hiệu sâu bệnh hoặc điều kiện môi trường thực tế tại lô đất...'}
                 value={values.description}
-                ref={descriptionRef}
-                onChange={(e) => {
-                  const value = e.target.value;
-
-                  setValues((prev) => ({
-                    ...prev,
-                    description: value,
-                  }));
-
-                  if (value.length > 500) {
-                    setError(
-                      lang === 'en'
-                        ? 'Description must not exceed 500 characters.'
-                        : 'Mô tả không được vượt quá 500 ký tự.'
-                    );
-                  } else {
-                    setError(null);
-                  }
-                }}
+                onChange={(e) => setValues({ ...values, description: e.target.value })}
                 required
               />
-              {error && (
-                <p style={{
-                  color: '#dc2626',
-                  fontSize: '12px',
-                  marginTop: '5px',
-                  marginBottom: 0
-                }}>
-                  {error}
-                </p>
-              )}
             </div>
           </div>
 
