@@ -5,7 +5,7 @@ import { createServer } from 'vite';
 import { createElement, act } from 'react';
 import axios from 'axios';
 
-test('user registration handles load errors, persists through remount and cancels through the API', async () => {
+test('Manage Farms unifies applications and accessible farms without switching workspaces', async () => {
   const dom = new JSDOM('<div id="root"></div>', { url: 'http://localhost:5173' });
   const replacements = { window: dom.window, document: dom.window.document, navigator: dom.window.navigator,
     HTMLElement: dom.window.HTMLElement, HTMLDialogElement: dom.window.HTMLDialogElement, Node: dom.window.Node,
@@ -16,84 +16,153 @@ test('user registration handles load errors, persists through remount and cancel
   dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   const oldAdapter = axios.defaults.adapter;
   const calls = [];
-  let unavailable = true;
-  let saved = null;
+  let unavailable = true, failSubmission = false;
+  let applications = [], farms = [];
+  const farm = id => ({ id, farmName: `Farm ${id}`, currentUserRole: id === 4 ? 'STAFF' : 'OWNER', status: 'ACTIVE',
+    address: `Address ${id}`, description: `Description ${id}`, createdAt: '2026-10-01', updatedAt: '2026-10-01' });
   axios.defaults.adapter = async config => {
     calls.push(config);
     assert.equal(config.headers.get('Authorization'), 'Bearer user-session');
-    let data;
-    if (config.url.startsWith('/farms?')) data = { items: [], last: true, totalPages: 0 };
-    else if (unavailable) return { config, status: 503, headers: {}, data: JSON.stringify({ success: false, message: 'Chưa tải được hồ sơ.' }) };
-    else if (config.method === 'post') {
-      const body = JSON.parse(config.data);
-      saved = { ...body, registrationId: 23, status: 'PENDING', submittedAt: '2026-10-20T10:00:00' };
-      data = saved;
-    } else if (config.method === 'patch') { saved = { ...saved, status: 'CANCELLED' }; data = saved; }
-    else data = config.url.includes('?') ? { items: saved ? [saved] : [], last: true, totalPages: saved ? 1 : 0 } : saved;
-    return { config, status: 200, headers: {}, data: JSON.stringify({ success: true, data }) };
+    let data, status = 200;
+    const url = new URL(config.url, 'http://fixture');
+    if (config.method === 'post' && url.pathname === '/farms') assert.fail('Never create an approved farm directly');
+    if (url.pathname === '/farms') {
+      const page = Number(url.searchParams.get('page'));
+      data = { items: farms.slice(page, page + 1), last: page + 1 >= farms.length, totalPages: farms.length };
+    } else if (/^\/farms\/\d+$/.test(url.pathname)) {
+      data = farms.find(item => item.id === Number(url.pathname.split('/')[2]));
+      if (!data) status = 403;
+      else if (config.method === 'put') Object.assign(data, JSON.parse(config.data));
+    } else if (url.pathname.includes('/members')) data = [];
+    else if (url.pathname === '/farm-registrations' && config.method === 'post') {
+      if (failSubmission) status = 503;
+      else {
+        data = { ...JSON.parse(config.data), registrationId: 23 + applications.length, status: 'PENDING', submittedAt: '2026-10-20T10:00:00' };
+        applications.push(data);
+      }
+    } else if (url.pathname === '/farm-registrations') {
+      if (unavailable) status = 503;
+      const page = Number(url.searchParams.get('page'));
+      data = { items: applications.slice(page, page + 1), last: page + 1 >= applications.length, totalPages: applications.length };
+    } else if (url.pathname.startsWith('/farm-registrations/')) {
+      data = applications.find(item => item.registrationId === Number(url.pathname.split('/')[2]));
+      if (!data) status = 403;
+      else if (config.method === 'patch') data.status = 'CANCELLED';
+    } else if (url.pathname === '/user/farm-invitations') data = [];
+    else if (url.pathname === '/notifications') data = { items: [], totalPages: 0, last: true };
+    else status = 404;
+    return { config, status, headers: {}, data: JSON.stringify({ success: status === 200, data, message: status === 403 ? 'Bạn không có quyền truy cập dữ liệu này.' : 'Registration service unavailable' }) };
   };
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] },
     server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom' });
-  let root;
+  let root, navigate;
   try {
     const { createRoot } = await import('react-dom/client');
-    const { MemoryRouter } = await import('react-router-dom');
+    const { MemoryRouter, useNavigate, useLocation } = await import('react-router-dom');
     const { App } = await server.ssrLoadModule('/src/app/App.tsx');
     const { AuthProvider } = await server.ssrLoadModule('/src/features/auth/AuthProvider.tsx');
     const storage = await server.ssrLoadModule('/src/features/auth/authStorage.ts');
     storage.saveAccessToken('user-session', { userId: 12, email: 'farmer@example.com', fullName: 'Người dùng', systemRole: 'USER' });
-    const mount = async () => {
+    function Location() { navigate = useNavigate(); return createElement('output', { id: 'location' }, useLocation().pathname); }
+    const mount = async (path = '/farms') => {
       root = createRoot(document.getElementById('root'));
-      await act(async () => root.render(createElement(MemoryRouter, { initialEntries: ['/farm-registration'] }, createElement(AuthProvider, null, createElement(App)))));
+      await act(async () => root.render(createElement(MemoryRouter, { initialEntries: [path] }, createElement(AuthProvider, null, createElement(App), createElement(Location)))));
     };
-    const button = async text => {
-      const node = [...document.querySelectorAll('button')].find(item => item.textContent.trim() === text);
-      assert.ok(node, `Missing button ${text}`);
-      await act(async () => node.click());
+    const go = async path => act(async () => navigate(path));
+    const click = async selector => {
+      const element = document.querySelector(selector);
+      assert.ok(element, `Missing ${selector}`);
+      await act(async () => element.click());
     };
-    await mount();
-    assert.ok(document.querySelector('[role="alert"]').textContent.includes('Chưa tải được hồ sơ'));
-    assert.equal(document.querySelector('form'), null);
-    unavailable = false;
-    await button('Thử lại');
-    const values = ['Vườn Xanh', 'Địa chỉ Cần Thơ', 'Cần Thơ', 'Ninh Kiều', 'An Bình', 'Rau sạch', 'https://example.com/giay-chung-nhan.pdf'];
-    for (const [index, input] of [...document.querySelectorAll('form input, form textarea')].entries()) {
-      const prototype = input.tagName === 'TEXTAREA' ? dom.window.HTMLTextAreaElement.prototype : dom.window.HTMLInputElement.prototype;
-      await act(async () => {
-        Object.getOwnPropertyDescriptor(prototype, 'value').set.call(input, values[index]);
-        input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
-      });
-    }
-    const documentInput = document.querySelector('input[type="url"]');
-    const setDocument = async value => act(async () => {
-      Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(documentInput, value);
-      documentInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    const setValue = async (element, value) => act(async () => {
+      const prototype = element.tagName === 'TEXTAREA' ? dom.window.HTMLTextAreaElement.prototype : element.tagName === 'SELECT' ? dom.window.HTMLSelectElement.prototype : dom.window.HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(prototype, 'value').set.call(element, value);
+      element.dispatchEvent(new dom.window.Event(element.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }));
     });
-    await setDocument('javascript:alert(1)');
-    await act(async () => document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
-    assert.equal(calls.some(call => call.method === 'post'), false);
-    assert.ok(document.querySelector('.field-error').textContent.includes('http://'));
-    await setDocument(values[6]);
-    await act(async () => document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
-    assert.equal(document.querySelector('form'), null);
-    assert.ok(document.querySelector('.farm-registration-status').textContent.includes('Vườn Xanh'));
-    assert.deepEqual(JSON.parse(calls.find(call => call.method === 'post').data), { farmName: 'Vườn Xanh', addressLine: 'Địa chỉ Cần Thơ', province: 'Cần Thơ', district: 'Ninh Kiều', ward: 'An Bình', description: 'Rau sạch', documentUrl: 'https://example.com/giay-chung-nhan.pdf' });
+    const submit = () => act(async () => document.querySelector('form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true })));
+
+    await mount('/farms');
+    assert.ok(document.querySelector('main [role="alert"]'));
+    unavailable = false;
+    await click('main [role="alert"] button');
+    await go('/farms/new');
+    const signature = [...document.querySelectorAll('form input, form textarea')].map(field => field.type);
+    await go('/farms');
+    assert.equal(document.querySelectorAll('main tbody tr').length, 0);
+    applications = [
+      { registrationId: 23, farmName: 'Pending farm', addressLine: 'Address P', status: 'PENDING', submittedAt: '2026-10-20' },
+      { registrationId: 24, farmName: 'Rejected farm', addressLine: 'Address R', status: 'REJECTED', rejectionReason: 'Missing documents', submittedAt: '2026-10-20' },
+      { registrationId: 25, farmName: 'Farm 7', addressLine: 'Address A', province: 'Province A', district: 'District A', ward: 'Ward A', description: 'Original application description', documentUrl: 'https://example.com/certificate.pdf', handledAt: '2026-10-21', status: 'APPROVED', submittedAt: '2026-10-20' },
+    ];
+    farms = [farm(4),farm(7)];
     await act(async () => root.unmount());
-    await mount();
-    assert.ok(document.querySelector('.farm-registration-status').textContent.includes('Vườn Xanh'));
-    assert.ok(document.querySelector('.farm-registration-status').textContent.includes('Ninh Kiều'));
-    assert.ok(document.querySelector('.farm-registration-status').textContent.includes('An Bình'));
-    assert.equal(document.querySelector('.farm-registration-status a').href, 'https://example.com/giay-chung-nhan.pdf');
-    await button('Hủy đăng ký');
-    const confirm = [...document.querySelectorAll('.confirm-dialog-actions button')].find(node => node.textContent.trim() === 'Hủy đăng ký');
-    await act(async () => confirm.click());
-    assert.ok(calls.some(call => call.method === 'patch' && call.url === '/farm-registrations/23/cancel'));
-    assert.ok(document.querySelector('.farm-registration-status').textContent.includes('Đã hủy'));
+    await mount('/farms');
+    assert.equal(document.querySelectorAll('main tbody tr').length, 4);
+    assert.equal(document.querySelector('main a[href="/farms/registrations/25"]'), null, 'Approved applications do not duplicate farm records in the list');
+    assert.ok(document.querySelector('main a[href="/farms/7"]'), 'Farm records remain accessible alongside applications');
+    assert.equal(document.querySelector('main a[href*="history="]'), null);
+    await go('/farms?history=1');
+    assert.equal(document.querySelectorAll('main tbody tr').length, 4, 'Old history URLs no longer switch to a separate list');
+    assert.ok(document.querySelector('main a[href="/farms/7"]'));
+    await go('/farms');
+    await act(async () => [...document.querySelectorAll('main button[aria-pressed]')].find(button => /Card view|Dạng thẻ/.test(button.textContent) && button.getAttribute('aria-pressed') === 'false')?.click());
+    assert.equal(document.querySelector('main table'), null);
+    assert.ok(document.querySelector('main article a[href="/farms/7"]'));
+    await act(async () => [...document.querySelectorAll('main button[aria-pressed]')].find(button => /Table view|Dạng bảng/.test(button.textContent) && button.getAttribute('aria-pressed') === 'false')?.click());
+    assert.ok(calls.some(call => call.url.includes('/farm-registrations?page=2')));
+    await setValue(document.querySelector('main select'), 'pending');
+    assert.equal(document.querySelectorAll('main tbody tr').length, 1);
+    await click('main a[href="/farms/registrations/23"]');
+    assert.match(document.querySelector('.farm-registration-status').textContent, /Pending farm/);
+    await act(async () => [...document.querySelectorAll('main button')].find(button => /Cancel Registration|Hủy đăng ký/.test(button.textContent)).click());
+    await click('dialog .ui-button--danger');
+    assert.equal(applications[0].status, 'CANCELLED');
+    await go('/farms/registrations/24');
+    assert.match(document.querySelector('.farm-registration-status').textContent, /Missing documents/);
+    await go('/farms/registrations/999');
+    assert.ok(document.querySelector('main [role="alert"]'));
+    await go('/farms/7');
+    assert.match(document.querySelector('main').textContent, /Description 7/);
+    assert.match(document.querySelector('.farm-registration-history').textContent, /Original application description/);
+    assert.ok(document.querySelector('.farm-registration-history').closest('.panel').textContent.includes('Description 7'), 'Application fields are inside the farm information card');
+    assert.equal(document.querySelector('.farm-registration-history .farm-goong-map'), null);
+    assert.equal(document.querySelector('main a[href="/harvests"]'), null, 'Quick links are removed from the profile card');
+    assert.ok(document.querySelector('.farm-registration-history a[href="https://example.com/certificate.pdf"]'));
+    await go('/farms'); await go('/farms/7');
+    assert.ok(document.querySelector('.farm-registration-history a[href="https://example.com/certificate.pdf"]'), 'Documents are visible immediately after reopening farm details');
+    assert.equal(document.querySelector('.workspace-switcher select').value, '4');
+    await act(async () => [...document.querySelectorAll('main button')].find(button => /Edit Farm & Map|Chỉnh sửa trang trại/.test(button.textContent)).click());
+    await setValue(document.querySelector('dialog input'), 'Edited Farm 7');
+    await submit();
+    assert.equal(calls.filter(call => call.method === 'put').at(-1).url, '/farms/7');
+    await go('/farms/4');
+    assert.equal(document.querySelector('.farm-registration-history'), null, 'Staff cannot see owner account application history');
+    assert.equal([...document.querySelectorAll('main button')].some(button => /Edit Farm & Map|Chỉnh sửa trang trại/.test(button.textContent)), false);
+    await go('/farms/999');
+    assert.doesNotMatch(document.querySelector('main').textContent, /Description [47]/);
+    await go('/farms/new');
+    assert.deepEqual([...document.querySelectorAll('form input, form textarea')].map(field => field.type), signature);
+    await submit();
+    assert.equal(calls.some(call => call.method === 'post'), false);
+    const inputs = [...document.querySelectorAll('form input[type="text"]')];
+    await setValue(inputs[0], 'New owner farm');
+    await setValue(inputs[1], '123 Green Street');
+    failSubmission = true;
+    await submit();
+    assert.equal(document.getElementById('location').textContent, '/farms/new');
+    assert.equal(document.querySelector('form input').value, 'New owner farm');
+    assert.ok(document.querySelector('form [role="alert"]'));
+    failSubmission = false;
+    await submit();
+    assert.equal(document.getElementById('location').textContent, '/farms');
+    assert.equal(applications.at(-1).status, 'PENDING');
+    assert.ok(calls.some(call => call.method === 'post' && call.url === '/farm-registrations'));
+    assert.equal(calls.some(call => call.method === 'post' && call.url === '/farms'), false);
+    await go('/farm');
+    assert.equal(document.getElementById('location').textContent, '/farms');
   } finally {
     if (root) await act(async () => root.unmount());
-    await server.close();
-    dom.window.close();
-    axios.defaults.adapter = oldAdapter;
+    await server.close(); dom.window.close(); axios.defaults.adapter = oldAdapter;
     for (const [key, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, key, descriptor); else delete globalThis[key]; }
   }
 });

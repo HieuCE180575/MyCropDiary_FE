@@ -43,11 +43,12 @@ interface FarmRegistrationFormProps {
   submitting: boolean;
   submitError: string | null;
   onSubmit: (values: FarmRegistrationFormValues) => void;
+  onCancel?: () => void;
 }
 
 type FieldName = keyof FarmRegistrationFormValues;
 
-export function FarmRegistrationForm({ submitting, submitError, onSubmit }: FarmRegistrationFormProps) {
+export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCancel }: FarmRegistrationFormProps) {
   const { lang, t: translate } = useLanguage();
   const [values, setValues] = useState<FarmRegistrationFormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<FarmRegistrationFormErrors>({});
@@ -334,7 +335,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         </div>
       </div>
 
-      {submitError ? <p className="form-error-banner">{translate(submitError)}</p> : null}
+      {submitError ? <p role="alert" className="form-error-banner">{translate(submitError)}</p> : null}
 
       <label className="form-field structured-field-card">
         <span>{lang === 'en' ? 'Proposed Farm Name *' : 'Tên trang trại dự kiến *'}</span>
@@ -754,6 +755,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit }: Farm
         />
       </div>
 
+      {onCancel && <Button type="button" variant="secondary" disabled={submitting} onClick={onCancel}>{translate("Cancel")}</Button>}
       <Button type="submit" variant="primary" loading={submitting}>
         {submitting ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...') : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
       </Button>

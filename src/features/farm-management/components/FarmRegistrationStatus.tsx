@@ -15,6 +15,7 @@ import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
 interface FarmRegistrationStatusProps {
   registration: FarmRegistration;
+  evidenceOnly?: boolean;
   cancelling: boolean;
   cancelError: string | null;
   onCancel: () => void;
@@ -27,6 +28,7 @@ function formatDateTime(iso: string, lang: 'en' | 'vi'): string {
 
 export function FarmRegistrationStatus({
   registration,
+  evidenceOnly = false,
   cancelling,
   cancelError,
   onCancel,
@@ -42,8 +44,8 @@ export function FarmRegistrationStatus({
   const evidenceFiles = parseEvidenceFiles(registration.documentUrl);
 
   return (
-    <div className="panel farm-registration-status">
-      <div className="panel-title">
+    <div className={evidenceOnly ? "farm-registration-status farm-registration-evidence" : "panel farm-registration-status"}>
+      {!evidenceOnly && <div className="panel-title">
         <div>
           <span className="eyebrow">{lang === 'en' ? 'REGISTRATION STATUS' : 'Trạng thái đăng ký'}</span>
           <h2>{registration.proposedFarmName}</h2>
@@ -52,9 +54,10 @@ export function FarmRegistrationStatus({
           label={FARM_REGISTRATION_STATUS_LABEL[registration.status]}
           tone={FARM_REGISTRATION_STATUS_TONE[registration.status]}
         />
-      </div>
+      </div>}
 
-      <dl className="detail-list">
+      <dl className={evidenceOnly ? "detail-list farm-profile-fields" : "detail-list"}>
+        {!evidenceOnly && <>
         <div>
           <dt>{lang === 'en' ? 'Address' : 'Địa chỉ'}</dt>
           <dd>{registration.address}</dd>
@@ -72,8 +75,9 @@ export function FarmRegistrationStatus({
             <dd>{registration.latitude.toFixed(6)}, {registration.longitude.toFixed(6)}</dd>
           </div>
         ) : null}
+        </>}
         {evidenceFiles.length > 0 && (
-          <div>
+          <div className={evidenceOnly ? "farm-profile-field-wide" : undefined}>
             <dt>{lang === 'en' ? `Supporting Documents (${evidenceFiles.length} files)` : `Tài liệu minh chứng (${evidenceFiles.length} tệp)`}</dt>
             <dd>
               <div className="status-evidence-list">
@@ -81,13 +85,13 @@ export function FarmRegistrationStatus({
                   const typeInfo = getFileTypeInfo(file);
 
                   return (
-                    <div key={`${file.url}-${idx}`} className="status-evidence-item">
+                    <div key={`${file.url}-${idx}`} className="status-evidence-item" style={evidenceOnly ? { flexWrap: "wrap" } : undefined}>
                       <div className="status-evidence-info">
                         <span className={`file-upload-item-icon ${typeInfo.badgeClass}`}>
                           <Icon name={typeInfo.iconName} />
                         </span>
                         <div>
-                          <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{file.name}</strong>
+                          <strong style={{ fontSize: '13.5px', color: '#0f172a', overflowWrap: 'anywhere' }}>{file.name}</strong>
                           <div style={{ fontSize: '12px', color: '#64748b' }}>
                             {formatFileSize(file.size) || (typeInfo.isPdf ? 'PDF • Cloudinary' : typeInfo.isImage ? 'Image • Cloudinary' : 'Cloudinary Document')}
                           </div>
@@ -144,7 +148,7 @@ export function FarmRegistrationStatus({
       </dl>
 
       {/* Bản đồ hiển thị tọa độ & vẽ sơ đồ ranh giới trang trại đã đăng ký trên Goong Map */}
-      <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+      {!evidenceOnly && <div style={{ marginTop: '20px', marginBottom: '20px' }}>
         <FarmGoongMap
           farmName={registration.proposedFarmName}
           address={registration.address}
@@ -157,7 +161,7 @@ export function FarmRegistrationStatus({
           editable={false}
           height={360}
         />
-      </div>
+      </div>}
 
       {cancelError ? <p className="form-error-banner">{translate(cancelError)}</p> : null}
 
