@@ -267,12 +267,6 @@ export function ChecklistItemCard({
               <Icon name="check" size={11} />
             </span>
           )}
-          {savingStatus === 'error' && (
-            <span style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px' }} title={errorMessage ?? undefined}>
-              <Icon name="warning" size={11} />
-              <span>{errorMessage || (lang === 'en' ? 'Error' : 'Lỗi')}</span>
-            </span>
-          )}
 
           {/* Segmented Control 4 Buttons (Compact 30px) */}
           <div
@@ -373,6 +367,12 @@ export function ChecklistItemCard({
 
         {/* Right: Evidence & Notes Action Trigger */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          {savingStatus === 'error' && errorMessage && (
+            <span style={{ color: '#dc2626', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Icon name="alert-triangle" size={12} />
+              <span>{errorMessage}</span>
+            </span>
+          )}
           {/* Direct Photo Thumbnail Preview if already attached */}
           {localItem.evidenceImageUrl && (
             <button

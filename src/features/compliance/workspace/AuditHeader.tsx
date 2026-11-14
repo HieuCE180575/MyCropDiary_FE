@@ -8,7 +8,7 @@ interface AuditHeaderProps {
   completedItems: number; // processed != 'pending'
   passedItems: number;
   failedItems: number;
-  naItems: number;
+  naItems?: number;
   pendingItems: number;
   missingEvidenceCount: number;
   compliancePercent: number;
@@ -27,7 +27,6 @@ export function AuditHeader({
   completedItems,
   passedItems,
   failedItems,
-  naItems: _naItems,
   pendingItems,
   missingEvidenceCount,
   compliancePercent,

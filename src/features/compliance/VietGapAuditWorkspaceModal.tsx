@@ -231,12 +231,19 @@ export function VietGapAuditWorkspaceModal({
     <div
       className="modal-backdrop"
       style={{
-        zIndex: 1000,
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '2vh 2vw',
-        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(4px)',
       }}
       onClick={onClose}
