@@ -3,10 +3,11 @@ import { Button } from '../../../shared/components/Button';
 import { Icon } from '../../../shared/components/Icon';
 import { Modal } from '../../../shared/components/Modal';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import type { Zone, ZoneFormValues } from '../types';
 import { createZone, updateZone } from '../zoneBlockService';
+import { AlertCircle } from 'lucide-react';
 
 interface ZoneModalProps {
   isOpen: boolean;
@@ -40,6 +41,8 @@ export function ZoneModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<TranslationMessage | null>(null);
+  const zoneNameRef = useRef<HTMLInputElement>(null);
+  const areaValueRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -71,10 +74,14 @@ export function ZoneModal({
     const trimmedName = values.zoneName.trim();
     if (!trimmedName) {
       setError((lang === 'en' ? "Enter a management zone name." : 'Vui lòng nhập tên khu vực quản lý.'));
+      zoneNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      zoneNameRef.current?.focus();
       return;
     }
     if (trimmedName.length > 100) {
       setError((lang === 'en' ? "Zone name must not exceed 100 characters." : 'Tên khu vực không được vượt quá 100 ký tự.'));
+      zoneNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      zoneNameRef.current?.focus();
       return;
     }
 
@@ -86,12 +93,16 @@ export function ZoneModal({
       );
       if (isDuplicate) {
         setError((message("Zone name \"{value1}\" already exists in this farm. Choose another name.", { value1: trimmedName })));
+        zoneNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        zoneNameRef.current?.focus();
         return;
       }
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
       setError((lang === 'en' ? "Zone area must be a valid positive number (> 0)." : 'Diện tích khu vực phải là số dương hợp lệ (> 0).'));
+      areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      areaValueRef.current?.focus();
       return;
     }
 
@@ -101,6 +112,8 @@ export function ZoneModal({
         setError(
           (lang === 'en' ? `Zone area (${areaNum} ${values.areaUnit}) must not be smaller than the total area of existing blocks (${currentBlocksTotal} ${values.areaUnit}).` : `Area phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`)
         );
+        areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        areaValueRef.current?.focus();
         return;
       }
     }
@@ -138,7 +151,23 @@ export function ZoneModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
+          {error && (
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <AlertCircle size={18} />
+              <span>{typeof error === 'string' ? error : translate(error)}</span>
+            </div>
+          )}
 
           <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
@@ -161,6 +190,7 @@ export function ZoneModal({
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input className="ui-input"
+                ref={zoneNameRef}
                 id="zone-name-input"
                 type="text"
                 maxLength={100}
@@ -182,6 +212,7 @@ export function ZoneModal({
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input className="ui-input"
+                  ref={areaValueRef}
                   id="zone-area-input"
                   type="number"
                   step="0.01"

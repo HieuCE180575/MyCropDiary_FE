@@ -7,7 +7,7 @@ import {
   Phone, Check, Award, Sparkles, Star, TrendingUp, Sprout, ExternalLink, FileText,
   Sun, Moon, ChevronLeft, ChevronRight, SlidersHorizontal, Maximize2,
   Activity, Layers, Zap, Database, Building2, Trash2, Weight, FlaskConical, Grip, Users, Gauge, MapPin, Bug, Thermometer, ArrowUp,
-  Target, Telescope, Settings, CirclePlay, Cloud, Camera, QrCode,
+  Target, Telescope, Settings, CirclePlay, Cloud, Camera, QrCode, ChevronUp,
   type LucideIcon, type LucideProps,
 } from 'lucide-react';
 
@@ -18,7 +18,7 @@ const icons: Record<string, LucideIcon> = {
   home: House, leaf: Leaf, plots: Map, calendar: CalendarDays, book: BookOpen,
   box: Package, money: CircleDollarSign, check: ListChecks, report: ChartColumn,
   bot: Bot, user: UserRound, bell: Bell, plus: Plus, arrow: ArrowRight,
-  'arrow-left': ArrowLeft, chevron: ChevronDown, logout: LogOut,
+  'arrow-left': ArrowLeft, chevron: ChevronDown, 'chevron-up': ChevronUp, 'chevron-down': ChevronDown, logout: LogOut,
   warning: TriangleAlert, drop: Droplet, history: History, message: MessageSquare,
   lock: LockKeyhole, search: Search, eye: Eye, 'eye-off': EyeOff,
   mail: Mail, globe: Globe, login: LogIn, close: X, hand: Hand,

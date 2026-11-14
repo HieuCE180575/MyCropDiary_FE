@@ -1,4 +1,3 @@
-import { Button } from '../../shared/components/Button';
 import { Link, Outlet } from 'react-router-dom';
 import { SidebarNavigation } from './SidebarNavigation';
 import { Icon } from '../../shared/components/Icon';
@@ -20,6 +19,13 @@ import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { NotificationPopover } from './NotificationPopover';
+import {
+  fetchMyNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  type NotificationItem,
+} from '../../features/notifications/notificationService';
 
 
 export function AppLayout() {
@@ -122,20 +128,88 @@ function WorkspaceLayout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const notificationWrapRef = useRef<HTMLDivElement>(null);
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  const loadNotifications = async (silent = false) => {
+    if (!silent) setLoadingNotifications(true);
+    try {
+      const result = await fetchMyNotifications(20);
+      setNotifications(result.items);
+      setUnreadCount(result.unreadCount);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      if (!silent) setLoadingNotifications(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user?.systemRole?.toUpperCase() !== 'ADMIN') {
+      void loadNotifications(!notificationsOpen);
+    }
+  }, [notificationsOpen, user?.userId]);
+
+  useEffect(() => {
+    if (!user || user?.systemRole?.toUpperCase() === 'ADMIN') return;
+    const refresh = () => void loadNotifications(true);
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [user?.userId]);
+
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    try {
+      if (!notification.isRead) {
+        const updated = await markNotificationAsRead(notification.id);
+        if (updated) {
+          setNotifications((prev) =>
+            prev.map((item) => (item.id === notification.id ? updated : item))
+          );
+          setUnreadCount((prev) => Math.max(0, prev - 1));
+        }
+      }
+      setNotificationsOpen(false);
+      if (notification.actionUrl) {
+        navigate(notification.actionUrl);
+      }
+    } catch (error) {
+      console.error('Failed to update notification:', error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllNotificationsAsRead();
+      setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
         setAccountMenuOpen(false);
       }
+      if (notificationWrapRef.current && !notificationWrapRef.current.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
     }
-    if (accountMenuOpen) {
+    if (accountMenuOpen || notificationsOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [accountMenuOpen]);
+  }, [accountMenuOpen, notificationsOpen]);
 
   useEffect(() => {
     setAccountMenuOpen(false);
@@ -144,6 +218,8 @@ function WorkspaceLayout() {
   const [invitations, setInvitations] = useState<FarmInvitation[]>([]);
   const [respondingInvId, setRespondingInvId] = useState<number | null>(null);
   const [invitationError, setInvitationError] = useState<string | null>(null);
+
+  const totalUnread = invitations.length + unreadCount;
 
   const loadInvitations = async () => {
     if (!user || user?.systemRole?.toUpperCase() === 'ADMIN') return;
@@ -161,6 +237,7 @@ function WorkspaceLayout() {
 
   useRealtimeSync(() => {
     void loadInvitations();
+    void loadNotifications(true);
   });
 
   const handleRespondInvitation = async (inv: FarmInvitation, action: 'approve' | 'reject') => {
@@ -318,7 +395,7 @@ function WorkspaceLayout() {
             </button>
 
             {/* Notifications */}
-            <div className="notification-wrap">
+            <div className="notification-wrap" ref={notificationWrapRef}>
               <button
                 className="icon-button notification-btn"
                 aria-label={translate('Notifications')}
@@ -327,105 +404,25 @@ function WorkspaceLayout() {
                 style={{ position: 'relative' }}
               >
                 <Icon name="bell" />
-                {invitations.length > 0 ? (
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: '2px',
-                      right: '2px',
-                      background: 'var(--color-danger-bg)',
-                      color: 'var(--color-danger)',
-                      fontSize: '10px',
-                      fontWeight: 700,
-                      borderRadius: '10px',
-                      padding: '1px 5px',
-                      minWidth: '16px',
-                      textAlign: 'center',
-                    }}
-                  >
-                    {invitations.length}
+                {totalUnread > 0 && (
+                  <span className="notification-badge">
+                    {totalUnread}
                   </span>
-                ) : (
-                  <span className="notification-dot" />
                 )}
               </button>
               {notificationsOpen && (
-                <div
-                  className="notification-popover"
-                  role="status"
-                  style={{
-                    width: '360px',
-                    maxWidth: '90vw',
-                    padding: '14px',
-                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', borderBottom: '1px solid var(--color-subtle)', paddingBottom: '8px' }}>
-                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{t("System Notifications")}</strong>
-                    {invitations.length > 0 && (
-                      <span className="crop-cat-pill" style={{ background: 'var(--color-warning-bg)', color: 'var(--color-warning)', borderColor: 'var(--color-border)', fontWeight: 700, fontSize: '11px' }}>
-                        {invitations.length} {lang === 'en' ? 'invitations' : 'lời mời'}
-                      </span>
-                    )}
-                  </div>
-
-                  {invitationError && <p role="alert" className="form-error-banner">{t(invitationError)}</p>}
-                  {invitations.length === 0 ? (
-                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>{t("All systems operational. No new notifications.")}</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '340px', overflowY: 'auto' }}>
-                      {invitations.map((inv) => (
-                        <div
-                          key={inv.memberId}
-                          style={{
-                            background: 'var(--color-page)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: '8px',
-                            padding: '10px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '6px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                            <span style={{ fontSize: '18px' }}>🌿</span>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <strong style={{ fontSize: '13.5px', color: 'var(--color-text)', display: 'block' }}>
-                                {inv.farmName}
-                              </strong>
-                              <span style={{ fontSize: '12px', color: 'var(--color-body)', display: 'block', marginTop: '2px' }}>
-                                {lang === 'en' ? 'Invitation to join:' : 'Lời mời tham gia:'} <strong>{(lang === 'en' ? inv.farmRole?.toLowerCase() === 'owner' ? "Co-Owner" : "Technical Staff" : inv.farmRole?.toLowerCase() === 'owner' ? 'Đồng sở hữu (Co-Owner)' : 'Nhân viên kỹ thuật (Staff)')}</strong>
-                              </span>
-                              <span style={{ fontSize: '11.5px', color: 'var(--color-muted)', display: 'block' }}>
-                                {lang === 'en' ? 'Invited by:' : 'Người mời:'} {inv.ownerName}
-                              </span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                            <Button
-                              type="button"
-                              variant="primary"
-                              disabled={respondingInvId === inv.memberId}
-                              onClick={() => handleRespondInvitation(inv, 'approve')}
-                              style={{ flex: 1, justifyContent: 'center' }}
-                            >
-                              ✓ {lang === 'en' ? 'Accept' : 'Chấp nhận'}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              disabled={respondingInvId === inv.memberId}
-                              onClick={() => handleRespondInvitation(inv, 'reject')}
-
-                            >
-                              ✕ {lang === 'en' ? 'Decline' : 'Từ chối'}
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <NotificationPopover
+                  lang={lang}
+                  notifications={notifications}
+                  unreadCount={unreadCount}
+                  loading={loadingNotifications}
+                  invitations={invitations}
+                  respondingInvId={respondingInvId}
+                  invitationError={invitationError}
+                  onMarkAllAsRead={handleMarkAllAsRead}
+                  onNotificationClick={handleNotificationClick}
+                  onRespond={handleRespondInvitation}
+                />
               )}
             </div>
 

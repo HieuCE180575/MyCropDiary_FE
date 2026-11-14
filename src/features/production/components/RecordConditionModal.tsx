@@ -2,10 +2,11 @@ import { Button } from '../../../shared/components/Button';
 import { Icon } from '../../../shared/components/Icon';
 import { Modal } from '../../../shared/components/Modal';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Block, BlockConditionObservation, RecordConditionFormValues } from '../types';
 import { recordBlockCondition } from '../zoneBlockService';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
+import { AlertCircle } from 'lucide-react';
 
 interface RecordConditionModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export function RecordConditionModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +66,11 @@ export function RecordConditionModal({
     }
     if (!values.description.trim()) {
       setError((lang === 'en' ? "Enter detailed condition notes." : 'Vui lòng nhập nội dung ghi nhận điều kiện chi tiết.'));
+      descriptionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+      descriptionRef.current?.focus();
       return;
     }
 
@@ -99,7 +106,23 @@ export function RecordConditionModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
+          {error && (
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <AlertCircle size={18} />
+              <span>{typeof error === 'string' ? error : translate(error)}</span>
+            </div>
+          )}
 
           <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
@@ -167,6 +190,7 @@ export function RecordConditionModal({
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <textarea className="ui-textarea"
+                ref={descriptionRef}
                 id="cond-desc-input"
                 rows={4}
                 maxLength={1000}

@@ -4,9 +4,10 @@ import { Icon } from '../../../shared/components/Icon';
 import { Modal } from '../../../shared/components/Modal';
 import { FarmGoongMap } from '../../farm-management/components/FarmGoongMap';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import type { Block, BlockFormValues, Zone } from '../types';
 import { createBlock, updateBlock } from '../zoneBlockService';
+import { AlertCircle } from 'lucide-react';
 
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 
@@ -49,6 +50,8 @@ export function BlockModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<TranslationMessage | null>(null);
+  const blockNameRef = useRef<HTMLInputElement>(null);
+  const areaValueRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -99,11 +102,15 @@ export function BlockModal({
     const trimmedBlockName = values.blockName.trim();
     if (!trimmedBlockName) {
       setError((lang === 'en' ? "Enter a production block name." : 'Vui lòng nhập tên lô sản xuất.'));
+      blockNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      blockNameRef.current?.focus();
       return;
     }
     const areaNum = parseFloat(values.areaValue);
     if (!values.areaValue || isNaN(areaNum) || areaNum <= 0) {
       setError((lang === 'en' ? "Block area must be greater than 0." : 'Diện tích lô sản xuất phải lớn hơn 0.'));
+      areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      areaValueRef.current?.focus();
       return;
     }
 
@@ -116,6 +123,8 @@ export function BlockModal({
       );
       if (isDuplicate) {
         setError((message("Block name \"{value1}\" already exists in zone \"{value2}\". Choose another name.", { value1: trimmedBlockName, value2: targetZone.zoneName })));
+        blockNameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        blockNameRef.current?.focus();
         return;
       }
     }
@@ -123,6 +132,8 @@ export function BlockModal({
       setError(
         (lang === 'en' ? `Block area (${areaNum} ${values.areaUnit}) must not exceed the zone area ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).` : `Diện tích Block (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`)
       );
+      areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      areaValueRef.current?.focus();
       return;
     }
 
@@ -159,7 +170,23 @@ export function BlockModal({
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
-          {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
+          {error && (
+            <div style={{
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              color: '#b91c1c',
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '12px'
+            }}>
+              <AlertCircle size={18} />
+              <span>{typeof error === 'string' ? error : translate(error)}</span>
+            </div>
+          )}
 
           {/* Parent Zone Field */}
           <div
@@ -212,6 +239,7 @@ export function BlockModal({
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
               <input className="ui-input"
+                ref={blockNameRef}
                 id="block-name-input"
                 type="text"
                 maxLength={100}
@@ -234,6 +262,7 @@ export function BlockModal({
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
                 <input className="ui-input"
+                  ref={areaValueRef}
                   id="block-area-input"
                   type="number"
                   step="0.01"
