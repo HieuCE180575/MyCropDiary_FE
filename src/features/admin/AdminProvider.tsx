@@ -496,11 +496,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
     if (command.type === 'status' && command.collection === 'users') {
       const updated = userToRecord(await updateAdminUserStatus(command.id, command.status));
+      if (command.reason && command.status === 'LOCKED') {
+        updated.lockReason = command.reason;
+      }
       setState((previous) => ({
         ...previous,
-        users: previous.users.map((record) => (record.id === updated.id ? updated : record)),
+        users: previous.users.map((record) => (record.id === updated.id ? { ...record, ...updated, lockReason: command.status === 'LOCKED' ? (command.reason || record.lockReason || 'Vi phạm điều khoản hoặc chính sách hệ thống') : '' } : record)),
       }));
-      showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt tài khoản thành công.' : 'Đã khóa tài khoản thành công.');
+      showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt mở khóa tài khoản thành công.' : 'Đã khóa tài khoản thành công.');
       return;
     }
 
@@ -579,7 +582,79 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             ...previous,
             farms: previous.farms.map((record) => (record.id === updated.id ? updated : record)),
           }));
-          showNotice('Đã cập nhật trạng thái trang trại thành công.');
+          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt trang trại thành công.' : 'Đã tạm ngưng trang trại thành công.');
+          return;
+        } catch {
+          // Fallback to local
+        }
+      }
+
+      if (command.type === 'status' && command.collection === 'zones' && /^\d+$/.test(command.id)) {
+        try {
+          const updated = zoneToRecord(
+            await updateAdminZone(command.id, {
+              status: command.status.toLowerCase(),
+            }),
+          );
+          setState((previous) => ({
+            ...previous,
+            zones: previous.zones.map((record) => (record.id === updated.id ? updated : record)),
+          }));
+          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt phân khu thành công.' : 'Đã tạm ngưng phân khu thành công.');
+          return;
+        } catch {
+          // Fallback to local
+        }
+      }
+
+      if (command.type === 'status' && command.collection === 'blocks' && /^\d+$/.test(command.id)) {
+        try {
+          const updated = blockToRecord(
+            await updateAdminBlock(command.id, {
+              status: command.status.toLowerCase(),
+            }),
+          );
+          setState((previous) => ({
+            ...previous,
+            blocks: previous.blocks.map((record) => (record.id === updated.id ? updated : record)),
+          }));
+          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt lô đất thành công.' : 'Đã tạm ngưng lô đất thành công.');
+          return;
+        } catch {
+          // Fallback to local
+        }
+      }
+
+      if (command.type === 'status' && command.collection === 'rules' && /^\d+$/.test(command.id)) {
+        try {
+          const updated = ruleToRecord(
+            await updateAdminChecklistRule(command.id, {
+              isActive: command.status === 'ACTIVE',
+            }),
+          );
+          setState((previous) => ({
+            ...previous,
+            rules: previous.rules.map((record) => (record.id === updated.id ? updated : record)),
+          }));
+          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt áp dụng quy tắc thành công.' : 'Đã ngừng áp dụng quy tắc thành công.');
+          return;
+        } catch {
+          // Fallback to local
+        }
+      }
+
+      if (command.type === 'status' && command.collection === 'compliance' && /^\d+$/.test(command.id)) {
+        try {
+          const updated = complianceToRecord(
+            await updateAdminCompliance(command.id, {
+              status: command.status,
+            }),
+          );
+          setState((previous) => ({
+            ...previous,
+            compliance: previous.compliance.map((record) => (record.id === updated.id ? updated : record)),
+          }));
+          showNotice('Đã cập nhật trạng thái mùa vụ thành công.');
           return;
         } catch {
           // Fallback to local

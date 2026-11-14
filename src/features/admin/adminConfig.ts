@@ -210,6 +210,7 @@ export const adminConfigs: Record<Collection, CollectionConfig> = {
     details: [
       { key: 'email', label: 'Email' },
       { key: 'verified', label: 'Xác thực email' },
+      { key: 'lockReason', label: 'Lý do khóa tài khoản' },
       { key: 'farmsSummary', label: 'Trang trại sở hữu / tham gia' },
       { key: 'zonesSummary', label: 'Phân khu đang phụ trách' },
     ],
