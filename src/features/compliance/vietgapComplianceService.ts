@@ -1,22 +1,34 @@
 import { apiRequest } from '../../shared/api/httpClient';
+import { getAccessToken } from '../auth/authStorage';
 import type { ApiResponse } from '../../shared/types/api';
 
-// Checklist Types
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1').replace(/\/$/, '');
+
+// ─── Checklist Types ─────────────────────────────────────────────────────────
+
 export interface ChecklistResultItemResp {
   resultId: number;
   runId: number;
+  checklistRuleId?: number | null;
+  ruleCode?: string | null;
+  ruleName?: string | null;
+  category?: string | null;
+  ruleLevel?: 'MUST' | 'MAJOR' | 'MINOR' | 'RECOMMENDED' | string;
   checkedByMemberId?: number | null;
   checkedByName?: string | null;
-  resultStatus: string; // 'pass', 'fail', 'not_applicable'
+  resultStatus: 'pass' | 'fail' | 'not_applicable' | 'pending' | string;
+  isAutoEvaluated?: boolean;
   notes?: string | null;
   evidenceImageUrl?: string | null;
+  evidenceReferenceType?: string | null;
+  evidenceReferenceId?: number | null;
   isMissingEvidence?: boolean;
   checkedAt?: string | null;
 }
 
 export interface ChecklistRunResp {
   runId: number;
-  checklistRuleId: number;
+  checklistRuleId?: number | null;
   ruleName?: string | null;
   ruleCategory?: string | null;
   farmId: number;
@@ -26,14 +38,17 @@ export interface ChecklistRunResp {
   blockName?: string | null;
   assignedToMemberId?: number | null;
   assignedToName?: string | null;
-  runStatus: string; // 'open', 'in_progress', 'completed', 'cancelled'
+  runStatus: 'open' | 'in_progress' | 'completed' | 'cancelled' | string;
   scheduledAt?: string | null;
   completedAt?: string | null;
   createdAt?: string | null;
   totalItems: number;
   passedItems: number;
   failedItems: number;
+  naItems?: number;
+  compliancePercent?: number;
   missingEvidenceCount: number;
+  notes?: string | null;
   results?: ChecklistResultItemResp[];
 }
 
@@ -49,6 +64,23 @@ export interface RunChecklistPayload {
     notes?: string;
     evidenceImageUrl?: string;
   }[];
+}
+
+// New VietGAP Audit Run payloads
+export interface InitVietGapAuditRunPayload {
+  cropSeasonId: number;
+  blockId?: number | null;
+  assignedToMemberId?: number | null;
+  scheduledAt?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateChecklistItemPayload {
+  resultStatus: 'pass' | 'fail' | 'not_applicable' | 'pending';
+  notes?: string | null;
+  evidenceImageUrl?: string | null;
+  evidenceReferenceType?: string | null;
+  evidenceReferenceId?: number | null;
 }
 
 // Internal Assessment Types
@@ -187,5 +219,73 @@ export async function fetchVietGapCriteriaApi(
   const qs = query.toString();
   const res = await apiRequest<ApiResponse<VietGapCriterionResp[]>>(`/farms/${farmId}/vietgap-criteria${qs ? `?${qs}` : ''}`);
   return res.data || [];
+}
+
+// ─── VietGAP 33-Criteria Audit APIs ─────────────────────────────────────────
+
+export async function initVietGapAuditRunApi(
+  farmId: number,
+  payload: InitVietGapAuditRunPayload
+): Promise<ChecklistRunResp> {
+  const res = await apiRequest<ApiResponse<ChecklistRunResp>>(`/farms/${farmId}/checklist-runs/init`, {
+    method: 'POST',
+    data: payload,
+  });
+  return res.data;
+}
+
+export async function fetchVietGapAuditRunDetailApi(
+  farmId: number,
+  runId: number
+): Promise<ChecklistRunResp> {
+  const res = await apiRequest<ApiResponse<ChecklistRunResp>>(`/farms/${farmId}/checklist-runs/${runId}`);
+  return res.data;
+}
+
+export async function updateChecklistItemApi(
+  farmId: number,
+  runId: number,
+  resultId: number,
+  payload: UpdateChecklistItemPayload
+): Promise<ChecklistResultItemResp> {
+  const res = await apiRequest<ApiResponse<ChecklistResultItemResp>>(
+    `/farms/${farmId}/checklist-runs/${runId}/items/${resultId}`,
+    { method: 'PUT', data: payload }
+  );
+  return res.data;
+}
+
+export async function autoCheckRunApi(
+  farmId: number,
+  runId: number
+): Promise<ChecklistRunResp> {
+  const res = await apiRequest<ApiResponse<ChecklistRunResp>>(
+    `/farms/${farmId}/checklist-runs/${runId}/auto-check`,
+    { method: 'POST' }
+  );
+  return res.data;
+}
+
+export async function completeChecklistRunApi(
+  farmId: number,
+  runId: number
+): Promise<ChecklistRunResp> {
+  const res = await apiRequest<ApiResponse<ChecklistRunResp>>(
+    `/farms/${farmId}/checklist-runs/${runId}/complete`,
+    { method: 'POST' }
+  );
+  return res.data;
+}
+
+/** PDF export — uses fetch directly because apiRequest uses responseType:'text' */
+export async function exportAuditReportPdfApi(farmId: number, runId: number): Promise<Blob> {
+  const token = getAccessToken();
+  const res = await fetch(`${API_BASE_URL}/farms/${farmId}/checklist-runs/${runId}/export-pdf`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    throw new Error(`Lỗi xuất PDF: ${res.status}`);
+  }
+  return res.blob();
 }
 
