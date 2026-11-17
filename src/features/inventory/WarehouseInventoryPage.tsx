@@ -65,6 +65,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
     quantityOnHand: '',
     reorderLevel: '',
   });
+
   const [updatingInventory, setUpdatingInventory] = useState(false);
 
   // Edit warehouse state
@@ -213,7 +214,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete warehouse." : err instanceof Error ? err.message : 'Không thể xóa kho hàng.'), 'error');
     }
   };
-
+ 
   const handleOpenCreateInventory = async () => {
     await loadMaterials();
     if (warehouses.length > 0) {
