@@ -325,13 +325,13 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <PageHeading level={embedded ? 2 : 1}   title={<>
-            {lang === 'en' ? 'Farm Expenses' : 'Chi phí sản xuất'}
-          </>} description={<>
-            {lang === 'en'
-              ? `${expenses.length} expense records · Total: ${formatCurrency(summary?.totalExpenseAmount)}`
-              : `${expenses.length} khoản chi phí · Tổng: ${formatCurrency(summary?.totalExpenseAmount)} tại ${selectedFarm?.farmName || 'trang trại'}`}
-          </>}><div>
+      <PageHeading level={embedded ? 2 : 1} title={<>
+        {lang === 'en' ? 'Farm Expenses' : 'Chi phí sản xuất'}
+      </>} description={<>
+        {lang === 'en'
+          ? `${expenses.length} expense records · Total: ${formatCurrency(summary?.totalExpenseAmount)}`
+          : `${expenses.length} khoản chi phí · Tổng: ${formatCurrency(summary?.totalExpenseAmount)} tại ${selectedFarm?.farmName || 'trang trại'}`}
+      </>}><div>
           <Button
             type="button"
             variant="primary"
@@ -689,9 +689,13 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
         <form onSubmit={handleSubmitRecord} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
           <div className="structured-field-card">
-            <label htmlFor="expenses-page-field-1">
-              {lang === 'en' ? 'Expense Category *' : 'Danh mục chi phí *'}
-            </label>
+            <div className="structured-field-header">
+              <label htmlFor="inventory-field-1">
+                {lang === 'en' ? 'Expense Category ' : 'Danh mục chi phí '}
+                <span style={{ color: '#dc2626' }}>*</span>
+              </label>
+              <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+            </div>
             <select id="expenses-page-field-1" className="ui-select"
               value={recordForm.expenseCategory}
               onChange={(e) => setRecordForm({ ...recordForm, expenseCategory: e.target.value })}
@@ -706,9 +710,13 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
             <div className="structured-field-card">
-              <label htmlFor="expenses-page-control-1">
-                {lang === 'en' ? 'Amount (VND) *' : 'Số tiền (VND) *'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Amount (VND) ' : 'Số tiền (VND) '}
+                  <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              </div>
               <input id="expenses-page-control-1" className="ui-input"
                 type="number"
                 min="0"
@@ -722,9 +730,13 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="structured-field-card">
-              <label htmlFor="expenses-page-control-2">
-                {lang === 'en' ? 'Expense Date' : 'Ngày chi'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Expense Date ' : 'Ngày chi '}
+                  <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              </div>
               <input id="expenses-page-control-2" className="ui-input"
                 type="date"
                 value={recordForm.expenseDate}
@@ -735,9 +747,12 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           <div className="structured-field-card">
-            <label htmlFor="expenses-page-field-2">
-              {lang === 'en' ? 'Associated Crop Season (optional)' : 'Mùa vụ áp dụng (tùy chọn)'}
-            </label>
+            <div className="structured-field-header">
+              <label htmlFor="inventory-field-1">
+                {lang === 'en' ? 'Associated Crop Season ' : 'Mùa vụ áp dụng '}
+              </label>
+              <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+            </div>
             <select id="expenses-page-field-2" className="ui-select"
               value={recordForm.cropSeasonId ?? ''}
               onChange={(e) => setRecordForm({ ...recordForm, cropSeasonId: e.target.value ? Number(e.target.value) : undefined })}
@@ -751,9 +766,12 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           <div className="structured-field-card">
-            <label htmlFor="expenses-page-control-3">
-              {lang === 'en' ? 'Description' : 'Diễn giải nội dung chi'}
-            </label>
+            <div className="structured-field-header">
+              <label htmlFor="inventory-field-1">
+                {lang === 'en' ? 'Description' : 'Diễn giải nội dung chi'}
+              </label>
+              <span className="structured-field-badge">{recordForm.description?.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+            </div>
             <textarea id="expenses-page-control-3" className="ui-textarea"
               rows={3}
               value={recordForm.description}
@@ -764,9 +782,12 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           <div className="structured-field-card">
-            <label htmlFor="expenses-page-control-4">
-              {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh hóa đơn / chứng từ'}
-            </label>
+            <div className="structured-field-header">
+              <label htmlFor="inventory-field-1">
+                {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh hóa đơn / chứng từ'}
+              </label>
+              <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+            </div>
             <input id="expenses-page-control-4" className="ui-input"
               type="url"
               value={recordForm.receiptImageUrl}
@@ -806,11 +827,15 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
       >
         {editingExpense && (
           <form onSubmit={handleSubmitUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="structured-field-card">
-              <label htmlFor="expenses-page-field-3">
-                {lang === 'en' ? 'Expense Category' : 'Danh mục chi phí'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Expense Category ' : 'Danh mục chi phí '}
+                  <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              </div>
               <select id="expenses-page-field-3" className="ui-select"
                 value={updateForm.expenseCategory}
                 onChange={(e) => setUpdateForm({ ...updateForm, expenseCategory: e.target.value })}
@@ -824,9 +849,13 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
               <div className="structured-field-card">
-                <label htmlFor="expenses-page-control-5">
-                  {lang === 'en' ? 'Amount (VND)' : 'Số tiền (VND)'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Amount (VND) ' : 'Số tiền (VND) '}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <input id="expenses-page-control-5" className="ui-input"
                   type="number"
                   min="0"
@@ -838,9 +867,13 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
               </div>
 
               <div className="structured-field-card">
-                <label htmlFor="expenses-page-control-6">
-                  {lang === 'en' ? 'Expense Date' : 'Ngày chi'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Expense Date ' : 'Ngày chi '}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <input id="expenses-page-control-6" className="ui-input"
                   type="date"
                   value={updateForm.expenseDate}
@@ -851,9 +884,12 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="structured-field-card">
-              <label htmlFor="expenses-page-field-4">
-                {lang === 'en' ? 'Associated Crop Season' : 'Mùa vụ áp dụng'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Associated Crop Season ' : 'Mùa vụ áp dụng '}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <select id="expenses-page-field-4" className="ui-select"
                 value={updateForm.cropSeasonId ?? ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, cropSeasonId: e.target.value ? Number(e.target.value) : undefined })}
@@ -867,9 +903,12 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="structured-field-card">
-              <label htmlFor="expenses-page-control-7">
-                {lang === 'en' ? 'Description' : 'Diễn giải nội dung'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Description' : 'Diễn giải nội dung chi'}
+                </label>
+                <span className="structured-field-badge">{updateForm.description?.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+              </div>
               <textarea id="expenses-page-control-7" className="ui-textarea"
                 rows={3}
                 value={updateForm.description}
@@ -879,9 +918,12 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="structured-field-card">
-              <label htmlFor="expenses-page-control-8">
-                {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh chứng từ / hóa đơn'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Receipt Photo URL' : 'Đường dẫn ảnh hóa đơn / chứng từ'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input id="expenses-page-control-8" className="ui-input"
                 type="url"
                 placeholder={(lang === 'en' ? "https://images.unsplash.com/... or receipt image URL" : "https://images.unsplash.com/... hoặc link ảnh chứng từ")}

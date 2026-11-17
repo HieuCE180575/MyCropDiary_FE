@@ -300,13 +300,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <PageHeading level={embedded ? 2 : 1}   title={<>
-            {lang === 'en' ? 'Input Purchases' : 'Mua sắm vật tư'}
-          </>} description={<>
-            {lang === 'en'
-              ? `${purchases.length} purchases · Total: ${displayCurrency(totalSpent ?? 0, lang)} at ${selectedFarm?.farmName || 'Farm'}`
-              : `${purchases.length} phiếu mua · Tổng chi phí: ${displayCurrency(totalSpent ?? 0, lang)} tại ${selectedFarm?.farmName || 'trang trại'}`}
-          </>}><div>
+      <PageHeading level={embedded ? 2 : 1} title={<>
+        {lang === 'en' ? 'Input Purchases' : 'Mua sắm vật tư'}
+      </>} description={<>
+        {lang === 'en'
+          ? `${purchases.length} purchases · Total: ${displayCurrency(totalSpent ?? 0, lang)} at ${selectedFarm?.farmName || 'Farm'}`
+          : `${purchases.length} phiếu mua · Tổng chi phí: ${displayCurrency(totalSpent ?? 0, lang)} tại ${selectedFarm?.farmName || 'trang trại'}`}
+      </>}><div>
           <Button
             type="button"
             variant="primary"
@@ -465,7 +465,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {hasWarehouse ? (
-                          <StatusBadge title={lang === 'en' ? 'Warehouse verified' : 'Đã đối soát kho'}  tone="success" label={<>
+                          <StatusBadge title={lang === 'en' ? 'Warehouse verified' : 'Đã đối soát kho'} tone="success" label={<>
                             {purchase.warehouseReceiptNo}
                           </>} />
                         ) : (
@@ -598,14 +598,14 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 </div>
                 {selectedPurchase.warehouseReceiptNo ? (
                   <div>
-                    <StatusBadge   tone="success" label={<>{selectedPurchase.warehouseReceiptNo}</>} />
+                    <StatusBadge tone="success" label={<>{selectedPurchase.warehouseReceiptNo}</>} />
                     <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--color-primary-text)' }}>
                       {lang === 'en' ? '✓ Linked to VietGAP warehouse receipt' : '✓ Đã liên kết chứng từ kho VietGAP'}
                     </p>
                   </div>
                 ) : (
                   <div>
-                    <StatusBadge   tone="warning" label={<>{lang === 'en' ? 'Unlinked' : 'Chưa liên kết'}</>} />
+                    <StatusBadge tone="warning" label={<>{lang === 'en' ? 'Unlinked' : 'Chưa liên kết'}</>} />
                     <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--color-warning)' }}>
                       {lang === 'en' ? 'No warehouse receipt linked.' : 'Chưa gắn số phiếu nhập kho lưu trữ.'}
                     </p>
@@ -713,9 +713,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             </p>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="input-purchases-page-field-1">
-                {lang === 'en' ? 'Warehouse Receipt No. *' : 'Số phiếu nhập kho *'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Warehouse Receipt No. *' : 'Số phiếu nhập kho *'}
+                  <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+              </div>
               <input id="input-purchases-page-field-1" className="ui-input"
                 type="text"
                 required
@@ -748,9 +752,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="ui-form-grid">
               <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-field-2">
-                  {lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <select id="input-purchases-page-field-2" className="ui-select"
                   value={newSupplierId}
                   onChange={(e) => setNewSupplierId(e.target.value ? Number(e.target.value) : '')}
@@ -766,9 +774,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
               </div>
 
               <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-control-1">
-                  {lang === 'en' ? 'Purchase Date *' : 'Ngày mua hàng *'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Purchase Date *' : 'Ngày mua hàng *'}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <input id="input-purchases-page-control-1" className="ui-input"
                   type="date"
                   required
@@ -779,11 +791,15 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
               </div>
 
               <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-control-2">
-                  {lang === 'en' ? 'Invoice No. / Reference No.' : 'Số hóa đơn / Số tham chiếu'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Invoice No.' : 'Số hóa đơn'}
+                  </label>
+                  <span className="structured-field-badge">{newReferenceNo.length}{(lang === 'en' ? "/100 chars" : "/100 ký tự")}</span>
+                </div>
                 <input id="input-purchases-page-control-2" className="ui-input"
                   type="text"
+                  maxLength={100}
                   placeholder={lang === 'en' ? 'e.g. INV-2026-081...' : 'Ví dụ: HD-2026-081...'}
                   value={newReferenceNo}
                   onChange={(e) => setNewReferenceNo(e.target.value)}
@@ -792,9 +808,12 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
               </div>
 
               <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-field-3">
-                  {lang === 'en' ? 'Warehouse Receipt No. (optional)' : 'Số phiếu nhập kho (nếu có)'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Warehouse Receipt No. ' : 'Số phiếu nhập kho'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div>
                 <input id="input-purchases-page-field-3" className="ui-input"
                   type="text"
                   placeholder={lang === 'en' ? 'e.g. PNK-2026-001...' : 'Ví dụ: PNK-2026-001...'}
@@ -806,9 +825,12 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             </div>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="input-purchases-page-field-4">
-                {lang === 'en' ? 'Purchase Notes' : 'Ghi chú mua hàng'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Purchase Notes' : 'Ghi chú mua hàng'}
+                </label>
+                <span className="structured-field-badge">{newNotes.length}{(lang === 'en' ? "/100 chars" : "/100 ký tự")}</span>
+              </div>
               <textarea id="input-purchases-page-field-4" className="ui-textarea"
                 rows={2}
                 placeholder={lang === 'en' ? 'Storage conditions, VietGAP batch...' : 'Ghi chú điều kiện bảo quản, lô hàng VietGAP...'}
@@ -821,9 +843,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             {/* Dynamic Items */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text)' }}>
-                  {lang === 'en' ? 'Purchased Input Items' : 'Danh mục mặt hàng vật tư'}
-                </span>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Purchased Input Items' : 'Danh mục mặt hàng vật tư'}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <button
                   type="button"
                   onClick={handleAddItemRow}
@@ -837,38 +863,38 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 {newItems.map((item, idx) => (
                   <div key={idx} className="purchase-item-row">
                     <label className="structured-field-card">
-                    <span>{lang === 'en' ? 'Material ID' : 'Mã vật tư'}</span>
-                    <input className="ui-input"
-                      type="number"
-                      min={1}
-                      placeholder={lang === 'en' ? 'Mat ID' : 'Mã VT'}
-                      value={item.materialId}
-                      onChange={(e) => handleItemChange(idx, 'materialId', Number(e.target.value))}
-                      style={{ padding: '6px 8px' }}
-                    />
+                      <span>{lang === 'en' ? 'Material ID' : 'Mã vật tư'}</span>
+                      <input className="ui-input"
+                        type="number"
+                        min={1}
+                        placeholder={lang === 'en' ? 'Mat ID' : 'Mã VT'}
+                        value={item.materialId}
+                        onChange={(e) => handleItemChange(idx, 'materialId', Number(e.target.value))}
+                        style={{ padding: '6px 8px' }}
+                      />
                     </label>
                     <label className="structured-field-card">
-                    <span>{lang === 'en' ? 'Quantity' : 'Số lượng'}</span>
-                    <input className="ui-input"
-                      type="number"
-                      min={0.01}
-                      step="any"
-                      placeholder={lang === 'en' ? 'Qty' : 'Số lượng'}
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(idx, 'quantity', Number(e.target.value))}
-                      style={{ padding: '6px 8px' }}
-                    />
+                      <span>{lang === 'en' ? 'Quantity' : 'Số lượng'}</span>
+                      <input className="ui-input"
+                        type="number"
+                        min={0.01}
+                        step="any"
+                        placeholder={lang === 'en' ? 'Qty' : 'Số lượng'}
+                        value={item.quantity}
+                        onChange={(e) => handleItemChange(idx, 'quantity', Number(e.target.value))}
+                        style={{ padding: '6px 8px' }}
+                      />
                     </label>
                     <label className="structured-field-card">
-                    <span>{lang === 'en' ? 'Unit price (VND)' : 'Đơn giá (VND)'}</span>
-                    <input className="ui-input"
-                      type="number"
-                      min={0}
-                      placeholder={lang === 'en' ? 'Unit Price' : 'Đơn giá (VND)'}
-                      value={item.unitCost}
-                      onChange={(e) => handleItemChange(idx, 'unitCost', Number(e.target.value))}
-                      style={{ padding: '6px 8px' }}
-                    />
+                      <span>{lang === 'en' ? 'Unit price (VND)' : 'Đơn giá (VND)'}</span>
+                      <input className="ui-input"
+                        type="number"
+                        min={0}
+                        placeholder={lang === 'en' ? 'Unit Price' : 'Đơn giá (VND)'}
+                        value={item.unitCost}
+                        onChange={(e) => handleItemChange(idx, 'unitCost', Number(e.target.value))}
+                        style={{ padding: '6px 8px' }}
+                      />
                     </label>
                     <button
                       type="button"

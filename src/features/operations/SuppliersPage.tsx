@@ -282,13 +282,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <PageHeading level={embedded ? 2 : 1}   title={<>
-            {lang === 'en' ? 'Suppliers' : 'Nhà cung cấp'}
-          </>} description={<>
-            {lang === 'en'
-              ? `${suppliers.length} input and service suppliers at ${selectedFarm?.farmName || 'Farm'}`
-              : `${suppliers.length} nhà cung ứng vật tư & dịch vụ tại ${selectedFarm?.farmName || 'trang trại'}`}
-          </>}><div>
+      <PageHeading level={embedded ? 2 : 1} title={<>
+        {lang === 'en' ? 'Suppliers' : 'Nhà cung cấp'}
+      </>} description={<>
+        {lang === 'en'
+          ? `${suppliers.length} input and service suppliers at ${selectedFarm?.farmName || 'Farm'}`
+          : `${suppliers.length} nhà cung ứng vật tư & dịch vụ tại ${selectedFarm?.farmName || 'trang trại'}`}
+      </>}><div>
           <Button
             type="button"
             variant="primary"
@@ -578,12 +578,17 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', }}>
             {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-1">
-                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Company / Supplier Name ' : 'Tên công ty / Nhà cung cấp '}
+                  <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{createForm.supplierName.length}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+              </div>
               <input id="suppliers-page-field-1" className="ui-input"
                 type="text"
                 required
+                maxLength={100}
                 placeholder={lang === 'en' ? 'e.g. Green Agriculture JSC...' : 'Ví dụ: Công ty Cổ phần Nông nghiệp Xanh...'}
                 value={createForm.supplierName}
                 onChange={(e) => setCreateForm({ ...createForm, supplierName: e.target.value })}
@@ -593,11 +598,15 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
 
             <div className="ui-form-grid">
               <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-2">
-                  {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
+                  </label>
+                  <span className="structured-field-badge">{createForm.contactName?.length}{(lang === 'en' ? "/80 characters" : "/80 ký tự")}</span>
+                </div>
                 <input id="suppliers-page-field-2" className="ui-input"
                   type="text"
+                  maxLength={80}
                   placeholder={lang === 'en' ? 'Full name...' : 'Họ và tên...'}
                   value={createForm.contactName || ''}
                   onChange={(e) => setCreateForm({ ...createForm, contactName: e.target.value })}
@@ -606,9 +615,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
               </div>
 
               <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-3">
-                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div>
                 <input id="suppliers-page-field-3" className="ui-input"
                   type="tel"
                   placeholder="09xx..."
@@ -620,9 +632,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-4">
-                {lang === 'en' ? 'Email' : 'Email'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Email' : 'Email'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input id="suppliers-page-field-4" className="ui-input"
                 type="email"
                 placeholder="supplier@example.com..."
@@ -633,9 +648,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-5">
-                {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input id="suppliers-page-field-5" className="ui-input"
                 type="text"
                 placeholder={lang === 'en' ? 'Street, Ward, District, City...' : 'Số nhà, đường, quận/huyện, tỉnh thành...'}
@@ -646,9 +664,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-6">
-                {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
+                </label>
+                <span className="structured-field-badge">{createForm.notes?.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+              </div>
               <textarea id="suppliers-page-field-6" className="ui-textarea"
                 rows={2}
                 placeholder={lang === 'en' ? 'Supplies organic fertilizers, F1 seeds...' : 'Chuyên cung ứng phân trùn quế, hạt giống F1...'}
@@ -676,11 +697,16 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
           <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', }}>
             {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-7">
-                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Company / Supplier Name ' : 'Tên công ty / Nhà cung cấp '}
+                  <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{updateForm.supplierName.length}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+              </div>
               <input id="suppliers-page-field-7" className="ui-input"
                 type="text"
+                maxLength={100}
                 required
                 value={updateForm.supplierName}
                 onChange={(e) => setUpdateForm({ ...updateForm, supplierName: e.target.value })}
@@ -690,11 +716,15 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
 
             <div className="ui-form-grid">
               <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-8">
-                  {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
+                  </label>
+                  <span className="structured-field-badge">{updateForm.contactName?.length}{(lang === 'en' ? "/80 characters" : "/80 ký tự")}</span>
+                </div>
                 <input id="suppliers-page-field-8" className="ui-input"
                   type="text"
+                  maxLength={80}
                   value={updateForm.contactName || ''}
                   onChange={(e) => setUpdateForm({ ...updateForm, contactName: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px' }}
@@ -702,10 +732,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
               </div>
 
               <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-9">
-                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
-                </label>
-                <input id="suppliers-page-field-9" className="ui-input"
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div><input id="suppliers-page-field-9" className="ui-input"
                   type="tel"
                   value={updateForm.phone || ''}
                   onChange={(e) => setUpdateForm({ ...updateForm, phone: e.target.value })}
@@ -715,9 +747,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-10">
-                {lang === 'en' ? 'Email' : 'Email'}
-              </label>
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Email' : 'Email'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input id="suppliers-page-field-10" className="ui-input"
                 type="email"
                 value={updateForm.email || ''}
@@ -727,10 +762,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-11">
-                {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
-              </label>
-              <input id="suppliers-page-field-11" className="ui-input"
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div> <input id="suppliers-page-field-11" className="ui-input"
                 type="text"
                 value={updateForm.address || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, address: e.target.value })}
@@ -739,10 +776,12 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-12">
-                {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
-              </label>
-              <textarea id="suppliers-page-field-12" className="ui-textarea"
+              <div className="structured-field-header">
+                <label htmlFor="inventory-field-1">
+                  {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
+                </label>
+                <span className="structured-field-badge">{updateForm.notes?.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+              </div><textarea id="suppliers-page-field-12" className="ui-textarea"
                 rows={2}
                 value={updateForm.notes || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, notes: e.target.value })}

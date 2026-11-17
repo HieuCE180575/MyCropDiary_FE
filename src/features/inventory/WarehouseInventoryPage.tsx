@@ -214,7 +214,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete warehouse." : err instanceof Error ? err.message : 'Không thể xóa kho hàng.'), 'error');
     }
   };
- 
+
   const handleOpenCreateInventory = async () => {
     await loadMaterials();
     if (warehouses.length > 0) {
@@ -350,19 +350,19 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <PageHeading level={embedded ? 2 : 1}   title={<>
-            {activeSubTab === 'warehouses'
-              ? (lang === 'en' ? 'Warehouse Management' : 'Quản lý Kho hàng')
-              : (lang === 'en' ? 'Input Inventory' : 'Tồn kho Vật tư')}
-          </>} description={<>
-            {activeSubTab === 'warehouses'
-              ? (lang === 'en'
-                ? `${warehouses.length} storage facilities at ${selectedFarm?.farmName || 'Farm'}`
-                : `${warehouses.length} kho hàng lưu trữ tại ${selectedFarm?.farmName || 'trang trại'}`)
-              : (lang === 'en'
-                ? `${inventories.length} stock items · Threshold tracking`
-                : `${inventories.length} mặt hàng tồn kho · Giám sát định mức`)}
-          </>}><div>
+      <PageHeading level={embedded ? 2 : 1} title={<>
+        {activeSubTab === 'warehouses'
+          ? (lang === 'en' ? 'Warehouse Management' : 'Quản lý Kho hàng')
+          : (lang === 'en' ? 'Input Inventory' : 'Tồn kho Vật tư')}
+      </>} description={<>
+        {activeSubTab === 'warehouses'
+          ? (lang === 'en'
+            ? `${warehouses.length} storage facilities at ${selectedFarm?.farmName || 'Farm'}`
+            : `${warehouses.length} kho hàng lưu trữ tại ${selectedFarm?.farmName || 'trang trại'}`)
+          : (lang === 'en'
+            ? `${inventories.length} stock items · Threshold tracking`
+            : `${inventories.length} mặt hàng tồn kho · Giám sát định mức`)}
+      </>}><div>
           {activeSubTab === 'warehouses' ? (
             <Button
               type="button"
@@ -388,10 +388,10 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       <div className="zone-clean-card">
         {/* Integrated Tabs */}
         <TabList idPrefix="warehouse" label={lang === 'en' ? 'Warehouse sections' : 'Các mục kho hàng'} inset
-            value={activeSubTab} onChange={setActiveSubTab} items={[
-              { value: 'warehouses', label: <><Icon name="box" size={17} /> {lang === 'en' ? 'Warehouses' : 'Kho hàng'} <span className="tab-count">({warehouses.length})</span></> },
-              { value: 'inventory', label: <><Icon name="layers" size={17} /> {lang === 'en' ? 'Inventory' : 'Tồn kho vật tư'} <span className="tab-count">({inventories.length})</span></> },
-            ]} />
+          value={activeSubTab} onChange={setActiveSubTab} items={[
+            { value: 'warehouses', label: <><Icon name="box" size={17} /> {lang === 'en' ? 'Warehouses' : 'Kho hàng'} <span className="tab-count">({warehouses.length})</span></> },
+            { value: 'inventory', label: <><Icon name="layers" size={17} /> {lang === 'en' ? 'Inventory' : 'Tồn kho vật tư'} <span className="tab-count">({inventories.length})</span></> },
+          ]} />
 
         {/* =========================================================
             TAB 1: WAREHOUSES
@@ -428,9 +428,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 <p>{lang === 'en' ? '⏳ Loading warehouses list...' : '⏳ Đang tải danh sách kho hàng...'}</p>
               </div>
             ) : warehouseLoadError ? (<LoadError message={warehouseLoadError} onRetry={() => { void loadWarehouses(); }} />) : filteredWarehouses.length === 0 ? (
-              <EmptyState  className="panel" title={<>{lang === 'en' ? 'No Warehouses Found' : 'Chưa có kho hàng nào'}</>} description={<>{lang === 'en' ? 'Click "Add Warehouse" to create storage facilities for inputs and produce.' : 'Nhấn "Thêm kho hàng" để khởi tạo cơ sở lưu trữ vật tư và nông sản cho trang trại.'}</>} icon={<>🏢</>} action={<><Button type="button" variant="primary" onClick={() => setIsCreateWarehouseOpen(true)}>
-                  <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Warehouse' : 'Thêm kho hàng'}
-                </Button></>} />
+              <EmptyState className="panel" title={<>{lang === 'en' ? 'No Warehouses Found' : 'Chưa có kho hàng nào'}</>} description={<>{lang === 'en' ? 'Click "Add Warehouse" to create storage facilities for inputs and produce.' : 'Nhấn "Thêm kho hàng" để khởi tạo cơ sở lưu trữ vật tư và nông sản cho trang trại.'}</>} icon={<>🏢</>} action={<><Button type="button" variant="primary" onClick={() => setIsCreateWarehouseOpen(true)}>
+                <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Warehouse' : 'Thêm kho hàng'}
+              </Button></>} />
             ) : (
               <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
                 <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -599,9 +599,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 <p>{lang === 'en' ? '⏳ Loading inventory records...' : '⏳ Đang truy xuất danh mục tồn kho...'}</p>
               </div>
             ) : inventoryLoadError ? (<LoadError message={inventoryLoadError} onRetry={() => { void loadInventories(); }} />) : filteredInventories.length === 0 ? (
-              <EmptyState  className="panel" title={<>{lang === 'en' ? 'No Materials in Stock' : 'Không có vật tư nào trong kho'}</>} description={<>{lang === 'en' ? 'Click "Add to Inventory" to store fertilizers, pesticides, or seeds in the warehouse.' : 'Nhấn "Thêm vào kho" để lưu trữ phân bón, thuốc BVTV hoặc hạt giống vào kho.'}</>} icon={<>📦</>} action={<><Button type="button" variant="primary" onClick={() => void handleOpenCreateInventory()}>
-                  <Icon name="plus" size={16} /> {lang === 'en' ? 'Add to Inventory' : 'Thêm vào kho'}
-                </Button></>} />
+              <EmptyState className="panel" title={<>{lang === 'en' ? 'No Materials in Stock' : 'Không có vật tư nào trong kho'}</>} description={<>{lang === 'en' ? 'Click "Add to Inventory" to store fertilizers, pesticides, or seeds in the warehouse.' : 'Nhấn "Thêm vào kho" để lưu trữ phân bón, thuốc BVTV hoặc hạt giống vào kho.'}</>} icon={<>📦</>} action={<><Button type="button" variant="primary" onClick={() => void handleOpenCreateInventory()}>
+                <Icon name="plus" size={16} /> {lang === 'en' ? 'Add to Inventory' : 'Thêm vào kho'}
+              </Button></>} />
             ) : (
               <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
                 <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -737,7 +737,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setSelectedWarehouse(null)}><Icon name="close" /></button>
           </div>
           <div className="modal-body" style={{ padding: '20px 24px' }}>
-            <div className="ui-form-grid" style={{ marginBottom: '16px', background: 'var(--color-page)', padding: '14px', borderRadius: '8px'  }}>
+            <div className="ui-form-grid" style={{ marginBottom: '16px', background: 'var(--color-page)', padding: '14px', borderRadius: '8px' }}>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Owning Farm' : 'Trang trại sở hữu'}</span>
                 <p style={{ margin: '2px 0 0', fontWeight: 600, color: 'var(--color-text)' }}>{selectedWarehouse.farmName}</p>
@@ -849,9 +849,12 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-1">
-                  {lang === 'en' ? 'Warehouse Name *' : 'Tên kho hàng *'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Warehouse Name ' : 'Tên kho hàng '} <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{createWarehouseForm.warehouseName.length}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+                </div>
                 <input id="inventory-field-1" className="ui-input"
                   type="text"
                   required
@@ -862,9 +865,12 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 />
               </div>
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-2">
-                  {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div>
                 <input id="inventory-field-2" className="ui-input"
                   type="text"
                   placeholder={lang === 'en' ? 'e.g. High-tech Greenhouse Area #1' : 'VD: Khu nhà kính công nghệ cao số 1, Đà Lạt'}
@@ -902,9 +908,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-3">
-                  {lang === 'en' ? `Actual Stock on Hand (${editingInventory.unit}) *` : `Số lượng tồn kho thực tế (${editingInventory.unit}) *`}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? `Actual Stock on Hand (${editingInventory.unit}) ` : `Số lượng tồn kho thực tế (${editingInventory.unit}) `}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <input id="inventory-field-3" className="ui-input"
                   type="number"
                   min="0"
@@ -916,9 +926,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 />
               </div>
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-4">
-                  {lang === 'en' ? `Reorder Alert Threshold (${editingInventory.unit}) *` : `Mức cảnh báo đặt hàng lại (${editingInventory.unit}) *`}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? `Reorder Alert Threshold (${editingInventory.unit}) ` : `Mức cảnh báo đặt hàng lại (${editingInventory.unit}) `}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <input id="inventory-field-4" className="ui-input"
                   type="number"
                   min="0"
@@ -961,9 +975,12 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-5">
-                  {lang === 'en' ? 'Warehouse Name *' : 'Tên kho hàng *'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Warehouse Name ' : 'Tên kho hàng '} <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{editWarehouseForm.warehouseName.length}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+                </div>
                 <input id="inventory-field-5" className="ui-input"
                   type="text"
                   required
@@ -973,9 +990,12 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 />
               </div>
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-6">
-                  {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div>
                 <input id="inventory-field-6" className="ui-input"
                   type="text"
                   value={editWarehouseForm.address}
@@ -1010,9 +1030,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-7">
-                  {lang === 'en' ? 'Select Storage Warehouse *' : 'Chọn kho lưu trữ *'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Select Storage Warehouse ' : 'Chọn kho lưu trữ '}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <select id="inventory-field-7" className="ui-select"
                   required
                   value={createInventoryForm.warehouseId}
@@ -1029,9 +1053,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               </div>
 
               <div className="structured-field-card">
-                <label htmlFor="inventory-field-8">
-                  {lang === 'en' ? 'Select Agricultural Material *' : 'Chọn vật tư nông nghiệp *'}
-                </label>
+                <div className="structured-field-header">
+                  <label htmlFor="inventory-field-1">
+                    {lang === 'en' ? 'Select Agricultural Material ' : 'Chọn vật tư nông nghiệp '}
+                    <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <select id="inventory-field-8" className="ui-select"
                   required
                   value={createInventoryForm.materialId}
@@ -1049,9 +1077,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
               <div className="ui-form-grid" >
                 <div className="structured-field-card">
-                  <label htmlFor="inventory-field-9">
-                    {lang === 'en' ? 'Initial Quantity *' : 'Số lượng ban đầu *'}
-                  </label>
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Initial Quantity ' : 'Số lượng ban đầu '}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
                   <input id="inventory-field-9" className="ui-input"
                     type="number"
                     min="0"
@@ -1063,9 +1095,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                   />
                 </div>
                 <div className="structured-field-card">
-                  <label htmlFor="inventory-field-10">
-                    {lang === 'en' ? 'Reorder Threshold *' : 'Ngưỡng cảnh báo *'}
-                  </label>
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Reorder Alert ' : 'Ngưỡng cảnh báo '}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
                   <input id="inventory-field-10" className="ui-input"
                     type="number"
                     min="0"
