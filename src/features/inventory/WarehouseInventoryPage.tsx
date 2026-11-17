@@ -38,7 +38,10 @@ export function WarehouseInventoryPage() {
   const [filterWarehouseId, setFilterWarehouseId] = useState<number | 'ALL'>('ALL');
   const [searchMaterialKeyword, setSearchMaterialKeyword] = useState('');
   const [editingInventory, setEditingInventory] = useState<InventoryItemResp | null>(null);
-  const [updateInventoryForm, setUpdateInventoryForm] = useState({ quantityOnHand: 0, reorderLevel: 0 });
+  const [updateInventoryForm, setUpdateInventoryForm] = useState({
+    quantityOnHand: '',
+    reorderLevel: '',
+  });
   const [updatingInventory, setUpdatingInventory] = useState(false);
 
   // Edit warehouse state
@@ -67,6 +70,14 @@ export function WarehouseInventoryPage() {
 
   const nameRef = useRef<HTMLInputElement>(null);
   const addressRef = useRef<HTMLInputElement>(null);
+
+  const [inventoryErrors, setInventoryErrors] = useState<{
+    quantityOnHand?: string;
+    reorderLevel?: string;
+  }>({});
+
+  const quantityRef = useRef<HTMLInputElement>(null);
+  const reorderLevelRef = useRef<HTMLInputElement>(null);
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setNotification({ text, type });
@@ -212,7 +223,28 @@ export function WarehouseInventoryPage() {
 
   const handleUpdateWarehouse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingWarehouse || !editWarehouseForm.warehouseName.trim()) return;
+    if (!editingWarehouse) return;
+
+    const errors = validateWarehouseForm();
+
+    if (Object.keys(errors).length > 0) {
+      if (errors.warehouseName) {
+        nameRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        nameRef.current?.focus();
+      } else if (errors.address) {
+        addressRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        addressRef.current?.focus();
+      }
+
+      return;
+    }
+
     setUpdatingWarehouse(true);
     try {
       await updateWarehouseApi(editingWarehouse.warehouseId, {
@@ -241,6 +273,47 @@ export function WarehouseInventoryPage() {
     } catch (err) {
       showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete warehouse." : err instanceof Error ? err.message : 'Không thể xóa kho hàng.'), 'error');
     }
+  };
+  const validateInventoryForm = () => {
+    const errors: {
+      quantityOnHand?: string;
+      reorderLevel?: string;
+    } = {};
+
+    const quantity = updateInventoryForm.quantityOnHand.trim();
+    const reorder = updateInventoryForm.reorderLevel.trim();
+
+    const validNumber = /^\d+(\.\d{1,3})?$/;
+
+    // Actual Stock on Hand
+    if (!quantity) {
+      errors.quantityOnHand =
+        lang === 'en'
+          ? 'Please enter the actual stock quantity.'
+          : 'Vui lòng nhập số lượng tồn kho thực tế.';
+    } else if (!validNumber.test(quantity)) {
+      errors.quantityOnHand =
+        lang === 'en'
+          ? 'Enter a valid number with up to 3 decimal places.'
+          : 'Vui lòng nhập số hợp lệ với tối đa 3 chữ số thập phân.';
+    }
+
+    // Reorder Alert Threshold
+    if (!reorder) {
+      errors.reorderLevel =
+        lang === 'en'
+          ? 'Please enter the reorder alert threshold.'
+          : 'Vui lòng nhập mức cảnh báo đặt hàng lại.';
+    } else if (!validNumber.test(reorder)) {
+      errors.reorderLevel =
+        lang === 'en'
+          ? 'Enter a valid number with up to 3 decimal places.'
+          : 'Vui lòng nhập số hợp lệ với tối đa 3 chữ số thập phân.';
+    }
+
+    setInventoryErrors(errors);
+
+    return errors;
   };
 
   const handleOpenCreateInventory = async () => {
@@ -279,12 +352,39 @@ export function WarehouseInventoryPage() {
   const handleUpdateInventory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingInventory) return;
+
+    const errors = validateInventoryForm();
+
+    if (Object.keys(errors).length > 0) {
+      if (errors.quantityOnHand) {
+        quantityRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        quantityRef.current?.focus();
+      } else if (errors.reorderLevel) {
+        reorderLevelRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+        });
+        reorderLevelRef.current?.focus();
+      }
+
+      return;
+    }
+
+    const payload = {
+      quantityOnHand: Number(updateInventoryForm.quantityOnHand),
+      reorderLevel: Number(updateInventoryForm.reorderLevel),
+    };
+
     setUpdatingInventory(true);
     try {
-      await updateInventoryApi(editingInventory.inventoryId, {
-        quantityOnHand: Number(updateInventoryForm.quantityOnHand),
-        reorderLevel: Number(updateInventoryForm.reorderLevel),
-      });
+      await updateInventoryApi(
+        editingInventory.inventoryId,
+        payload
+      );
+
       setEditingInventory(null);
       showToast((lang === 'en' ? `Inventory adjusted: "${editingInventory.materialName}" successfully!` : `Đã điều chỉnh tồn kho "${editingInventory.materialName}" thành công!`));
       void loadInventories();
@@ -743,8 +843,8 @@ export function WarehouseInventoryPage() {
                               onClick={() => {
                                 setEditingInventory(it);
                                 setUpdateInventoryForm({
-                                  quantityOnHand: Number(it.quantityOnHand),
-                                  reorderLevel: Number(it.reorderLevel),
+                                  quantityOnHand: String(it.quantityOnHand ?? ''),
+                                  reorderLevel: String(it.reorderLevel ?? ''),
                                 });
                               }}
                             >
@@ -1032,39 +1132,171 @@ export function WarehouseInventoryPage() {
                   {editingInventory.materialName} ({editingInventory.warehouseName})
                 </h3>
               </div>
-              <button type="button" className="modal-close" onClick={() => setEditingInventory(null)}>
+              <button type="button" className="modal-close" onClick={() => {
+                setEditingInventory(null)
+                setInventoryErrors({})
+              }}>
                 ✕
               </button>
             </div>
-            <form onSubmit={handleUpdateInventory}>
+            <form onSubmit={handleUpdateInventory} noValidate>
               <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {(Object.keys(inventoryErrors).length > 0) && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}
+                  >
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
+
+                    <div>
+                      <p style={{ margin: 0 }}>
+                        {lang === 'en'
+                          ? 'Please correct the highlighted fields before saving.'
+                          : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? `Actual Stock on Hand (${editingInventory.unit}) *` : `Số lượng tồn kho thực tế (${editingInventory.unit}) *`}
-                  </label>
+                  <div className="structured-field-header">
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? `Actual Stock on Hand (${editingInventory.unit}) ` : `Số lượng tồn kho thực tế (${editingInventory.unit}) `}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.001"
+                    ref={quantityRef}
+                    type="text"
+                    inputMode="decimal"
                     required
+                    placeholder="Enter quantity"
                     value={updateInventoryForm.quantityOnHand}
-                    onChange={(e) => setUpdateInventoryForm((p) => ({ ...p, quantityOnHand: Number(e.target.value) }))}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setUpdateInventoryForm((p) => ({
+                        ...p,
+                        quantityOnHand: value,
+                      }));
+
+                      setInventoryErrors((prev) => {
+                        const updated = { ...prev };
+                        const validNumber = /^\d+(\.\d{1,3})?$/;
+
+                        if (!value.trim()) {
+                          updated.quantityOnHand =
+                            lang === 'en'
+                              ? 'Please enter the actual stock quantity.'
+                              : 'Vui lòng nhập số lượng tồn kho thực tế.';
+                        } else if (!validNumber.test(value.trim())) {
+                          updated.quantityOnHand =
+                            lang === 'en'
+                              ? 'Enter a valid number with up to 3 decimal places.'
+                              : 'Vui lòng nhập số hợp lệ với tối đa 3 chữ số thập phân.';
+                        } else {
+                          delete updated.quantityOnHand;
+                        }
+
+                        return updated;
+                      });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '6px',
+                      border: inventoryErrors.quantityOnHand
+                        ? '1px solid #dc2626'
+                        : '1px solid #cbd5e1',
+                    }}
                   />
+                  {inventoryErrors.quantityOnHand && (
+                    <p
+                      className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0,
+                      }}
+                    >
+                      {inventoryErrors.quantityOnHand}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? `Reorder Alert Threshold (${editingInventory.unit}) *` : `Mức cảnh báo đặt hàng lại (${editingInventory.unit}) *`}
                   </label>
+                  <div className="structured-field-header">
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? `Reorder Alert Threshold (${editingInventory.unit}) ` : `Mức cảnh báo đặt hàng lại (${editingInventory.unit}) `}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.001"
+                    ref={reorderLevelRef}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Enter threshold"
                     required
                     value={updateInventoryForm.reorderLevel}
-                    onChange={(e) => setUpdateInventoryForm((p) => ({ ...p, reorderLevel: Number(e.target.value) }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setUpdateInventoryForm((p) => ({
+                        ...p,
+                        reorderLevel: value,
+                      }));
+
+                      // Validate the input immediately
+                      setInventoryErrors((prev) => {
+                        const updated = { ...prev };
+                        const validNumber = /^\d+(\.\d{1,3})?$/;
+
+                        if (!value.trim()) {
+                          updated.reorderLevel =
+                            lang === 'en'
+                              ? 'Please enter the reorder alert threshold.'
+                              : 'Vui lòng nhập mức cảnh báo đặt hàng lại.';
+                        } else if (!validNumber.test(value.trim())) {
+                          updated.reorderLevel =
+                            lang === 'en'
+                              ? 'Enter a valid number with up to 3 decimal places.'
+                              : 'Vui lòng nhập số hợp lệ với tối đa 3 chữ số thập phân.';
+                        } else {
+                          // Remove the previous error if the input is valid
+                          delete updated.reorderLevel;
+                        }
+
+                        return updated;
+                      });
+                    }}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                   />
+                  {inventoryErrors.reorderLevel && (
+                    <p
+                      className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0,
+                      }}
+                    >
+                      {inventoryErrors.reorderLevel}
+                    </p>
+                  )}
                   <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>
                     {lang === 'en'
                       ? 'When inventory falls below this threshold, the system displays a low stock warning.'
@@ -1073,7 +1305,11 @@ export function WarehouseInventoryPage() {
                 </div>
               </div>
               <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
-                <button type="button" className="ghost-button" onClick={() => setEditingInventory(null)} disabled={updatingInventory}>
+                <button type="button" className="ghost-button" onClick={() => {
+                  setEditingInventory(null)
+                  setInventoryErrors({})
+                }}
+                  disabled={updatingInventory}>
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
                 </button>
                 <button type="submit" className="action-button solid" disabled={updatingInventory}>
@@ -1089,43 +1325,166 @@ export function WarehouseInventoryPage() {
       {editingWarehouse && (
         <div className="modal-backdrop" style={{ zIndex: 1100 }}>
           <div className="modal-card" style={{ maxWidth: '500px', width: '92%' }}>
+
             <div className="modal-header">
               <div>
                 <span className="eyebrow" style={{ color: '#059669' }}>{lang === 'en' ? 'Update Storage Facility' : 'Cập nhật cơ sở lưu trữ'}</span>
                 <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{lang === 'en' ? 'Edit Warehouse Information' : 'Chỉnh sửa thông tin kho hàng'}</h3>
               </div>
-              <button type="button" className="modal-close" onClick={() => setEditingWarehouse(null)}>
+              <button type="button" className="modal-close" onClick={() => {
+                setWarehouseErrors({})
+                setEditingWarehouse(null)
+              }}>
                 ✕
               </button>
             </div>
             <form onSubmit={handleUpdateWarehouse}>
               <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {(Object.keys(warehouseErrors).length > 0) && (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#b91c1c',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                    }}
+                  >
+                    <AlertCircle size={18} style={{ flexShrink: 0 }} />
+
+                    <div>
+                      <p style={{ margin: 0 }}>
+                        {lang === 'en'
+                          ? 'Please correct the highlighted fields before saving.'
+                          : 'Vui lòng sửa các trường được đánh dấu trước khi lưu.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? 'Warehouse Name *' : 'Tên kho hàng *'}
-                  </label>
+                  <div className="structured-field-header">
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? 'Warehouse Name' : 'Tên kho hàng'} <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{editWarehouseForm.warehouseName.length}{(lang === 'en' ? "/150 characters" : "/150 ký tự")}</span>
+                  </div>
                   <input
+                    ref={nameRef}
                     type="text"
                     required
+                    maxLength={150}
                     value={editWarehouseForm.warehouseName}
-                    onChange={(e) => setEditWarehouseForm((p) => ({ ...p, warehouseName: e.target.value }))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setEditWarehouseForm((prev) => ({
+                        ...prev,
+                        warehouseName: value,
+                      }));
+
+                      setWarehouseErrors((prev) => {
+                        const updated = { ...prev };
+
+                        // Validate assessed date
+                        if (!value.trim()) {
+                          updated.warehouseName = lang === 'en'
+                            ? 'Please enter a warehouse name.'
+                            : 'Vui lòng nhập tên kho hàng.'
+                        } else if (value.trim().length > 150) {
+                          updated.warehouseName =
+                            lang === 'en'
+                              ? 'Warehouse name cannot exceed 150 characters.'
+                              : 'Tên kho hàng không được vượt quá 150 ký tự.';
+                        } else {
+                          delete updated.warehouseName;
+                        }
+
+                        return updated;
+                      });
+                    }}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                   />
+                  {warehouseErrors.warehouseName && (
+                    <p className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0
+                      }}>
+                      {warehouseErrors.warehouseName}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
-                  </label>
+                  <div className="structured-field-header">
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
+                    </label>
+                    <span className="structured-field-badge">{editWarehouseForm.address.length}{(lang === 'en' ? "/250 characters" : "/250 ký tự")}</span>
+                  </div>
                   <input
                     type="text"
                     value={editWarehouseForm.address}
-                    onChange={(e) => setEditWarehouseForm((p) => ({ ...p, address: e.target.value }))}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    onChange={(e) => {
+                      const value = e.target.value;
+
+                      setEditWarehouseForm((p) => ({
+                        ...p,
+                        address: value,
+                      }));
+
+                      setWarehouseErrors((prev) => {
+                        const updated = { ...prev };
+
+                        // Validate assessed date
+                        if (value.trim().length > 150) {
+                          updated.address =
+                            lang === 'en'
+                              ? 'Address cannot exceed 250 characters.'
+                              : 'Địa chỉ không được vượt quá 250 ký tự.';
+                        } else {
+                          delete updated.address;
+                        }
+
+                        return updated;
+                      });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '6px',
+                      border: warehouseErrors.address
+                        ? '1px solid #dc2626'
+                        : '1px solid #cbd5e1',
+                    }}
                   />
+
+                  {warehouseErrors.address && (
+                    <p
+                      className="field-error"
+                      style={{
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        marginTop: '5px',
+                        marginBottom: 0,
+                      }}
+                    >
+                      {warehouseErrors.address}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
-                <button type="button" className="ghost-button" onClick={() => setEditingWarehouse(null)} disabled={updatingWarehouse}>
+                <button type="button" className="ghost-button" onClick={() => {
+                  setEditingWarehouse(null)
+                  setWarehouseErrors({})
+                }} disabled={updatingWarehouse}>
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
                 </button>
                 <button type="submit" className="action-button solid" disabled={updatingWarehouse}>
@@ -1135,104 +1494,107 @@ export function WarehouseInventoryPage() {
             </form>
           </div>
         </div>
-      )}
+      )
+      }
 
       {/* MODAL: Create Inventory */}
-      {isCreateInventoryOpen && (
-        <div className="modal-backdrop" style={{ zIndex: 1100 }}>
-          <div className="modal-card" style={{ maxWidth: '520px', width: '92%' }}>
-            <div className="modal-header">
-              <div>
-                <span className="eyebrow" style={{ color: '#059669' }}>{lang === 'en' ? 'Inventory Management' : 'Quản lý tồn kho'}</span>
-                <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{lang === 'en' ? 'Add Material to Warehouse' : 'Thêm vật tư vào kho lưu trữ'}</h3>
+      {
+        isCreateInventoryOpen && (
+          <div className="modal-backdrop" style={{ zIndex: 1100 }}>
+            <div className="modal-card" style={{ maxWidth: '520px', width: '92%' }}>
+              <div className="modal-header">
+                <div>
+                  <span className="eyebrow" style={{ color: '#059669' }}>{lang === 'en' ? 'Inventory Management' : 'Quản lý tồn kho'}</span>
+                  <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{lang === 'en' ? 'Add Material to Warehouse' : 'Thêm vật tư vào kho lưu trữ'}</h3>
+                </div>
+                <button type="button" className="modal-close" onClick={() => setIsCreateInventoryOpen(false)}>
+                  ✕
+                </button>
               </div>
-              <button type="button" className="modal-close" onClick={() => setIsCreateInventoryOpen(false)}>
-                ✕
-              </button>
+              <form onSubmit={handleCreateInventory}>
+                <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? 'Select Storage Warehouse *' : 'Chọn kho lưu trữ *'}
+                    </label>
+                    <select
+                      required
+                      value={createInventoryForm.warehouseId}
+                      onChange={(e) => setCreateInventoryForm((p) => ({ ...p, warehouseId: Number(e.target.value) }))}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    >
+                      <option value={0}>{lang === 'en' ? '-- Select Warehouse --' : '-- Chọn kho hàng --'}</option>
+                      {warehouses.map((w) => (
+                        <option key={w.warehouseId} value={w.warehouseId}>
+                          {w.warehouseName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                      {lang === 'en' ? 'Select Agricultural Material *' : 'Chọn vật tư nông nghiệp *'}
+                    </label>
+                    <select
+                      required
+                      value={createInventoryForm.materialId}
+                      onChange={(e) => setCreateInventoryForm((p) => ({ ...p, materialId: Number(e.target.value) }))}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    >
+                      <option value={0}>{lang === 'en' ? '-- Select Input Material --' : '-- Chọn vật tư canh tác --'}</option>
+                      {availableMaterials.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.materialName} ({translate(m.unit)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        {lang === 'en' ? 'Initial Quantity *' : 'Số lượng ban đầu *'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        required
+                        value={createInventoryForm.quantityOnHand}
+                        onChange={(e) => setCreateInventoryForm((p) => ({ ...p, quantityOnHand: Number(e.target.value) }))}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        {lang === 'en' ? 'Reorder Threshold *' : 'Ngưỡng cảnh báo *'}
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.001"
+                        required
+                        value={createInventoryForm.reorderLevel}
+                        onChange={(e) => setCreateInventoryForm((p) => ({ ...p, reorderLevel: Number(e.target.value) }))}
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
+                  <button type="button" className="ghost-button" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
+                    {lang === 'en' ? 'Cancel' : 'Hủy'}
+                  </button>
+                  <button type="submit" className="action-button solid" disabled={creatingInventory}>
+                    {creatingInventory ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Add to Warehouse' : 'Thêm vào kho')}
+                  </button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleCreateInventory}>
-              <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? 'Select Storage Warehouse *' : 'Chọn kho lưu trữ *'}
-                  </label>
-                  <select
-                    required
-                    value={createInventoryForm.warehouseId}
-                    onChange={(e) => setCreateInventoryForm((p) => ({ ...p, warehouseId: Number(e.target.value) }))}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                  >
-                    <option value={0}>{lang === 'en' ? '-- Select Warehouse --' : '-- Chọn kho hàng --'}</option>
-                    {warehouses.map((w) => (
-                      <option key={w.warehouseId} value={w.warehouseId}>
-                        {w.warehouseName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    {lang === 'en' ? 'Select Agricultural Material *' : 'Chọn vật tư nông nghiệp *'}
-                  </label>
-                  <select
-                    required
-                    value={createInventoryForm.materialId}
-                    onChange={(e) => setCreateInventoryForm((p) => ({ ...p, materialId: Number(e.target.value) }))}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                  >
-                    <option value={0}>{lang === 'en' ? '-- Select Input Material --' : '-- Chọn vật tư canh tác --'}</option>
-                    {availableMaterials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.materialName} ({translate(m.unit)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                      {lang === 'en' ? 'Initial Quantity *' : 'Số lượng ban đầu *'}
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.001"
-                      required
-                      value={createInventoryForm.quantityOnHand}
-                      onChange={(e) => setCreateInventoryForm((p) => ({ ...p, quantityOnHand: Number(e.target.value) }))}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                      {lang === 'en' ? 'Reorder Threshold *' : 'Ngưỡng cảnh báo *'}
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.001"
-                      required
-                      value={createInventoryForm.reorderLevel}
-                      onChange={(e) => setCreateInventoryForm((p) => ({ ...p, reorderLevel: Number(e.target.value) }))}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
-                <button type="button" className="ghost-button" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
-                  {lang === 'en' ? 'Cancel' : 'Hủy'}
-                </button>
-                <button type="submit" className="action-button solid" disabled={creatingInventory}>
-                  {creatingInventory ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Add to Warehouse' : 'Thêm vào kho')}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
-    </section>
+        )
+      }
+    </section >
   );
 }

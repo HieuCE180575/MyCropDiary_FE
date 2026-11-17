@@ -567,8 +567,8 @@ export function InputPurchasesPage() {
                 <span style={{ fontSize: '12.5px', color: '#64748b' }}>{lang === 'en' ? 'Total Amount:' : 'Tổng thanh toán:'}</span>
                 <div style={{ fontSize: '20px', fontWeight: 800, color: '#059669' }}>
                   {lang === 'en'
-                          ? `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('en-US')} ₫`
-                          : `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('vi-VN')} đ`}
+                    ? `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('en-US')} ₫`
+                    : `${(Number(selectedPurchase.totalAmount) || 0).toLocaleString('vi-VN')} đ`}
                 </div>
               </div>
             </div>
@@ -721,9 +721,12 @@ export function InputPurchasesPage() {
             </p>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
-                {lang === 'en' ? 'Warehouse Receipt No. *' : 'Số phiếu nhập kho (Warehouse Receipt No) *'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                  {lang === 'en' ? 'Warehouse Receipt No. ' : 'Số phiếu nhập kho '} <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{receiptNoInput.length}{(lang === 'en' ? "/50 characters" : "/50 ký tự")}</span>
+              </div>
               <input
                 type="text"
                 required
@@ -755,9 +758,12 @@ export function InputPurchasesPage() {
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: '580px', maxWidth: '750px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                    {lang === 'en' ? 'Supplier' : 'Nhà cung cấp'} <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <select
                   value={newSupplierId}
                   onChange={(e) => setNewSupplierId(e.target.value ? Number(e.target.value) : '')}
@@ -773,9 +779,12 @@ export function InputPurchasesPage() {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Purchase Date *' : 'Ngày mua hàng *'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                    {lang === 'en' ? 'Purchase Date ' : 'Ngày mua hàng '} <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <input
                   type="date"
                   required
@@ -786,9 +795,12 @@ export function InputPurchasesPage() {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Invoice No. / Reference No.' : 'Số hóa đơn / Số tham chiếu'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                    {lang === 'en' ? 'Invoice No. / Reference No.' : 'Số hóa đơn / Số tham chiếu'}<span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{newReferenceNo.length}{(lang === 'en' ? "/100 chars" : "/100 ký tự")}</span>
+                </div>
                 <input
                   type="text"
                   placeholder={lang === 'en' ? 'e.g. INV-2026-081...' : 'Ví dụ: HD-2026-081...'}
@@ -799,9 +811,12 @@ export function InputPurchasesPage() {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Warehouse Receipt No. (optional)' : 'Số phiếu nhập kho (nếu có)'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                    {lang === 'en' ? 'Warehouse Receipt No.' : 'Số phiếu nhập kho'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div>
                 <input
                   type="text"
                   placeholder={lang === 'en' ? 'e.g. PNK-2026-001...' : 'Ví dụ: PNK-2026-001...'}
@@ -813,9 +828,12 @@ export function InputPurchasesPage() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Purchase Notes' : 'Ghi chú mua hàng'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                  {lang === 'en' ? 'Purchase Notes' : 'Ghi chú mua hàng'}
+                </label>
+                <span className="structured-field-badge">{newNotes.length}{(lang === 'en' ? "/1000 characters" : "/1000 ký tự")}</span>
+              </div>
               <textarea
                 rows={2}
                 placeholder={lang === 'en' ? 'Storage conditions, VietGAP batch...' : 'Ghi chú điều kiện bảo quản, lô hàng VietGAP...'}
@@ -828,13 +846,16 @@ export function InputPurchasesPage() {
             {/* Dynamic Items */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
-                  {lang === 'en' ? 'Purchased Input Items' : 'Danh mục mặt hàng vật tư'}
-                </span>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '6px' }}>
+                    {lang === 'en' ? 'Purchased Input Items' : 'Danh mục mặt hàng vật tư'} <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                </div>
                 <button
                   type="button"
                   onClick={handleAddItemRow}
-                  style={{ fontSize: '12.5px', color: '#059669', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
+                  style={{ fontSize: '12.5px', color: '#059669', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, marginBottom: '24px' }}
                 >
                   + {lang === 'en' ? 'Add Item' : 'Thêm mặt hàng'}
                 </button>

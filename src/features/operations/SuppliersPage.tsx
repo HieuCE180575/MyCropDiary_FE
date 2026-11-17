@@ -585,9 +585,12 @@ export function SuppliersPage() {
         <Modal open={true} onClose={() => setIsCreateOpen(false)} title={lang === 'en' ? 'Add New Supplier' : 'Thêm mới nhà cung cấp vật tư'}>
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Company / Supplier Name ' : 'Tên công ty / Nhà cung cấp '} <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{createForm.supplierName.length}{(lang === 'en' ? "/50 characters" : "/50 ký tự")}</span>
+              </div>
               <input
                 type="text"
                 required
@@ -600,9 +603,12 @@ export function SuppliersPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                    {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
+                  </label>
+                  <span className="structured-field-badge">{createForm.contactName}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+                </div>
                 <input
                   type="text"
                   placeholder={lang === 'en' ? 'Full name...' : 'Họ và tên...'}
@@ -613,9 +619,12 @@ export function SuppliersPage() {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                    {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div>
                 <input
                   type="tel"
                   placeholder="09xx..."
@@ -627,9 +636,12 @@ export function SuppliersPage() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Email' : 'Email'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Email' : 'Email'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input
                 type="email"
                 placeholder="supplier@example.com..."
@@ -640,9 +652,12 @@ export function SuppliersPage() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input
                 type="text"
                 placeholder={lang === 'en' ? 'Street, Ward, District, City...' : 'Số nhà, đường, quận/huyện, tỉnh thành...'}
@@ -653,9 +668,12 @@ export function SuppliersPage() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
+                </label>
+                <span className="structured-field-badge">{createForm.notes?.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+              </div>
               <textarea
                 rows={2}
                 placeholder={lang === 'en' ? 'Supplies organic fertilizers, F1 seeds...' : 'Chuyên cung ứng phân trùn quế, hạt giống F1...'}
@@ -682,9 +700,12 @@ export function SuppliersPage() {
         <Modal open={true} onClose={() => setEditingSupplier(null)} title={lang === 'en' ? `Update Supplier #${editingSupplier.supplierId}` : `Cập nhật nhà cung cấp #${editingSupplier.supplierId}`}>
           <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', minWidth: '450px' }}>
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Company / Supplier Name ' : 'Tên công ty / Nhà cung cấp '} <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{updateForm.supplierName.length}{(lang === 'en' ? "/50 characters" : "/50 ký tự")}</span>
+              </div>
               <input
                 type="text"
                 required
@@ -696,9 +717,12 @@ export function SuppliersPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                    {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
+                  </label>
+                  <span className="structured-field-badge">{updateForm.contactName?.length}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+                </div>
                 <input
                   type="text"
                   value={updateForm.contactName || ''}
@@ -708,9 +732,12 @@ export function SuppliersPage() {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
-                </label>
+                <div className="structured-field-header">
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                    {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
+                  </label>
+                  <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                </div>
                 <input
                   type="tel"
                   value={updateForm.phone || ''}
@@ -721,9 +748,12 @@ export function SuppliersPage() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Email' : 'Email'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Email' : 'Email'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input
                 type="email"
                 value={updateForm.email || ''}
@@ -733,9 +763,12 @@ export function SuppliersPage() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
+                </label>
+                <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+              </div>
               <input
                 type="text"
                 value={updateForm.address || ''}
@@ -745,9 +778,12 @@ export function SuppliersPage() {
             </div>
 
             <div className="form-group">
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a', marginBottom: '4px' }}>
-                {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
-              </label>
+              <div className="structured-field-header">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#0f172a'}}>
+                  {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
+                </label>
+                <span className="structured-field-badge">{updateForm.notes?.length}{(lang === 'en' ? "/500 characters" : "/500 ký tự")}</span>
+              </div>
               <textarea
                 rows={2}
                 value={updateForm.notes || ''}
