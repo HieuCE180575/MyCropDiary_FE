@@ -57,6 +57,7 @@ export interface AdminCropCategoryItem {
   categoryName: string;
   description: string;
   imageUrl?: string;
+  status?: string;
 }
 
 export interface AdminChecklistRuleItem {
@@ -313,7 +314,7 @@ export async function createAdminCropCategory(payload: { categoryName: string; d
 
 export async function updateAdminCropCategory(
   id: number | string,
-  payload: { categoryName: string; description: string },
+  payload: { categoryName?: string; description?: string; status?: string },
 ): Promise<AdminCropCategoryItem> {
   const res = await apiRequest<ApiResponse<AdminCropCategoryItem>>(`/admin/crop-categories/${id}`, {
     method: 'PUT',

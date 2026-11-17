@@ -135,8 +135,10 @@ export function applyAdminCommand(state: AdminState, command: AdminCommand, meta
           next.lockReason = '';
         }
       }
-      if (command.collection !== 'users' && command.collection !== 'farms' && command.collection !== 'zones' && command.collection !== 'blocks' && command.collection !== 'compliance') {
+      if (command.collection === 'rules') {
         validateRecord(state, command.collection, next);
+      } else if (command.collection === 'articles' && next.status === 'APPROVED' && !next.source?.trim()) {
+        throw new Error('Cần bổ sung nguồn tham khảo trước khi duyệt bài viết.');
       }
       action = command.collection === 'users' ? `${command.status === 'LOCKED' ? 'Khóa' : 'Mở khóa'} tài khoản` : `${config.statuses[command.status]} ${config.singular}`;
       break;

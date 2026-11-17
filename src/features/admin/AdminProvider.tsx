@@ -214,13 +214,15 @@ function feedbackToRecord(item: AdminAIFeedbackItem): AdminRecord {
 }
 
 function cropToRecord(item: AdminCropCategoryItem): AdminRecord {
+  const rawStatus = (item.status || 'ACTIVE').toUpperCase();
   return {
     id: String(item.id),
     name: item.categoryName,
     code: `CROP_${item.id}`,
     group: 'FRUIT',
+    growthDays: '35–45 ngày',
     description: item.description || '',
-    status: 'ACTIVE',
+    status: rawStatus === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -625,6 +627,24 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         }
       }
 
+      if (command.type === 'status' && command.collection === 'crops' && /^\d+$/.test(command.id)) {
+        try {
+          const updated = cropToRecord(
+            await updateAdminCropCategory(command.id, {
+              status: command.status,
+            }),
+          );
+          setState((previous) => ({
+            ...previous,
+            crops: previous.crops.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
+          }));
+          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt danh mục cây trồng thành công.' : 'Đã ngừng sử dụng danh mục cây trồng thành công.');
+          return;
+        } catch {
+          // Fallback to local
+        }
+      }
+
       if (command.type === 'status' && command.collection === 'rules' && /^\d+$/.test(command.id)) {
         try {
           const updated = ruleToRecord(
@@ -811,7 +831,27 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
       if (command.type === 'status' && command.collection === 'articles' && /^\d+$/.test(command.id)) {
         try {
-          await updateAdminArticleStatus(command.id, command.status);
+          const updated = articleToRecord(await updateAdminArticleStatus(command.id, command.status));
+          setState((previous) => ({
+            ...previous,
+            articles: previous.articles.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
+          }));
+          showNotice(command.status === 'APPROVED' ? 'Đã duyệt và công bố bài viết thành công.' : 'Đã lưu trữ bài viết thành công.');
+          return;
+        } catch {
+          // Fallback to local
+        }
+      }
+
+      if (command.type === 'status' && command.collection === 'feedback' && /^\d+$/.test(command.id)) {
+        try {
+          const updated = feedbackToRecord(await updateAdminAIFeedbackStatus(command.id, command.status));
+          setState((previous) => ({
+            ...previous,
+            feedback: previous.feedback.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
+          }));
+          showNotice(command.status === 'RESOLVED' ? 'Đã đánh dấu giải quyết phản hồi thành công.' : 'Đã mở lại phản hồi thành công.');
+          return;
         } catch {
           // Fallback to local
         }
