@@ -33,7 +33,7 @@ export interface SeasonSummary {
 export type AdminState = Record<Collection, AdminRecord[]> & { seasons: SeasonSummary[] };
 
 export type EditableCollection = 'farms' | 'zones' | 'blocks' | 'compliance' | 'users' | 'registrations' | 'crops' | 'rules' | 'articles';
-export type StatusCollection = 'farms' | 'zones' | 'blocks' | 'compliance' | 'users' | 'crops' | 'rules' | 'articles';
+export type StatusCollection = 'registrations' | 'farms' | 'zones' | 'blocks' | 'compliance' | 'users' | 'crops' | 'rules' | 'articles' | 'feedback';
 
 export interface Field {
   key: string;

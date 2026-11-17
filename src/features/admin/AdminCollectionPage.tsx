@@ -231,7 +231,7 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
         <button className="admin-reset" onClick={reset}><Icon name="refresh" />{lang === 'en' ? 'Reset Filters' : 'Xóa bộ lọc'}</button>
       </div>
       {invalidDate && <p className="admin-form-error" role="alert">{(lang === 'en' ? "The start date must not be after the end date." : "Ngày bắt đầu không được sau ngày kết thúc.")}</p>}
-      {rows.length ? <div className="admin-table-scroll ui-table-scroll" tabIndex={0}><table className="ui-data-table admin-table"><caption className="sr-only">{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}</caption><thead><tr>{config.columns.map(column => <th scope="col" key={column.key}>{lang === 'en' ? (ADMIN_COL_EN[column.label] || column.label) : column.label}</th>)}<th scope="col">{lang === 'en' ? 'Status' : 'Trạng thái'}</th><th scope="col" className="admin-action-col">{lang === 'en' ? 'Actions' : 'Thao tác'}</th></tr></thead><tbody>{rows.map(record => <tr key={record.id}>{config.columns.map((column, index) => <td key={column.key}>{index === 0 ? <button className="admin-record-link" onClick={() => setDialog({ mode: 'detail', id: record.id })}><strong>{displayValue(column.key, record[column.key], lang)}</strong><small>{record.code || record.id}</small></button> : <span>{displayValue(column.key, record[column.key], lang)}</span>}</td>)}<td><AdminBadge collection={collection} status={record.status} /></td><td><div className="table-action-btns"><button className="table-icon-btn primary" onClick={() => setDialog({ mode: 'detail', id: record.id })} aria-label={(lang === 'en' ? `View details ${record.name}` : `Xem chi tiết ${record.name}`)} title={(lang === 'en' ? `View details ${record.name}` : `Xem chi tiết ${record.name}`)}><Icon name="eye" /></button>{canRowEdit && <button className="table-icon-btn edit" onClick={() => setDialog({ mode: 'edit', id: record.id })} aria-label={(lang === 'en' ? `Edit ${record.name}` : `Sửa ${record.name}`)} title={(lang === 'en' ? `Edit ${record.name}` : `Sửa ${record.name}`)}><Icon name="edit" /></button>}{collection === 'users' && (record.role === 'ADMIN' ? <button className="table-icon-btn" disabled aria-label={lang === 'en' ? 'Administrator account is protected' : 'Tài khoản quản trị được bảo vệ'} title={lang === 'en' ? 'Administrator account is protected' : 'Tài khoản quản trị được bảo vệ'}><Icon name="shield" /></button> : record.status === 'ACTIVE' ? <button className="table-icon-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'LOCKED' })} aria-label={lang === 'en' ? `Lock account ${record.name}` : `Khóa tài khoản ${record.name}`} title={lang === 'en' ? `Lock account ${record.name}` : `Khóa tài khoản ${record.name}`}><Icon name="lock" /></button> : <button className="table-icon-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'ACTIVE' })} aria-label={lang === 'en' ? `Unlock account ${record.name}` : `Mở khóa tài khoản ${record.name}`} title={lang === 'en' ? `Unlock account ${record.name}` : `Mở khóa tài khoản ${record.name}`}><Icon name="unlock" /></button>)}{(collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'crops' || collection === 'rules') && (record.status === 'ACTIVE' ? <button className="table-icon-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'INACTIVE' })} aria-label={lang === 'en' ? `Deactivate ${record.name}` : `${collection === 'crops' ? 'Ngừng sử dụng' : collection === 'rules' ? 'Ngừng áp dụng' : 'Tạm ngưng'} ${record.name}`} title={lang === 'en' ? `Deactivate ${record.name}` : `${collection === 'crops' ? 'Ngừng sử dụng' : collection === 'rules' ? 'Ngừng áp dụng' : 'Tạm ngưng'} ${record.name}`}><Icon name="ban" /></button> : <button className="table-icon-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'ACTIVE' })} aria-label={lang === 'en' ? `Activate ${record.name}` : `Kích hoạt ${record.name}`} title={lang === 'en' ? `Activate ${record.name}` : `Kích hoạt ${record.name}`}><Icon name="check-circle" /></button>)}{collection === 'compliance' && (<>{record.status !== 'NEEDS_REVIEW' && <button className="table-icon-btn condition" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'NEEDS_REVIEW' })} aria-label={lang === 'en' ? `Flag for review ${record.name}` : `Cần rà soát VietGAP ${record.name}`} title={lang === 'en' ? `Flag for review ${record.name}` : `Cần rà soát VietGAP ${record.name}`}><Icon name="warning" /></button>}{record.status !== 'ACTIVE' && <button className="table-icon-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'ACTIVE' })} aria-label={lang === 'en' ? `Mark growing ${record.name}` : `Đang canh tác ${record.name}`} title={lang === 'en' ? `Mark growing ${record.name}` : `Đang canh tác ${record.name}`}><Icon name="leaf" /></button>}</>)}{collection === 'registrations' && record.status === 'PENDING' && (<><button className="table-icon-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'APPROVED' })} aria-label={lang === 'en' ? `Approve registration ${record.name}` : `Duyệt hồ sơ ${record.name}`} title={lang === 'en' ? `Approve registration ${record.name}` : `Duyệt hồ sơ ${record.name}`}><Icon name="check-circle" /></button><button className="table-icon-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'REJECTED' })} aria-label={lang === 'en' ? `Reject registration ${record.name}` : `Từ chối hồ sơ ${record.name}`} title={lang === 'en' ? `Reject registration ${record.name}` : `Từ chối hồ sơ ${record.name}`}><Icon name="close" /></button></>)}</div></td></tr>)}</tbody></table></div> : <AdminEmpty />}
+      {rows.length ? <div className="admin-table-scroll ui-table-scroll" tabIndex={0}><table className="ui-data-table admin-table"><caption className="sr-only">{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}</caption><thead><tr>{config.columns.map(column => <th scope="col" key={column.key}>{lang === 'en' ? (ADMIN_COL_EN[column.label] || column.label) : column.label}</th>)}<th scope="col">{lang === 'en' ? 'Status' : 'Trạng thái'}</th><th scope="col" className="admin-action-col">{lang === 'en' ? 'Actions' : 'Thao tác'}</th></tr></thead><tbody>{rows.map(record => <tr key={record.id}>{config.columns.map((column, index) => <td key={column.key}>{index === 0 ? <button className="admin-record-link" onClick={() => setDialog({ mode: 'detail', id: record.id })}><strong>{displayValue(column.key, record[column.key], lang)}</strong><small>{record.code || record.id}</small></button> : <span>{displayValue(column.key, record[column.key], lang)}</span>}</td>)}<td><AdminBadge collection={collection} status={record.status} /></td><td><div className="table-action-btns"><button className="table-icon-btn primary" onClick={() => setDialog({ mode: 'detail', id: record.id })} aria-label={(lang === 'en' ? `View details ${record.name}` : `Xem chi tiết ${record.name}`)} title={(lang === 'en' ? `View details ${record.name}` : `Xem chi tiết ${record.name}`)}><Icon name="eye" /></button>{canRowEdit && <button className="table-icon-btn edit" onClick={() => setDialog({ mode: 'edit', id: record.id })} aria-label={(lang === 'en' ? `Edit ${record.name}` : `Sửa ${record.name}`)} title={(lang === 'en' ? `Edit ${record.name}` : `Sửa ${record.name}`)}><Icon name="edit" /></button>}{collection === 'users' && (record.role === 'ADMIN' ? <button className="admin-action-toggle-btn muted" disabled aria-label={lang === 'en' ? 'Administrator account is protected' : 'Tài khoản quản trị được bảo vệ'} title={lang === 'en' ? 'Administrator account is protected' : 'Tài khoản quản trị được bảo vệ'}><Icon name="shield" /><span>{lang === 'en' ? 'Protected' : 'Bảo vệ'}</span></button> : record.status === 'ACTIVE' ? <button className="admin-action-toggle-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'LOCKED' })} aria-label={lang === 'en' ? `Lock account ${record.name}` : `Khóa tài khoản ${record.name}`} title={lang === 'en' ? `Ban / Lock account ${record.name}` : `Khóa / Ban tài khoản ${record.name}`}><Icon name="lock" /><span>{lang === 'en' ? 'Ban / Lock' : 'Khóa / Ban'}</span></button> : <button className="admin-action-toggle-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'ACTIVE' })} aria-label={lang === 'en' ? `Unlock account ${record.name}` : `Mở khóa tài khoản ${record.name}`} title={lang === 'en' ? `Unban / Unlock account ${record.name}` : `Mở khóa / Unban tài khoản ${record.name}`}><Icon name="unlock" /><span>{lang === 'en' ? 'Unban / Unlock' : 'Mở khóa / Unban'}</span></button>)}{(collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'crops' || collection === 'rules') && (record.status === 'ACTIVE' ? <button className="admin-action-toggle-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'INACTIVE' })} aria-label={lang === 'en' ? `Deactivate ${record.name}` : `${collection === 'crops' ? 'Ngừng sử dụng' : collection === 'rules' ? 'Ngừng áp dụng' : 'Tạm ngưng'} ${record.name}`} title={lang === 'en' ? `Deactivate ${record.name}` : `${collection === 'crops' ? 'Ngừng sử dụng' : collection === 'rules' ? 'Ngừng áp dụng' : 'Tạm ngưng'} ${record.name}`}><Icon name="ban" /><span>{lang === 'en' ? 'Deactivate' : (collection === 'crops' ? 'Ngừng sử dụng' : collection === 'rules' ? 'Ngừng áp dụng' : 'Tạm ngưng')}</span></button> : <button className="admin-action-toggle-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'ACTIVE' })} aria-label={lang === 'en' ? `Activate ${record.name}` : `Kích hoạt ${record.name}`} title={lang === 'en' ? `Activate ${record.name}` : `Kích hoạt ${record.name}`}><Icon name="check-circle" /><span>{lang === 'en' ? 'Activate' : 'Kích hoạt'}</span></button>)}{collection === 'articles' && (record.status === 'APPROVED' ? <button className="admin-action-toggle-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'ARCHIVED' })} aria-label={lang === 'en' ? `Archive / unpublish ${record.name}` : `Lưu trữ / ngừng công bố ${record.name}`} title={lang === 'en' ? `Deactivate / Archive ${record.name}` : `Ngừng công bố / lưu trữ ${record.name}`}><Icon name="ban" /><span>{lang === 'en' ? 'Deactivate' : 'Ngừng đăng'}</span></button> : <button className="admin-action-toggle-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'APPROVED' })} aria-label={lang === 'en' ? `Approve and publish ${record.name}` : `Duyệt và công bố ${record.name}`} title={lang === 'en' ? `Activate / Publish ${record.name}` : `Duyệt và công bố ${record.name}`}><Icon name="check-circle" /><span>{lang === 'en' ? 'Activate' : 'Duyệt đăng'}</span></button>)}{collection === 'compliance' && (<>{record.status !== 'NEEDS_REVIEW' && <button className="table-icon-btn condition" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'NEEDS_REVIEW' })} aria-label={lang === 'en' ? `Flag for review ${record.name}` : `Cần rà soát VietGAP ${record.name}`} title={lang === 'en' ? `Flag for review ${record.name}` : `Cần rà soát VietGAP ${record.name}`}><Icon name="warning" /></button>}{record.status === 'ACTIVE' ? <button className="admin-action-toggle-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'CANCELLED' })} aria-label={lang === 'en' ? `Deactivate ${record.name}` : `Tạm ngưng mùa vụ ${record.name}`} title={lang === 'en' ? `Deactivate season ${record.name}` : `Tạm ngưng mùa vụ ${record.name}`}><Icon name="ban" /><span>{lang === 'en' ? 'Deactivate' : 'Tạm ngưng'}</span></button> : <button className="admin-action-toggle-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'ACTIVE' })} aria-label={lang === 'en' ? `Activate ${record.name}` : `Kích hoạt mùa vụ ${record.name}`} title={lang === 'en' ? `Activate season ${record.name}` : `Kích hoạt mùa vụ ${record.name}`}><Icon name="check-circle" /><span>{lang === 'en' ? 'Activate' : 'Kích hoạt'}</span></button>}</>)}{collection === 'registrations' && (record.status === 'PENDING' ? (<><button className="admin-action-toggle-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'APPROVED' })} aria-label={lang === 'en' ? `Approve registration ${record.name}` : `Duyệt hồ sơ ${record.name}`} title={lang === 'en' ? `Approve registration ${record.name}` : `Duyệt hồ sơ ${record.name}`}><Icon name="check-circle" /><span>{lang === 'en' ? 'Approve' : 'Duyệt'}</span></button><button className="admin-action-toggle-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'REJECTED' })} aria-label={lang === 'en' ? `Reject registration ${record.name}` : `Từ chối hồ sơ ${record.name}`} title={lang === 'en' ? `Reject registration ${record.name}` : `Từ chối hồ sơ ${record.name}`}><Icon name="close" /><span>{lang === 'en' ? 'Reject' : 'Từ chối'}</span></button></>) : record.status === 'APPROVED' ? <button className="admin-action-toggle-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'CANCELLED' })} aria-label={lang === 'en' ? `Deactivate registration ${record.name}` : `Tạm ngưng hồ sơ ${record.name}`} title={lang === 'en' ? `Deactivate registration ${record.name}` : `Tạm ngưng hồ sơ ${record.name}`}><Icon name="ban" /><span>{lang === 'en' ? 'Deactivate' : 'Tạm ngưng'}</span></button> : <button className="admin-action-toggle-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'APPROVED' })} aria-label={lang === 'en' ? `Activate registration ${record.name}` : `Kích hoạt hồ sơ ${record.name}`} title={lang === 'en' ? `Activate / Approve ${record.name}` : `Kích hoạt / Duyệt ${record.name}`}><Icon name="check-circle" /><span>{lang === 'en' ? 'Activate' : 'Kích hoạt'}</span></button>)}{collection === 'feedback' && (record.status !== 'RESOLVED' ? <button className="admin-action-toggle-btn primary" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'RESOLVED' })} aria-label={lang === 'en' ? `Mark resolved ${record.name}` : `Đánh dấu đã giải quyết ${record.name}`} title={lang === 'en' ? `Mark resolved ${record.name}` : `Đánh dấu đã giải quyết ${record.name}`}><Icon name="check-circle" /><span>{lang === 'en' ? 'Resolve' : 'Giải quyết'}</span></button> : <button className="admin-action-toggle-btn danger" onClick={() => setDialog({ mode: 'action', id: record.id, status: 'OPEN' })} aria-label={lang === 'en' ? `Reopen feedback ${record.name}` : `Mở lại phản hồi ${record.name}`} title={lang === 'en' ? `Reopen feedback ${record.name}` : `Mở lại phản hồi ${record.name}`}><Icon name="refresh" /><span>{lang === 'en' ? 'Reopen' : 'Mở lại'}</span></button>)}</div></td></tr>)}</tbody></table></div> : <AdminEmpty />}
       <div className="admin-pagination"><span>{(lang === 'en' ? records.length ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, records.length)} of ${records.length} results` : "0 results" : records.length ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, records.length)} trên ${records.length} kết quả` : '0 kết quả')}</span><label>{(lang === 'en' ? "Rows per page" : "Số dòng")}<select className="ui-select" value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value={5}>5</option><option value={10}>10</option><option value={20}>20</option></select></label><Pagination page={currentPage} totalPages={pages} onChange={setPage} /></div>
     </section>
     {collection === 'rules' && <p className="admin-footnote"><Icon name="check" />{(lang === 'en' ? "Rule changes apply to the next inspection; saved results are preserved." : "Thay đổi quy tắc chỉ áp dụng cho lần kiểm tra tiếp theo; kết quả đã lưu được giữ nguyên.")}</p>}
@@ -285,28 +285,30 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
       <p className="admin-subtle">{(lang === 'en' ? "Fields marked * are required." : "Các trường có dấu * là bắt buộc.")}</p><div className="admin-form-grid">{config.fields.map(field => <AdminField key={field.key} field={field} value={values[field.key] ?? ''} onChange={(value) => setValues(previous => ({ ...previous, [field.key]: value }))} />)}</div>
       {collection === 'articles' && <p className="admin-inline-note">{(lang === 'en' ? "Articles are saved as drafts for review. A reference source is required for approval." : "Bài viết được lưu dưới dạng bản nháp để kiểm tra lại trước khi duyệt. Nguồn tham khảo là bắt buộc khi duyệt.")}</p>}
       {error && <p role="alert" className="admin-form-error">{translate(error)}</p>}
-    </div><div className="admin-modal-footer"><Button variant="secondary" type="button" onClick={close}>{(lang === 'en' ? "Cancel" : "Hủy")}</Button><Button variant="primary" type="submit" loading={submitting}>{(lang === 'en' ? collection === 'articles' ? "Save draft" : "Save changes" : collection === 'articles' ? 'Lưu bản nháp' : 'Lưu thay đổi')}</Button></div></form></AdminModal>;
+    </div><div className="admin-modal-footer"><Button variant="secondary" type="button" onClick={close}>{(lang === 'en' ? "Cancel" : "Hủy")}</Button>{dialog.mode === 'edit' && record && <RecordActions collection={collection} record={record} change={change} hideEdit />}<Button variant="primary" type="submit" loading={submitting}>{(lang === 'en' ? collection === 'articles' ? "Save draft" : "Save changes" : collection === 'articles' ? 'Lưu bản nháp' : 'Lưu thay đổi')}</Button></div></form></AdminModal>;
   }
 
   if (!record) return null;
 
   if (dialog.mode === 'action') {
     const isReject = collection === 'registrations' && dialog.status === 'REJECTED';
+    const isCancelReg = collection === 'registrations' && dialog.status === 'CANCELLED';
     const isLockUser = collection === 'users' && dialog.status === 'LOCKED';
     const isUnlockUser = collection === 'users' && dialog.status === 'ACTIVE';
     const isDeactivate = ['farms', 'zones', 'blocks', 'crops', 'rules'].includes(collection) && dialog.status === 'INACTIVE';
     const isActivate = ['farms', 'zones', 'blocks', 'crops', 'rules'].includes(collection) && dialog.status === 'ACTIVE';
+    const isResolveFeedback = collection === 'feedback' && dialog.status === 'RESOLVED';
 
     const getActionTitle = () => {
       if (collection === 'users') {
         return isLockUser
-          ? (lang === 'en' ? 'Lock User Account' : 'Khóa tài khoản người dùng')
-          : (lang === 'en' ? 'Unlock User Account' : 'Mở khóa tài khoản người dùng');
+          ? (lang === 'en' ? 'Lock / Ban User Account' : 'Khóa / Ban tài khoản người dùng')
+          : (lang === 'en' ? 'Unlock / Unban User Account' : 'Mở khóa / Unban tài khoản người dùng');
       }
       if (collection === 'registrations') {
-        return isReject
-          ? (lang === 'en' ? 'Reject Farm Registration' : 'Từ chối hồ sơ đăng ký')
-          : (lang === 'en' ? 'Approve Farm Registration' : 'Duyệt hồ sơ đăng ký trang trại');
+        if (isReject) return lang === 'en' ? 'Reject Farm Registration' : 'Từ chối hồ sơ đăng ký';
+        if (isCancelReg) return lang === 'en' ? 'Deactivate Farm Registration' : 'Tạm ngưng hồ sơ đăng ký';
+        return lang === 'en' ? 'Approve / Activate Farm Registration' : 'Duyệt hồ sơ đăng ký trang trại';
       }
       if (collection === 'crops') {
         return isDeactivate
@@ -327,12 +329,18 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
       if (collection === 'compliance') {
         if (dialog.status === 'NEEDS_REVIEW') return lang === 'en' ? 'Flag for VietGAP Review' : 'Cần rà soát VietGAP';
         if (dialog.status === 'HARVESTED') return lang === 'en' ? 'Mark Harvested' : 'Đánh dấu đã thu hoạch';
-        return lang === 'en' ? 'Mark Growing' : 'Đánh dấu đang canh tác';
+        if (dialog.status === 'CANCELLED') return lang === 'en' ? 'Deactivate / Cancel Season' : 'Tạm ngưng / hủy mùa vụ';
+        return lang === 'en' ? 'Activate / Mark Growing' : 'Kích hoạt / đánh dấu đang canh tác';
       }
       if (collection === 'articles') {
         return dialog.status === 'ARCHIVED'
-          ? (lang === 'en' ? 'Archive Article' : 'Lưu trữ bài viết')
+          ? (lang === 'en' ? 'Deactivate / Archive Article' : 'Lưu trữ / ngừng công bố bài viết')
           : (lang === 'en' ? 'Approve and Publish Article' : 'Duyệt và công bố bài viết');
+      }
+      if (collection === 'feedback') {
+        return isResolveFeedback
+          ? (lang === 'en' ? 'Resolve AI Feedback' : 'Đánh dấu giải quyết phản hồi AI')
+          : (lang === 'en' ? 'Reopen AI Feedback' : 'Mở lại phản hồi AI');
       }
       return config.statuses[dialog.status] || (lang === 'en' ? 'Update Status' : 'Đổi trạng thái');
     };
@@ -340,13 +348,23 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
     const getActionQuestion = () => {
       if (collection === 'users') {
         return isLockUser
-          ? (lang === 'en' ? `Are you sure you want to lock the account for "${record.name}"?` : `Bạn có chắc chắn muốn khóa tài khoản đối với "${record.name}"?`)
-          : (lang === 'en' ? `Are you sure you want to unlock the account for "${record.name}"?` : `Bạn có chắc chắn muốn mở khóa tài khoản đối với "${record.name}"?`);
+          ? (lang === 'en' ? `Are you sure you want to lock/ban the account for "${record.name}"?` : `Bạn có chắc chắn muốn khóa (ban) tài khoản đối với "${record.name}"?`)
+          : (lang === 'en' ? `Are you sure you want to unlock/unban the account for "${record.name}"?` : `Bạn có chắc chắn muốn mở khóa (unban) tài khoản đối với "${record.name}"?`);
       }
       if (collection === 'registrations') {
-        return isReject
-          ? (lang === 'en' ? `Are you sure you want to reject registration for "${record.name}"?` : `Bạn có chắc chắn muốn từ chối hồ sơ đăng ký của "${record.name}"?`)
-          : (lang === 'en' ? `Are you sure you want to approve registration for "${record.name}"?` : `Bạn có chắc chắn muốn phê duyệt hồ sơ đăng ký của "${record.name}"?`);
+        if (isReject) return lang === 'en' ? `Are you sure you want to reject registration for "${record.name}"?` : `Bạn có chắc chắn muốn từ chối hồ sơ đăng ký của "${record.name}"?`;
+        if (isCancelReg) return lang === 'en' ? `Are you sure you want to deactivate registration for "${record.name}"?` : `Bạn có chắc chắn muốn tạm ngưng hồ sơ đăng ký của "${record.name}"?`;
+        return lang === 'en' ? `Are you sure you want to approve/activate registration for "${record.name}"?` : `Bạn có chắc chắn muốn phê duyệt / kích hoạt hồ sơ đăng ký của "${record.name}"?`;
+      }
+      if (collection === 'compliance' && dialog.status === 'CANCELLED') {
+        return lang === 'en'
+          ? `Are you sure you want to deactivate season "${record.name}"?`
+          : `Bạn có chắc chắn muốn tạm ngưng mùa vụ "${record.name}"?`;
+      }
+      if (collection === 'feedback') {
+        return isResolveFeedback
+          ? (lang === 'en' ? `Confirm resolving AI feedback "${record.name}"?` : `Xác nhận đánh dấu đã giải quyết phản hồi "${record.name}"?`)
+          : (lang === 'en' ? `Are you sure you want to reopen feedback "${record.name}"?` : `Bạn có chắc chắn muốn mở lại phản hồi "${record.name}"?`);
       }
       if (isDeactivate) {
         return lang === 'en'
@@ -378,9 +396,12 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
           : (lang === 'en' ? (submitting ? 'Unlocking...' : 'Unlock account') : (submitting ? 'Đang mở khóa...' : 'Mở khóa tài khoản'));
       }
       if (collection === 'registrations') {
-        return isReject
-          ? (lang === 'en' ? (submitting ? 'Rejecting...' : 'Reject registration') : (submitting ? 'Đang từ chối...' : 'Từ chối hồ sơ'))
-          : (lang === 'en' ? (submitting ? 'Approving...' : 'Approve registration') : (submitting ? 'Đang duyệt...' : 'Duyệt hồ sơ'));
+        if (isReject) return lang === 'en' ? (submitting ? 'Rejecting...' : 'Reject registration') : (submitting ? 'Đang từ chối...' : 'Từ chối hồ sơ');
+        if (isCancelReg) return lang === 'en' ? (submitting ? 'Deactivating...' : 'Deactivate') : (submitting ? 'Đang xử lý...' : 'Tạm ngưng');
+        return lang === 'en' ? (submitting ? 'Approving...' : 'Approve registration') : (submitting ? 'Đang duyệt...' : 'Duyệt hồ sơ');
+      }
+      if (collection === 'compliance' && dialog.status === 'CANCELLED') {
+        return lang === 'en' ? (submitting ? 'Deactivating...' : 'Deactivate') : (submitting ? 'Đang xử lý...' : 'Tạm ngưng');
       }
       if (isDeactivate) {
         const textVi = collection === 'crops' ? 'Ngừng sử dụng' : collection === 'rules' ? 'Ngừng áp dụng' : 'Tạm ngưng';
@@ -399,15 +420,17 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
       <AdminModal title={getActionTitle()} close={() => { if (!submitting) close(); }}>
         <form onSubmit={(event) => {
           event.preventDefault();
-          if (collection === 'registrations') {
-            submit({ type: 'review', collection, id: record.id, status: dialog.status as 'APPROVED' | 'REJECTED', reason });
-          } else if (['farms', 'zones', 'blocks', 'compliance', 'users', 'crops', 'rules', 'articles'].includes(collection)) {
+          if (collection === 'registrations' && record.status === 'PENDING' && (dialog.status === 'APPROVED' || dialog.status === 'REJECTED')) {
+            submit({ type: 'review', collection, id: record.id, status: dialog.status, reason });
+          } else if (collection === 'feedback' && dialog.status === 'RESOLVED') {
+            submit({ type: 'feedback', collection: 'feedback', id: record.id, status: 'RESOLVED', reply: reply.trim() || 'Đã ghi nhận góp ý và cập nhật nguồn kiến thức.' });
+          } else {
             submit({ type: 'status', collection: collection as StatusCollection, id: record.id, status: dialog.status, reason });
           }
         }}>
           <div className="admin-modal-body">
             <p>{getActionQuestion()}</p>
-            {collection === 'registrations' && !isReject && (
+            {collection === 'registrations' && !isReject && !isCancelReg && (
               <p className="admin-inline-note">
                 {lang === 'en'
                   ? 'Approving a registration activates the farm and grants the applicant farm owner access. The farm and owner permissions are created after approval succeeds.'
@@ -447,6 +470,13 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
                 field={{ key: 'reason', label: lang === 'en' ? 'Lock Reason (optional/violation details)' : 'Lý do khóa tài khoản (chi tiết vi phạm)', type: 'textarea', maxLength: 1000 }}
                 value={reason}
                 onChange={setReason}
+              />
+            )}
+            {isResolveFeedback && (
+              <AdminField
+                field={{ key: 'reply', label: lang === 'en' ? 'Resolution Note / Reply' : 'Nội dung phản hồi / giải quyết', type: 'textarea', maxLength: 3000 }}
+                value={reply}
+                onChange={setReply}
               />
             )}
             {error && <p role="alert" className="admin-form-error">{translate(error)}</p>}
@@ -645,24 +675,28 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
   </AdminModal>;
 }
 
-function RecordActions({ collection, record, change }: { collection: Collection; record: AdminRecord; change: (dialog: DialogState) => void }) {
+function RecordActions({ collection, record, change, hideEdit = false }: { collection: Collection; record: AdminRecord; change: (dialog: DialogState) => void; hideEdit?: boolean }) {
   const { lang } = useLanguage();
   const action = (status: string) => change({ mode: 'action', id: record.id, status });
   if (collection === 'registrations') {
     return <>
-      <Button variant="secondary" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>
-      {record.status === 'PENDING' && <>
-        <Button variant="danger" onClick={() => action('REJECTED')}><Icon name="close" />{(lang === 'en' ? "Reject" : "Từ chối")}</Button>
-        <Button variant="primary" onClick={() => action('APPROVED')}><Icon name="check-circle" />{(lang === 'en' ? "Approve registration" : "Duyệt hồ sơ")}</Button>
-      </>}
+      {!hideEdit && <Button variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
+      {record.status === 'PENDING' ? <>
+        <Button variant="danger" type="button" onClick={() => action('REJECTED')}><Icon name="close" />{(lang === 'en' ? "Reject" : "Từ chối")}</Button>
+        <Button variant="primary" type="button" onClick={() => action('APPROVED')}><Icon name="check-circle" />{(lang === 'en' ? "Approve registration" : "Duyệt hồ sơ")}</Button>
+      </> : record.status === 'APPROVED' ? (
+        <Button variant="danger" type="button" onClick={() => action('CANCELLED')}><Icon name="ban" />{(lang === 'en' ? "Deactivate" : "Tạm ngưng")}</Button>
+      ) : (
+        <Button variant="primary" type="button" onClick={() => action('APPROVED')}><Icon name="check-circle" />{(lang === 'en' ? "Activate" : "Kích hoạt")}</Button>
+      )}
     </>;
   }
   if (collection === 'users') {
     return <>
-      <Button variant="secondary" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>
+      {!hideEdit && <Button variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
       {record.role === 'ADMIN'
         ? <span className="admin-subtle">{(lang === 'en' ? "Administrator accounts are protected in this preview." : "Tài khoản quản trị được bảo vệ trong bản xem trước.")}</span>
-        : <Button variant={record.status === 'ACTIVE' ? 'danger' : 'primary'} onClick={() => action(record.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE')}>
+        : <Button variant={record.status === 'ACTIVE' ? 'danger' : 'primary'} type="button" onClick={() => action(record.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE')}>
             <Icon name={record.status === 'ACTIVE' ? 'lock' : 'unlock'} />
             {(lang === 'en' ? record.status === 'ACTIVE' ? "Lock account" : "Unlock account" : record.status === 'ACTIVE' ? 'Khóa tài khoản' : 'Mở khóa tài khoản')}
           </Button>}
@@ -670,15 +704,18 @@ function RecordActions({ collection, record, change }: { collection: Collection;
   }
   if (collection === 'compliance') {
     return <>
-      <Button variant="secondary" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>
+      {!hideEdit && <Button variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
       {record.status !== 'NEEDS_REVIEW' && (
-        <Button variant="danger" onClick={() => action('NEEDS_REVIEW')}><Icon name="warning" />{(lang === 'en' ? "Flag for VietGAP review" : "Cần rà soát VietGAP")}</Button>
+        <Button variant="danger" type="button" onClick={() => action('NEEDS_REVIEW')}><Icon name="warning" />{(lang === 'en' ? "Flag for VietGAP review" : "Cần rà soát VietGAP")}</Button>
+      )}
+      {record.status !== 'CANCELLED' && (
+        <Button variant="danger" type="button" onClick={() => action('CANCELLED')}><Icon name="ban" />{(lang === 'en' ? "Deactivate" : "Tạm ngưng")}</Button>
       )}
       {record.status !== 'HARVESTED' && (
-        <Button variant="primary" onClick={() => action('HARVESTED')}><Icon name="check-circle" />{(lang === 'en' ? "Mark Harvested" : "Đã thu hoạch")}</Button>
+        <Button variant="primary" type="button" onClick={() => action('HARVESTED')}><Icon name="check-circle" />{(lang === 'en' ? "Mark Harvested" : "Đã thu hoạch")}</Button>
       )}
       {record.status !== 'ACTIVE' && (
-        <Button variant="primary" onClick={() => action('ACTIVE')}><Icon name="leaf" />{(lang === 'en' ? "Mark Growing" : "Đang canh tác")}</Button>
+        <Button variant="primary" type="button" onClick={() => action('ACTIVE')}><Icon name="leaf" />{(lang === 'en' ? "Mark Growing" : "Đang canh tác")}</Button>
       )}
     </>;
   }
@@ -690,9 +727,10 @@ function RecordActions({ collection, record, change }: { collection: Collection;
     const actLabelVi = 'Kích hoạt';
 
     return <>
-      <Button variant="secondary" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>
+      {!hideEdit && <Button variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
       <Button
         variant={isAct ? 'danger' : 'primary'}
+        type="button"
         onClick={() => action(isAct ? 'INACTIVE' : 'ACTIVE')}
       >
         <Icon name={isAct ? 'ban' : 'check-circle'} />
@@ -702,9 +740,9 @@ function RecordActions({ collection, record, change }: { collection: Collection;
   }
   if (collection === 'articles') {
     return <>
-      <Button variant="secondary" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>
-      {record.status !== 'ARCHIVED' && <Button variant="danger" onClick={() => action('ARCHIVED')}><Icon name="box" />{(lang === 'en' ? "Archive / unpublish" : "Lưu trữ / ngừng công bố")}</Button>}
-      {record.status !== 'APPROVED' && <Button variant="primary" onClick={() => action('APPROVED')}><Icon name="check-circle" />{(lang === 'en' ? "Approve and publish" : "Duyệt và công bố")}</Button>}
+      {!hideEdit && <Button variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
+      {record.status !== 'ARCHIVED' && <Button variant="danger" type="button" onClick={() => action('ARCHIVED')}><Icon name="ban" />{(lang === 'en' ? "Archive / unpublish" : "Lưu trữ / ngừng công bố")}</Button>}
+      {record.status !== 'APPROVED' && <Button variant="primary" type="button" onClick={() => action('APPROVED')}><Icon name="check-circle" />{(lang === 'en' ? "Approve and publish" : "Duyệt và công bố")}</Button>}
     </>;
   }
   return null;
