@@ -108,6 +108,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const [editLng, setEditLng] = useState<number | null>(null);
   const [editBoundary, setEditBoundary] = useState<LatLngPoint[]>([]);
   const [editCoverImage, setEditCoverImage] = useState('');
+  const [editFarmMapUrl, setEditFarmMapUrl] = useState('');
   const [updating, setUpdating] = useState(false);
 
   // Add Member Modal state
@@ -201,6 +202,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
           setEditLng(detail.longitude ?? null);
           setEditBoundary(parseBoundaryCoordinates(detail.boundaryCoordinates));
           setEditCoverImage(detail.coverImageUrl || '');
+          setEditFarmMapUrl(detail.farmMapUrl || '');
         }
         setMembers(memberList);
       })
@@ -276,6 +278,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
         longitude: editLng,
         boundaryCoordinates: stringifyBoundaryCoordinates(editBoundary) || null,
         coverImageUrl: editCoverImage.trim() || undefined,
+        farmMapUrl: editFarmMapUrl.trim() || undefined,
       });
       setFarmDetail(updated);
       setIsEditOpen(false);
@@ -851,6 +854,22 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                           <StatusBadge tone="success" label={<>{farmDetail.status ? (lang === 'en' && farmDetail.status === 'ACTIVE' ? 'Active' : farmDetail.status) : (lang === 'en' ? 'Active' : 'Đang hoạt động')}</>} />
                         </dd></div>
 
+                        {farmDetail.farmMapUrl && (
+                          <div>
+                            <dt>{lang === 'en' ? 'VietGAP Map:' : 'Sơ đồ VietGAP:'}</dt>
+                            <dd>
+                              <a
+                                href={farmDetail.farmMapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: '#059669', fontWeight: 600, textDecoration: 'none' }}
+                              >
+                                {lang === 'en' ? 'View Layout Map (VG-CS-04) ↗' : 'Xem sơ đồ mặt bằng (VG-CS-04) ↗'}
+                              </a>
+                            </dd>
+                          </div>
+                        )}
+
 
                       </dl>
 
@@ -1071,6 +1090,17 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
               hint={lang === 'en' ? 'Upload farm photos to Cloudinary to display on the profile.' : 'Tải ảnh chụp thực tế trang trại lên Cloudinary để hiển thị trên hồ sơ.'}
               folder="mycropdiary/farms"
               accept="image/*"
+              disabled={updating}
+            />
+          </div>
+          <div>
+            <FileUpload
+              value={editFarmMapUrl}
+              onChange={setEditFarmMapUrl}
+              label={lang === 'en' ? 'Farm Master Plan / Layout Map (VietGAP VG-CS-04)' : 'Sơ đồ mặt bằng vùng sản xuất (VietGAP VG-CS-04)'}
+              hint={lang === 'en' ? 'Upload farm layout diagram, greenhouse blueprint, or irrigation schema.' : 'Tải ảnh sơ đồ mặt bằng các phân khu, nhà màng, trạm bơm tưới phục vụ thẩm định VietGAP.'}
+              folder="mycropdiary/farms/maps"
+              accept="image/*,application/pdf"
               disabled={updating}
             />
           </div>

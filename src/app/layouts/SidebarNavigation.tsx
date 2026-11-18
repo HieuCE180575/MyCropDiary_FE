@@ -9,7 +9,7 @@ const sidebarGroups = [
   { id: 'farm', title: 'Farm Setup', keys: ['farm', 'members', 'production'] },
   { id: 'supplies', title: 'Material Preparation', keys: ['suppliers', 'purchases'] },
   { id: 'cultivation', title: 'Cultivation', keys: ['seasons', 'tasks', 'activities', 'materials', 'harvests'] },
-  { id: 'compliance', title: 'VietGAP Compliance', keys: ['checklists', 'assessments', 'environment', 'training'] },
+  { id: 'compliance', title: 'VietGAP Compliance', keys: ['checklists', 'standards', 'environment', 'training'] },
   { id: 'reports', title: 'Costs & Reports', keys: ['expenses', 'reports'] },
   { id: 'knowledge', title: 'Knowledge & AI', keys: ['knowledge', 'ai', 'ai-history', 'ai-feedback', 'ai-drafts'] },
   { id: 'account', title: 'Account', keys: ['profile', 'logout'] },

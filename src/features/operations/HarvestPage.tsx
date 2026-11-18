@@ -34,6 +34,7 @@ interface HarvestRecord {
   harvestLotCode: string | null;
   harvestedAt: string;
   quantity: number;
+  discardedQuantity?: number | null;
   unit: string;
   qualityGrade: string | null;
   storageLocation: string | null;
@@ -76,6 +77,7 @@ function HarvestContent() {
   const [selectedBlockId, setSelectedBlockId] = useState<number | ''>('');
   const [lotCode, setLotCode] = useState(`LOT-${new Date().getFullYear()}-01`);
   const [quantity, setQuantity] = useState<number | ''>(500);
+  const [discardedQuantity, setDiscardedQuantity] = useState<number | ''>('');
   const [harvestedAt, setHarvestedAt] = useState('');
   const [unit, setUnit] = useState('kg');
   const [qualityGrade, setQualityGrade] = useState('Loại 1 (Xuất khẩu)');
@@ -212,6 +214,7 @@ function HarvestContent() {
         setTraceabilityCode(res.data.traceabilityCode ?? '');
         setHarvestedAt(res.data.harvestedAt);
         setQuantity(res.data.quantity);
+        setDiscardedQuantity(res.data.discardedQuantity != null ? res.data.discardedQuantity : '');
         setUnit(res.data.unit);
         setQualityGrade(res.data.qualityGrade ?? '');
         setStorageLocation(res.data.storageLocation ?? '');
@@ -270,6 +273,7 @@ function HarvestContent() {
       ...(selectedBlockId ? { blockId: Number(selectedBlockId) } : {}),
       harvestedAt,
       quantity: Number(quantity),
+      discardedQuantity: discardedQuantity !== '' ? Number(discardedQuantity) : 0,
       unit: unit.trim(),
       qualityGrade,
       storageLocation,
@@ -313,6 +317,7 @@ function HarvestContent() {
     setTraceabilityCode(`GAP-VN-${Math.floor(100000 + Math.random() * 900000)}`);
     setHarvestedAt(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16));
     setQuantity(500);
+    setDiscardedQuantity('');
     setUnit('kg');
     setQualityGrade('Loại 1 (Xuất khẩu)');
     setStorageLocation('');
@@ -1066,6 +1071,33 @@ function HarvestContent() {
 
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
+                <span className="structured-field-label">
+                  {(lang === 'en' ? "Discarded / Culled Yield" : "Sản lượng loại bỏ / phế phẩm")}
+                </span>
+                <span className="structured-field-badge" style={{ color: '#059669', background: '#ecfdf5' }}>
+                  {(lang === 'en' ? "VietGAP VG-TX-03" : "VietGAP VG-TX-03")}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="form-field" style={{ flex: 2, marginBottom: 0 }}>
+                  <input className="ui-input"
+                    aria-label={lang === 'en' ? 'Discarded Yield' : 'Sản lượng loại bỏ'}
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder={lang === 'en' ? 'e.g. 15 (damaged, culled)' : 'Ví dụ: 15 (dập nát, sâu hại...)'}
+                    value={discardedQuantity}
+                    onChange={(e) => setDiscardedQuantity(e.target.value ? Number(e.target.value) : '')}
+                  />
+                </div>
+                <div style={{ flex: 1, alignSelf: 'center', fontSize: '13px', color: '#64748b', paddingLeft: '4px' }}>
+                  {unit}
+                </div>
+              </div>
+            </div>
+
+            <div className="structured-field-card" style={{ marginBottom: 0 }}>
+              <div className="structured-field-header">
                 <span className="structured-field-label">{(lang === 'en' ? "Quality classification" : "Phân loại phẩm chất")}</span>
                 <label htmlFor="harvest-page-control-7" className="structured-field-badge">{(lang === 'en' ? "Grade" : "Phẩm cấp")}</label>
               </div>
@@ -1214,6 +1246,14 @@ function HarvestContent() {
                 <dt>{(lang === 'en' ? "Yield" : "Sản lượng")}</dt>
                 <dd>
                   {displayNumber(selectedTraceRecord.quantity, lang)} {translate(selectedTraceRecord.unit)}
+                </dd>
+              </div>
+              <div>
+                <dt>{(lang === 'en' ? "Discarded / Culled" : "Sản lượng loại bỏ (VG-TX-03)")}</dt>
+                <dd>
+                  {selectedTraceRecord.discardedQuantity != null
+                    ? `${displayNumber(selectedTraceRecord.discardedQuantity, lang)} ${translate(selectedTraceRecord.unit)}`
+                    : `0 ${translate(selectedTraceRecord.unit)}`}
                 </dd>
               </div>
               <div>

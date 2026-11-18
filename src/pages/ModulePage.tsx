@@ -16,6 +16,7 @@ import { ExpensesPage } from '../features/operations/ExpensesPage';
 import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 import { TasksPage } from '../features/operations/TasksPage';
 import { VietGAPCompliancePage } from '../features/compliance/VietGAPCompliancePage';
+import { VietGapStandardsPage } from '../features/compliance/VietGapStandardsPage';
 import { ReportsPage } from '../features/reports/ReportsPage';
 import { AIAssistantPage } from '../features/ai/AIAssistantPage';
 
@@ -39,8 +40,8 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
   if (module.key === 'harvests') return <HarvestPage />;
   if (module.key === 'seasons') return <CropSeasonsPage />;
   if (module.key === 'tasks') return <TasksPage />;
-  if (module.key === 'checklists') return <VietGAPCompliancePage initialTab="checklists" />;
-  if (module.key === 'assessments') return <VietGAPCompliancePage initialTab="assessments" />;
+  if (module.key === 'checklists' || module.key === 'assessments') return <VietGAPCompliancePage initialTab="checklists" />;
+  if (module.key === 'standards' || module.key === 'vietgap-standards') return <VietGapStandardsPage />;
   if (module.key === 'environment') return <VietGAPCompliancePage initialTab="environment" />;
   if (module.key === 'training') return <VietGAPCompliancePage initialTab="training" />;
   if (module.key === 'reports') return <ReportsPage initialTab="reports" />;

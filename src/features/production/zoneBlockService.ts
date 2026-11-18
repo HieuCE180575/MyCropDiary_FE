@@ -599,6 +599,7 @@ export interface SoilAssessmentBackendResp {
   nutrientData: string;
   notes?: string | null;
   imageUrl?: string | null;
+  labTestReportUrl?: string | null;
   assessedAt: string;
 }
 
@@ -608,6 +609,7 @@ export interface CreateSoilAssessmentPayload {
   nutrientData?: string;
   notes?: string;
   imageUrl?: string;
+  labTestReportUrl?: string;
   assessedAt?: string;
 }
 
@@ -638,6 +640,7 @@ export interface UpdateSoilAssessmentPayload {
   nutrientData?: string;
   notes?: string;
   imageUrl?: string;
+  labTestReportUrl?: string;
   assessedAt?: string;
 }
 
@@ -678,6 +681,7 @@ export interface WaterAssessmentBackendResp {
   qualityStatus?: string | null;
   notes?: string | null;
   imageUrl?: string | null;
+  labTestReportUrl?: string | null;
   assessedAt?: string | null;
 }
 
@@ -690,6 +694,7 @@ export interface CreateWaterAssessmentPayload {
   qualityStatus?: string;
   notes?: string;
   imageUrl?: string;
+  labTestReportUrl?: string;
   assessedAt?: string;
 }
 
@@ -702,6 +707,7 @@ export interface UpdateWaterAssessmentPayload {
   qualityStatus?: string;
   notes?: string;
   imageUrl?: string;
+  labTestReportUrl?: string;
   assessedAt?: string;
 }
 

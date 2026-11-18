@@ -163,6 +163,16 @@ export const moduleDefinitions: ModuleDefinition[] = [
     "description": "Verify production compliance criteria according to VietGAP standards."
   },
   {
+    "key": "standards",
+    "path": "standards",
+    "title": "VietGAP Standards",
+    "ucRange": "TCVN 11892-1:2017",
+    "group": "compliance",
+    "access": "farm",
+    "icon": "book",
+    "description": "National VietGAP crop standards, 33 compliance criteria, checkpoints, and required audit evidence."
+  },
+  {
     "key": "assessments",
     "path": "assessments",
     "title": "Internal Assessments",

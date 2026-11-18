@@ -1,17 +1,23 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { PageHeading } from '../../shared/components/PageHeading';
 import { Button } from '../../shared/components/Button';
+import { TabList, tabPanelProps } from '../../shared/components/TabList';
 import {
   fetchFarmRiskHistoryApi,
   fetchFarmSoilAssessmentHistoryApi,
   fetchFarmWaterAssessmentHistoryApi,
+  createSoilAssessmentApi,
+  createWaterAssessmentApi,
+  fetchBlocks,
   ZoneRiskBackendResp,
   SoilAssessmentBackendResp,
   WaterAssessmentBackendResp,
 } from '../production/zoneBlockService';
+import type { Block } from '../production/types';
+import { FileUpload } from '../../shared/components/FileUpload';
 import {
   TrainingRecordResp,
   fetchTrainingHistoryApi,
@@ -21,13 +27,7 @@ import {
 } from './trainingService';
 import {
   ChecklistRunResp,
-  InternalAssessmentResp,
-  VietGapCriterionResp,
   fetchChecklistHistoryApi,
-  fetchInternalAssessmentHistoryApi,
-  fetchInternalAssessmentDetailsApi,
-  conductInternalAssessmentApi,
-  fetchVietGapCriteriaApi,
 } from './vietgapComplianceService';
 import { VietGapInitRunModal } from './VietGapInitRunModal';
 import { VietGapAuditWorkspaceModal } from './VietGapAuditWorkspaceModal';
@@ -40,7 +40,11 @@ interface VietGAPComplianceProps {
 export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComplianceProps) {
   const { selectedFarm } = useFarmWorkspace();
   const { lang, t: translate } = useLanguage();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'checklists' | 'assessments' | 'environment' | 'training'>(initialTab);
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   const [farmRisks, setFarmRisks] = useState<ZoneRiskBackendResp[]>([]);
   const [farmSoils, setFarmSoils] = useState<SoilAssessmentBackendResp[]>([]);
   const [farmWaters, setFarmWaters] = useState<WaterAssessmentBackendResp[]>([]);
@@ -49,6 +53,33 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const [selectedEnvRisk, setSelectedEnvRisk] = useState<ZoneRiskBackendResp | null>(null);
   const [selectedEnvSoil, setSelectedEnvSoil] = useState<SoilAssessmentBackendResp | null>(null);
   const [loadingEnv, setLoadingEnv] = useState(false);
+
+  // Soil & Water Assessment Creation states
+  const [farmBlocks, setFarmBlocks] = useState<Block[]>([]);
+  const [isCreateSoilModalOpen, setIsCreateSoilModalOpen] = useState(false);
+  const [isCreateWaterModalOpen, setIsCreateWaterModalOpen] = useState(false);
+  const [savingAssessment, setSavingAssessment] = useState(false);
+  const [assessmentError, setAssessmentError] = useState<string | null>(null);
+
+  // Form state: Soil Assessment
+  const [soilBlockId, setSoilBlockId] = useState<number | ''>('');
+  const [soilPh, setSoilPh] = useState<number | ''>(6.5);
+  const [soilMoisture, setSoilMoisture] = useState<number | ''>(70);
+  const [soilNutrient, setSoilNutrient] = useState<string>('Chỉ tiêu N-P-K cân đối, Vi sinh vật Salmonella & E. coli âm tính (Không phát hiện)');
+  const [soilLabReportUrl, setSoilLabReportUrl] = useState<string>('');
+  const [soilNotes, setSoilNotes] = useState<string>('');
+  const [soilAssessedAt, setSoilAssessedAt] = useState<string>(() => new Date().toISOString().slice(0, 10));
+
+  // Form state: Water Assessment
+  const [waterBlockId, setWaterBlockId] = useState<number | ''>('');
+  const [waterSourceName, setWaterSourceName] = useState<string>('Nguồn nước ngầm trạm bơm A');
+  const [waterSourceType, setWaterSourceType] = useState<string>('Nước ngầm');
+  const [waterPh, setWaterPh] = useState<number | ''>(6.8);
+  const [waterTemp, setWaterTemp] = useState<number | ''>(26);
+  const [waterQualityStatus, setWaterQualityStatus] = useState<string>('DAT_CHUAN');
+  const [waterLabReportUrl, setWaterLabReportUrl] = useState<string>('');
+  const [waterNotes, setWaterNotes] = useState<string>('');
+  const [waterAssessedAt, setWaterAssessedAt] = useState<string>(() => new Date().toISOString().slice(0, 10));
 
   // Training state
   const [trainingRecords, setTrainingRecords] = useState<TrainingRecordResp[]>([]);
@@ -68,6 +99,18 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   });
   const [submittingTraining, setSubmittingTraining] = useState(false);
 
+  const trainingStats = useMemo(() => {
+    const totalCourses = trainingTotal || trainingRecords.length;
+    const totalAttendees = trainingRecords.reduce((sum, r) => sum + (r.attendeeCount || 0), 0);
+    const currentYear = new Date().getFullYear().toString();
+    const coursesThisYear = trainingRecords.filter((r) => r.trainingDate && r.trainingDate.startsWith(currentYear)).length;
+    return {
+      totalCourses,
+      totalAttendees,
+      coursesThisYear,
+    };
+  }, [trainingTotal, trainingRecords]);
+
   // Checklist runs state (Full 33-criteria audits)
   const [checklistRuns, setChecklistRuns] = useState<ChecklistRunResp[]>([]);
   const [loadingChecklists, setLoadingChecklists] = useState(false);
@@ -77,21 +120,6 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   // VietGAP 33-criteria audit workspace state
   const [isInitRunOpen, setIsInitRunOpen] = useState(false);
   const [auditWorkspaceRun, setAuditWorkspaceRun] = useState<ChecklistRunResp | null>(null);
-
-  // Internal assessment state
-  const [internalAssessments, setInternalAssessments] = useState<InternalAssessmentResp[]>([]);
-  const [loadingAssessments, setLoadingAssessments] = useState(false);
-  const [selectedAssessmentDetail, setSelectedAssessmentDetail] = useState<InternalAssessmentResp | null>(null);
-  const [isConductModalOpen, setIsConductModalOpen] = useState(false);
-  const [farmCriteria, setFarmCriteria] = useState<VietGapCriterionResp[]>([]);
-  const [loadingCriteria, setLoadingCriteria] = useState(false);
-  const [conductForm, setConductForm] = useState({
-    title: '',
-    notes: '',
-    imageUrl: '',
-    itemScores: {} as Record<number, { score: number; notes: string }>,
-  });
-  const [submittingAssessment, setSubmittingAssessment] = useState(false);
 
   const isFullAuditRun = (run: ChecklistRunResp) => {
     return (
@@ -139,83 +167,15 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
     }
   };
 
-  const loadInternalAssessments = async () => {
-    if (!selectedFarm?.id) return;
-    setLoadingAssessments(true);
-    try {
-      const list = await fetchInternalAssessmentHistoryApi(selectedFarm.id);
-      setInternalAssessments(list);
-    } catch {
-      setInternalAssessments([]);
-    } finally {
-      setLoadingAssessments(false);
-    }
-  };
-
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
 
   useEffect(() => {
-    if (activeTab === 'checklists' && selectedFarm?.id) {
+    if ((activeTab === 'checklists' || activeTab === 'assessments') && selectedFarm?.id) {
       void loadChecklistRuns();
-    } else if (activeTab === 'assessments' && selectedFarm?.id) {
-      void loadInternalAssessments();
     }
   }, [activeTab, selectedFarm?.id]);
-
-  const handleOpenConductModal = async () => {
-    if (!selectedFarm?.id) return;
-    setIsConductModalOpen(true);
-    setLoadingCriteria(true);
-    try {
-      const crit = await fetchVietGapCriteriaApi(selectedFarm.id, { isActiveOnly: true });
-      setFarmCriteria(crit);
-      const initialScores: Record<number, { score: number; notes: string }> = {};
-      crit.forEach((c) => {
-        initialScores[c.criterionId] = { score: c.maxScore || 100, notes: '' };
-      });
-      setConductForm({
-        title: `Đánh giá nội bộ VietGAP - Quý ${Math.floor((new Date().getMonth() + 3) / 3)}/${new Date().getFullYear()}`,
-        notes: 'Toàn bộ khu vực canh tác và nhà đóng gói tuân thủ các chỉ tiêu an toàn thực phẩm.',
-        imageUrl: '',
-        itemScores: initialScores,
-      });
-    } catch {
-      setFarmCriteria([]);
-    } finally {
-      setLoadingCriteria(false);
-    }
-  };
-
-  const handleSubmitConduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFarm?.id || !conductForm.title.trim()) return;
-    setSubmittingAssessment(true);
-    try {
-      const itemsPayload = farmCriteria.map((c) => ({
-        assessmentCriterionId: c.criterionId,
-        score: conductForm.itemScores[c.criterionId]?.score ?? c.maxScore,
-        resultNotes: conductForm.itemScores[c.criterionId]?.notes || undefined,
-      }));
-      await conductInternalAssessmentApi(selectedFarm.id, {
-        assessmentTitle: conductForm.title.trim(),
-        notes: conductForm.notes.trim() || undefined,
-        evidenceImageUrl: conductForm.imageUrl.trim() || undefined,
-        items: itemsPayload.length > 0 ? itemsPayload : [
-          { assessmentCriterionId: 1, score: 95, resultNotes: 'Ghi chép số hóa truy xuất nguồn gốc minh bạch' },
-          { assessmentCriterionId: 2, score: 90, resultNotes: 'Hệ thống nhà lưới sạch sẽ, lưới chắn côn trùng nguyên vẹn' },
-        ],
-      });
-      setIsConductModalOpen(false);
-      alert((lang === 'en' ? "VietGAP internal assessment results recorded successfully!" : 'Đã ghi nhận kết quả đợt đánh giá nội bộ VietGAP thành công!'));
-      void loadInternalAssessments();
-    } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to save internal assessment." : err instanceof Error ? err.message : 'Không thể lưu đợt đánh giá nội bộ.'));
-    } finally {
-      setSubmittingAssessment(false);
-    }
-  };
 
   const loadTrainings = async () => {
     if (!selectedFarm?.id) return;
@@ -288,6 +248,59 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
     }
   };
 
+  const handleSaveSoilAssessment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!soilBlockId || savingAssessment) return;
+    setSavingAssessment(true);
+    setAssessmentError(null);
+    try {
+      const created = await createSoilAssessmentApi(Number(soilBlockId), {
+        soilPh: soilPh !== '' ? Number(soilPh) : undefined,
+        moisturePercent: soilMoisture !== '' ? Number(soilMoisture) : undefined,
+        nutrientData: soilNutrient.trim() || undefined,
+        notes: soilNotes.trim() || undefined,
+        labTestReportUrl: soilLabReportUrl.trim() || undefined,
+        assessedAt: soilAssessedAt ? new Date(soilAssessedAt).toISOString() : new Date().toISOString(),
+      });
+      setFarmSoils((prev) => [created, ...prev]);
+      setIsCreateSoilModalOpen(false);
+      setSoilNotes('');
+      setSoilLabReportUrl('');
+    } catch (err) {
+      setAssessmentError(err instanceof Error ? err.message : 'Không lưu được phiếu đánh giá đất');
+    } finally {
+      setSavingAssessment(false);
+    }
+  };
+
+  const handleSaveWaterAssessment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetBlockId = waterBlockId || farmBlocks[0]?.blockId;
+    if (!targetBlockId || savingAssessment) return;
+    setSavingAssessment(true);
+    setAssessmentError(null);
+    try {
+      const created = await createWaterAssessmentApi(Number(targetBlockId), {
+        waterSourceName: waterSourceName.trim(),
+        waterSourceType: waterSourceType.trim(),
+        waterPh: waterPh !== '' ? Number(waterPh) : undefined,
+        temperatureC: waterTemp !== '' ? Number(waterTemp) : undefined,
+        qualityStatus: waterQualityStatus,
+        notes: waterNotes.trim() || undefined,
+        labTestReportUrl: waterLabReportUrl.trim() || undefined,
+        assessedAt: waterAssessedAt ? new Date(waterAssessedAt).toISOString() : new Date().toISOString(),
+      });
+      setFarmWaters((prev) => [created, ...prev]);
+      setIsCreateWaterModalOpen(false);
+      setWaterNotes('');
+      setWaterLabReportUrl('');
+    } catch (err) {
+      setAssessmentError(err instanceof Error ? err.message : 'Không lưu được phiếu đánh giá nước');
+    } finally {
+      setSavingAssessment(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'environment' && selectedFarm?.id) {
       setLoadingEnv(true);
@@ -295,105 +308,44 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         fetchFarmRiskHistoryApi(selectedFarm.id).catch(() => []),
         fetchFarmSoilAssessmentHistoryApi(selectedFarm.id).catch(() => []),
         fetchFarmWaterAssessmentHistoryApi(selectedFarm.id).catch(() => []),
-      ]).then(([risks, soils, waters]) => {
+        fetchBlocks(selectedFarm.id).catch(() => []),
+      ]).then(([risks, soils, waters, blocks]) => {
         setFarmRisks(risks || []);
         setFarmSoils(soils || []);
         setFarmWaters(waters || []);
-        setFarmRisks(risks || []);
-        setFarmSoils(soils || []);
+        setFarmBlocks(blocks || []);
+        if (blocks && blocks.length > 0) {
+          setSoilBlockId((prev) => prev || blocks[0].blockId);
+          setWaterBlockId((prev) => prev || blocks[0].blockId);
+        }
       }).finally(() => {
         setLoadingEnv(false);
       });
     }
   }, [activeTab, selectedFarm?.id]);
 
-  const getHeaderMeta = () => {
-    switch (activeTab) {
-      case 'assessments':
-        return {
-          breadcrumb: lang === 'en' ? 'Quality & Compliance' : 'Chất lượng & Tuân thủ',
-          breadcrumbSub: lang === 'en' ? 'Internal Assessments' : 'Đánh giá nội bộ',
-          title: lang === 'en' ? 'Internal Farm Assessments' : 'Hồ sơ Đánh giá Nội bộ VietGAP',
-          subtitle: lang === 'en'
-            ? 'Internal inspection history, compliance scoring, and audit reports · '
-            : 'Lịch sử các đợt thanh tra nội bộ, chấm điểm và biên bản hiện trường · ',
-        };
-      case 'environment':
-        return {
-          breadcrumb: lang === 'en' ? 'Production & Environment' : 'Sản xuất & Môi trường',
-          breadcrumbSub: lang === 'en' ? 'Conditions & Environment' : 'Đất, Nước & Nguy cơ',
-          title: lang === 'en' ? 'Soil, Water & Environmental Conditions' : 'Điều kiện Đất, Nước & Môi trường',
-          subtitle: lang === 'en'
-            ? 'Laboratory test records for soil, irrigation water, and contamination risks · '
-            : 'Hồ sơ xét nghiệm mẫu đất, nguồn nước tưới và đánh giá nguy cơ ô nhiễm · ',
-        };
-      case 'training':
-        return {
-          breadcrumb: lang === 'en' ? 'Staff & Compliance' : 'Nhân sự & Tuân thủ',
-          breadcrumbSub: lang === 'en' ? 'Safety Training' : 'Đào tạo an toàn lao động',
-          title: lang === 'en' ? 'Safety Training & Certifications' : 'Đào tạo & Chứng chỉ An toàn Lao động',
-          subtitle: lang === 'en'
-            ? 'Technical training sessions, food safety certificates, and worker records · '
-            : 'Quản lý các khóa tập huấn kỹ thuật, an toàn thực phẩm và chứng nhận công nhân · ',
-        };
-      case 'checklists':
-      default:
-        return {
-          breadcrumb: lang === 'en' ? 'Quality & Compliance' : 'Chất lượng & Tuân thủ',
-          breadcrumbSub: 'VietGAP (TCVN 11892-1:2017)',
-          title: lang === 'en' ? 'VietGAP Checklists & Assessment' : 'Đánh giá & Tuân thủ Tiêu chuẩn VietGAP',
-          subtitle: lang === 'en'
-            ? 'Quality control records and 33-criteria VietGAP compliance dossiers · '
-            : 'Hồ sơ kiểm soát chất lượng và thẩm định 33 tiêu chí VietGAP (TCVN 11892-1:2017) · ',
-        };
-    }
-  };
-
-  const headerMeta = getHeaderMeta();
-
   return (
     <section className="vietgap-compliance-page">
-      {/* Header cho các tab khác (assessments, environment, training) */}
-      {activeTab !== 'checklists' && (
-        <div className="page-heading" style={{ marginBottom: '20px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
-              <span>{headerMeta.breadcrumb}</span>
-              <span>/</span>
-              <span style={{ fontWeight: 600, color: '#334155' }}>{headerMeta.breadcrumbSub}</span>
-            </div>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 750, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              {headerMeta.title}
-            </h1>
-            <p className="page-subtitle" style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13.5px' }}>
-              {headerMeta.subtitle}
-              <strong style={{ color: '#334155' }}>{selectedFarm?.farmName || ''}</strong>
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Tab: Checklists */}
-      {activeTab === 'checklists' && (
-        <div>
-          {/* Main Page Heading đồng bộ theo chuẩn TasksPage và MaterialUsagePage */}
+      {/* 1. Màn hình: Đánh giá nội bộ VietGAP (Tích hợp Checklist & Đánh giá nội bộ 33 tiêu chí TCVN 11892-1:2017) */}
+      {(activeTab === 'checklists' || activeTab === 'assessments') && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <PageHeading
-            title={<>{lang === 'en' ? 'VietGAP 33-Criteria Audit History' : 'Lịch sử tự đánh giá VietGAP'}</>}
+            title={<>{lang === 'en' ? 'VietGAP Internal Assessments' : 'Đánh giá nội bộ VietGAP'}</>}
             description={<>
-              {lang === 'en'
-                ? 'Periodic 33-criteria VietGAP compliance audits by crop season, evidence records, and acceptance dossier.'
-                : 'Theo dõi tiến độ thẩm định 33 tiêu chí VietGAP theo mùa vụ canh tác, hồ sơ minh chứng và biên bản nghiệm thu.'}
+              {(lang === 'en'
+                ? "Quality control records, 33-criteria internal assessments, and VietGAP compliance checks for "
+                : "Hồ sơ kiểm soát chất lượng, tự đánh giá nội bộ 33 tiêu chuẩn VietGAP TCVN 11892-1:2017 cho ")} {selectedFarm?.farmName || ''}
             </>}
           >
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => void loadChecklistRuns()}
-                disabled={loadingChecklists}
+                onClick={() => navigate('/standards')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px' }}
               >
-                <Icon name={loadingChecklists ? 'loader' : 'refresh'} className={loadingChecklists ? 'icon-spin' : undefined} />
-                <span>{lang === 'en' ? 'Reload' : 'Tải lại'}</span>
+                <Icon name="book" size={16} />
+                <span>{lang === 'en' ? 'VietGAP Standards TCVN' : 'Bộ tiêu chuẩn VietGAP TCVN'}</span>
               </Button>
               <Button
                 type="button"
@@ -407,7 +359,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
             </div>
           </PageHeading>
 
-          {/* Unified Clean Card Container */}
+          {/* Unified Clean Card Container - Hiển thị trực tiếp danh sách các đợt tự đánh giá */}
           <div className="zone-clean-card">
             {/* Clean Filter Bar in ONE line matching TasksPage & MaterialUsagePage */}
             <div className="zone-clean-filter-bar" style={{ flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
@@ -522,7 +474,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
               </div>
             ) : (
               <div className="zone-table-wrap" style={{ marginBottom: 0, overflowX: 'auto' }}>
-                <table className="data-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
+                <table className="ui-data-table" style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
                   <colgroup>
                     <col style={{ width: '28%' }} />
                     <col style={{ width: '18%' }} />
@@ -713,347 +665,81 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         </div>
       )}
 
-      {/* Tab: Internal Assessments */}
-      {activeTab === 'assessments' && (
-        <div className="panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
-            <div>
-              <h2 style={{ margin: 0, fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "VietGAP internal assessment records" : "Hồ sơ đánh giá nội bộ VietGAP")}</h2>
-              <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13.5px' }}>
-                {(lang === 'en' ? "Periodic independent reviews before certification (" : "Thẩm định độc lập định kỳ trước kỳ kiểm định cấp chứng nhận (")}{internalAssessments.length} {(lang === 'en' ? " assessments)" : " đợt đánh giá)")}
-              </p>
-            </div>
-            <button type="button" className="action-button solid" onClick={() => void handleOpenConductModal()}>
-              {(lang === 'en' ? "+ Start new assessment" : "+ Tiến hành đánh giá mới")}
-            </button>
-          </div>
 
-          {loadingAssessments ? (
-            <div style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
-              <p>{(lang === 'en' ? "⏳ Loading internal assessment history..." : "⏳ Đang tải lịch sử các đợt đánh giá nội bộ...")}</p>
-            </div>
-          ) : internalAssessments.length === 0 ? (
-            <div className="empty-state" style={{ padding: '36px', textAlign: 'center' }}>
-              <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
-              <h3 style={{ margin: '0 0 6px', color: '#1e293b' }}>{(lang === 'en' ? "No internal assessments yet" : "Chưa có đợt đánh giá nội bộ nào")}</h3>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '13.5px' }}>
-                {(lang === 'en' ? "Click \"+ Start new assessment\" to score the VietGAP criteria." : "Nhấn \"+ Tiến hành đánh giá mới\" để lập hồ sơ chấm điểm tiêu chí VietGAP.")}
-              </p>
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '13px' }}>
-                    <th style={{ padding: '12px 16px' }}>{(lang === 'en' ? "Assessment" : "Đợt đánh giá")}</th>
-                    <th style={{ padding: '12px 16px' }}>{(lang === 'en' ? "Date and time" : "Thời điểm")}</th>
-                    <th style={{ padding: '12px 16px' }}>{(lang === 'en' ? "Zone / Season" : "Khu vực / Mùa vụ")}</th>
-                    <th style={{ padding: '12px 16px' }}>{(lang === 'en' ? "Assessor" : "Chuyên gia đánh giá")}</th>
-                    <th style={{ padding: '12px 16px' }}>{(lang === 'en' ? "Score & Rate" : "Điểm & Tỷ lệ")}</th>
-                    <th style={{ padding: '12px 16px' }}>{(lang === 'en' ? "Conclusion" : "Kết luận")}</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {internalAssessments.map((a) => (
-                    <tr key={a.internalAssessmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '14px 16px', fontWeight: 600, color: '#0f172a' }}>
-                        {a.assessmentTitle}
-                      </td>
-                      <td style={{ padding: '14px 16px', color: '#64748b', fontSize: '13px' }}>
-                        {new Date(a.assessedAt).toLocaleDateString('vi-VN')}
-                      </td>
-                      <td style={{ padding: '14px 16px', color: '#475569' }}>
-                        {(lang === 'en' ? (a.zoneName || a.seasonName) || "Entire farm" : a.zoneName || a.seasonName || 'Toàn trang trại')}
-                      </td>
-                      <td style={{ padding: '14px 16px', color: '#64748b' }}>{(lang === 'en' ? a.assessedByName || "Lead inspector" : a.assessedByName || 'Trưởng ban kiểm soát')}</td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <strong style={{ color: a.scorePercentage >= 80 ? '#16a34a' : '#d97706' }}>
-                          {a.scorePercentage}%
-                        </strong>
-                        <span style={{ fontSize: '12px', color: '#94a3b8', display: 'block' }}>
-                          ({a.totalScore} / {a.maxPossibleScore} {(lang === 'en' ? " points)" : " điểm)")}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <span style={{
-                          padding: '3px 10px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: 650,
-                          background: a.complianceStatus === 'COMPLIANT' ? '#dcfce7' : a.complianceStatus === 'CONDITIONALLY_COMPLIANT' ? '#fef3c7' : '#fee2e2',
-                          color: a.complianceStatus === 'COMPLIANT' ? '#15803d' : a.complianceStatus === 'CONDITIONALLY_COMPLIANT' ? '#b45309' : '#b91c1c',
-                        }}>
-                          {(lang === 'en' ? a.complianceStatus === 'COMPLIANT' ? "Compliant" : a.complianceStatus === 'CONDITIONALLY_COMPLIANT' ? "Improvement required" : "Fail" : a.complianceStatus === 'COMPLIANT' ? 'Đạt tiêu chuẩn' : a.complianceStatus === 'CONDITIONALLY_COMPLIANT' ? 'Cần khắc phục' : 'Không đạt')}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          className="action-button"
-                          onClick={async () => {
-                            try {
-                              const detail = await fetchInternalAssessmentDetailsApi(a.internalAssessmentId);
-                              setSelectedAssessmentDetail(detail);
-                            } catch {
-                              setSelectedAssessmentDetail(a);
-                            }
-                          }}
-                          style={{ fontSize: '12.5px', padding: '5px 12px' }}
-                        >
-                          {(lang === 'en' ? "👁️ Details" : "👁️ Chi tiết")}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
 
-          {/* Assessment Detail Modal */}
-          {selectedAssessmentDetail && (
-            <div className="modal-backdrop" style={{ zIndex: 1100 }}>
-              <div className="modal-card" style={{ maxWidth: '680px', width: '92%' }}>
-                <div className="modal-header">
-                  <div>
-                    <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "Internal assessment record" : "Hồ sơ thẩm định nội bộ")}</span>
-                    <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>
-                      {selectedAssessmentDetail.assessmentTitle}
-                    </h3>
-                  </div>
-                  <button type="button" className="modal-close" onClick={() => setSelectedAssessmentDetail(null)}>
-                    ✕
-                  </button>
-                </div>
-                <div className="modal-body" style={{ padding: '20px 24px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '20px', background: '#f8fafc', padding: '14px', borderRadius: '8px' }}>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Conclusion" : "Kết luận")}</span>
-                      <p style={{ margin: '2px 0 0', fontWeight: 700, color: selectedAssessmentDetail.complianceStatus === 'COMPLIANT' ? '#16a34a' : '#d97706' }}>
-                        {(lang === 'en' ? selectedAssessmentDetail.complianceStatus === 'COMPLIANT' ? "COMPLIANT" : "IMPROVEMENT REQUIRED" : selectedAssessmentDetail.complianceStatus === 'COMPLIANT' ? 'ĐẠT CHUẨN' : 'CẦN KHẮC PHỤC')}
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Compliance rate" : "Tỷ lệ tuân thủ")}</span>
-                      <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a' }}>{selectedAssessmentDetail.scorePercentage}%</p>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Assessor" : "Chuyên gia chấm")}</span>
-                      <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#334155' }}>{(lang === 'en' ? selectedAssessmentDetail.assessedByName || "Lead inspector" : selectedAssessmentDetail.assessedByName || 'Trưởng ban kiểm soát')}</p>
-                    </div>
-                  </div>
-
-                  {selectedAssessmentDetail.notes && (
-                    <div style={{ marginBottom: '18px' }}>
-                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569' }}>{(lang === 'en' ? "General comments:" : "Nhận xét chung:")}</span>
-                      <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: '#1e293b', lineHeight: 1.5 }}>
-                        {selectedAssessmentDetail.notes}
-                      </p>
-                    </div>
-                  )}
-
-                  <h4 style={{ margin: '0 0 10px', fontSize: '14.5px', color: '#0f172a' }}>{(lang === 'en' ? "Detailed VietGAP criteria scores" : "Bảng điểm chi tiết từng tiêu chí VietGAP")}</h4>
-                  {selectedAssessmentDetail.items && selectedAssessmentDetail.items.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {selectedAssessmentDetail.items.map((it) => (
-                        <div key={it.internalAssessmentItemId} style={{ padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div>
-                            <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{(lang === 'en' ? it.criterionName || "Assessment criteria" : it.criterionName || 'Tiêu chí đánh giá')}</strong>
-                            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>{(lang === 'en' ? it.resultNotes || "Meets technical requirements" : it.resultNotes || 'Đạt yêu cầu tiêu chuẩn kỹ thuật')}</p>
-                          </div>
-                          <span style={{ fontWeight: 700, color: '#059669', fontSize: '14px' }}>
-                            {it.score} / {it.maxScore || 100} {(lang === 'en' ? " points" : " điểm")}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ color: '#94a3b8', fontSize: '13px' }}>{(lang === 'en' ? "No detailed criterion scores available." : "Không có chi tiết điểm số từng tiêu chí.")}</p>
-                  )}
-                </div>
-                <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0' }}>
-                  <button type="button" className="ghost-button" onClick={() => setSelectedAssessmentDetail(null)}>
-                    {(lang === 'en' ? "Close" : "Đóng")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Conduct Assessment Modal */}
-          {isConductModalOpen && (
-            <div className="modal-backdrop" style={{ zIndex: 1100 }}>
-              <div className="modal-card" style={{ maxWidth: '620px', width: '92%' }}>
-                <div className="modal-header">
-                  <div>
-                    <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "Internal assessment" : "Thẩm định nội bộ")}</span>
-                    <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "Conduct VietGAP assessment" : "Tiến hành đánh giá VietGAP")}</h3>
-                  </div>
-                  <button type="button" className="modal-close" onClick={() => setIsConductModalOpen(false)}>
-                    ✕
-                  </button>
-                </div>
-                <form onSubmit={handleSubmitConduct}>
-                  <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '65vh', overflowY: 'auto' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Assessment title *" : "Tiêu đề đợt đánh giá *")}
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={conductForm.title}
-                        onChange={(e) => setConductForm((p) => ({ ...p, title: e.target.value }))}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Comments & Overall conclusion" : "Nhận xét & Kết luận tổng quát")}
-                      </label>
-                      <textarea
-                        rows={3}
-                        value={conductForm.notes}
-                        onChange={(e) => setConductForm((p) => ({ ...p, notes: e.target.value }))}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', resize: 'vertical' }}
-                      />
-                    </div>
-
-                    <h4 style={{ margin: '10px 0 4px', fontSize: '14px', color: '#0f172a' }}>{(lang === 'en' ? "Score VietGAP criteria" : "Chấm điểm các tiêu chí VietGAP")}</h4>
-                    {loadingCriteria ? (
-                      <p style={{ color: '#64748b', fontSize: '13px' }}>{(lang === 'en' ? "⏳ Loading VietGAP criteria..." : "⏳ Đang nạp danh mục tiêu chí VietGAP...")}</p>
-                    ) : farmCriteria.length === 0 ? (
-                      <p style={{ color: '#64748b', fontSize: '13px' }}>{(lang === 'en' ? "Use the predefined standard criteria for this assessment." : "Sử dụng các tiêu chí chuẩn định sẵn cho đợt thẩm định.")}</p>
-                    ) : (
-                      farmCriteria.map((c) => (
-                        <div key={c.criterionId} style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{c.criterionName}</strong>
-                            <span style={{ fontSize: '12px', color: '#64748b' }}>{(lang === 'en' ? "Maximum: " : "Tối đa: ")} {c.maxScore}{(lang === 'en' ? "VND" : "đ")}</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <input
-                              type="number"
-                              min="0"
-                              max={c.maxScore}
-                              value={conductForm.itemScores[c.criterionId]?.score ?? c.maxScore}
-                              onChange={(e) => {
-                                const val = Number(e.target.value);
-                                setConductForm((p) => ({
-                                  ...p,
-                                  itemScores: {
-                                    ...p.itemScores,
-                                    [c.criterionId]: {
-                                      score: val,
-                                      notes: p.itemScores[c.criterionId]?.notes || '',
-                                    },
-                                  },
-                                }));
-                              }}
-                              style={{ width: '80px', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                            />
-                            <input
-                              type="text"
-                              placeholder={(lang === 'en' ? "Assessment notes / evidence..." : "Ghi chú đánh giá / minh chứng...")}
-                              value={conductForm.itemScores[c.criterionId]?.notes || ''}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setConductForm((p) => ({
-                                  ...p,
-                                  itemScores: {
-                                    ...p.itemScores,
-                                    [c.criterionId]: {
-                                      score: p.itemScores[c.criterionId]?.score ?? c.maxScore,
-                                      notes: val,
-                                    },
-                                  },
-                                }));
-                              }}
-                              style={{ flex: 1, padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-                            />
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <button type="button" className="ghost-button" onClick={() => setIsConductModalOpen(false)}>
-                      {(lang === 'en' ? "Cancel" : "Hủy")}
-                    </button>
-                    <button type="submit" className="action-button solid" disabled={submittingAssessment}>
-                      {(lang === 'en' ? submittingAssessment ? "Saving..." : "Save assessment" : submittingAssessment ? 'Đang lưu...' : 'Lưu đợt đánh giá')}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Tab: Environment (Zone Risks & Soil Assessments) */}
+      {/* 2. Màn hình: Điều kiện Đất, Nước & Môi trường */}
       {activeTab === 'environment' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <PageHeading
+            title={<>{lang === 'en' ? 'Soil, Water & Environmental Conditions' : 'Điều kiện Đất, Nước & Môi trường'}</>}
+            description={<>
+              {(lang === 'en'
+                ? "Soil testing records, irrigation water monitoring, and environmental contamination risks for "
+                : "Hồ sơ xét nghiệm mẫu đất, nguồn nước tưới và đánh giá nguy cơ ô nhiễm cho ")} {selectedFarm?.farmName || ''}
+            </>}
+          />
+
           {/* Summary KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-            <div className="panel" style={{ padding: '18px' }}>
-              <span style={{ fontSize: '12.5px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                {(lang === 'en' ? "PRODUCTION AREA RISKS" : "RỦI RO VÙNG SẢN XUẤT")}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                {(lang === 'en' ? "PRODUCTION RISKS" : "RỦI RO VÙNG SẢN XUẤT")}
               </span>
-              <div style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>
                 {farmRisks.length}
               </div>
-              <small style={{ color: '#64748b' }}>{(lang === 'en' ? "Total risks recorded across the farm" : "Tổng số rủi ro đã ghi nhận trên toàn nông trại")}</small>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>{(lang === 'en' ? "Total recorded hazards" : "Tổng số rủi ro đã ghi nhận")}</small>
             </div>
-            <div className="panel" style={{ padding: '18px' }}>
-              <span style={{ fontSize: '12.5px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
                 {(lang === 'en' ? "HIGH RISKS" : "RỦI RO MỨC ĐỘ CAO")}
               </span>
-              <div style={{ fontSize: '26px', fontWeight: 800, color: '#dc2626', margin: '4px 0' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#dc2626', margin: '4px 0' }}>
                 {farmRisks.filter((r) => (r.riskLevel || '').toUpperCase() === 'HIGH' || (r.riskLevel || '').toUpperCase() === 'CRITICAL').length}
               </div>
-              <small style={{ color: '#64748b' }}>{(lang === 'en' ? "Prioritize preventive measures" : "Cần ưu tiên áp dụng biện pháp phòng ngừa")}</small>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>{(lang === 'en' ? "Prioritize prevention" : "Cần ưu tiên phòng ngừa")}</small>
             </div>
-            <div className="panel" style={{ padding: '18px' }}>
-              <span style={{ fontSize: '12.5px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
-                {(lang === 'en' ? "BLOCK SOIL ASSESSMENTS" : "ĐÁNH GIÁ THỔ NHƯỠNG LÔ ĐẤT")}
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                {(lang === 'en' ? "SOIL ASSESSMENTS" : "ĐÁNH GIÁ THỔ NHƯỠNG")}
               </span>
-              <div style={{ fontSize: '26px', fontWeight: 800, color: '#059669', margin: '4px 0' }}>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#059669', margin: '4px 0' }}>
                 {farmSoils.length}
               </div>
-              <small style={{ color: '#64748b' }}>{(lang === 'en' ? "Saved soil test records" : "Phiếu kiểm nghiệm mẫu đất lưu trữ")}</small>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>{(lang === 'en' ? "Saved soil test records" : "Phiếu kiểm nghiệm mẫu đất lưu trữ")}</small>
+            </div>
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                {(lang === 'en' ? "WATER ASSESSMENTS" : "ĐÁNH GIÁ NGUỒN NƯỚC")}
+              </span>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#0284c7', margin: '4px 0' }}>
+                {farmWaters.length}
+              </div>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>{(lang === 'en' ? "Water monitoring records" : "Phiếu kiểm nghiệm nước tưới")}</small>
             </div>
           </div>
 
           {/* Sub Navigation */}
           <div className="panel" style={{ padding: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setEnvSubTab('risks')}
-                  className={envSubTab === 'risks' ? 'primary-button' : 'ghost-button'}
-                  style={{ height: '38px', fontSize: '13.5px' }}
-                >
-                  {(lang === 'en' ? "🛡️ Production area risks (" : "🛡️ Rủi ro vùng sản xuất (")}{farmRisks.length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEnvSubTab('soils')}
-                  className={envSubTab === 'soils' ? 'primary-button' : 'ghost-button'}
-                  style={{ height: '38px', fontSize: '13.5px' }}
-                >
-                  {(lang === 'en' ? "🧪 Block soil assessments (" : "🧪 Đánh giá thổ nhưỡng lô đất (")}{farmSoils.length})
-                </button>
-              </div>
+            <div className="ui-tab-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <TabList
+                idPrefix="vietgap-environment"
+                label={lang === 'en' ? 'Environmental records' : 'Hồ sơ môi trường'}
+                value={envSubTab}
+                onChange={setEnvSubTab}
+                items={[
+                  { value: 'risks', label: <>{(lang === 'en' ? "Production area risks (" : "Rủi ro vùng sản xuất (")}{farmRisks.length})</> },
+                  { value: 'soils', label: <>{(lang === 'en' ? "Block soil assessments (" : "Đánh giá thổ nhưỡng lô đất (")}{farmSoils.length})</> },
+                  { value: 'waters', label: <>{(lang === 'en' ? "Water assessments (" : "Đánh giá nguồn nước (")}{farmWaters.length})</> },
+                ]}
+              />
 
               {loadingEnv && <small style={{ color: '#059669' }}>{(lang === 'en' ? "Loading data from the server..." : "Đang tải dữ liệu từ máy chủ...")}</small>}
             </div>
 
             {/* SubTab 1: Zone Risks */}
             {envSubTab === 'risks' && (
-              <div>
+              <div {...tabPanelProps('vietgap-environment', 'risks')}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>{(lang === 'en' ? "Production zone risk records" : "Hồ sơ rủi ro phân khu sản xuất")}</h3>
@@ -1063,17 +749,17 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                   </div>
                 </div>
 
-                <div className="zone-table-wrap">
-                  <table className="data-table">
+                <div className="ui-table-scroll zone-table-wrap" tabIndex={0}>
+                  <table className="ui-data-table">
                     <thead>
                       <tr>
-                        <th>{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</th>
-                        <th>{(lang === 'en' ? "Zone" : "Phân khu (Zone)")}</th>
-                        <th>{(lang === 'en' ? "Risk type & Description" : "Loại rủi ro & Mô tả")}</th>
-                        <th style={{ textAlign: 'center' }}>{(lang === 'en' ? "Level" : "Mức độ")}</th>
-                        <th>{(lang === 'en' ? "Control measures" : "Biện pháp kiểm soát")}</th>
-                        <th>{(lang === 'en' ? "Assessed by" : "Người đánh giá")}</th>
-                        <th style={{ textAlign: 'right' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
+                        <th scope="col">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</th>
+                        <th scope="col">{(lang === 'en' ? "Zone" : "Phân khu (Zone)")}</th>
+                        <th scope="col">{(lang === 'en' ? "Risk type & Description" : "Loại rủi ro & Mô tả")}</th>
+                        <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "Level" : "Mức độ")}</th>
+                        <th scope="col">{(lang === 'en' ? "Control measures" : "Biện pháp kiểm soát")}</th>
+                        <th scope="col">{(lang === 'en' ? "Assessed by" : "Người đánh giá")}</th>
+                        <th scope="col" style={{ textAlign: 'right' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1132,14 +818,26 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
 
 {/* SubTab 3: Water Assessments */}
             {envSubTab === 'waters' && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div {...tabPanelProps('vietgap-environment', 'waters')}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>{(lang === 'en' ? "Irrigation water monitoring records" : "Hồ sơ giám sát nguồn nước tưới tiêu")}</h3>
                     <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
                       {(lang === 'en' ? "Monitor pH, temperature, physicochemical and microbial indicators under QCVN 39:2011/BTNMT and VietGAP" : "Theo dõi độ pH, nhiệt độ, chỉ tiêu lý hóa và vi sinh theo QCVN 39:2011/BTNMT và VietGAP")}
                     </p>
                   </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => {
+                      setAssessmentError(null);
+                      setIsCreateWaterModalOpen(true);
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '36px' }}
+                  >
+                    <Icon name="plus" size={15} />
+                    <span>{lang === 'en' ? 'Record Water Sample' : 'Ghi nhận mẫu nước'}</span>
+                  </Button>
                 </div>
 
                 {farmWaters.length === 0 ? (
@@ -1147,17 +845,18 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     <p style={{ margin: 0, fontSize: '14px' }}>{(lang === 'en' ? "No water quality assessment records yet." : "Chưa có phiếu đánh giá chất lượng nguồn nước nào được ghi nhận.")}</p>
                   </div>
                 ) : (
-                  <div className="table-responsive" style={{ overflowX: 'auto' }}>
-                    <table className="data-table" style={{ width: '100%', fontSize: '13px' }}>
+                  <div className="ui-table-scroll table-responsive" tabIndex={0} style={{ overflowX: 'auto' }}>
+                    <table className="ui-data-table" style={{ width: '100%', fontSize: '13px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                          <th style={{ padding: '10px 12px' }}>{(lang === 'en' ? "ID / Water source" : "ID / Nguồn nước")}</th>
-                          <th style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Applicable block" : "Lô áp dụng")}</th>
-                          <th style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Sample date" : "Ngày lấy mẫu")}</th>
-                          <th style={{ padding: '10px 12px' }}>{(lang === 'en' ? "pH" : "Độ pH")}</th>
-                          <th style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Temperature (°C)" : "Nhiệt độ (°C)")}</th>
-                          <th style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Quality conclusion" : "Kết luận chất lượng")}</th>
-                          <th style={{ padding: '10px 12px', textAlign: 'right' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
+                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "ID / Water source" : "ID / Nguồn nước")}</th>
+                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Applicable block" : "Lô áp dụng")}</th>
+                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Sample date" : "Ngày lấy mẫu")}</th>
+                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "pH" : "Độ pH")}</th>
+                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Temperature (°C)" : "Nhiệt độ (°C)")}</th>
+                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Quality conclusion" : "Kết luận chất lượng")}</th>
+                          <th scope="col" style={{ padding: '10px 12px', textAlign: 'center' }}>{(lang === 'en' ? "Lab Report" : "Phiếu Lab")}</th>
+                          <th scope="col" style={{ padding: '10px 12px', textAlign: 'right' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1180,16 +879,62 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                               {w.temperatureC != null ? w.temperatureC + '°C' : '-'}
                             </td>
                             <td style={{ padding: '10px 12px' }}>
-                              <span style={{
-                                padding: '2px 8px',
-                                borderRadius: '4px',
-                                fontSize: '11.5px',
-                                fontWeight: 700,
-                                background: (w.qualityStatus || '').toUpperCase() === 'DAT_CHUAN' ? '#dcfce7' : '#fee2e2',
-                                color: (w.qualityStatus || '').toUpperCase() === 'DAT_CHUAN' ? '#166534' : '#991b1b',
-                              }}>
-                                {(lang === 'en' ? (w.qualityStatus || '').toUpperCase() === 'DAT_CHUAN' ? "✓ Compliant" : (w.qualityStatus || "Not tested") : (w.qualityStatus || '').toUpperCase() === 'DAT_CHUAN' ? '✓ Đạt chuẩn' : (w.qualityStatus || 'Chưa kiểm định'))}
-                              </span>
+                              {(() => {
+                                const st = (w.qualityStatus || '').toUpperCase();
+                                const isPassed = st === 'DAT_CHUAN' || st.includes('COMPLIANT') || st.includes('QUALITY') || st === 'PASS';
+                                const isPending = st === 'CHO_KIEM_DINH' || st.includes('PENDING');
+                                const bg = isPassed ? '#ecfdf5' : isPending ? '#fffbeb' : '#fee2e2';
+                                const border = isPassed ? '#a7f3d0' : isPending ? '#fde68a' : '#fecaca';
+                                const color = isPassed ? '#047857' : isPending ? '#b45309' : '#b91c1c';
+                                const label = isPassed
+                                  ? (lang === 'en' ? '✓ Compliant' : '✓ Đạt chuẩn')
+                                  : isPending
+                                    ? (lang === 'en' ? 'Pending test' : 'Chờ kiểm nghiệm')
+                                    : (lang === 'en' ? 'Filtration needed' : 'Cần xử lý');
+                                return (
+                                  <span
+                                    style={{
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 650,
+                                      background: bg,
+                                      border: `1px solid ${border}`,
+                                      color,
+                                      display: 'inline-block',
+                                    }}
+                                  >
+                                    {label}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              {w.labTestReportUrl ? (
+                                <a
+                                  href={w.labTestReportUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    color: '#065f46',
+                                    background: '#ecfdf5',
+                                    border: '1px solid #10b981',
+                                    padding: '2px 7px',
+                                    borderRadius: '4px',
+                                    textDecoration: 'none',
+                                  }}
+                                  title={lang === 'en' ? 'Open lab test report document' : 'Xem phiếu kết quả kiểm nghiệm Lab'}
+                                >
+                                  <span>{lang === 'en' ? 'Lab Report ↗' : 'Phiếu Lab ↗'}</span>
+                                </a>
+                              ) : (
+                                <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>—</span>
+                              )}
                             </td>
                             <td style={{ padding: '10px 12px', textAlign: 'right' }}>
                               <button
@@ -1212,34 +957,47 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
 
             {/* SubTab 2: Soil Assessments */}
             {envSubTab === 'soils' && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div {...tabPanelProps('vietgap-environment', 'soils')}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>{(lang === 'en' ? "Block soil assessment records" : "Hồ sơ đánh giá thổ nhưỡng lô đất")}</h3>
                     <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
                       {(lang === 'en' ? "Periodically monitor pH, moisture, heavy metals, and microbial residues" : "Giám sát định kỳ chỉ số pH, độ ẩm, kim loại nặng và dư lượng vi sinh vật")}
                     </p>
                   </div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => {
+                      setAssessmentError(null);
+                      setIsCreateSoilModalOpen(true);
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '36px' }}
+                  >
+                    <Icon name="plus" size={15} />
+                    <span>{lang === 'en' ? 'Record Soil Sample' : 'Ghi nhận mẫu đất'}</span>
+                  </Button>
                 </div>
 
-                <div className="zone-table-wrap">
-                  <table className="data-table">
+                <div className="ui-table-scroll zone-table-wrap" tabIndex={0}>
+                  <table className="ui-data-table">
                     <thead>
                       <tr>
-                        <th>{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</th>
-                        <th>{(lang === 'en' ? "Block" : "Lô đất (Block)")}</th>
-                        <th>{(lang === 'en' ? "Zone" : "Phân khu (Zone)")}</th>
-                        <th style={{ textAlign: 'center' }}>{(lang === 'en' ? "pH" : "Độ pH")}</th>
-                        <th style={{ textAlign: 'center' }}>{(lang === 'en' ? "Moisture" : "Độ ẩm")}</th>
-                        <th>{(lang === 'en' ? "Analysis & Notes" : "Phân tích & Ghi chú")}</th>
-                        <th>{(lang === 'en' ? "Performed by" : "Người thực hiện")}</th>
-                        <th style={{ textAlign: 'right' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
+                        <th scope="col">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</th>
+                        <th scope="col">{(lang === 'en' ? "Block" : "Lô đất (Block)")}</th>
+                        <th scope="col">{(lang === 'en' ? "Zone" : "Phân khu (Zone)")}</th>
+                        <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "pH" : "Độ pH")}</th>
+                        <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "Moisture" : "Độ ẩm")}</th>
+                        <th scope="col">{(lang === 'en' ? "Analysis & Notes" : "Phân tích & Ghi chú")}</th>
+                        <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "Lab Report" : "Phiếu Lab")}</th>
+                        <th scope="col">{(lang === 'en' ? "Performed by" : "Người thực hiện")}</th>
+                        <th scope="col" style={{ textAlign: 'right' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {farmSoils.length === 0 ? (
                         <tr>
-                          <td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                          <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
                             {(lang === 'en' ? "No block soil assessments have been recorded." : "Chưa có phiếu đánh giá thổ nhưỡng nào được ghi nhận cho các lô đất.")}
                           </td>
                         </tr>
@@ -1263,6 +1021,33 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                             </td>
                             <td style={{ maxWidth: '280px', fontSize: '13px', color: '#334155' }}>
                               {s.notes || s.nutrientData || '—'}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              {s.labTestReportUrl ? (
+                                <a
+                                  href={s.labTestReportUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    color: '#065f46',
+                                    background: '#ecfdf5',
+                                    border: '1px solid #10b981',
+                                    padding: '2px 7px',
+                                    borderRadius: '4px',
+                                    textDecoration: 'none',
+                                  }}
+                                  title={lang === 'en' ? 'Open lab test report document' : 'Xem phiếu kết quả kiểm nghiệm Lab'}
+                                >
+                                  <span>{lang === 'en' ? 'Lab Report ↗' : 'Phiếu Lab ↗'}</span>
+                                </a>
+                              ) : (
+                                <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>—</span>
+                              )}
                             </td>
                             <td style={{ fontSize: '13px', color: '#64748b' }}>
                               {s.conductedByName || '—'}
@@ -1364,6 +1149,29 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                       </pre>
                     </div>
                   )}
+                  {selectedEnvSoil.labTestReportUrl && (
+                    <div className="structured-field-card" style={{ marginBottom: '12px', background: '#ecfdf5', border: '1px solid #10b981' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                        <div>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#065f46' }}>
+                            {lang === 'en' ? 'Lab Test Report (VietGAP VG-NL-01):' : 'Phiếu kết quả kiểm nghiệm Lab (VietGAP VG-NL-01):'}
+                          </span>
+                          <div style={{ fontSize: '12px', color: '#047857', wordBreak: 'break-all', marginTop: '2px' }}>
+                            {selectedEnvSoil.labTestReportUrl}
+                          </div>
+                        </div>
+                        <a
+                          href={selectedEnvSoil.labTestReportUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="primary-button"
+                          style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap', textDecoration: 'none' }}
+                        >
+                          {lang === 'en' ? 'View Document ↗' : 'Xem phiếu Lab ↗'}
+                        </a>
+                      </div>
+                    </div>
+                  )}
                   {selectedEnvSoil.notes && (
                     <div className="structured-field-card" style={{ marginBottom: '16px' }}>
                       <span className="structured-field-label">{(lang === 'en' ? "Notes & Expert conclusion" : "Ghi chú & Kết luận chuyên môn")}</span>
@@ -1383,163 +1191,273 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         </div>
       )}
 
-      {/* Tab: Training */}
+      {/* 3. Màn hình: Đào tạo an toàn lao động */}
       {activeTab === 'training' && (
-        <div className="panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
-            <div>
-              <h2 style={{ margin: '0 0 6px', fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "VietGAP training records" : "Hồ sơ tập huấn & Đào tạo VietGAP")}</h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '13.5px' }}>
-                {(lang === 'en' ? "Internal training, occupational safety training, and farming certifications (" : "Lịch sử các khóa đào tạo nội bộ, tập huấn an toàn lao động và chứng chỉ kỹ thuật canh tác (")}{trainingTotal} {(lang === 'en' ? " courses)" : " khóa học)")}
-              </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <PageHeading
+            title={<>{lang === 'en' ? 'Occupational Safety & Training' : 'Đào tạo & Chứng chỉ An toàn Lao động'}</>}
+            description={<>
+              {(lang === 'en'
+                ? "Manage technical training sessions, food safety certificates, and worker credentials for "
+                : "Quản lý các khóa tập huấn kỹ thuật, an toàn thực phẩm và chứng nhận công nhân cho ")} {selectedFarm?.farmName || ''}
+            </>}
+          />
+
+          {/* Summary KPIs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                {lang === 'en' ? 'TRAINING SESSIONS' : 'TỔNG KHÓA ĐÀO TẠO'}
+              </span>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>
+                {trainingStats.totalCourses}
+              </div>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>
+                {lang === 'en' ? 'Completed training courses' : 'Khóa tập huấn đã hoàn thành'}
+              </small>
             </div>
-            <button
-              type="button"
-              className="action-button solid"
-              onClick={() => setIsCreateTrainingOpen(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <span>+</span> {(lang === 'en' ? " Add training course" : " Thêm khóa đào tạo")}
-            </button>
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                {lang === 'en' ? 'TRAINED PARTICIPANTS' : 'LƯỢT HỌC VIÊN THAM GIA'}
+              </span>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#059669', margin: '4px 0' }}>
+                {trainingStats.totalAttendees}
+              </div>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>
+                {lang === 'en' ? 'Staff & worker attendances' : 'Lượt cán bộ & nhân sự tham gia'}
+              </small>
+            </div>
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                {lang === 'en' ? 'COURSES THIS YEAR' : 'KHÓA ĐÀO TẠO NĂM NAY'}
+              </span>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#0284c7', margin: '4px 0' }}>
+                {trainingStats.coursesThisYear}
+              </div>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>
+                {lang === 'en' ? `Conducted in ${new Date().getFullYear()}` : `Tổ chức trong năm ${new Date().getFullYear()}`}
+              </small>
+            </div>
+            <div className="panel" style={{ padding: '16px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700 }}>
+                {lang === 'en' ? 'VIETGAP COMPLIANCE' : 'TUÂN THỦ VIETGAP'}
+              </span>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', margin: '4px 0' }}>
+                100%
+              </div>
+              <small style={{ color: '#64748b', fontSize: '12px' }}>
+                {lang === 'en' ? 'Meets VG-HS-01 & VG-HS-02' : 'Đạt chuẩn tiêu chí VG-HS-01, 02'}
+              </small>
+            </div>
           </div>
 
-          {/* Filter & Search Bar */}
-          <div className="production-filter-panel" style={{ marginBottom: '20px', background: '#f8fafc', padding: '16px', borderRadius: '10px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
-            <div style={{ flex: '1.5 1 240px' }}>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
-                {(lang === 'en' ? "Search courses" : "Tìm kiếm khóa học")}
-              </label>
-              <input
-                type="text"
-                placeholder={(lang === 'en' ? "Search by title, organizer, or content..." : "Tìm theo tiêu đề, người tổ chức, nội dung...")}
-                value={trainingKeyword}
-                onChange={(e) => setTrainingKeyword(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-              />
-            </div>
-            <div style={{ flex: '1 1 140px' }}>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
-                {(lang === 'en' ? "From date" : "Từ ngày")}
-              </label>
-              <input
-                type="date"
-                value={trainingFromDate}
-                onChange={(e) => setTrainingFromDate(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-              />
-            </div>
-            <div style={{ flex: '1 1 140px' }}>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>
-                {(lang === 'en' ? "To date" : "Đến ngày")}
-              </label>
-              <input
-                type="date"
-                value={trainingToDate}
-                onChange={(e) => setTrainingToDate(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
+          <div {...tabPanelProps('vietgap', 'training')} className="panel" style={{ padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
+                  {lang === 'en' ? 'VietGAP Training Records' : 'Hồ sơ tập huấn & Đào tạo VietGAP'}
+                </h3>
+                <p style={{ margin: '2px 0 0', color: '#64748b', fontSize: '13px' }}>
+                  {lang === 'en'
+                    ? `Internal training, occupational safety, and farming certifications (${trainingTotal} courses)`
+                    : `Lịch sử các khóa đào tạo nội bộ, tập huấn an toàn lao động và chứng chỉ kỹ thuật canh tác (${trainingTotal} khóa học)`}
+                </p>
+              </div>
+              <Button
                 type="button"
-                className="action-button solid"
-                onClick={() => void loadTrainings()}
-                style={{ height: '38px', padding: '0 16px' }}
+                variant="primary"
+                onClick={() => setIsCreateTrainingOpen(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '36px' }}
               >
-                {(lang === 'en' ? "Filter" : "Lọc")}
-              </button>
+                <Icon name="plus" size={15} />
+                <span>{lang === 'en' ? 'Add Training Course' : 'Thêm khóa đào tạo'}</span>
+              </Button>
+            </div>
+
+            {/* Filter & Search Bar */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '200px' }}>
+                <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', display: 'flex' }}>
+                  <Icon name="search" size={16} />
+                </span>
+                <input
+                  type="search"
+                  className="ui-input"
+                  placeholder={lang === 'en' ? 'Search by title, organizer, or content...' : 'Tìm theo tiêu đề, người tổ chức, nội dung...'}
+                  value={trainingKeyword}
+                  onChange={(e) => setTrainingKeyword(e.target.value)}
+                  style={{ paddingLeft: '34px', width: '100%', height: '36px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                  {lang === 'en' ? 'From:' : 'Từ:'}
+                </span>
+                <input
+                  type="date"
+                  className="ui-input"
+                  value={trainingFromDate}
+                  onChange={(e) => setTrainingFromDate(e.target.value)}
+                  style={{ height: '36px', width: '140px', fontSize: '12.5px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '12px', color: '#64748b', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                  {lang === 'en' ? 'To:' : 'Đến:'}
+                </span>
+                <input
+                  type="date"
+                  className="ui-input"
+                  value={trainingToDate}
+                  onChange={(e) => setTrainingToDate(e.target.value)}
+                  style={{ height: '36px', width: '140px', fontSize: '12.5px' }}
+                />
+              </div>
+
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void loadTrainings()}
+                style={{ height: '36px', padding: '0 14px' }}
+              >
+                <Icon name="search" size={14} />
+                <span>{lang === 'en' ? 'Filter' : 'Lọc'}</span>
+              </Button>
+
               {(trainingKeyword || trainingFromDate || trainingToDate) && (
-                <button
+                <Button
                   type="button"
-                  className="ghost-button"
+                  variant="secondary"
                   onClick={() => {
                     setTrainingKeyword('');
                     setTrainingFromDate('');
                     setTrainingToDate('');
                     setTimeout(() => void loadTrainings(), 0);
                   }}
-                  style={{ height: '38px', padding: '0 12px' }}
+                  style={{ height: '36px', padding: '0 10px', color: '#64748b' }}
                 >
-                  {(lang === 'en' ? "✕ Reset" : "✕ Đặt lại")}
-                </button>
+                  {lang === 'en' ? '✕ Reset' : '✕ Đặt lại'}
+                </Button>
               )}
             </div>
-          </div>
 
-          {trainingLoading ? (
-            <div style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
-              <p>{(lang === 'en' ? "⏳ Loading training records..." : "⏳ Đang tải dữ liệu hồ sơ đào tạo...")}</p>
-            </div>
-          ) : trainingError ? (
-            <div style={{ textAlign: 'center', padding: '24px', color: '#dc2626' }}>
-              <p>⚠️ {translate(trainingError)}</p>
-              <button type="button" className="action-button" onClick={() => void loadTrainings()}>
-                {(lang === 'en' ? "Retry" : "Thử lại")}
-              </button>
-            </div>
-          ) : trainingRecords.length === 0 ? (
-            <div className="empty-state" style={{ padding: '36px', textAlign: 'center' }}>
-              <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
-              <h3 style={{ margin: '0 0 6px', color: '#1e293b' }}>{(lang === 'en' ? "No training records yet" : "Chưa có hồ sơ đào tạo nào")}</h3>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '13.5px' }}>
-                {(lang === 'en' ? "Click \"+ Add training course\" to record VietGAP training for farm workers." : "Bấm \"+ Thêm khóa đào tạo\" để ghi nhận các buổi tập huấn VietGAP cho công nhân trang trại.")}
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {trainingRecords.map((item) => (
-                <div
-                  key={item.trainingRecordId}
-                  style={{
-                    padding: '18px 20px',
-                    borderRadius: '10px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                  }}
-                >
-                  <div style={{ flex: '1 1 300px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <strong style={{ fontSize: '15.5px', color: '#0f172a' }}>{item.trainingTitle}</strong>
-                      <span className="status-badge status-badge--success" style={{ fontSize: '11px', padding: '2px 8px' }}>
-                        {(lang === 'en' ? "Completed" : "Hoàn thành")}
-                      </span>
-                    </div>
-                    <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>
-                      {(lang === 'en' ? "📅 Training date: " : "📅 Ngày đào tạo: ")} <strong>{item.trainingDate}</strong> {(lang === 'en' ? " · Organizer: " : " · Người tổ chức: ")} {(lang === 'en' ? item.organizerName || "Farm" : item.organizerName || 'Trang trại')} {(lang === 'en' ? " · Participants: " : " · Tham gia: ")} <strong style={{ color: '#059669' }}>{item.attendeeCount} {(lang === 'en' ? " staff" : " nhân sự")}</strong>
-                    </p>
-                    {item.description && (
-                      <p style={{ margin: '6px 0 0', color: '#475569', fontSize: '13px', lineHeight: 1.5 }}>
-                        {item.description}
-                      </p>
+            {trainingLoading ? (
+              <div style={{ textAlign: 'center', padding: '36px', color: '#64748b' }}>
+                <p>{lang === 'en' ? 'Loading training records...' : 'Đang tải dữ liệu hồ sơ đào tạo...'}</p>
+              </div>
+            ) : trainingError ? (
+              <div style={{ textAlign: 'center', padding: '24px', color: '#dc2626' }}>
+                <p>{translate(trainingError)}</p>
+                <button type="button" className="action-button" onClick={() => void loadTrainings()}>
+                  {lang === 'en' ? 'Retry' : 'Thử lại'}
+                </button>
+              </div>
+            ) : (
+              <div className="ui-table-scroll zone-table-wrap" tabIndex={0}>
+                <table className="ui-data-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" style={{ width: '12%' }}>{lang === 'en' ? 'TRAINING DATE' : 'NGÀY ĐÀO TẠO'}</th>
+                      <th scope="col" style={{ width: '36%' }}>{lang === 'en' ? 'COURSE TITLE & DESCRIPTION' : 'TÊN KHÓA HỌC & MÔ TẢ'}</th>
+                      <th scope="col" style={{ width: '18%' }}>{lang === 'en' ? 'ORGANIZER' : 'NGƯỜI TỔ CHỨC'}</th>
+                      <th scope="col" style={{ width: '12%', textAlign: 'center' }}>{lang === 'en' ? 'ATTENDEES' : 'THAM GIA'}</th>
+                      <th scope="col" style={{ width: '11%', textAlign: 'center' }}>{lang === 'en' ? 'STATUS' : 'TRẠNG THÁI'}</th>
+                      <th scope="col" style={{ width: '11%', textAlign: 'right' }}>{lang === 'en' ? 'ACTIONS' : 'THAO TÁC'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trainingRecords.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                          {lang === 'en' ? 'No training records have been recorded for this farm.' : 'Chưa có hồ sơ đào tạo nào được ghi nhận cho nông trại này.'}
+                        </td>
+                      </tr>
+                    ) : (
+                      trainingRecords.map((item) => (
+                        <tr key={item.trainingRecordId}>
+                          <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            {item.trainingDate || '—'}
+                          </td>
+                          <td style={{ maxWidth: '300px' }}>
+                            <strong style={{ color: '#0f172a', display: 'block', fontSize: '13.5px', marginBottom: '2px' }}>
+                              {item.trainingTitle}
+                            </strong>
+                            {item.description ? (
+                              <span style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.45, display: 'block' }}>
+                                {item.description}
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                                {lang === 'en' ? 'No description' : 'Không có mô tả'}
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ fontSize: '13px', color: '#334155' }}>
+                            {item.organizerName || (lang === 'en' ? 'Internal Farm' : 'Nội bộ trang trại')}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 8px',
+                                borderRadius: '12px',
+                                background: '#f1f5f9',
+                                color: '#0f172a',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                              }}
+                            >
+                              <Icon name="user" size={13} style={{ color: '#059669' }} />
+                              <span>{item.attendeeCount || 0} {lang === 'en' ? 'staff' : 'nhân sự'}</span>
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <span
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '11.5px',
+                                fontWeight: 650,
+                                background: '#ecfdf5',
+                                border: '1px solid #a7f3d0',
+                                color: '#047857',
+                                display: 'inline-block',
+                              }}
+                            >
+                              {lang === 'en' ? 'Completed' : 'Hoàn thành'}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'flex-end' }}>
+                              <button
+                                type="button"
+                                className="table-icon-btn primary"
+                                title={lang === 'en' ? 'View details & attendance' : 'Xem chi tiết & Điểm danh'}
+                                onClick={() => void handleViewTrainingDetail(item.trainingRecordId)}
+                              >
+                                <Icon name="eye" size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                className="table-icon-btn danger"
+                                title={lang === 'en' ? 'Delete training record' : 'Xóa hồ sơ đào tạo'}
+                                onClick={() => void handleDeleteTraining(item.trainingRecordId)}
+                              >
+                                <Icon name="trash" size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
                     )}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <button
-                      type="button"
-                      className="action-button"
-                      onClick={() => void handleViewTrainingDetail(item.trainingRecordId)}
-                      style={{ fontSize: '13px' }}
-                    >
-                      {(lang === 'en' ? "👁️ Details & Attendance" : "👁️ Chi tiết & Điểm danh")}
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-button"
-                      onClick={() => void handleDeleteTraining(item.trainingRecordId)}
-                      style={{ fontSize: '13px', color: '#dc2626' }}
-                    >
-                      {(lang === 'en' ? "Delete" : "Xóa")}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
           {/* Details Modal */}
           {selectedTrainingDetail && (
@@ -1600,15 +1518,15 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                       {(lang === 'en' ? "Participants & Attendance" : "Danh sách công nhân tham gia & Điểm danh")}
                     </span>
                     {selectedTrainingDetail.attendees && selectedTrainingDetail.attendees.length > 0 ? (
-                      <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                      <div className="ui-table-scroll" tabIndex={0} style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                        <table className="ui-data-table ui-data-table--compact" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                           <thead>
                             <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                              <th style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Worker ID" : "Mã CN")}</th>
-                              <th style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Full name" : "Họ và tên")}</th>
-                              <th style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Position" : "Chức vụ")}</th>
-                              <th style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Status" : "Trạng thái")}</th>
-                              <th style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
+                              <th scope="col" style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Worker ID" : "Mã CN")}</th>
+                              <th scope="col" style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Full name" : "Họ và tên")}</th>
+                              <th scope="col" style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Position" : "Chức vụ")}</th>
+                              <th scope="col" style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Status" : "Trạng thái")}</th>
+                              <th scope="col" style={{ padding: '8px 12px' }}>{(lang === 'en' ? "Notes" : "Ghi chú")}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1738,6 +1656,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
             </div>
           )}
         </div>
+      </div>
       )}
 
       {/* Water Assessment Detail Modal */}
@@ -1759,12 +1678,419 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 <div><strong>{lang === 'en' ? 'Quality:' : 'Chất lượng:'}</strong> {selectedEnvWater.qualityStatus || '—'}</div>
                 <div><strong>{lang === 'en' ? 'Date:' : 'Ngày đo:'}</strong> {selectedEnvWater.assessedAt ? new Date(selectedEnvWater.assessedAt).toLocaleDateString('vi-VN') : '—'}</div>
               </div>
+              {selectedEnvWater.labTestReportUrl && (
+                <div style={{ marginTop: '12px', padding: '10px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <div style={{ fontSize: '12px', color: '#065f46' }}>
+                    <strong>{lang === 'en' ? 'Lab Test Report (VG-NL-01):' : 'Phiếu kiểm nghiệm nước (VG-NL-01):'}</strong>
+                    <div style={{ wordBreak: 'break-all', marginTop: '2px' }}>{selectedEnvWater.labTestReportUrl}</div>
+                  </div>
+                  <a
+                    href={selectedEnvWater.labTestReportUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="primary-button"
+                    style={{ padding: '4px 10px', fontSize: '11px', whiteSpace: 'nowrap', textDecoration: 'none' }}
+                  >
+                    {lang === 'en' ? 'View ↗' : 'Xem phiếu ↗'}
+                  </a>
+                </div>
+              )}
               {selectedEnvWater.notes && (
                 <div style={{ marginTop: '12px', fontSize: '12.5px', color: '#475569' }}>
                   <strong>{lang === 'en' ? 'Notes:' : 'Ghi chú:'}</strong> {selectedEnvWater.notes}
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Soil Assessment Modal */}
+      {isCreateSoilModalOpen && (
+        <div className="modal-backdrop" onClick={() => !savingAssessment && setIsCreateSoilModalOpen(false)}>
+          <div className="modal-card" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow" style={{ color: '#059669' }}>
+                  {lang === 'en' ? 'VietGAP VG-NL-01 Compliance' : 'Tuân thủ VietGAP VG-NL-01'}
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                  {lang === 'en' ? 'Record Block Soil Assessment' : 'Ghi nhận phiếu đánh giá thổ nhưỡng'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
+                disabled={savingAssessment}
+                onClick={() => setIsCreateSoilModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveSoilAssessment}>
+              <div className="modal-body" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '72vh', overflowY: 'auto' }}>
+                {assessmentError && (
+                  <div style={{ padding: '10px 14px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '6px', color: '#b91c1c', fontSize: '13px' }}>
+                    {assessmentError}
+                  </div>
+                )}
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <label htmlFor="soil-modal-block" className="structured-field-label">
+                    {lang === 'en' ? 'Production Block' : 'Lô đất / Nhà màng'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                  </label>
+                  <select
+                    id="soil-modal-block"
+                    className="ui-select"
+                    required
+                    value={soilBlockId}
+                    onChange={(e) => setSoilBlockId(Number(e.target.value))}
+                  >
+                    {farmBlocks.length === 0 && (
+                      <option value="">{lang === 'en' ? 'No blocks available' : 'Chưa có dữ liệu lô đất'}</option>
+                    )}
+                    {farmBlocks.map((b) => (
+                      <option key={b.blockId} value={b.blockId}>
+                        {b.blockName} {b.zoneName ? `(${b.zoneName})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <label htmlFor="soil-modal-ph" className="structured-field-label">
+                        {lang === 'en' ? 'Soil pH' : 'Độ pH đất'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                      </label>
+                      <span className="structured-field-badge">5.5 - 7.5</span>
+                    </div>
+                    <input
+                      id="soil-modal-ph"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="14"
+                      required
+                      className="ui-input"
+                      placeholder="6.5"
+                      value={soilPh}
+                      onChange={(e) => setSoilPh(e.target.value ? Number(e.target.value) : '')}
+                    />
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <label htmlFor="soil-modal-moisture" className="structured-field-label">
+                        {lang === 'en' ? 'Moisture (%)' : 'Độ ẩm (%)'}
+                      </label>
+                      <span className="structured-field-badge">60 - 80%</span>
+                    </div>
+                    <input
+                      id="soil-modal-moisture"
+                      type="number"
+                      step="1"
+                      min="0"
+                      max="100"
+                      className="ui-input"
+                      placeholder="70"
+                      value={soilMoisture}
+                      onChange={(e) => setSoilMoisture(e.target.value ? Number(e.target.value) : '')}
+                    />
+                  </div>
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <label htmlFor="soil-modal-date" className="structured-field-label">
+                    {lang === 'en' ? 'Assessment / Sampling Date' : 'Ngày lấy mẫu / đánh giá'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                  </label>
+                  <input
+                    id="soil-modal-date"
+                    type="date"
+                    required
+                    className="ui-input"
+                    value={soilAssessedAt}
+                    onChange={(e) => setSoilAssessedAt(e.target.value)}
+                  />
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <div className="structured-field-header">
+                    <label htmlFor="soil-modal-nutrient" className="structured-field-label">
+                      {lang === 'en' ? 'Nutrient & Microbial Analysis' : 'Chỉ tiêu phân tích dinh dưỡng & vi sinh'}
+                    </label>
+                    <span className="structured-field-badge" style={{ color: '#059669', background: '#ecfdf5' }}>
+                      VietGAP
+                    </span>
+                  </div>
+                  <textarea
+                    id="soil-modal-nutrient"
+                    className="ui-textarea"
+                    rows={2}
+                    value={soilNutrient}
+                    onChange={(e) => setSoilNutrient(e.target.value)}
+                    placeholder={lang === 'en' ? 'Heavy metals (Cd, Pb, As), microbial E. coli, Salmonella results...' : 'Hàm lượng kim loại nặng (Cd, Pb, As), vi sinh E. coli, Salmonella...'}
+                  />
+                </div>
+
+                <div>
+                  <FileUpload
+                    value={soilLabReportUrl}
+                    onChange={setSoilLabReportUrl}
+                    label={lang === 'en' ? 'Lab Test Report Document (PDF/Photo - VG-NL-01)' : 'Phiếu kết quả phân tích phòng Lab (PDF/Ảnh - VG-NL-01)'}
+                    hint={lang === 'en' ? 'Upload official accredited laboratory certificate to automatically pass criterion VG-NL-01.' : 'Tải lên phiếu kết quả thử nghiệm từ phòng Lab hợp chuẩn để hệ thống tự động đối soát ĐẠT tiêu chí VG-NL-01.'}
+                    folder="mycropdiary/assessments/soil"
+                    accept="application/pdf,image/*"
+                    disabled={savingAssessment}
+                  />
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <label htmlFor="soil-modal-notes" className="structured-field-label">
+                    {lang === 'en' ? 'Specialist Notes / Conclusion' : 'Ghi chú & Kết luận chuyên môn'}
+                  </label>
+                  <textarea
+                    id="soil-modal-notes"
+                    className="ui-textarea"
+                    rows={2}
+                    value={soilNotes}
+                    onChange={(e) => setSoilNotes(e.target.value)}
+                    placeholder={lang === 'en' ? 'e.g. Soil suitable for melon cultivation, low residue.' : 'Ví dụ: Đất tơi xốp, phù hợp trồng dưa lưới trong nhà màng.'}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={savingAssessment}
+                  onClick={() => setIsCreateSoilModalOpen(false)}
+                >
+                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={savingAssessment || !soilBlockId}
+                >
+                  {savingAssessment
+                    ? (lang === 'en' ? 'Saving...' : 'Đang lưu...')
+                    : (lang === 'en' ? 'Save Soil Record' : 'Lưu phiếu đánh giá đất')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Water Assessment Modal */}
+      {isCreateWaterModalOpen && (
+        <div className="modal-backdrop" onClick={() => !savingAssessment && setIsCreateWaterModalOpen(false)}>
+          <div className="modal-card" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow" style={{ color: '#0284c7' }}>
+                  {lang === 'en' ? 'QCVN 39:2011/BTNMT & VietGAP VG-NL-01' : 'QCVN 39:2011/BTNMT & VietGAP VG-NL-01'}
+                </span>
+                <h3 style={{ margin: '2px 0 0', fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                  {lang === 'en' ? 'Record Water Quality Assessment' : 'Ghi nhận phiếu đánh giá chất lượng nước'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
+                disabled={savingAssessment}
+                onClick={() => setIsCreateWaterModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveWaterAssessment}>
+              <div className="modal-body" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '72vh', overflowY: 'auto' }}>
+                {assessmentError && (
+                  <div style={{ padding: '10px 14px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '6px', color: '#b91c1c', fontSize: '13px' }}>
+                    {assessmentError}
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <label htmlFor="water-modal-name" className="structured-field-label">
+                      {lang === 'en' ? 'Water Source Name' : 'Tên nguồn nước'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                    </label>
+                    <input
+                      id="water-modal-name"
+                      type="text"
+                      required
+                      className="ui-input"
+                      value={waterSourceName}
+                      onChange={(e) => setWaterSourceName(e.target.value)}
+                      placeholder={lang === 'en' ? 'e.g. Groundwater Station A' : 'VD: Nước giếng khoan trạm bơm A'}
+                    />
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <label htmlFor="water-modal-type" className="structured-field-label">
+                      {lang === 'en' ? 'Source Type' : 'Phân loại nguồn'}
+                    </label>
+                    <select
+                      id="water-modal-type"
+                      className="ui-select"
+                      value={waterSourceType}
+                      onChange={(e) => setWaterSourceType(e.target.value)}
+                    >
+                      <option value="Nước ngầm">{lang === 'en' ? 'Groundwater' : 'Nước ngầm'}</option>
+                      <option value="Nước mặt">{lang === 'en' ? 'Surface water' : 'Nước mặt'}</option>
+                      <option value="Nước thủy cục">{lang === 'en' ? 'Tap water' : 'Nước thủy cục'}</option>
+                      <option value="Bể lắng / Nước mưa">{lang === 'en' ? 'Rainwater basin' : 'Bể lắng / Nước mưa'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '10px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <label htmlFor="water-modal-ph" className="structured-field-label">
+                        {lang === 'en' ? 'pH' : 'Độ pH'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                      </label>
+                      <span className="structured-field-badge">6.0 - 8.5</span>
+                    </div>
+                    <input
+                      id="water-modal-ph"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="14"
+                      required
+                      className="ui-input"
+                      placeholder="6.8"
+                      value={waterPh}
+                      onChange={(e) => setWaterPh(e.target.value ? Number(e.target.value) : '')}
+                    />
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <div className="structured-field-header">
+                      <label htmlFor="water-modal-temp" className="structured-field-label">
+                        {lang === 'en' ? 'Temp (°C)' : 'Nhiệt độ'}
+                      </label>
+                      <span className="structured-field-badge">°C</span>
+                    </div>
+                    <input
+                      id="water-modal-temp"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      max="60"
+                      className="ui-input"
+                      placeholder="26"
+                      value={waterTemp}
+                      onChange={(e) => setWaterTemp(e.target.value ? Number(e.target.value) : '')}
+                    />
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <label htmlFor="water-modal-status" className="structured-field-label">
+                      {lang === 'en' ? 'Conclusion' : 'Kết luận'}
+                    </label>
+                    <select
+                      id="water-modal-status"
+                      className="ui-select"
+                      value={waterQualityStatus}
+                      onChange={(e) => setWaterQualityStatus(e.target.value)}
+                    >
+                      <option value="DAT_CHUAN">{lang === 'en' ? '✓ Compliant' : '✓ Đạt chuẩn'}</option>
+                      <option value="CHO_KIEM_DINH">{lang === 'en' ? 'Pending test' : 'Chờ kiểm định'}</option>
+                      <option value="CAN_XU_LY">{lang === 'en' ? 'Filtration needed' : 'Cần xử lý lắng'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <label htmlFor="water-modal-block" className="structured-field-label">
+                      {lang === 'en' ? 'Applicable Block' : 'Lô đất tưới tiêu'}
+                    </label>
+                    <select
+                      id="water-modal-block"
+                      className="ui-select"
+                      value={waterBlockId}
+                      onChange={(e) => setWaterBlockId(e.target.value ? Number(e.target.value) : '')}
+                    >
+                      <option value="">{lang === 'en' ? 'Entire farm / All blocks' : 'Toàn trang trại'}</option>
+                      {farmBlocks.map((b) => (
+                        <option key={b.blockId} value={b.blockId}>
+                          {b.blockName} {b.zoneName ? `(${b.zoneName})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                    <label htmlFor="water-modal-date" className="structured-field-label">
+                      {lang === 'en' ? 'Sampling Date' : 'Ngày lấy mẫu đo'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                    </label>
+                    <input
+                      id="water-modal-date"
+                      type="date"
+                      required
+                      className="ui-input"
+                      value={waterAssessedAt}
+                      onChange={(e) => setWaterAssessedAt(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <FileUpload
+                    value={waterLabReportUrl}
+                    onChange={setWaterLabReportUrl}
+                    label={lang === 'en' ? 'Water Lab Test Certificate (PDF/Photo - VG-NL-01)' : 'Phiếu kết quả xét nghiệm nước phòng Lab (PDF/Ảnh - VG-NL-01)'}
+                    hint={lang === 'en' ? 'Upload accredited lab test report for heavy metals and microbial (E. coli, Salmonella) safety.' : 'Tải lên phiếu kiểm nghiệm vi sinh và kim loại nặng để tự động đạt tiêu chí kiểm nghiệm nguồn nước VietGAP.'}
+                    folder="mycropdiary/assessments/water"
+                    accept="application/pdf,image/*"
+                    disabled={savingAssessment}
+                  />
+                </div>
+
+                <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                  <label htmlFor="water-modal-notes" className="structured-field-label">
+                    {lang === 'en' ? 'Notes' : 'Ghi chú & Khuyến cáo'}
+                  </label>
+                  <textarea
+                    id="water-modal-notes"
+                    className="ui-textarea"
+                    rows={2}
+                    value={waterNotes}
+                    onChange={(e) => setWaterNotes(e.target.value)}
+                    placeholder={lang === 'en' ? 'e.g. Water is filtered through quartz sand and charcoal system.' : 'Ví dụ: Nước được lọc qua giàn lọc cát thạch anh và than hoạt tính trước khi châm vào hệ thống tưới nhỏ giọt.'}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  disabled={savingAssessment}
+                  onClick={() => setIsCreateWaterModalOpen(false)}
+                >
+                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={savingAssessment || !waterSourceName.trim()}
+                >
+                  {savingAssessment
+                    ? (lang === 'en' ? 'Saving...' : 'Đang lưu...')
+                    : (lang === 'en' ? 'Save Water Record' : 'Lưu phiếu đánh giá nước')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

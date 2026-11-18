@@ -44,6 +44,7 @@ export interface FarmDetail {
   longitude: number | null;
   boundaryCoordinates?: string | null;
   coverImageUrl: string | null;
+  farmMapUrl?: string | null;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -58,6 +59,7 @@ export interface CreateFarmPayload {
   longitude?: number | null;
   boundaryCoordinates?: string | null;
   coverImageUrl?: string;
+  farmMapUrl?: string;
 }
 
 export interface UpdateFarmPayload {
@@ -68,6 +70,7 @@ export interface UpdateFarmPayload {
   longitude?: number | null;
   boundaryCoordinates?: string | null;
   coverImageUrl?: string;
+  farmMapUrl?: string;
   status?: string;
 }
 

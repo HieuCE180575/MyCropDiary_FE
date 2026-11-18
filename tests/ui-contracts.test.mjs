@@ -15,7 +15,7 @@ test('all tables use the shared contract and table actions have one CSS owner', 
       assert.doesNotMatch(table[0], /minWidth: 0/, file);
     }
   }
-  assert.equal(count, 34);
+  assert.equal(count, 37);
   const owners = files('src/styles').filter(file => file.endsWith('.css'))
     .filter(file => /(?:^|\n)\.table-icon-btn\s*\{/.test(readFileSync(file, 'utf8')));
   assert.deepEqual(owners, [join('src/styles', 'shared-ui.css')]);
