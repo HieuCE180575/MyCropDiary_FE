@@ -356,3 +356,35 @@ export const VIETGAP_CRITERIA_KNOWLEDGE: Record<string, VietGapCriterionKnowledg
     tcvnClause: 'TCVN 11892-1:2017 Điều 4.7.4',
   },
 };
+
+/**
+ * Danh sách 16 tiêu chí được Hệ thống MyCropDiary tự động đối soát từ CSDL
+ * (Nhật ký phân thuốc, thời gian cách ly PHI, kho bãi, đất nước, thu hoạch, đào tạo, lưu trữ).
+ */
+export const AUTO_EVALUATED_CODES = new Set<string>([
+  'VG-NL-01',
+  'VG-NL-03',
+  'VG-CS-01',
+  'VG-CS-04',
+  'VG-PB-01',
+  'VG-PB-03',
+  'VG-TV-01',
+  'VG-TV-02',
+  'VG-TH-01',
+  'VG-TX-01',
+  'VG-TX-02',
+  'VG-TX-03',
+  'VG-HS-01',
+  'VG-HS-02',
+  'VG-HS-05',
+  'VG-HS-06',
+]);
+
+/**
+ * Kiểm tra xem một tiêu chí là loại Tự động đối soát (Auto-Evaluated)
+ * hay Thẩm định hiện trường (Manual Field Audit).
+ */
+export function isAutoEvaluatedCriterion(ruleCode?: string | null): boolean {
+  if (!ruleCode) return false;
+  return AUTO_EVALUATED_CODES.has(ruleCode);
+}

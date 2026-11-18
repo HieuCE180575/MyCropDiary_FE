@@ -4,7 +4,7 @@ import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { getCategoryDisplayName } from './types';
 import { updateChecklistItemApi } from '../vietgapComplianceService';
 import type { ChecklistResultItemResp, UpdateChecklistItemPayload } from '../vietgapComplianceService';
-import { VIETGAP_CRITERIA_KNOWLEDGE } from './vietgapCriteriaKnowledge';
+import { VIETGAP_CRITERIA_KNOWLEDGE, isAutoEvaluatedCriterion } from './vietgapCriteriaKnowledge';
 
 interface ChecklistItemCardProps {
   item: ChecklistResultItemResp;
@@ -46,6 +46,12 @@ export function ChecklistItemCard({
   const [isEditingNotes, setIsEditingNotes] = useState(false);
 
   const knowledge = localItem.ruleCode ? VIETGAP_CRITERIA_KNOWLEDGE[localItem.ruleCode] : undefined;
+
+  const shortClause = knowledge?.tcvnClause
+    ? knowledge.tcvnClause.includes('Điều')
+      ? knowledge.tcvnClause.substring(knowledge.tcvnClause.indexOf('Điều')).trim()
+      : knowledge.tcvnClause
+    : null;
 
   const level = LEVEL_STYLE[localItem.ruleLevel ?? ''] ?? {
     bg: '#f1f5f9',
@@ -143,14 +149,14 @@ export function ChecklistItemCard({
         borderBottom: '1px solid #f1f5f9',
         borderRadius: 0,
         boxShadow: 'none',
-        padding: '12px 6px',
+        padding: '12px 8px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '7px',
+        gap: '6px',
         transition: 'background 0.15s ease',
       }}
     >
-      {/* ─── TẦNG 1: IDENTITY, CONTENT & SEGMENTED CONTROLS ─── */}
+      {/* ─── TẦNG 1: PRIMARY IDENTITY & CONTROLS ─────────── */}
       <div
         style={{
           display: 'flex',
@@ -160,12 +166,13 @@ export function ChecklistItemCard({
           flexWrap: 'wrap',
         }}
       >
-        {/* Left: Metadata & Title */}
-        <div style={{ flex: '1 1 380px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        {/* Left: Metadata badges & Criterion Title */}
+        <div style={{ flex: '1 1 400px', display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', minWidth: 0 }}>
+          {/* Level: MUST, MAJOR, MINOR, RECOMMENDED */}
           {localItem.ruleLevel && (
             <span
               style={{
-                fontSize: '10.5px',
+                fontSize: '10px',
                 fontWeight: 700,
                 letterSpacing: '0.04em',
                 padding: '1.5px 5px',
@@ -179,11 +186,12 @@ export function ChecklistItemCard({
             </span>
           )}
 
+          {/* Rule Code */}
           <span
             style={{
               fontSize: '12px',
               fontWeight: 700,
-              color: '#475569',
+              color: '#334155',
               fontFamily: 'ui-monospace, monospace',
               flexShrink: 0,
             }}
@@ -191,48 +199,75 @@ export function ChecklistItemCard({
             {localItem.ruleCode ?? `#${localItem.resultId}`}
           </span>
 
-          {showCategoryLabel && (
-            <>
-              <span style={{ color: '#cbd5e1', fontSize: '12px' }}>·</span>
-              <span style={{ fontSize: '12px', color: '#64748b', flexShrink: 0 }}>
-                {getCategoryDisplayName(localItem.category, lang)}
-              </span>
-            </>
+          {/* Dẫn chiếu điều khoản TCVN (Rút gọn) */}
+          {shortClause && (
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: '#047857',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                padding: '1.5px 6px',
+                borderRadius: '4px',
+                flexShrink: 0,
+              }}
+              title={knowledge?.tcvnClause ?? shortClause}
+            >
+              {shortClause}
+            </span>
           )}
 
-          {/* Criterion Name */}
-          <span
-            style={{
-              fontSize: '13.5px',
-              fontWeight: 650,
-              color: '#0f172a',
-              lineHeight: 1.35,
-            }}
-          >
-            {localItem.ruleName ?? (lang === 'en' ? `Criterion #${localItem.resultId}` : `Tiêu chí #${localItem.resultId}`)}
-          </span>
-
-          {localItem.isAutoEvaluated && (
+          {/* Phân loại trực quan: ⚡ Tự đối soát vs 📷 Hiện trường */}
+          {isAutoEvaluatedCriterion(localItem.ruleCode) ? (
             <span
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '3px',
-                fontSize: '10.5px',
-                fontWeight: 600,
-                padding: '1px 6px',
+                fontSize: '11px',
+                fontWeight: 650,
+                padding: '1.5px 6px',
                 borderRadius: '4px',
-                background: '#f5f3ff',
-                color: '#6d28d9',
+                background: '#ecfdf5',
+                color: '#047857',
                 flexShrink: 0,
               }}
-              title={lang === 'en' ? 'Pre-evaluated by system auto-check engine' : 'Hệ thống tự động quét và đối soát'}
+              title={
+                lang === 'en'
+                  ? 'Auto-evaluated by system from digital farming logs, PHI, warehouse, lab tests, harvest, and training records'
+                  : 'Hệ thống tự động đối soát từ nhật ký phân thuốc, cách ly PHI, kho bãi, đất nước, thu hoạch và đào tạo'
+              }
             >
-              <Icon name="zap" size={10} />
-              <span>{lang === 'en' ? 'Auto-check' : 'Tự đối soát'}</span>
+              <Icon name="zap" size={10} style={{ color: '#10b981' }} />
+              <span>{lang === 'en' ? 'Auto' : 'Tự đối soát'}</span>
+            </span>
+          ) : (
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '3px',
+                fontSize: '11px',
+                fontWeight: 650,
+                padding: '1.5px 6px',
+                borderRadius: '4px',
+                background: '#fffbeb',
+                color: '#b45309',
+                flexShrink: 0,
+              }}
+              title={
+                lang === 'en'
+                  ? 'Field inspection: Requires physical observation and photo evidence'
+                  : 'Thẩm định hiện trường: Yêu cầu quan sát thực tế tại nông trại và đính kèm ảnh chụp'
+              }
+            >
+              <Icon name="camera" size={10} style={{ color: '#f59e0b' }} />
+              <span>{lang === 'en' ? 'Field' : 'Hiện trường'}</span>
             </span>
           )}
 
+          {/* Cảnh báo thiếu ảnh minh chứng */}
           {localItem.isMissingEvidence && localItem.resultStatus === 'pass' && (
             <span
               style={{
@@ -240,35 +275,64 @@ export function ChecklistItemCard({
                 alignItems: 'center',
                 gap: '3px',
                 fontSize: '10.5px',
-                fontWeight: 600,
-                padding: '1px 6px',
+                fontWeight: 650,
+                padding: '1.5px 5px',
                 borderRadius: '4px',
-                background: '#fff7ed',
-                color: '#c2410c',
+                background: '#fef2f2',
+                color: '#b91c1c',
                 flexShrink: 0,
               }}
+              title={lang === 'en' ? 'Missing photographic evidence' : 'Thiếu ảnh minh chứng bắt buộc'}
             >
               <Icon name="warning" size={10} />
-              <span>{lang === 'en' ? 'Need evidence' : 'Cần minh chứng'}</span>
+              <span>{lang === 'en' ? 'Need photo' : 'Thiếu ảnh'}</span>
             </span>
           )}
+
+          {showCategoryLabel && (
+            <>
+              <span style={{ color: '#cbd5e1', fontSize: '11px' }}>·</span>
+              <span style={{ fontSize: '11.5px', color: '#64748b', flexShrink: 0 }}>
+                {getCategoryDisplayName(localItem.category, lang)}
+              </span>
+            </>
+          )}
+
+          {/* Tên tiêu chí */}
+          <span
+            style={{
+              fontSize: '13px',
+              fontWeight: 650,
+              color: '#0f172a',
+              lineHeight: 1.35,
+              marginLeft: '2px',
+            }}
+          >
+            {localItem.ruleName ?? (lang === 'en' ? `Criterion #${localItem.resultId}` : `Tiêu chí #${localItem.resultId}`)}
+          </span>
         </div>
 
-        {/* Right: Segmented Control & Status Indicator */}
+        {/* Right: Saving indicator, Segmented Control & Details trigger */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {savingStatus === 'saving' && (
-            <span style={{ color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px' }}>
+            <span style={{ color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px' }}>
               <Icon name="loader" size={11} className="spin" />
               <span>{lang === 'en' ? 'Saving' : 'Lưu...'}</span>
             </span>
           )}
           {savingStatus === 'saved' && (
-            <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px' }}>
+            <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px' }}>
               <Icon name="check" size={11} />
             </span>
           )}
+          {savingStatus === 'error' && (
+            <span style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px' }} title={errorMessage ?? undefined}>
+              <Icon name="warning" size={11} />
+              <span>{lang === 'en' ? 'Error' : 'Lỗi'}</span>
+            </span>
+          )}
 
-          {/* Segmented Control 4 Buttons (Compact 30px) */}
+          {/* Segmented Control 4 Buttons (Compact) */}
           <div
             style={{
               display: 'inline-flex',
@@ -279,10 +343,10 @@ export function ChecklistItemCard({
             role="group"
           >
             {[
-              { status: 'pass', vi: 'Đạt', en: 'Pass', activeBg: '#ecfdf5', activeColor: '#059669', activeWeight: 600 },
-              { status: 'fail', vi: 'Chưa đạt', en: 'Fail', activeBg: '#fef2f2', activeColor: '#b91c1c', activeWeight: 600 },
-              { status: 'not_applicable', vi: 'Không áp dụng', en: 'N/A', activeBg: '#ffffff', activeColor: '#475569', activeWeight: 500 },
-              { status: 'pending', vi: 'Chờ', en: 'Pending', activeBg: '#ffffff', activeColor: '#475569', activeWeight: 500 },
+              { status: 'pass', vi: 'Đạt', en: 'Pass', activeBg: '#10b981', activeColor: '#ffffff' },
+              { status: 'fail', vi: 'Chưa đạt', en: 'Fail', activeBg: '#ef4444', activeColor: '#ffffff' },
+              { status: 'not_applicable', vi: 'K.áp dụng', en: 'N/A', activeBg: '#64748b', activeColor: '#ffffff' },
+              { status: 'pending', vi: 'Chờ', en: 'Pending', activeBg: '#94a3b8', activeColor: '#ffffff' },
             ].map((btn) => {
               const isActive = localItem.resultStatus === btn.status;
               return (
@@ -292,16 +356,16 @@ export function ChecklistItemCard({
                   disabled={isLocked || savingStatus === 'saving'}
                   onClick={() => handleStatusChange(btn.status as any)}
                   style={{
-                    minHeight: '28px',
-                    padding: '0 10px',
+                    height: '26px',
+                    padding: '0 9px',
                     borderRadius: '4px',
                     border: 'none',
                     background: isActive ? btn.activeBg : 'transparent',
                     color: isActive ? btn.activeColor : '#64748b',
-                    fontSize: '12px',
-                    fontWeight: isActive ? btn.activeWeight : 400,
+                    fontSize: '11.5px',
+                    fontWeight: isActive ? 600 : 500,
                     cursor: isLocked || savingStatus === 'saving' ? 'not-allowed' : 'pointer',
-                    boxShadow: isActive ? '0 1px 2px rgba(0, 0, 0, 0.05)' : 'none',
+                    boxShadow: isActive ? '0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -310,10 +374,36 @@ export function ChecklistItemCard({
               );
             })}
           </div>
+
+          {/* Toggle Minh chứng / Ghi chú */}
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            style={{
+              height: '26px',
+              padding: '0 8px',
+              borderRadius: '4px',
+              border: (localItem.notes || localItem.evidenceImageUrl) ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
+              background: (localItem.notes || localItem.evidenceImageUrl) ? '#ecfdf5' : '#ffffff',
+              color: (localItem.notes || localItem.evidenceImageUrl) ? '#047857' : '#64748b',
+              fontSize: '11.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'all 0.15s ease',
+            }}
+            title={lang === 'en' ? 'Open details, notes & photo evidence' : 'Mở rộng ghi chú & ảnh minh chứng'}
+          >
+            <Icon name={localItem.evidenceImageUrl ? 'camera' : 'file-text'} size={11} />
+            <span>{lang === 'en' ? 'Evidence' : 'Minh chứng'}</span>
+            <Icon name={isExpanded ? 'chevron' : 'chevron-right'} size={10} />
+          </button>
         </div>
       </div>
 
-      {/* ─── TẦNG 2: MICRO-GUIDANCE & QUICK ACTIONS ───────── */}
+      {/* ─── TẦNG 2: MICRO-REQUIREMENT & QUICK ACTIONS ────── */}
       <div
         style={{
           display: 'flex',
@@ -326,7 +416,13 @@ export function ChecklistItemCard({
       >
         {/* Left: 1-line Micro-Requirement + Inspect Guide Trigger */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', flex: '1 1 360px' }}>
-          {knowledge?.requirement ? (
+          {/* Hiển thị lý do đối soát tự động nếu có */}
+          {localItem.isAutoEvaluated && localItem.notes ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: localItem.resultStatus === 'fail' ? '#b91c1c' : '#047857', fontSize: '11.5px', fontWeight: 500 }}>
+              <Icon name={localItem.resultStatus === 'fail' ? 'warning' : 'check'} size={12} style={{ flexShrink: 0 }} />
+              <span>{localItem.notes}</span>
+            </div>
+          ) : knowledge?.requirement ? (
             <span style={{ color: '#64748b', lineHeight: 1.4 }}>
               <span style={{ color: '#047857', fontWeight: 600 }}>
                 {lang === 'en' ? 'Standard: ' : 'Tiêu chuẩn: '}
@@ -351,115 +447,59 @@ export function ChecklistItemCard({
                 border: 'none',
                 background: showGuidance ? '#ecfdf5' : 'transparent',
                 color: showGuidance ? '#047857' : '#0284c7',
-                fontSize: '11.5px',
-                fontWeight: 600,
+                fontSize: '11px',
+                fontWeight: 500,
                 cursor: 'pointer',
-                padding: '2px 6px',
+                padding: '1px 5px',
                 borderRadius: '4px',
                 flexShrink: 0,
+                textDecoration: 'underline',
               }}
             >
               <Icon name="help" size={11} />
-              <span>{showGuidance ? (lang === 'en' ? 'Close Guide' : 'Đóng hướng dẫn') : (lang === 'en' ? 'How to comply?' : 'Hướng dẫn đạt chuẩn')}</span>
+              <span>{showGuidance ? (lang === 'en' ? 'Hide guide' : 'Ẩn hướng dẫn') : (lang === 'en' ? 'How to comply?' : 'Hướng dẫn đạt chuẩn')}</span>
             </button>
           )}
         </div>
 
-        {/* Right: Evidence & Notes Action Trigger */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-          {savingStatus === 'error' && errorMessage && (
-            <span style={{ color: '#dc2626', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <Icon name="alert-triangle" size={12} />
-              <span>{errorMessage}</span>
-            </span>
-          )}
-          {/* Direct Photo Thumbnail Preview if already attached */}
-          {localItem.evidenceImageUrl && (
-            <button
-              type="button"
-              onClick={() => setIsPreviewModalOpen(true)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                border: 'none',
-                background: 'transparent',
-                padding: 0,
-                cursor: 'pointer',
-              }}
-              title={lang === 'en' ? 'Click to view full photo' : 'Nhấn để xem ảnh phóng to'}
-            >
-              <img
-                src={localItem.evidenceImageUrl}
-                alt="Evidence"
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '4px',
-                  objectFit: 'cover',
-                  border: '1px solid #cbd5e1',
-                }}
-              />
-            </button>
-          )}
-
-          {/* Expand/Collapse Button */}
+        {/* Right: Quick photo view button if photo exists and not expanded */}
+        {localItem.evidenceImageUrl && !isExpanded && (
           <button
             type="button"
-            onClick={() => setIsExpanded((prev) => !prev)}
+            onClick={() => setIsPreviewModalOpen(true)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
-              background: isExpanded ? '#f1f5f9' : 'transparent',
-              border: 'none',
-              color: isExpanded ? '#0f172a' : '#64748b',
-              fontSize: '12px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              padding: '3px 8px',
+              border: '1px solid #a7f3d0',
+              background: '#ecfdf5',
+              padding: '2px 7px',
               borderRadius: '4px',
+              fontSize: '11px',
+              cursor: 'pointer',
+              color: '#047857',
+              fontWeight: 600,
+              flexShrink: 0,
             }}
+            title={lang === 'en' ? 'Click to view enlarged photo' : 'Nhấn để phóng to xem ảnh minh chứng'}
           >
-            <Icon name={isExpanded ? 'chevron' : 'chevron-right'} size={12} />
-            <span>
-              {isExpanded
-                ? (lang === 'en' ? 'Collapse' : 'Thu gọn')
-                : (lang === 'en' ? 'Evidence & Notes' : 'Ghi chú & minh chứng')}
-            </span>
-            {localItem.evidenceImageUrl && (
-              <span style={{ fontSize: '10.5px', color: '#10b981', fontWeight: 600 }}>•</span>
-            )}
+            <img
+              src={localItem.evidenceImageUrl}
+              alt="Evidence thumbnail"
+              style={{ width: '15px', height: '15px', borderRadius: '2px', objectFit: 'cover' }}
+            />
+            <span>{lang === 'en' ? 'View Photo' : 'Xem ảnh'}</span>
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Auto-evaluated System Warning / Verification Note */}
-      {localItem.isAutoEvaluated && localItem.notes && (
-        <div
-          style={{
-            background: localItem.resultStatus === 'fail' ? '#fef2f2' : '#f0fdf4',
-            borderRadius: '5px',
-            padding: '6px 10px',
-            fontSize: '12px',
-            color: localItem.resultStatus === 'fail' ? '#991b1b' : '#166534',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '6px',
-          }}
-        >
-          <Icon name={localItem.resultStatus === 'fail' ? 'warning' : 'shield'} size={13} style={{ marginTop: '2px', flexShrink: 0 }} />
-          <span>{localItem.notes}</span>
-        </div>
-      )}
-
-      {/* ─── IN-LINE FIELD GUIDANCE (TRỢ LÝ THẨM ĐỊNH TẠI CHỖ) ─ */}
+      {/* ─── IN-LINE FIELD GUIDANCE ──────────────────────── */}
       {showGuidance && knowledge && (
         <div
           style={{
             background: '#f8fafc',
-            borderLeft: '3px solid #10b981',
-            borderRadius: '4px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
             padding: '10px 14px',
             fontSize: '12px',
             color: '#334155',
@@ -502,7 +542,7 @@ export function ChecklistItemCard({
             display: 'flex',
             flexDirection: 'column',
             gap: '12px',
-            fontSize: '12.5px',
+            fontSize: '12px',
           }}
         >
           {/* 1. Direct File / Photo Attachment Area */}
@@ -539,8 +579,8 @@ export function ChecklistItemCard({
                   alt="Evidence"
                   onClick={() => setIsPreviewModalOpen(true)}
                   style={{
-                    width: '64px',
-                    height: '64px',
+                    width: '60px',
+                    height: '60px',
                     borderRadius: '4px',
                     objectFit: 'cover',
                     cursor: 'pointer',
@@ -549,7 +589,7 @@ export function ChecklistItemCard({
                   title={lang === 'en' ? 'Click to enlarge' : 'Nhấn để phóng to'}
                 />
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1 }}>
                   <span style={{ fontSize: '12px', fontWeight: 600, color: '#0f172a' }}>
                     {lang === 'en' ? 'Attached Photo Evidence' : 'Đã đính kèm ảnh minh chứng hiện trường'}
                   </span>
@@ -615,8 +655,8 @@ export function ChecklistItemCard({
                   if (!isLocked) e.currentTarget.style.borderColor = '#cbd5e1';
                 }}
               >
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: isLocked ? '#94a3b8' : '#059669', fontSize: '12.5px', fontWeight: 600 }}>
-                  <Icon name="camera" size={15} />
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: isLocked ? '#94a3b8' : '#059669', fontSize: '12px', fontWeight: 600 }}>
+                  <Icon name="camera" size={14} />
                   <span>{lang === 'en' ? 'Take Photo or Upload Image from Device' : 'Chụp ảnh từ camera hoặc Chọn tệp từ máy'}</span>
                 </div>
                 <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#94a3b8' }}>
@@ -698,44 +738,128 @@ export function ChecklistItemCard({
       {isPreviewModalOpen && localItem.evidenceImageUrl && (
         <div
           className="modal-backdrop"
-          style={{ zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{
+            zIndex: 1300,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            padding: '20px',
+          }}
           onClick={() => setIsPreviewModalOpen(false)}
         >
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
               background: '#ffffff',
-              borderRadius: '8px',
-              padding: '16px',
-              maxWidth: '90vw',
+              borderRadius: '12px',
+              padding: '18px 22px',
+              maxWidth: '85vw',
               maxHeight: '90vh',
               display: 'flex',
               flexDirection: 'column',
               gap: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontWeight: 700, fontSize: '13.5px', color: '#0f172a' }}>
-                {localItem.ruleCode} · {lang === 'en' ? 'Evidence Photo' : 'Ảnh minh chứng thực tế'}
-              </span>
+            {/* Header with Title and TCVN clause */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: '14px', color: '#0f172a', fontFamily: 'ui-monospace, monospace' }}>
+                    {localItem.ruleCode}
+                  </span>
+                  {knowledge?.tcvnClause && (
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '1.5px 6px', borderRadius: '4px' }}>
+                      {knowledge.tcvnClause}
+                    </span>
+                  )}
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                    {localItem.ruleName}
+                  </span>
+                </div>
+                <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                  {knowledge?.evidenceRequired ? `Yêu cầu minh chứng: ${knowledge.evidenceRequired}` : 'Ảnh chụp hiện trường phục vụ kiểm tra VietGAP'}
+                </span>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsPreviewModalOpen(false)}
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}
+                style={{
+                  border: 'none',
+                  background: '#f1f5f9',
+                  borderRadius: '6px',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#475569',
+                  fontWeight: 'bold',
+                }}
+                aria-label="Close"
               >
                 ✕
               </button>
             </div>
-            <img
-              src={localItem.evidenceImageUrl}
-              alt="Enlarged Evidence"
-              style={{
-                maxWidth: '100%',
-                maxHeight: '75vh',
-                objectFit: 'contain',
-                borderRadius: '4px',
-              }}
-            />
+
+            {/* High-res Image Display */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0f172a', borderRadius: '8px', overflow: 'hidden', padding: '8px' }}>
+              <img
+                src={localItem.evidenceImageUrl}
+                alt="Enlarged Evidence"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '65vh',
+                  objectFit: 'contain',
+                  borderRadius: '4px',
+                }}
+              />
+            </div>
+
+            {/* Footer with Details & Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', paddingTop: '4px', borderTop: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: '12px', color: '#64748b', maxWidth: '65%' }}>
+                {localItem.notes ? (
+                  <span><strong>Ghi chú:</strong> {localItem.notes}</span>
+                ) : (
+                  <span>Minh chứng đính kèm hồ sơ tự đánh giá</span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <a
+                  href={localItem.evidenceImageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Icon name="external-link" size={12} />
+                  <span>{lang === 'en' ? 'Open in new tab' : 'Mở trong tab mới'}</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="primary-button"
+                  style={{ fontSize: '12px', padding: '6px 16px' }}
+                >
+                  {lang === 'en' ? 'Close' : 'Đóng'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

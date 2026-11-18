@@ -10,10 +10,11 @@ import type { ChecklistRunResp, ChecklistResultItemResp } from './vietgapComplia
 import { AuditHeader } from './workspace/AuditHeader';
 import { AuditCategorySidebar } from './workspace/AuditCategorySidebar';
 import { AuditFilters } from './workspace/AuditFilters';
-import type { StatusFilterKey } from './workspace/AuditFilters';
+import type { StatusFilterKey, MethodFilterKey } from './workspace/AuditFilters';
 import { ChecklistItemCard } from './workspace/ChecklistItemCard';
 import { AuditConfirmationModal } from './workspace/AuditConfirmationModal';
 import { AUDIT_CATEGORIES, getCategoryMeta } from './workspace/types';
+import { isAutoEvaluatedCriterion } from './workspace/vietgapCriteriaKnowledge';
 
 interface VietGapAuditWorkspaceModalProps {
   run: ChecklistRunResp;
@@ -35,6 +36,7 @@ export function VietGapAuditWorkspaceModal({
   // Filter States
   const [selectedCategory, setSelectedCategory] = useState<string>('all'); // 'all' | 'priority' | categoryCode
   const [statusFilter, setStatusFilter] = useState<StatusFilterKey>('all');
+  const [methodFilter, setMethodFilter] = useState<MethodFilterKey>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Action States
@@ -76,7 +78,8 @@ export function VietGapAuditWorkspaceModal({
       pending: categoryScopedItems.filter((i) => i.resultStatus === 'pending').length,
       fail: categoryScopedItems.filter((i) => i.resultStatus === 'fail').length,
       missing_evidence: categoryScopedItems.filter((i) => i.resultStatus === 'pass' && i.isMissingEvidence).length,
-      auto: categoryScopedItems.filter((i) => i.isAutoEvaluated).length,
+      auto: categoryScopedItems.filter((i) => isAutoEvaluatedCriterion(i.ruleCode) || i.isAutoEvaluated).length,
+      field: categoryScopedItems.filter((i) => !isAutoEvaluatedCriterion(i.ruleCode) && !i.isAutoEvaluated).length,
       pass: categoryScopedItems.filter((i) => i.resultStatus === 'pass').length,
     };
   }, [categoryScopedItems]);
@@ -130,14 +133,18 @@ export function VietGapAuditWorkspaceModal({
   // Filter & Search Engine (operates on the category-scoped criteria)
   const filteredItems = useMemo(() => {
     return categoryScopedItems.filter((item) => {
-      // 1. Status Pills Filter
+      // 1. Status Filter
       if (statusFilter === 'pending' && item.resultStatus !== 'pending') return false;
       if (statusFilter === 'fail' && item.resultStatus !== 'fail') return false;
       if (statusFilter === 'missing_evidence' && !(item.resultStatus === 'pass' && item.isMissingEvidence)) return false;
-      if (statusFilter === 'auto' && !item.isAutoEvaluated) return false;
       if (statusFilter === 'pass' && item.resultStatus !== 'pass') return false;
 
-      // 2. Search Query Filter
+      // 2. Method Filter
+      const isAuto = isAutoEvaluatedCriterion(item.ruleCode) || item.isAutoEvaluated;
+      if (methodFilter === 'auto' && !isAuto) return false;
+      if (methodFilter === 'field' && isAuto) return false;
+
+      // 3. Search Query Filter
       if (searchQuery.trim()) {
         const query = searchQuery.trim().toLowerCase();
         const codeMatch = item.ruleCode?.toLowerCase().includes(query);
@@ -148,13 +155,14 @@ export function VietGapAuditWorkspaceModal({
 
       return true;
     });
-  }, [categoryScopedItems, statusFilter, searchQuery]);
+  }, [categoryScopedItems, statusFilter, methodFilter, searchQuery]);
 
-  const hasActiveFilters = selectedCategory !== 'all' || statusFilter !== 'all' || Boolean(searchQuery.trim());
+  const hasActiveFilters = selectedCategory !== 'all' || statusFilter !== 'all' || methodFilter !== 'all' || Boolean(searchQuery.trim());
 
   const handleResetFilters = () => {
     setSelectedCategory('all');
     setStatusFilter('all');
+    setMethodFilter('all');
     setSearchQuery('');
   };
 
@@ -430,6 +438,8 @@ export function VietGapAuditWorkspaceModal({
               onSearchChange={setSearchQuery}
               statusFilter={statusFilter}
               onStatusFilterChange={setStatusFilter}
+              methodFilter={methodFilter}
+              onMethodFilterChange={setMethodFilter}
               counts={filterCounts}
               onResetFilters={handleResetFilters}
               hasActiveFilters={hasActiveFilters}
