@@ -12,6 +12,7 @@ interface ChecklistItemCardProps {
   farmId: number;
   runId: number;
   selectedCategory: string;
+  farmMapUrl?: string | null;
   onUpdate: (updated: ChecklistResultItemResp) => void;
 }
 
@@ -28,6 +29,7 @@ export function ChecklistItemCard({
   farmId,
   runId,
   selectedCategory,
+  farmMapUrl,
   onUpdate,
 }: ChecklistItemCardProps) {
   const { lang } = useLanguage();
@@ -459,6 +461,49 @@ export function ChecklistItemCard({
               <Icon name="help" size={11} />
               <span>{showGuidance ? (lang === 'en' ? 'Hide guide' : 'Ẩn hướng dẫn') : (lang === 'en' ? 'How to comply?' : 'Hướng dẫn đạt chuẩn')}</span>
             </button>
+          )}
+
+          {/* Quick link for VG-CS-04 Farm Layout Map */}
+          {localItem.ruleCode === 'VG-CS-04' && (
+            farmMapUrl ? (
+              <a
+                href={farmMapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '11px',
+                  color: '#047857',
+                  background: '#ecfdf5',
+                  border: '1px solid #10b981',
+                  padding: '2px 7px',
+                  borderRadius: '4px',
+                  textDecoration: 'none',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+                title={lang === 'en' ? 'Open farm layout blueprint' : 'Xem sơ đồ mặt bằng quy hoạch'}
+              >
+                <span>🗺️ {lang === 'en' ? 'Farm Map ↗' : 'Sơ đồ trang trại ↗'}</span>
+              </a>
+            ) : (
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: '#b45309',
+                  background: '#fffbeb',
+                  border: '1px solid #fde68a',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  flexShrink: 0,
+                }}
+                title={lang === 'en' ? 'Upload map in Farm Profile' : 'Chưa tải sơ đồ trong Hồ sơ trang trại'}
+              >
+                ⚠️ {lang === 'en' ? 'No layout map' : 'Chưa có sơ đồ'}
+              </span>
+            )
           )}
         </div>
 

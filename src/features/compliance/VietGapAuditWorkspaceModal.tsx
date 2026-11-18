@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { getFarmById } from '../farm-management/api';
 import {
   autoCheckRunApi,
   completeChecklistRunApi,
@@ -45,6 +46,13 @@ export function VietGapAuditWorkspaceModal({
   const [isLockModalOpen, setIsLockModalOpen] = useState(false);
   const [isLocking, setIsLocking] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'err' } | null>(null);
+  const [farmMapUrl, setFarmMapUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (farmId) {
+      getFarmById(farmId).then((f) => setFarmMapUrl(f.farmMapUrl ?? null)).catch(() => {});
+    }
+  }, [farmId]);
 
   const isLocked = currentRun.runStatus === 'completed' || currentRun.runStatus === 'cancelled';
 
@@ -491,6 +499,7 @@ export function VietGapAuditWorkspaceModal({
                     farmId={farmId}
                     runId={currentRun.runId}
                     selectedCategory={selectedCategory}
+                    farmMapUrl={farmMapUrl}
                     onUpdate={handleItemUpdate}
                   />
                 ))
@@ -512,20 +521,27 @@ export function VietGapAuditWorkspaceModal({
               }}
             >
               <div>
-                <span>
-                  {selectedCategory === 'all'
-                    ? lang === 'en'
-                      ? `Showing ${filteredItems.length} of ${totalItems} criteria`
-                      : `Hiển thị ${filteredItems.length} / ${totalItems} tiêu chí`
-                    : lang === 'en'
-                      ? `Showing ${filteredItems.length} of ${categoryScopedItems.length} criteria in group`
-                      : `Hiển thị ${filteredItems.length} / ${categoryScopedItems.length} tiêu chí trong nhóm`}
-                </span>
-                {hasActiveFilters && (
-                  <span style={{ marginLeft: '6px', color: '#059669', fontWeight: 600 }}>
-                    ({lang === 'en' ? 'Filtered' : 'Đang lọc'})
+                <div>
+                  <span>
+                    {selectedCategory === 'all'
+                      ? lang === 'en'
+                        ? `Showing ${filteredItems.length} of ${totalItems} criteria`
+                        : `Hiển thị ${filteredItems.length} / ${totalItems} tiêu chí`
+                      : lang === 'en'
+                        ? `Showing ${filteredItems.length} of ${categoryScopedItems.length} criteria in group`
+                        : `Hiển thị ${filteredItems.length} / ${categoryScopedItems.length} tiêu chí trong nhóm`}
                   </span>
-                )}
+                  {hasActiveFilters && (
+                    <span style={{ marginLeft: '6px', color: '#059669', fontWeight: 600 }}>
+                      ({lang === 'en' ? 'Filtered' : 'Đang lọc'})
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#94a3b8', fontStyle: 'italic', marginTop: '3px' }}>
+                  {lang === 'en'
+                    ? 'Internal VietGAP Self-Assessment Dossier in compliance with TCVN 11892-1:2017 & transitional TCVN 11892-1:2026.'
+                    : 'Biên bản Tự kiểm tra & Đánh giá nội bộ phục vụ công tác chuẩn bị hồ sơ chứng nhận theo TCVN 11892-1:2017 & chuyển tiếp TCVN 11892-1:2026.'}
+                </div>
               </div>
 
               <div>

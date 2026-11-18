@@ -74,6 +74,8 @@ export interface MaterialOption {
   materialForm?: string | null;
   unit: string;
   description?: string;
+  lotNumber?: string | null;
+  germinationRate?: number | null;
   isActive?: boolean;
 }
 
@@ -124,6 +126,8 @@ function MaterialUsageContent() {
   const [selectedMaterialId, setSelectedMaterialId] = useState<number | ''>('');
   const [customMaterialName, setCustomMaterialName] = useState('');
   const [customMaterialType, setCustomMaterialType] = useState('Phân bón hữu cơ');
+  const [customLotNumber, setCustomLotNumber] = useState('');
+  const [customGerminationRate, setCustomGerminationRate] = useState<number | ''>('');
   const [materialForm, setMaterialForm] = useState('Dạng hữu cơ vi sinh');
   const [quantity, setQuantity] = useState<number | ''>(5);
   const [unit, setUnit] = useState('bao');
@@ -362,6 +366,8 @@ function MaterialUsageContent() {
             materialType: customMaterialType,
             materialForm: materialForm || defaultMaterialForm(customMaterialType, unit),
             unit: unit.trim(),
+            lotNumber: customLotNumber.trim() || undefined,
+            germinationRate: customGerminationRate !== '' ? Number(customGerminationRate) : undefined,
           },
         });
         if (!created.success || !created.data?.id) throw new Error(created.message || 'Không tạo được vật tư.');
@@ -427,6 +433,7 @@ function MaterialUsageContent() {
     setShowRemainingSections(false);
     setEditingUsage(null); setNotification(null); setUseExistingMaterial(true); setFieldErrors({});
     setSelectedMaterialId(''); setCustomMaterialName(''); setCustomMaterialType('Phân bón hữu cơ');
+    setCustomLotNumber(''); setCustomGerminationRate('');
     setMaterialForm('Dạng hữu cơ vi sinh');
     setFarmingActivityId(''); setQuantity(5); setUnit('bao'); setDosage(''); setMethod('');
     setDosageManuallyEdited(false);
@@ -551,6 +558,46 @@ function MaterialUsageContent() {
                     {getMaterialUnitOptions(unit, lang).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select></div>{fieldError('usage-unit')}
                 </div></div>}
+
+              {!useExistingMaterial && (
+                <div className="mu-entry-grid mu-entry-two-columns" style={{ marginTop: '10px' }}>
+                  <div className="mu-field structured-field-card">
+                    <label htmlFor="usage-material-lot">
+                      {lang === 'en' ? 'Seed / Material Lot Number' : 'Số lô kiểm định hạt giống / vật tư'}
+                      <span className="structured-field-badge" style={{ marginLeft: '6px', color: '#059669', background: '#ecfdf5' }}>
+                        VietGAP VG-NL-03
+                      </span>
+                    </label>
+                    <input
+                      className="ui-input"
+                      id="usage-material-lot"
+                      maxLength={60}
+                      placeholder={lang === 'en' ? 'e.g. LOT-F1-2026-09' : 'Ví dụ: LOT-MELON-2026-F1'}
+                      value={customLotNumber}
+                      onChange={(event) => setCustomLotNumber(event.target.value)}
+                    />
+                  </div>
+                  <div className="mu-field structured-field-card">
+                    <label htmlFor="usage-material-germination">
+                      {lang === 'en' ? 'Germination Rate (%)' : 'Tỷ lệ nảy mầm (%)'}
+                      <span className="structured-field-badge" style={{ marginLeft: '6px', color: '#059669', background: '#ecfdf5' }}>
+                        ≥ 85%
+                      </span>
+                    </label>
+                    <input
+                      className="ui-input"
+                      id="usage-material-germination"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder={lang === 'en' ? 'e.g. 95' : 'Ví dụ: 95 (%)'}
+                      value={customGerminationRate}
+                      onChange={(event) => setCustomGerminationRate(event.target.value ? Number(event.target.value) : '')}
+                    />
+                  </div>
+                </div>
+              )}
             </MaterialUsageFormSection>
             <MaterialUsageFormSection number={3} title={lang === 'en' ? 'Usage amount' : 'Lượng sử dụng'}>
               <div className="mu-entry-grid mu-entry-three-columns"><div className="mu-field structured-field-card"><label htmlFor="usage-quantity">{lang === 'en' ? 'Usage Quantity' : 'Số lượng sử dụng'} <span className="mu-required">*</span></label>
