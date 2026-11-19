@@ -44,6 +44,27 @@ export interface UpdateInventoryReq {
   reorderLevel: number;
 }
 
+export interface RecentMaterial {
+  inventoryId: number;
+  warehouseId: number;
+  warehouseName: string;
+  materialId: number;
+  materialName: string;
+  quantityOnHand: number;
+  reorderLevel: number;
+}
+
+export interface WarehouseOverview {
+  warehouseId: number;
+  warehouseName: string;
+  farmName: string;
+  address: string | null;
+  totalItemCount: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  recentMaterials: RecentMaterial[];
+}
+
 export async function fetchWarehousesApi(farmId: number): Promise<WarehouseResp[]> {
   const res = await apiRequest<ApiResponse<WarehouseResp[]>>(`/farms/${farmId}/warehouses`);
   return res.data || [];
@@ -114,5 +135,16 @@ export async function deleteInventoryApi(inventoryId: number): Promise<void> {
   await apiRequest<ApiResponse<null>>(`/inventories/${inventoryId}`, {
     method: 'DELETE',
   });
+
 }
 
+export async function fetchWarehouseOverviewApi(
+  warehouseId: number
+): Promise<WarehouseOverview> {
+  const res = await apiRequest<ApiResponse<WarehouseOverview>>(
+    `/warehouses/${warehouseId}/overview`,
+    { method: 'GET' }
+  );
+
+  return res.data;
+}

@@ -9,7 +9,6 @@ import { Button } from '../../shared/components/Button';
 import { TablePagination } from '../../shared/components/TablePagination';
 import { Icon } from '../../shared/components/Icon';
 
-
 import { formatNumber as uiFormatNumber, formatDate } from '../../shared/format/formatters';
 
 import { usePagination } from '../../shared/hooks/usePagination';
@@ -30,6 +29,8 @@ import {
   createInventoryApi,
   updateInventoryApi,
   deleteInventoryApi,
+  WarehouseOverview,
+  fetchWarehouseOverviewApi,
 } from './warehouseService';
 import { apiRequest } from '../../shared/api/httpClient';
 import type { ApiResponse } from '../../shared/types/api';
@@ -48,7 +49,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
   // Warehouses state
   const [warehouses, setWarehouses] = useState<WarehouseResp[]>([]);
   const [loadingWarehouses, setLoadingWarehouses] = useState(false);
-  const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseResp | null>(null);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<WarehouseOverview | null>(null);
+  const [loadingWarehouseOverview, setLoadingWarehouseOverview] = useState(false);
+  const [warehouseOverviewError, setWarehouseOverviewError] = useState<string | null>(null);
   const [isCreateWarehouseOpen, setIsCreateWarehouseOpen] = useState(false);
   const [createWarehouseForm, setCreateWarehouseForm] = useState({ warehouseName: '', address: '', imageUrl: '' });
   const [creatingWarehouse, setCreatingWarehouse] = useState(false);
@@ -61,7 +64,11 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
   const [filterWarehouseId, setFilterWarehouseId] = useState<number | 'ALL'>('ALL');
   const [searchMaterialKeyword, setSearchMaterialKeyword] = useState('');
   const [editingInventory, setEditingInventory] = useState<InventoryItemResp | null>(null);
-  const [updateInventoryForm, setUpdateInventoryForm] = useState({ quantityOnHand: 0, reorderLevel: 0 });
+  const [updateInventoryForm, setUpdateInventoryForm] = useState({
+    quantityOnHand: '',
+    reorderLevel: '',
+  });
+
   const [updatingInventory, setUpdatingInventory] = useState(false);
 
   // Edit warehouse state
@@ -124,14 +131,16 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
   };
 
   useEffect(() => {
-    if (selectedFarm?.id) {
-      if (activeSubTab === 'warehouses') {
-        void loadWarehouses();
-      } else {
-        void loadInventories();
-      }
-    }
-  }, [activeSubTab, selectedFarm?.id, filterWarehouseId]);
+    if (!selectedFarm?.id) return;
+
+    void loadWarehouses();
+  }, [selectedFarm?.id]);
+
+  useEffect(() => {
+    if (!selectedFarm?.id) return;
+
+    void loadInventories();
+  }, [selectedFarm?.id, filterWarehouseId]);
 
   const loadMaterials = async () => {
     if (!selectedFarm?.id) return;
@@ -147,7 +156,8 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
   const handleCreateWarehouse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFarm?.id || !createWarehouseForm.warehouseName.trim()) return;
+    if (!selectedFarm?.id) return;
+
     setCreatingWarehouse(true);
     try {
       await createWarehouseApi(selectedFarm.id, {
@@ -167,6 +177,27 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
     }
   };
 
+  const handleViewWarehouse = async (warehouseId: number) => {
+    setLoadingWarehouseOverview(true);
+    setWarehouseOverviewError(null);
+    setSelectedWarehouse(null);
+
+    try {
+      const overview = await fetchWarehouseOverviewApi(warehouseId);
+      setSelectedWarehouse(overview);
+    } catch (err) {
+      setWarehouseOverviewError(
+        err instanceof Error
+          ? translate(err.message)
+          : lang === 'en'
+            ? 'Unable to load warehouse overview.'
+            : 'Không thể tải thông tin tổng quan kho.'
+      );
+    } finally {
+      setLoadingWarehouseOverview(false);
+    }
+  };
+
   const handleStartEditWarehouse = (w: WarehouseResp) => {
     setEditingWarehouse(w);
     setEditWarehouseForm({
@@ -178,7 +209,8 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
   const handleUpdateWarehouse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingWarehouse || !editWarehouseForm.warehouseName.trim()) return;
+    if (!editingWarehouse) return;
+
     setUpdatingWarehouse(true);
     try {
       await updateWarehouseApi(editingWarehouse.warehouseId, {
@@ -246,12 +278,19 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
   const handleUpdateInventory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingInventory) return;
+
+    const payload = {
+      quantityOnHand: Number(updateInventoryForm.quantityOnHand),
+      reorderLevel: Number(updateInventoryForm.reorderLevel),
+    };
+
     setUpdatingInventory(true);
     try {
-      await updateInventoryApi(editingInventory.inventoryId, {
-        quantityOnHand: Number(updateInventoryForm.quantityOnHand),
-        reorderLevel: Number(updateInventoryForm.reorderLevel),
-      });
+      await updateInventoryApi(
+        editingInventory.inventoryId,
+        payload
+      );
+
       setEditingInventory(null);
       showToast((message("Inventory adjusted: \"{value1}\" successfully!", { value1: editingInventory.materialName })));
       void loadInventories();
@@ -337,19 +376,19 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       )}
 
       {/* Main Page Heading matching Mockup */}
-      <PageHeading level={embedded ? 2 : 1}   title={<>
-            {activeSubTab === 'warehouses'
-              ? (lang === 'en' ? 'Warehouse Management' : 'Quản lý Kho hàng')
-              : (lang === 'en' ? 'Input Inventory' : 'Tồn kho Vật tư')}
-          </>} description={<>
-            {activeSubTab === 'warehouses'
-              ? (lang === 'en'
-                ? `${warehouses.length} storage facilities at ${selectedFarm?.farmName || 'Farm'}`
-                : `${warehouses.length} kho hàng lưu trữ tại ${selectedFarm?.farmName || 'trang trại'}`)
-              : (lang === 'en'
-                ? `${inventories.length} stock items · Threshold tracking`
-                : `${inventories.length} mặt hàng tồn kho · Giám sát định mức`)}
-          </>}><div>
+      <PageHeading level={embedded ? 2 : 1} title={<>
+        {activeSubTab === 'warehouses'
+          ? (lang === 'en' ? 'Warehouse Management' : 'Quản lý Kho hàng')
+          : (lang === 'en' ? 'Input Inventory' : 'Tồn kho Vật tư')}
+      </>} description={<>
+        {activeSubTab === 'warehouses'
+          ? (lang === 'en'
+            ? `${warehouses.length} storage facilities at ${selectedFarm?.farmName || 'Farm'}`
+            : `${warehouses.length} kho hàng lưu trữ tại ${selectedFarm?.farmName || 'trang trại'}`)
+          : (lang === 'en'
+            ? `${inventories.length} stock items · Threshold tracking`
+            : `${inventories.length} mặt hàng tồn kho · Giám sát định mức`)}
+      </>}><div>
           {activeSubTab === 'warehouses' ? (
             <Button
               type="button"
@@ -375,10 +414,10 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       <div className="zone-clean-card">
         {/* Integrated Tabs */}
         <TabList idPrefix="warehouse" label={lang === 'en' ? 'Warehouse sections' : 'Các mục kho hàng'} inset
-            value={activeSubTab} onChange={setActiveSubTab} items={[
-              { value: 'warehouses', label: <><Icon name="box" size={17} /> {lang === 'en' ? 'Warehouses' : 'Kho hàng'} <span className="tab-count">({warehouses.length})</span></> },
-              { value: 'inventory', label: <><Icon name="layers" size={17} /> {lang === 'en' ? 'Inventory' : 'Tồn kho vật tư'} <span className="tab-count">({inventories.length})</span></> },
-            ]} />
+          value={activeSubTab} onChange={setActiveSubTab} items={[
+            { value: 'warehouses', label: <><Icon name="box" size={17} /> {lang === 'en' ? 'Warehouses' : 'Kho hàng'} <span className="tab-count">({warehouses.length})</span></> },
+            { value: 'inventory', label: <><Icon name="layers" size={17} /> {lang === 'en' ? 'Inventory' : 'Tồn kho vật tư'} <span className="tab-count">({inventories.length})</span></> },
+          ]} />
 
         {/* =========================================================
             TAB 1: WAREHOUSES
@@ -415,17 +454,14 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 <p>{lang === 'en' ? '⏳ Loading warehouses list...' : '⏳ Đang tải danh sách kho hàng...'}</p>
               </div>
             ) : warehouseLoadError ? (<LoadError message={warehouseLoadError} onRetry={() => { void loadWarehouses(); }} />) : filteredWarehouses.length === 0 ? (
-              <EmptyState  className="panel" title={<>{lang === 'en' ? 'No Warehouses Found' : 'Chưa có kho hàng nào'}</>} description={<>{lang === 'en' ? 'Click "Add Warehouse" to create storage facilities for inputs and produce.' : 'Nhấn "Thêm kho hàng" để khởi tạo cơ sở lưu trữ vật tư và nông sản cho trang trại.'}</>} icon={<>🏢</>} action={<><Button type="button" variant="primary" onClick={() => setIsCreateWarehouseOpen(true)}>
-                  <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Warehouse' : 'Thêm kho hàng'}
-                </Button></>} />
+              <EmptyState className="panel" title={<>{lang === 'en' ? 'No Warehouses Found' : 'Chưa có kho hàng nào'}</>} description={<>{lang === 'en' ? 'Click "Add Warehouse" to create storage facilities for inputs and produce.' : 'Nhấn "Thêm kho hàng" để khởi tạo cơ sở lưu trữ vật tư và nông sản cho trang trại.'}</>} icon={<>🏢</>} action={<><Button type="button" variant="primary" onClick={() => setIsCreateWarehouseOpen(true)}>
+                <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Warehouse' : 'Thêm kho hàng'}
+              </Button></>} />
             ) : (
               <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
                 <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ background: 'var(--color-page)' }}>
-                      <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                      </th>
                       <th scope="col">
                         {lang === 'en' ? 'WAREHOUSE NAME' : 'TÊN KHO HÀNG'}
                       </th>
@@ -446,12 +482,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                   <tbody>
                     {warehousePagination.items.map((w) => (
                       <tr key={w.warehouseId} style={{ borderBottom: '1px solid var(--color-subtle)' }}>
-                        <td style={{ textAlign: 'center' }}>
-                          <input type="checkbox" aria-label={translate("Select") + " " + (w.warehouseName)} style={{ cursor: 'pointer' }} />
-                        </td>
                         <td>
                           <span
-                            onClick={() => setSelectedWarehouse(w)}
+                            onClick={() => handleViewWarehouse(w.warehouseId)}
                             style={{
                               fontWeight: 750,
                               fontSize: '15px',
@@ -476,7 +509,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                           {w.address || '—'}
                         </td>
                         <td style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 600 }}>
-                          {w.totalItemCount} {lang === 'en' ? 'items' : 'mặt hàng'}
+                          {w.totalItemCount} {lang === 'en' ? 'item(s)' : 'mặt hàng'}
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div className="table-action-btns zone-card-actions">
@@ -485,7 +518,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                               className="table-icon-btn primary"
                               title={lang === 'en' ? 'View Details' : 'Xem chi tiết kho hàng'}
                               aria-label={translate("View") + " " + (w.warehouseName)}
-                              onClick={() => setSelectedWarehouse(w)}
+                              onClick={() => handleViewWarehouse(w.warehouseId)}
                             >
                               <Icon name="eye" size={15} />
                             </button>
@@ -581,511 +614,1005 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               </button>
             </div>
 
+
             {loadingInventories ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-muted)' }}>
-                <p>{lang === 'en' ? '⏳ Loading inventory records...' : '⏳ Đang truy xuất danh mục tồn kho...'}</p>
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: 'var(--color-muted)'
+              }}>
+                <p>
+                  {lang === 'en'
+                    ? '⏳ Loading inventory records...'
+                    : '⏳ Đang truy xuất danh mục tồn kho...'}
+                </p>
               </div>
-            ) : inventoryLoadError ? (<LoadError message={inventoryLoadError} onRetry={() => { void loadInventories(); }} />) : filteredInventories.length === 0 ? (
-              <EmptyState  className="panel" title={<>{lang === 'en' ? 'No Materials in Stock' : 'Không có vật tư nào trong kho'}</>} description={<>{lang === 'en' ? 'Click "Add to Inventory" to store fertilizers, pesticides, or seeds in the warehouse.' : 'Nhấn "Thêm vào kho" để lưu trữ phân bón, thuốc BVTV hoặc hạt giống vào kho.'}</>} icon={<>📦</>} action={<><Button type="button" variant="primary" onClick={() => void handleOpenCreateInventory()}>
-                  <Icon name="plus" size={16} /> {lang === 'en' ? 'Add to Inventory' : 'Thêm vào kho'}
-                </Button></>} />
+            ) : inventoryLoadError ? (
+              <LoadError
+                message={inventoryLoadError}
+                onRetry={() => { void loadInventories(); }}
+              />
+            ) : filteredInventories.length === 0 ? (
+              <EmptyState
+                className="panel"
+                title={
+                  <>
+                    {lang === 'en'
+                      ? 'No Materials in Stock'
+                      : 'Không có vật tư nào trong kho'}
+                  </>
+                }
+                description={
+                  <>
+                    {lang === 'en'
+                      ? 'Click "Add to Inventory" to store fertilizers, pesticides, or seeds in the warehouse.'
+                      : 'Nhấn "Thêm vào kho" để lưu trữ phân bón, thuốc BVTV hoặc hạt giống vào kho.'}
+                  </>
+                }
+                icon={<>📦</>}
+                action={
+                  <>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      onClick={() => void handleOpenCreateInventory()}
+                    >
+                      <Icon name="plus" size={16} />
+                      {lang === 'en' ? 'Add to Inventory' : 'Thêm vào kho'}
+                    </Button>
+                  </>
+                }
+              />
             ) : (
-              <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
-                <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+              <div
+                className="zone-table-wrap ui-table-scroll"
+                style={{
+                  margin: 0,
+                  border: 'none',
+                  borderRadius: 0
+                }}
+                tabIndex={0}
+              >
+                <table
+                  className="ui-data-table"
+                  style={{
+                    width: '100%',
+                    borderCollapse: 'separate',
+                    borderSpacing: 0
+                  }}
+                >
                   <thead>
                     <tr style={{ background: 'var(--color-page)' }}>
-                      <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                      </th>
                       <th scope="col">
                         {lang === 'en' ? 'MATERIAL NAME' : 'TÊN VẬT TƯ'}
                       </th>
+
                       <th scope="col">
                         {lang === 'en' ? 'MATERIAL TYPE' : 'LOẠI VẬT TƯ'}
                       </th>
+
                       <th scope="col">
                         {lang === 'en' ? 'WAREHOUSE' : 'KHO LƯU TRỮ'}
                       </th>
+
                       <th scope="col">
                         {lang === 'en' ? 'QUANTITY ON HAND' : 'SỐ LƯỢNG TỒN'}
                       </th>
+
                       <th scope="col">
                         {lang === 'en' ? 'REORDER THRESHOLD' : 'NGƯỠNG CẢNH BÁO'}
                       </th>
-                      <th scope="col">
+
+                      <th
+                        scope="col"
+                        style={{ width: '100px', textAlign: 'center' }}
+                      >
                         {lang === 'en' ? 'STATUS' : 'TRẠNG THÁI'}
                       </th>
-                      <th scope="col" style={{ width: '100px', textAlign: 'right' }}>
+
+                      <th
+                        scope="col"
+                        style={{ width: '100px', textAlign: 'right' }}
+                      >
                         {lang === 'en' ? 'Actions' : 'Thao tác'}
                       </th>
                     </tr>
                   </thead>
+
                   <tbody>
-                    {inventoryPagination.items.map((it) => (
-                      <tr key={it.inventoryId} style={{ borderBottom: '1px solid var(--color-subtle)' }}>
-                        <td style={{ textAlign: 'center' }}>
-                          <input type="checkbox" aria-label={translate("Select") + " " + (it.materialName)} style={{ cursor: 'pointer' }} />
-                        </td>
-                        <td>
-                          <strong style={{ fontSize: '15px', color: 'var(--color-text)', display: 'block' }}>{it.materialName}</strong>
-                          <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Unit:' : 'Đơn vị tính:'} {materialUnitLabel(it.unit, lang)}</span>
-                        </td>
-                        <td style={{ fontSize: '13.5px', color: 'var(--color-body)' }}>
-                          {it.materialType ? materialTypeLabel(it.materialType, lang) : (lang === 'en' ? 'Farm Input' : 'Vật tư nông nghiệp')}
-                        </td>
-                        <td style={{ fontSize: '13.5px', color: 'var(--color-body)' }}>
-                          {it.warehouseName}
-                        </td>
-                        <td>
-                          <strong style={{ fontSize: '15px', color: it.isLowStock ? 'var(--color-danger)' : 'var(--color-primary-text)' }}>
-                            {uiFormatNumber(Number(it.quantityOnHand), lang)} {materialUnitLabel(it.unit, lang)}
-                          </strong>
-                        </td>
-                        <td style={{ fontSize: '13.5px', color: 'var(--color-muted)' }}>
-                          {uiFormatNumber(Number(it.reorderLevel), lang)} {translate(it.unit)}
-                        </td>
-                        <td>
-                          <span
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              fontSize: '11.5px',
-                              fontWeight: 700,
-                              background: it.isLowStock ? 'var(--color-danger-bg)' : 'var(--color-success-bg)',
-                              color: it.isLowStock ? 'var(--color-danger)' : 'var(--color-success)',
-                            }}
-                          >
-                            {it.isLowStock ? (lang === 'en' ? '⚠️ Low Stock' : '⚠️ Sắp hết hàng') : (lang === 'en' ? '✓ In Stock' : '✓ Đủ tồn kho')}
-                          </span>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div className="table-action-btns zone-card-actions">
-                            <button
-                              type="button"
-                              className="table-icon-btn primary"
-                              title={lang === 'en' ? 'View Inventory Details' : 'Xem chi tiết tồn kho'}
-                              aria-label={translate("View") + " " + (it.materialName)}
-                              onClick={() => setSelectedInventoryItem(it)}
-                            >
-                              <Icon name="eye" size={15} />
-                              <span className="sr-only">{lang === 'en' ? "View details" : "Xem chi tiết"}</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="table-icon-btn edit"
-                              title={lang === 'en' ? 'Edit Inventory' : 'Chỉnh sửa tồn kho'}
-                              aria-label={translate("Edit") + " " + (it.materialName)}
-                              onClick={() => {
-                                setEditingInventory(it);
-                                setUpdateInventoryForm({
-                                  quantityOnHand: Number(it.quantityOnHand),
-                                  reorderLevel: Number(it.reorderLevel),
-                                });
+                    {inventoryPagination.items.map((it) => {
+                      // Determine inventory status
+                      const out = it.quantityOnHand <= 0;
+                      const low = !out && it.isLowStock;
+
+                      return (
+                        <tr
+                          key={it.inventoryId}
+                          style={{
+                            borderBottom: '1px solid var(--color-subtle)'
+                          }}
+                        >
+                          {/* Material Name */}
+                          <td>
+                            <strong
+                              style={{
+                                fontSize: '15px',
+                                color: 'var(--color-text)',
+                                display: 'block'
                               }}
                             >
-                              <Icon name="edit" size={15} />
-                              <span className="sr-only">{lang === 'en' ? "Edit" : "Chỉnh sửa"}</span>
-                            </button>
-                            <button
-                              type="button"
-                              className="table-icon-btn danger"
-                              title={lang === 'en' ? 'Delete Inventory' : 'Xóa bản ghi tồn kho'}
-                              aria-label={translate("Delete") + " " + (it.materialName)}
-                              onClick={() => setDeleteTarget({ kind: 'inventory', id: it.inventoryId, farmId: selectedFarm?.id })}
+                              {it.materialName}
+                            </strong>
+
+                            <span
+                              style={{
+                                fontSize: '12.5px',
+                                color: 'var(--color-muted)'
+                              }}
                             >
-                              <Icon name="trash" size={15} />
-                              <span className="sr-only">{lang === 'en' ? "Delete" : "Xóa"}</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {lang === 'en' ? 'Unit:' : 'Đơn vị tính:'}{' '}
+                              {materialUnitLabel(it.unit, lang)}
+                            </span>
+                          </td>
+
+                          {/* Material Type */}
+                          <td
+                            style={{
+                              fontSize: '13.5px',
+                              color: 'var(--color-body)'
+                            }}
+                          >
+                            {it.materialType
+                              ? materialTypeLabel(it.materialType, lang)
+                              : (lang === 'en'
+                                ? 'Farm Input'
+                                : 'Vật tư nông nghiệp')}
+                          </td>
+
+                          {/* Warehouse */}
+                          <td
+                            style={{
+                              fontSize: '13.5px',
+                              color: 'var(--color-body)'
+                            }}
+                          >
+                            {it.warehouseName}
+                          </td>
+
+                          {/* Quantity On Hand */}
+                          <td>
+                            <strong
+                              style={{
+                                fontSize: '15px',
+                                color: out
+                                  ? 'var(--color-danger)'
+                                  : low
+                                    ? 'var(--color-warning)'
+                                    : 'var(--color-primary-text)'
+                              }}
+                            >
+                              {uiFormatNumber(Number(it.quantityOnHand), lang)}{' '}
+                              {materialUnitLabel(
+                                it.unit,
+                                lang,
+                                it.quantityOnHand
+                              )}
+                            </strong>
+                          </td>
+
+                          {/* Reorder Threshold */}
+                          <td
+                            style={{
+                              fontSize: '13.5px',
+                              color: 'var(--color-muted)'
+                            }}
+                          >
+                            {uiFormatNumber(Number(it.reorderLevel), lang)}{' '}
+                            {materialUnitLabel(
+                              it.unit,
+                              lang,
+                              it.quantityOnHand
+                            )}
+                          </td>
+
+                          {/* Inventory Status */}
+                          <td>
+                            <span
+                              className={`wh-chip ${out ? 'danger' : low ? 'warn' : 'ok'}`}
+                            >
+                              {out
+                                ? (lang === 'en' ? 'Out of Stock' : 'Hết hàng')
+                                : low
+                                  ? (lang === 'en' ? 'Low Stock' : 'Sắp hết hàng')
+                                  : (lang === 'en' ? 'In Stock' : 'Còn hàng')}
+                            </span>
+                          </td>
+
+                          {/* Actions */}
+                          <td style={{ textAlign: 'right' }}>
+                            <div className="table-action-btns zone-card-actions">
+
+                              {/* View Inventory */}
+                              <button
+                                type="button"
+                                className="table-icon-btn primary"
+                                title={
+                                  lang === 'en'
+                                    ? 'View Inventory Details'
+                                    : 'Xem chi tiết tồn kho'
+                                }
+                                aria-label={
+                                  translate("View") + " " + it.materialName
+                                }
+                                onClick={() => setSelectedInventoryItem(it)}
+                              >
+                                <Icon name="eye" size={15} />
+                                <span className="sr-only">
+                                  {lang === 'en' ? 'View details' : 'Xem chi tiết'}
+                                </span>
+                              </button>
+
+                              {/* Edit Inventory */}
+                              <button
+                                type="button"
+                                className="table-icon-btn edit"
+                                title={
+                                  lang === 'en'
+                                    ? 'Edit Inventory'
+                                    : 'Chỉnh sửa tồn kho'
+                                }
+                                aria-label={
+                                  translate("Edit") + " " + it.materialName
+                                }
+                                onClick={() => {
+                                  setEditingInventory(it);
+
+                                  setUpdateInventoryForm({
+                                    quantityOnHand: String(
+                                      it.quantityOnHand ?? ''
+                                    ),
+                                    reorderLevel: String(
+                                      it.reorderLevel ?? ''
+                                    ),
+                                  });
+                                }}
+                              >
+                                <Icon name="edit" size={15} />
+                                <span className="sr-only">
+                                  {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+                                </span>
+                              </button>
+
+                              {/* Delete Inventory */}
+                              <button
+                                type="button"
+                                className="table-icon-btn danger"
+                                title={
+                                  lang === 'en'
+                                    ? 'Delete Inventory'
+                                    : 'Xóa bản ghi tồn kho'
+                                }
+                                aria-label={
+                                  translate("Delete") + " " + it.materialName
+                                }
+                                onClick={() =>
+                                  setDeleteTarget({
+                                    kind: 'inventory',
+                                    id: it.inventoryId,
+                                    farmId: selectedFarm?.id
+                                  })
+                                }
+                              >
+                                <Icon name="trash" size={15} />
+                                <span className="sr-only">
+                                  {lang === 'en' ? 'Delete' : 'Xóa'}
+                                </span>
+                              </button>
+
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             )}
 
             {/* Footer */}
-            <TablePagination {...inventoryPagination} disabled={loadingInventories} />
+            <TablePagination
+              {...inventoryPagination}
+              disabled={loadingInventories}
+            />
           </div>
         )}
       </div>
 
       {/* MODAL: Warehouse Details */}
-      {selectedWarehouse && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setSelectedWarehouse(null)} style={{ width: 'min(540px, 100%)' }}>
-          <div className="modal-header">
-            <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Facility Information' : 'Thông tin cơ sở lưu trữ'}</span>
-              <h2 style={{ margin: '4px 0 0' }}>
-                {selectedWarehouse.warehouseName}
-              </h2>
-            </div>
-            <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setSelectedWarehouse(null)}><Icon name="close" /></button>
-          </div>
-          <div className="modal-body" style={{ padding: '20px 24px' }}>
-            <div className="ui-form-grid" style={{ marginBottom: '16px', background: 'var(--color-page)', padding: '14px', borderRadius: '8px'  }}>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Owning Farm' : 'Trang trại sở hữu'}</span>
-                <p style={{ margin: '2px 0 0', fontWeight: 600, color: 'var(--color-text)' }}>{selectedWarehouse.farmName}</p>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Stored Items Count' : 'Số mặt hàng lưu trữ'}</span>
-                <p style={{ margin: '2px 0 0', fontWeight: 700, color: 'var(--color-primary-text)' }}>{selectedWarehouse.totalItemCount} {lang === 'en' ? 'items' : 'sản phẩm'}</p>
-              </div>
-            </div>
-            <div>
-              <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--color-body)' }}>{lang === 'en' ? 'Facility Address:' : 'Địa chỉ kho bãi:'}</span>
-              <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--color-text)' }}>
-                {selectedWarehouse.address || (lang === 'en' ? 'No address provided.' : 'Chưa cập nhật chi tiết địa chỉ.')}
-              </p>
-            </div>
-          </div>
-          <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)' }}>
-            <Button type="button" variant="secondary" onClick={() => setSelectedWarehouse(null)}>
-              {lang === 'en' ? 'Close' : 'Đóng'}
-            </Button>
+      {loadingWarehouseOverview ? (
+        <Modal open onClose={() => setLoadingWarehouseOverview(false)}>
+          <div className="modal-body wh-loading">
+            <span className="wh-spinner" aria-hidden="true" />
+            {lang === 'en'
+              ? 'Loading warehouse overview...'
+              : 'Đang tải thông tin tổng quan kho...'}
           </div>
         </Modal>
-      )}
-
-      {/* MODAL: Inventory Item Details */}
-      {selectedInventoryItem && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setSelectedInventoryItem(null)} style={{ width: 'min(540px, 100%)' }}>
+      ) : selectedWarehouse && (
+        <Modal
+          open
+          customLayout
+          className="modal-form-layout wh-modal"
+          onClose={() => setSelectedWarehouse(null)}
+          style={{ width: 'min(560px, 100%)' }}
+        >
           <div className="modal-header">
             <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Material Stock Information' : 'Thông tin tồn kho vật tư'}</span>
-              <h2 style={{ margin: '4px 0 0' }}>
-                {selectedInventoryItem.materialName}
-              </h2>
+              <span className="eyebrow wh-eyebrow">
+                {lang === 'en' ? 'Facility Information' : 'Thông tin cơ sở lưu trữ'}
+              </span>
+              <h2>{selectedWarehouse.warehouseName}</h2>
             </div>
-            <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setSelectedInventoryItem(null)}><Icon name="close" /></button>
+            <button
+              type="button"
+              className="modal-close"
+              aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}
+              onClick={() => setSelectedWarehouse(null)}
+            >
+              <Icon name="close" />
+            </button>
           </div>
-          <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="ui-form-grid" style={{ background: 'var(--color-page)', padding: '16px', borderRadius: '8px', gap: '12px' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Warehouse Location' : 'Kho lưu trữ'}</span>
-                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>{selectedInventoryItem.warehouseName}</strong>
+
+          <div className="modal-body wh-body">
+            {warehouseOverviewError && (
+              <div className="wh-error" role="alert">{warehouseOverviewError}</div>
+            )}
+
+            {/* Summary stats */}
+            <div className="wh-stats">
+              <div className="wh-stat">
+                <span className="wh-stat-label">{lang === 'en' ? 'Stored Items' : 'Mặt hàng lưu trữ'}</span>
+                <strong className="wh-stat-value">{selectedWarehouse.totalItemCount}</strong>
               </div>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Stock Status' : 'Tình trạng tồn kho'}</span>
-                <span
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: '8px',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    display: 'inline-block',
-                    marginTop: '2px',
-                    background: selectedInventoryItem.isLowStock ? 'var(--color-danger-bg)' : 'var(--color-success-bg)',
-                    color: selectedInventoryItem.isLowStock ? 'var(--color-danger)' : 'var(--color-success)',
-                  }}
-                >
-                  {selectedInventoryItem.isLowStock ? (lang === 'en' ? '⚠️ Low Stock' : '⚠️ Sắp hết hàng') : (lang === 'en' ? '✓ In Stock' : '✓ Đủ tồn kho')}
-                </span>
+              <div className="wh-stat wh-stat-warn">
+                <span className="wh-stat-label">{lang === 'en' ? 'Low Stock' : 'Sắp hết hàng'}</span>
+                <strong className="wh-stat-value">{selectedWarehouse.lowStockCount}</strong>
               </div>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Quantity on Hand' : 'Số lượng thực tế'}</span>
-                <strong style={{ fontSize: '15px', color: 'var(--color-primary-text)' }}>
-                  {uiFormatNumber(Number(selectedInventoryItem.quantityOnHand), lang)} {materialUnitLabel(selectedInventoryItem.unit, lang)}
-                </strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Reorder Level' : 'Mức đặt lại hàng'}</span>
-                <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
-                  {uiFormatNumber(Number(selectedInventoryItem.reorderLevel), lang)} {translate(selectedInventoryItem.unit)}
-                </strong>
+              <div className="wh-stat wh-stat-danger">
+                <span className="wh-stat-label">{lang === 'en' ? 'Out of Stock' : 'Hết hàng'}</span>
+                <strong className="wh-stat-value">{selectedWarehouse.outOfStockCount}</strong>
               </div>
             </div>
 
-            <div style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>
-              {lang === 'en' ? 'Last inventory update: ' : 'Cập nhật lần cuối: '}
-              <strong>{selectedInventoryItem.updatedAt ? formatDate(selectedInventoryItem.updatedAt, lang) : '—'}</strong>
-            </div>
+            {/* Details */}
+            <dl className="wh-details">
+              <div>
+                <dt>{lang === 'en' ? 'Owning Farm' : 'Trang trại sở hữu'}</dt>
+                <dd>{selectedWarehouse.farmName}</dd>
+              </div>
+              <div>
+                <dt>{lang === 'en' ? 'Facility Address' : 'Địa chỉ kho bãi'}</dt>
+                <dd>
+                  {selectedWarehouse.address ||
+                    (lang === 'en' ? 'No address provided.' : 'Chưa cập nhật chi tiết địa chỉ.')}
+                </dd>
+              </div>
+            </dl>
+
+            {/* Recent materials */}
+            <section className="wh-section">
+              <h3>{lang === 'en' ? 'Recent Materials' : 'Vật tư gần đây'}</h3>
+
+              {selectedWarehouse.recentMaterials.length === 0 ? (
+                <p className="wh-empty">
+                  {lang === 'en' ? 'No recent materials.' : 'Chưa có vật tư gần đây.'}
+                </p>
+              ) : (
+                <ul className="wh-materials">
+                  {selectedWarehouse.recentMaterials.map((item) => {
+                    const out = item.quantityOnHand <= 0;
+                    const low = !out && item.quantityOnHand <= item.reorderLevel;
+                    return (
+                      <li key={item.inventoryId} className="wh-material">
+                        <div className="wh-material-main">
+                          <strong>{item.materialName}</strong>
+                          <span>
+                            {lang === 'en' ? 'Reorder level: ' : 'Mức đặt lại: '}
+                            {item.reorderLevel}
+                          </span>
+                        </div>
+                        <div className="wh-material-qty">
+                          <b>{item.quantityOnHand}</b>
+                          <span className={`wh-chip ${out ? 'danger' : low ? 'warn' : 'ok'}`}>
+                            {out
+                              ? lang === 'en' ? 'Out' : 'Hết'
+                              : low
+                                ? lang === 'en' ? 'Low' : 'Thấp'
+                                : lang === 'en' ? 'In stock' : 'Còn hàng'}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
           </div>
-          <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--color-border)' }}>
-            <Button type="button" variant="secondary" onClick={() => setSelectedInventoryItem(null)}>
-              {lang === 'en' ? 'Close' : 'Đóng'}
+
+          <div className="modal-footer wh-footer" style={{ gap: '15px' }}>
+            <Button
+              type="button"
+              variant="secondary"
+              className="edit"
+              onClick={() => {
+                const warehouse = warehouses.find(
+                  w => w.warehouseId === selectedWarehouse.warehouseId
+                );
+
+                if (warehouse) {
+                  setSelectedWarehouse(null);
+                  handleStartEditWarehouse(warehouse);
+                }
+              }}
+            >
+              <Icon name="edit" size={14} />
+              {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => {
+                const warehouse = warehouses.find(
+                  w => w.warehouseId === selectedWarehouse.warehouseId
+                );
+
+                if (warehouse) {
+                  setSelectedWarehouse(null);
+                  setDeleteTarget({ kind: 'warehouse', id: warehouse.warehouseId, farmId: selectedFarm?.id })
+                }
+              }}
+            >
+              <Icon name="trash" size={14} />
+              {lang === 'en' ? 'Delete' : 'Xóa kho'}
             </Button>
             <Button
               type="button"
               variant="primary"
-              onClick={() => {
-                const it = selectedInventoryItem;
-                setSelectedInventoryItem(null);
-                setEditingInventory(it);
-                setUpdateInventoryForm({
-                  quantityOnHand: Number(it.quantityOnHand),
-                  reorderLevel: Number(it.reorderLevel),
-                });
-              }}
+              onClick={() => setSelectedWarehouse(null)}
             >
-              <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit Inventory' : 'Chỉnh sửa'}
+              {lang === 'en' ? 'Close' : 'Đóng'}
             </Button>
           </div>
         </Modal>
-      )}
+      )
+      }
+
+
+      {/* MODAL: Inventory Item Details */}
+      {selectedInventoryItem && (() => {
+        const item = selectedInventoryItem;
+        const quantity = Number(item.quantityOnHand) || 0;
+        const reorderLevel = Number(item.reorderLevel) || 0;
+
+        const stockStatus = quantity <= 0 ? 'out' : quantity <= reorderLevel ? 'low' : 'normal';
+        const shortage = Math.max(0, reorderLevel - quantity);
+        const surplus = Math.max(0, quantity - reorderLevel);
+
+        const stockPercentage =
+          reorderLevel > 0
+            ? Math.min(100, (quantity / reorderLevel) * 100)
+            : quantity > 0 ? 100 : 0;
+
+        const statusLabel =
+          stockStatus === 'out'
+            ? (lang === 'en' ? 'Out of Stock' : 'Hết hàng')
+            : stockStatus === 'low'
+              ? (lang === 'en' ? 'Low Stock' : 'Sắp hết hàng')
+              : (lang === 'en' ? 'In Stock' : 'Đủ tồn kho');
+
+        const unit = materialUnitLabel(item.unit, lang);
+        const empty = '—';
+
+        return (
+          <Modal
+            open
+            customLayout
+            className="modal-form-layout inv-modal"
+            onClose={() => setSelectedInventoryItem(null)}
+            style={{ width: 'min(620px, 100%)' }}
+          >
+            {/* HEADER */}
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow inv-eyebrow">
+                  {lang === 'en' ? 'Inventory Details' : 'Chi tiết tồn kho'}
+                </span>
+                <h2>{item.materialName}</h2>
+                <div className="inv-subline">
+                  {item.materialType && <span className="inv-type">{translate(item.materialType)}</span>}
+                  {item.warehouseName && <span className="inv-where">{item.warehouseName}</span>}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}
+                onClick={() => setSelectedInventoryItem(null)}
+              >
+                <Icon name="close" />
+              </button>
+            </div>
+
+            {/* BODY */}
+            <div className="modal-body inv-body">
+              {/* SECTION 1: STOCK OVERVIEW */}
+              <section className="inv-section">
+                <div className="inv-section-head">
+                  <h3>{lang === 'en' ? 'Stock Overview' : 'Tổng quan tồn kho'}</h3>
+                  <span className={`inv-status ${stockStatus}`}>
+                    <span className="inv-status-dot" aria-hidden="true" />
+                    {statusLabel}
+                  </span>
+                </div>
+
+                <div className="inv-stats">
+                  <div className="inv-stat">
+                    <span className="inv-label">{lang === 'en' ? 'Quantity on Hand' : 'Số lượng hiện có'}</span>
+                    <strong className={`inv-stat-value ${stockStatus}`}>{uiFormatNumber(quantity, lang)}</strong>
+                    <span className="inv-unit">{materialUnitLabel(unit, lang, quantity)}</span>
+                  </div>
+
+                  <div className="inv-stat">
+                    <span className="inv-label">{lang === 'en' ? 'Reorder Level' : 'Mức đặt hàng lại'}</span>
+                    <strong className="inv-stat-value">{uiFormatNumber(reorderLevel, lang)}</strong>
+                    <span className="inv-unit">{materialUnitLabel(unit, lang, quantity)}</span>
+                  </div>
+
+                  <div className="inv-stat">
+                    <span className="inv-label">
+                      {shortage > 0
+                        ? (lang === 'en' ? 'Shortage' : 'Còn thiếu')
+                        : (lang === 'en' ? 'Above Reorder' : 'Vượt mức đặt')}
+                    </span>
+                    <strong className={`inv-stat-value ${shortage > 0 ? stockStatus : ''}`}>
+                      {uiFormatNumber(shortage > 0 ? shortage : surplus, lang)}
+                    </strong>
+                    <span className="inv-unit">{materialUnitLabel(unit, lang, quantity)}</span>
+                  </div>
+                </div>
+
+                {/* Stock level indicator */}
+                <div className="inv-level">
+                  <div className="inv-level-head">
+                    <strong>{lang === 'en' ? 'Stock Level' : 'Mức tồn kho'}</strong>
+                    <span>{stockPercentage.toFixed(0)}%</span>
+                  </div>
+                  <div
+                    className="inv-bar"
+                    role="progressbar"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(stockPercentage)}
+                  >
+                    <div className={`inv-bar-fill ${stockStatus}`} style={{ width: `${stockPercentage}%` }} />
+                  </div>
+                  <p className={`inv-level-note ${stockStatus}`}>
+                    {stockStatus === 'out'
+                      ? (lang === 'en'
+                        ? 'This material is currently out of stock.'
+                        : 'Vật tư này hiện đã hết hàng.')
+                      : stockStatus === 'low'
+                        ? (lang === 'en'
+                          ? `${uiFormatNumber(shortage, lang)} ${unit} below reorder level.`
+                          : `Thiếu ${uiFormatNumber(shortage, lang)} ${unit} so với mức đặt hàng lại.`)
+                        : (lang === 'en'
+                          ? 'Available stock is above the reorder level.'
+                          : 'Số lượng hiện có đang cao hơn mức đặt hàng lại.')}
+                  </p>
+                </div>
+              </section>
+
+              {/* SECTION 2: MATERIAL INFORMATION */}
+              <section className="inv-section">
+                <h3>{lang === 'en' ? 'Material Information' : 'Thông tin vật tư'}</h3>
+                <dl className="inv-grid">
+                  <div className="inv-field">
+                    <dt>{lang === 'en' ? 'Material Name' : 'Tên vật tư'}</dt>
+                    <dd>{item.materialName || empty}</dd>
+                  </div>
+                  <div className="inv-field">
+                    <dt>{lang === 'en' ? 'Material Type' : 'Loại vật tư'}</dt>
+                    <dd>{item.materialType ? translate(item.materialType) : empty}</dd>
+                  </div>
+                  <div className="inv-field">
+                    <dt>{lang === 'en' ? 'Unit' : 'Đơn vị tính'}</dt>
+                    <dd>{unit || empty}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              {/* SECTION 3: STORAGE & RECORD INFORMATION */}
+              <section className="inv-section">
+                <h3>{lang === 'en' ? 'Storage & Record Information' : 'Thông tin lưu trữ và bản ghi'}</h3>
+                <dl className="inv-grid">
+                  <div className="inv-field">
+                    <dt>{lang === 'en' ? 'Warehouse' : 'Kho lưu trữ'}</dt>
+                    <dd>{item.warehouseName || empty}</dd>
+                  </div>
+                  <div className="inv-field">
+                    <dt>{lang === 'en' ? 'Last Updated' : 'Cập nhật lần cuối'}</dt>
+                    <dd>{item.updatedAt ? formatDate(item.updatedAt, lang) : empty}</dd>
+                  </div>
+                </dl>
+              </section>
+            </div>
+
+            {/* FOOTER (unchanged) */}
+            <div className="modal-footer" style={{
+              padding: '14px 24px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '8px',
+              borderTop: '2px solid var(--color-border)',
+            }}>
+
+              {/* EDIT INVENTORY */}
+              <Button
+                type="button"
+                variant="secondary"
+                className="edit"
+                onClick={() => {
+                  const inventory = inventories.find(
+                    i => i.inventoryId === selectedInventoryItem.inventoryId
+                  );
+
+                  if (inventory) {
+                    setSelectedInventoryItem(null);
+                    setEditingInventory(inventory);
+                  }
+                }}
+              >
+                <Icon name="edit" size={14} />
+                {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+              </Button>
+
+              {/* DELETE INVENTORY */}
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => {
+                  const inventory = selectedInventoryItem;
+
+                  setSelectedInventoryItem(null);
+                  setDeleteTarget({
+                    kind: 'inventory',
+                    id: inventory.inventoryId,
+                    farmId: selectedFarm?.id,
+                  });
+                }}
+              >
+                <Icon name="trash" size={14} />
+                {lang === 'en' ? 'Delete' : 'Xóa tồn kho'}
+              </Button>
+
+              {/* CLOSE */}
+              <Button
+                type="button"
+                variant="primary"
+                onClick={() => setSelectedInventoryItem(null)}
+              >
+                {lang === 'en' ? 'Close' : 'Đóng'}
+              </Button>
+            </div>
+          </Modal>
+        );
+      })()}
 
       {/* MODAL: Create Warehouse */}
-      {isCreateWarehouseOpen && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateWarehouseOpen(false)} style={{ width: 'min(500px, 100%)' }}>
-          <div className="modal-header">
-            <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'New Storage Facility' : 'Tạo kho hàng mới'}</span>
-              <h2 style={{ margin: '4px 0 0' }}>{lang === 'en' ? 'Add Input Warehouse' : 'Thêm kho lưu trữ vật tư'}</h2>
-            </div>
-            <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setIsCreateWarehouseOpen(false)}><Icon name="close" /></button>
-          </div>
-          <form onSubmit={handleCreateWarehouse}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-1">
-                  {lang === 'en' ? 'Warehouse Name *' : 'Tên kho hàng *'}
-                </label>
-                <input id="inventory-field-1" className="ui-input"
-                  type="text"
-                  required
-                  placeholder={lang === 'en' ? 'e.g. Technical Inputs Warehouse #2, Cold Storage...' : 'VD: Kho vật tư kỹ thuật số 2, Kho lạnh bảo quản...'}
-                  value={createWarehouseForm.warehouseName}
-                  onChange={(e) => setCreateWarehouseForm((p) => ({ ...p, warehouseName: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                />
+      {
+        isCreateWarehouseOpen && (
+          <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateWarehouseOpen(false)} style={{ width: 'min(500px, 100%)' }}>
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'New Storage Facility' : 'Tạo kho hàng mới'}</span>
+                <h2 style={{ margin: '4px 0 0' }}>{lang === 'en' ? 'Add Input Warehouse' : 'Thêm kho lưu trữ vật tư'}</h2>
               </div>
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-2">
-                  {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
-                </label>
-                <input id="inventory-field-2" className="ui-input"
-                  type="text"
-                  placeholder={lang === 'en' ? 'e.g. High-tech Greenhouse Area #1' : 'VD: Khu nhà kính công nghệ cao số 1, Đà Lạt'}
-                  value={createWarehouseForm.address}
-                  onChange={(e) => setCreateWarehouseForm((p) => ({ ...p, address: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                />
+              <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setIsCreateWarehouseOpen(false)}><Icon name="close" /></button>
+            </div>
+            <form onSubmit={handleCreateWarehouse}>
+              <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
+                <div className="structured-field-card">
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Warehouse Name ' : 'Tên kho hàng '} <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{createWarehouseForm.warehouseName.length}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+                  </div>
+                  <input id="inventory-field-1" className="ui-input"
+                    type="text"
+                    required
+                    placeholder={lang === 'en' ? 'e.g. Technical Inputs Warehouse #2, Cold Storage...' : 'VD: Kho vật tư kỹ thuật số 2, Kho lạnh bảo quản...'}
+                    value={createWarehouseForm.warehouseName}
+                    onChange={(e) => setCreateWarehouseForm((p) => ({ ...p, warehouseName: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px' }}
+                  />
+                </div>
+                <div className="structured-field-card">
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                  </div>
+                  <input id="inventory-field-2" className="ui-input"
+                    type="text"
+                    placeholder={lang === 'en' ? 'e.g. High-tech Greenhouse Area #1' : 'VD: Khu nhà kính công nghệ cao số 1, Đà Lạt'}
+                    value={createWarehouseForm.address}
+                    onChange={(e) => setCreateWarehouseForm((p) => ({ ...p, address: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px' }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setIsCreateWarehouseOpen(false)} disabled={creatingWarehouse}>
-                {lang === 'en' ? 'Cancel' : 'Hủy'}
-              </Button>
-              <Button type="submit" variant="primary" loading={creatingWarehouse}>
-                {creatingWarehouse ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Create Warehouse' : 'Tạo kho hàng')}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+              <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
+                <Button type="button" variant="secondary" onClick={() => setIsCreateWarehouseOpen(false)} disabled={creatingWarehouse}>
+                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                </Button>
+                <Button type="submit" variant="primary" loading={creatingWarehouse}>
+                  {creatingWarehouse ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Create Warehouse' : 'Tạo kho hàng')}
+                </Button>
+              </div>
+            </form>
+          </Modal>
+        )
+      }
 
       {/* MODAL: Update Inventory */}
-      {editingInventory && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setEditingInventory(null)} style={{ width: 'min(480px, 100%)' }}>
-          <div className="modal-header">
-            <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Inventory' : 'Cập nhật tồn kho'}</span>
-              <h2 style={{ margin: '4px 0 0' }}>
-                {editingInventory.materialName} ({editingInventory.warehouseName})
-              </h2>
-            </div>
-            <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setEditingInventory(null)}><Icon name="close" /></button>
-          </div>
-          <form onSubmit={handleUpdateInventory}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-3">
-                  {lang === 'en' ? `Actual Stock on Hand (${editingInventory.unit}) *` : `Số lượng tồn kho thực tế (${editingInventory.unit}) *`}
-                </label>
-                <input id="inventory-field-3" className="ui-input"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  required
-                  value={updateInventoryForm.quantityOnHand}
-                  onChange={(e) => setUpdateInventoryForm((p) => ({ ...p, quantityOnHand: Number(e.target.value) }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                />
+      {
+        editingInventory && (
+          <Modal open customLayout className="modal-form-layout" onClose={() => setEditingInventory(null)} style={{ width: 'min(480px, 100%)' }}>
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Inventory' : 'Cập nhật tồn kho'}</span>
+                <h2 style={{ margin: '4px 0 0' }}>
+                  {editingInventory.materialName} ({editingInventory.warehouseName})
+                </h2>
               </div>
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-4">
-                  {lang === 'en' ? `Reorder Alert Threshold (${editingInventory.unit}) *` : `Mức cảnh báo đặt hàng lại (${editingInventory.unit}) *`}
-                </label>
-                <input id="inventory-field-4" className="ui-input"
-                  type="number"
-                  min="0"
-                  step="0.001"
-                  required
-                  value={updateInventoryForm.reorderLevel}
-                  onChange={(e) => setUpdateInventoryForm((p) => ({ ...p, reorderLevel: Number(e.target.value) }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                />
-                <small style={{ color: 'var(--color-muted)', marginTop: '4px', display: 'block' }}>
-                  {lang === 'en'
-                    ? 'When inventory falls below this threshold, the system displays a low stock warning.'
-                    : 'Khi số lượng tồn kho giảm xuống dưới ngưỡng này, hệ thống sẽ gắn nhãn cảnh báo.'}
-                </small>
+              <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setEditingInventory(null)}><Icon name="close" /></button>
+            </div>
+            <form onSubmit={handleUpdateInventory}>
+              <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
+                <div className="structured-field-card">
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? `Actual Stock on Hand (${editingInventory.unit}) ` : `Số lượng tồn kho thực tế (${editingInventory.unit}) `}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
+                  <input id="inventory-field-3" className="ui-input"
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    required
+                    value={updateInventoryForm.quantityOnHand}
+                    onChange={(e) => setUpdateInventoryForm((p) => ({ ...p, quantityOnHand: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px' }}
+                  />
+                </div>
+                <div className="structured-field-card">
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? `Reorder Alert Threshold (${editingInventory.unit}) ` : `Mức cảnh báo đặt hàng lại (${editingInventory.unit}) `}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
+                  <input id="inventory-field-4" className="ui-input"
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    required
+                    value={updateInventoryForm.reorderLevel}
+                    onChange={(e) => setUpdateInventoryForm((p) => ({ ...p, reorderLevel: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px' }}
+                  />
+                  <small style={{ color: 'var(--color-muted)', marginTop: '4px', display: 'block' }}>
+                    {lang === 'en'
+                      ? 'When inventory falls below this threshold, the system displays a low stock warning.'
+                      : 'Khi số lượng tồn kho giảm xuống dưới ngưỡng này, hệ thống sẽ gắn nhãn cảnh báo.'}
+                  </small>
+                </div>
               </div>
-            </div>
-            <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setEditingInventory(null)} disabled={updatingInventory}>
-                {lang === 'en' ? 'Cancel' : 'Hủy'}
-              </Button>
-              <Button type="submit" variant="primary" loading={updatingInventory}>
-                {updatingInventory ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Adjustments' : 'Lưu điều chỉnh')}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+              <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
+                <Button type="button" variant="secondary" onClick={() => setEditingInventory(null)} disabled={updatingInventory}>
+                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                </Button>
+                <Button type="submit" variant="primary" loading={updatingInventory}>
+                  {updatingInventory ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Adjustments' : 'Lưu điều chỉnh')}
+                </Button>
+              </div>
+            </form>
+          </Modal>
+        )
+      }
 
       {/* MODAL: Edit Warehouse */}
-      {editingWarehouse && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setEditingWarehouse(null)} style={{ width: 'min(500px, 100%)' }}>
-          <div className="modal-header">
-            <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Storage Facility' : 'Cập nhật cơ sở lưu trữ'}</span>
-              <h2 style={{ margin: '4px 0 0' }}>{lang === 'en' ? 'Edit Warehouse Information' : 'Chỉnh sửa thông tin kho hàng'}</h2>
-            </div>
-            <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setEditingWarehouse(null)}><Icon name="close" /></button>
-          </div>
-          <form onSubmit={handleUpdateWarehouse}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-5">
-                  {lang === 'en' ? 'Warehouse Name *' : 'Tên kho hàng *'}
-                </label>
-                <input id="inventory-field-5" className="ui-input"
-                  type="text"
-                  required
-                  value={editWarehouseForm.warehouseName}
-                  onChange={(e) => setEditWarehouseForm((p) => ({ ...p, warehouseName: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                />
+      {
+        editingWarehouse && (
+          <Modal open customLayout className="modal-form-layout" onClose={() => setEditingWarehouse(null)} style={{ width: 'min(500px, 100%)' }}>
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Storage Facility' : 'Cập nhật cơ sở lưu trữ'}</span>
+                <h2 style={{ margin: '4px 0 0' }}>{lang === 'en' ? 'Edit Warehouse Information' : 'Chỉnh sửa thông tin kho hàng'}</h2>
               </div>
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-6">
-                  {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
-                </label>
-                <input id="inventory-field-6" className="ui-input"
-                  type="text"
-                  value={editWarehouseForm.address}
-                  onChange={(e) => setEditWarehouseForm((p) => ({ ...p, address: e.target.value }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                />
+              <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setEditingWarehouse(null)}><Icon name="close" /></button>
+            </div>
+            <form onSubmit={handleUpdateWarehouse}>
+              <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
+                <div className="structured-field-card">
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Warehouse Name ' : 'Tên kho hàng '} <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{editWarehouseForm.warehouseName.length}{(lang === 'en' ? "/100 characters" : "/100 ký tự")}</span>
+                  </div>
+                  <input id="inventory-field-5" className="ui-input"
+                    type="text"
+                    required
+                    value={editWarehouseForm.warehouseName}
+                    onChange={(e) => setEditWarehouseForm((p) => ({ ...p, warehouseName: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px' }}
+                  />
+                </div>
+                <div className="structured-field-card">
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Address / Location in Farm' : 'Địa chỉ / Vị trí trong trang trại'}
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</span>
+                  </div>
+                  <input id="inventory-field-6" className="ui-input"
+                    type="text"
+                    value={editWarehouseForm.address}
+                    onChange={(e) => setEditWarehouseForm((p) => ({ ...p, address: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px' }}
+                  />
+                </div>
               </div>
-            </div>
-            <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setEditingWarehouse(null)} disabled={updatingWarehouse}>
-                {lang === 'en' ? 'Cancel' : 'Hủy'}
-              </Button>
-              <Button type="submit" variant="primary" loading={updatingWarehouse}>
-                {updatingWarehouse ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+              <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
+                <Button type="button" variant="secondary" onClick={() => setEditingWarehouse(null)} disabled={updatingWarehouse}>
+                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                </Button>
+                <Button type="submit" variant="primary" loading={updatingWarehouse}>
+                  {updatingWarehouse ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
+                </Button>
+              </div>
+            </form>
+          </Modal>
+        )
+      }
 
       {/* MODAL: Create Inventory */}
-      {isCreateInventoryOpen && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateInventoryOpen(false)} style={{ width: 'min(520px, 100%)' }}>
-          <div className="modal-header">
-            <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Inventory Management' : 'Quản lý tồn kho'}</span>
-              <h2 style={{ margin: '4px 0 0' }}>{lang === 'en' ? 'Add Material to Warehouse' : 'Thêm vật tư vào kho lưu trữ'}</h2>
+      {
+        isCreateInventoryOpen && (
+          <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateInventoryOpen(false)} style={{ width: 'min(520px, 100%)' }}>
+            <div className="modal-header">
+              <div>
+                <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Inventory Management' : 'Quản lý tồn kho'}</span>
+                <h2 style={{ margin: '4px 0 0' }}>{lang === 'en' ? 'Add Material to Warehouse' : 'Thêm vật tư vào kho lưu trữ'}</h2>
+              </div>
+              <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setIsCreateInventoryOpen(false)}><Icon name="close" /></button>
             </div>
-            <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setIsCreateInventoryOpen(false)}><Icon name="close" /></button>
-          </div>
-          <form onSubmit={handleCreateInventory}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-7">
-                  {lang === 'en' ? 'Select Storage Warehouse *' : 'Chọn kho lưu trữ *'}
-                </label>
-                <select id="inventory-field-7" className="ui-select"
-                  required
-                  value={createInventoryForm.warehouseId}
-                  onChange={(e) => setCreateInventoryForm((p) => ({ ...p, warehouseId: Number(e.target.value) }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                >
-                  <option value={0}>{lang === 'en' ? '-- Select Warehouse --' : '-- Chọn kho hàng --'}</option>
-                  {warehouses.map((w) => (
-                    <option key={w.warehouseId} value={w.warehouseId}>
-                      {w.warehouseName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="structured-field-card">
-                <label htmlFor="inventory-field-8">
-                  {lang === 'en' ? 'Select Agricultural Material *' : 'Chọn vật tư nông nghiệp *'}
-                </label>
-                <select id="inventory-field-8" className="ui-select"
-                  required
-                  value={createInventoryForm.materialId}
-                  onChange={(e) => setCreateInventoryForm((p) => ({ ...p, materialId: Number(e.target.value) }))}
-                  style={{ width: '100%', padding: '9px 12px' }}
-                >
-                  <option value={0}>{lang === 'en' ? '-- Select Input Material --' : '-- Chọn vật tư canh tác --'}</option>
-                  {availableMaterials.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.materialName} ({translate(m.unit)})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="ui-form-grid" >
+            <form onSubmit={handleCreateInventory}>
+              <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
                 <div className="structured-field-card">
-                  <label htmlFor="inventory-field-9">
-                    {lang === 'en' ? 'Initial Quantity *' : 'Số lượng ban đầu *'}
-                  </label>
-                  <input id="inventory-field-9" className="ui-input"
-                    type="number"
-                    min="0"
-                    step="0.001"
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Select Storage Warehouse ' : 'Chọn kho lưu trữ '}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
+                  <select id="inventory-field-7" className="ui-select"
                     required
-                    value={createInventoryForm.quantityOnHand}
-                    onChange={(e) => setCreateInventoryForm((p) => ({ ...p, quantityOnHand: Number(e.target.value) }))}
+                    value={createInventoryForm.warehouseId}
+                    onChange={(e) => setCreateInventoryForm((p) => ({ ...p, warehouseId: Number(e.target.value) }))}
                     style={{ width: '100%', padding: '9px 12px' }}
-                  />
+                  >
+                    <option value={0}>{lang === 'en' ? '-- Select Warehouse --' : '-- Chọn kho hàng --'}</option>
+                    {warehouses.map((w) => (
+                      <option key={w.warehouseId} value={w.warehouseId}>
+                        {w.warehouseName}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div className="structured-field-card">
-                  <label htmlFor="inventory-field-10">
-                    {lang === 'en' ? 'Reorder Threshold *' : 'Ngưỡng cảnh báo *'}
-                  </label>
-                  <input id="inventory-field-10" className="ui-input"
-                    type="number"
-                    min="0"
-                    step="0.001"
+                  <div className="structured-field-header">
+                    <label htmlFor="inventory-field-1">
+                      {lang === 'en' ? 'Select Agricultural Material ' : 'Chọn vật tư nông nghiệp '}
+                      <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                  </div>
+                  <select id="inventory-field-8" className="ui-select"
                     required
-                    value={createInventoryForm.reorderLevel}
-                    onChange={(e) => setCreateInventoryForm((p) => ({ ...p, reorderLevel: Number(e.target.value) }))}
+                    value={createInventoryForm.materialId}
+                    onChange={(e) => setCreateInventoryForm((p) => ({ ...p, materialId: Number(e.target.value) }))}
                     style={{ width: '100%', padding: '9px 12px' }}
-                  />
+                  >
+                    <option value={0}>{lang === 'en' ? '-- Select Input Material --' : '-- Chọn vật tư canh tác --'}</option>
+                    {availableMaterials.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.materialName} ({translate(m.unit)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="ui-form-grid" >
+                  <div className="structured-field-card">
+                    <div className="structured-field-header">
+                      <label htmlFor="inventory-field-1">
+                        {lang === 'en' ? 'Initial Quantity ' : 'Số lượng ban đầu '}
+                        <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <input id="inventory-field-9" className="ui-input"
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      required
+                      value={createInventoryForm.quantityOnHand}
+                      onChange={(e) => setCreateInventoryForm((p) => ({ ...p, quantityOnHand: Number(e.target.value) }))}
+                      style={{ width: '100%', padding: '9px 12px' }}
+                    />
+                  </div>
+                  <div className="structured-field-card">
+                    <div className="structured-field-header">
+                      <label htmlFor="inventory-field-1">
+                        {lang === 'en' ? 'Reorder Alert ' : 'Ngưỡng cảnh báo '}
+                        <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>
+                    </div>
+                    <input id="inventory-field-10" className="ui-input"
+                      type="number"
+                      min="0"
+                      step="0.001"
+                      required
+                      value={createInventoryForm.reorderLevel}
+                      onChange={(e) => setCreateInventoryForm((p) => ({ ...p, reorderLevel: Number(e.target.value) }))}
+                      style={{ width: '100%', padding: '9px 12px' }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
-                {lang === 'en' ? 'Cancel' : 'Hủy'}
-              </Button>
-              <Button type="submit" variant="primary" loading={creatingInventory}>
-                {creatingInventory ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Add to Warehouse' : 'Thêm vào kho')}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
+              <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
+                <Button type="button" variant="secondary" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
+                  {lang === 'en' ? 'Cancel' : 'Hủy'}
+                </Button>
+                <Button type="submit" variant="primary" loading={creatingInventory}>
+                  {creatingInventory ? (lang === 'en' ? 'Adding...' : 'Đang thêm...') : (lang === 'en' ? 'Add to Warehouse' : 'Thêm vào kho')}
+                </Button>
+              </div>
+            </form>
+          </Modal>
+        )
+      }
       <ConfirmDialog open={Boolean(deleteTarget)}
         title={deleteTarget?.kind === 'warehouse' ? (lang === 'en' ? 'Delete warehouse' : 'Xóa kho hàng') : (lang === 'en' ? 'Delete inventory record' : 'Xóa bản ghi tồn kho')}
         description={deleteTarget?.kind === 'warehouse'
           ? (lang === 'en' ? 'Are you sure you want to delete this warehouse and its inventory records?' : 'Bạn có chắc chắn muốn xóa kho hàng này và các bản ghi tồn kho liên quan?')
           : (lang === 'en' ? 'Are you sure you want to delete this inventory record?' : 'Bạn có chắc chắn muốn xóa bản ghi tồn kho vật tư này?')}
         tone="danger" loading={deleting} onClose={() => setDeleteTarget(null)} onConfirm={() => void confirmDelete()} />
-    </section>
+    </section >
   );
 }

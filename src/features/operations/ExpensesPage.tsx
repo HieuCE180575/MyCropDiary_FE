@@ -411,9 +411,6 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ background: 'var(--color-page)' }}>
-                <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                  <input type="checkbox" aria-label={(lang === 'en' ? "Select all" : "Chọn tất cả")} style={{ cursor: 'pointer' }} />
-                </th>
                 <th scope="col">
                   {lang === 'en' ? 'EXPENSE DESCRIPTION' : 'DIỄN GIẢI KHOẢN CHI'}
                 </th>
@@ -426,7 +423,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                 <th scope="col">
                   {lang === 'en' ? 'DATE' : 'NGÀY CHI'}
                 </th>
-                <th scope="col" style={{ textAlign: 'right' }}>
+                <th scope="col" style={{ textAlign: 'left' }}>
                   {lang === 'en' ? 'AMOUNT' : 'SỐ TIỀN'}
                 </th>
                 <th scope="col" style={{ width: '140px', textAlign: 'right' }}>
@@ -454,9 +451,6 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                   const styleColors = CATEGORY_COLORS[item.expenseCategory] || CATEGORY_COLORS['Other'];
                   return (
                     <tr key={item.expenseId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={(lang === 'en' ? `Select expense #${item.expenseId}` : `Chọn chi phí #${item.expenseId}`)} style={{ cursor: 'pointer' }} />
-                      </td>
                       <td>
                         <span
                           onClick={() => handleOpenDetails(item.expenseId)}
@@ -506,7 +500,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                       <td style={{ fontSize: '13.5px', color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
                         {formatDate(item.expenseDate, lang)}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text)', fontSize: '14.5px' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text)', fontSize: '14.5px', width: '120px' }}>
                         {formatCurrency(item.amount)}
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -555,127 +549,173 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
       {/* ========================================================= */}
       {/* MODAL 1: VIEW EXPENSE DETAILS                    */}
       {/* ========================================================= */}
+      {/* MODAL: Expense Details */}
       <Modal
         open={Boolean(selectedExpense)}
         onClose={() => setSelectedExpense(null)}
         title={lang === 'en' ? 'Expense Details' : 'Chi tiết khoản chi phí sản xuất'}
       >
-        {selectedExpense && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {/* Amount Banner */}
-            <div
-              style={{
-                backgroundColor: 'var(--color-page)',
-                padding: '16px 20px',
-                borderRadius: '10px',
-                border: '1px solid var(--color-border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
-                  {lang === 'en' ? 'Expense Amount' : 'Số tiền chi'}
+        {selectedExpense && (() => {
+          const cat = CATEGORY_COLORS[selectedExpense.expenseCategory];
+          const recordedAt = selectedExpense.createdAt
+            ? new Date(selectedExpense.createdAt).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN', {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })
+            : null;
+
+          return (
+            <div className="exp-detail">
+              {/* Hero: amount + category */}
+              <div className="exp-hero">
+                <div className="exp-hero-main">
+                  <span className="exp-label">{lang === 'en' ? 'Expense Amount' : 'Số tiền chi'}</span>
+                  <strong className="exp-amount">{formatCurrency(selectedExpense.amount)}</strong>
+                </div>
+                <span
+                  className="exp-chip"
+                  style={
+                    cat
+                      ? { background: cat.bg, color: cat.text, borderColor: cat.border }
+                      : undefined
+                  }
+                >
+                  {translate(selectedExpense.expenseCategory)}
                 </span>
-                <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-text)', marginTop: '2px' }}>
-                  {formatCurrency(selectedExpense.amount)}
+              </div>
+
+              {/* Key facts */}
+              <dl className="exp-grid">
+                <div className="exp-field">
+                  <dt>{lang === 'en' ? 'Expense Date' : 'Ngày chi tiêu'}</dt>
+                  <dd>{formatDate(selectedExpense.expenseDate, lang)}</dd>
                 </div>
-              </div>
-              <span
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '999px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  backgroundColor: CATEGORY_COLORS[selectedExpense.expenseCategory]?.bg || 'var(--color-subtle)',
-                  color: CATEGORY_COLORS[selectedExpense.expenseCategory]?.text || 'var(--color-body)',
-                  border: `1px solid ${CATEGORY_COLORS[selectedExpense.expenseCategory]?.border || 'var(--color-border)'}`,
-                }}
-              >
-                {translate(selectedExpense.expenseCategory)}
-              </span>
-            </div>
 
-            {/* Field Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Expense Date' : 'Ngày chi tiêu'}:</span>
-                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>{formatDate(selectedExpense.expenseDate, lang)}</div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Crop Season' : 'Mùa vụ canh tác'}:</span>
-                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
-                  {selectedExpense.seasonName || (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}
+                <div className="exp-field">
+                  <dt>{lang === 'en' ? 'Crop Season' : 'Mùa vụ canh tác'}</dt>
+                  <dd className={selectedExpense.seasonName ? '' : 'is-empty'}>
+                    {selectedExpense.seasonName ||
+                      (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}
+                  </dd>
                 </div>
-              </div>
 
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Associated Task' : 'Công việc liên quan'}:</span>
-                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
-                  {selectedExpense.taskTitle || (lang === 'en' ? 'None' : 'Không có')}
+                <div className="exp-field">
+                  <dt>{lang === 'en' ? 'Associated Task' : 'Công việc liên quan'}</dt>
+                  <dd className={selectedExpense.taskTitle ? '' : 'is-empty'}>
+                    {selectedExpense.taskTitle || (lang === 'en' ? 'None' : 'Không có')}
+                  </dd>
                 </div>
-              </div>
 
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}:</span>
-                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
-                  {selectedExpense.recordedByName || (lang === 'en' ? 'System Member' : 'Thành viên trang trại')}
+                <div className="exp-field">
+                  <dt>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}</dt>
+                  <dd className="exp-person">
+                    <span className="exp-avatar" aria-hidden="true">
+                      {(selectedExpense.recordedByName || 'M').charAt(0).toUpperCase()}
+                    </span>
+                    {selectedExpense.recordedByName ||
+                      (lang === 'en' ? 'System Member' : 'Thành viên trang trại')}
+                  </dd>
                 </div>
-              </div>
-            </div>
+              </dl>
 
-            {/* Description */}
-            <div>
-              <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Description & Notes' : 'Diễn giải / Ghi chú'}:</span>
-              <div
-                style={{
-                  backgroundColor: 'var(--color-page)',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-body)',
-                  marginTop: '4px',
-                  fontSize: '13px',
-                  lineHeight: '1.5',
-                }}
-              >
-                {selectedExpense.description || (lang === 'en' ? 'No notes provided.' : 'Không có ghi chú chi tiết.')}
-              </div>
-            </div>
+              {/* Notes */}
+              <section className="exp-section">
+                <h3>{lang === 'en' ? 'Description & Notes' : 'Diễn giải / Ghi chú'}</h3>
+                <p className={`exp-notes${selectedExpense.description ? '' : ' is-empty'}`}>
+                  {selectedExpense.description ||
+                    (lang === 'en' ? 'No notes provided.' : 'Không có ghi chú chi tiết.')}
+                </p>
+              </section>
 
-            {/* Receipt Image Preview */}
-            {selectedExpense.receiptImageUrl && (
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Receipt / Invoice Photo' : 'Ảnh hóa đơn / Chứng từ thanh toán'}:</span>
-                <div style={{ marginTop: '6px', textAlign: 'center' }}>
-                  <img
-                    src={selectedExpense.receiptImageUrl}
-                    alt={translate("Receipt")}
-                    style={{
-                      maxWidth: '100%',
-                      maxHeight: '300px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--color-border)',
-                      objectFit: 'contain',
+              {/* Receipt */}
+              <section className="exp-section">
+                <h3>
+                  {lang === 'en' ? 'Receipt / Invoice Photo' : 'Ảnh hóa đơn / Chứng từ thanh toán'}
+                  {selectedExpense.receiptImageUrl && (
+                    <a
+                      className="exp-link"
+                      href={selectedExpense.receiptImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {lang === 'en' ? 'Open full size' : 'Xem ảnh gốc'}
+                    </a>
+                  )}
+                </h3>
+                {selectedExpense.receiptImageUrl ? (
+                  <a
+                    className="exp-receipt"
+                    href={selectedExpense.receiptImageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <img src={selectedExpense.receiptImageUrl} alt={translate('Receipt')} />
+                  </a>
+                ) : (
+                  <p className="exp-notes is-empty">
+                    {lang === 'en' ? 'No receipt attached.' : 'Chưa đính kèm chứng từ.'}
+                  </p>
+                )}
+              </section>
+
+              {/* Audit trail */}
+              {recordedAt && (
+                <p className="exp-audit">
+                  {lang === 'en' ? 'Logged on ' : 'Ghi nhận lúc '}
+                  {recordedAt}
+                </p>
+              )}
+
+              {/* FOOTER */}
+              <div className="modal-footer" style={{
+                padding: '14px 0px',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '8px',
+                borderTop: '1px solid var(--color-border)',
+              }}>
+
+                  {/* EDIT INVENTORY */}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="edit"
+                    onClick={() => {
+                      const item = selectedExpense;
+                      setSelectedExpense(null);
+                      handleOpenUpdate(item);
                     }}
-                  />
+                  >
+                    <Icon name="edit" size={14} />
+                    {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+                  </Button>
+
+                  {/* DELETE INVENTORY */}
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={() => {
+                      const item = selectedExpense;
+                      setSelectedExpense(null);
+                      handleOpenDelete(item);
+                    }}
+                  >
+                    <Icon name="trash" size={14} />
+                    {lang === 'en' ? 'Delete' : 'Xóa tồn kho'}
+                  </Button>
+
+                  {/* CLOSE */}
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => setSelectedExpense(null)}
+                  >
+                    {lang === 'en' ? 'Close' : 'Đóng'}
+                  </Button>
                 </div>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
-              <Button variant="secondary"
-                type="button"
-                onClick={() => setSelectedExpense(null)}
-
-              >
-                {lang === 'en' ? 'Close' : 'Đóng'}
-              </Button>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* ========================================================= */}
