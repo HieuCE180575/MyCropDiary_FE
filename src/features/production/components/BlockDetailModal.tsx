@@ -13,9 +13,8 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
   const load = useCallback((signal: AbortSignal) => fetchBlockById(blockId, signal), [blockId]);
   const { data: block, loading, error, retry } = useApiData(load);
   const fields = block ? [
-    ['Mã lô đất', block.blockId],
     ['Tên lô đất', block.blockName],
-    ['Phân khu', block.zoneName ?? `#${block.zoneId}`],
+    ['Phân khu', block.zoneName ?? '—'],
     ['Diện tích', `${uiFormatNumber(block.areaValue, lang)} ${block.areaUnit}`],
     ['Loại đất', block.soilType],
     ['Trạng thái', translate(block.status)],
@@ -26,7 +25,7 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
   ] : [];
 
   return (
-    <Modal open onClose={onClose} title={lang === 'en' ? 'Block Details' : 'Chi tiết lô sản xuất'}>
+    <Modal structured open onClose={onClose} title={lang === 'en' ? 'Block Details' : 'Chi tiết lô trồng'}>
       {loading ? <p role="status">{lang === 'en' ? 'Loading block details...' : 'Đang tải chi tiết lô đất...'}</p> : error ? (
         <>
           <p role="alert">{translate(error)}</p>
@@ -36,9 +35,9 @@ export function BlockDetailModal({ blockId, onClose }: { blockId: number; onClos
         <div className="block-detail-modal">
           {block.imageUrl && <img src={block.imageUrl} alt={block.blockName} />}
           <dl className="block-details-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', margin: '12px 0' }}>
-            {fields.map(([label, value]) => (
+            {fields.map(([label, value], index) => (
               <div
-                className="block-detail-row"
+                className={`block-detail-row${index === 0 ? ' ui-detail-primary' : ''}`}
                 key={String(label)}
                 style={{
                   background: 'var(--color-page)',

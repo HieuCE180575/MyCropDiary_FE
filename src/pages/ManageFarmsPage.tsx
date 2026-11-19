@@ -22,7 +22,6 @@ export function ManageFarmsPage() {
   const { lang, t } = useLanguage();
   const location = useLocation();
   const [keyword, setKeyword] = useState('');
-  const [layout, setLayout] = useState<'table' | 'cards'>('table');
   const [status, setStatus] = useState('');
   const [role, setRole] = useState('');
   const load = useCallback(async (signal: AbortSignal) => {
@@ -66,7 +65,7 @@ export function ManageFarmsPage() {
       : error ? <LoadError message={error} onRetry={retry} />
         : <div className="panel">
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-            <input className="ui-input" style={{ flex: '1 1 240px' }} aria-label={t('farms.search')} placeholder={t('farms.search')} value={keyword} onChange={event => setKeyword(event.target.value)} />
+            <input className="ui-input" style={{ flex: '1 1 320px', minWidth: 0 }} aria-label={t('farms.search')} placeholder={t('farms.search')} value={keyword} onChange={event => setKeyword(event.target.value)} />
             <select className="ui-select" style={{ width: 'auto', flex: '0 1 220px' }} aria-label={t('farms.statusFilter')} value={status} onChange={event => setStatus(event.target.value)}>
               <option value="">{t('farms.allStatuses')}</option>
               {Object.keys(registrationTones).map(value => <option key={value} value={value}>{t(`farms.status.${value}`)}</option>)}
@@ -74,20 +73,10 @@ export function ManageFarmsPage() {
             <select className="ui-select" style={{ width: 'auto' }} aria-label={t('farms.roleFilter')} value={role} onChange={event => setRole(event.target.value)}>
               <option value="">{t('farms.allRoles')}</option><option value="OWNER">{t('farms.owner')}</option><option value="STAFF">{t('farms.staff')}</option>
             </select>
-            <Button variant="secondary" aria-pressed={layout === 'table'} onClick={() => setLayout('table')}>{t('farms.tableView')}</Button>
-            <Button variant="secondary" aria-pressed={layout === 'cards'} onClick={() => setLayout('cards')}>{t('farms.cardView')}</Button>
             <Button variant="secondary" style={{ flexShrink: 0 }} onClick={retry} aria-label={t('farms.refresh')}><Icon name="refresh" /></Button>
           </div>
           {rows.length === 0 ? <EmptyState title={t('farms.empty')} action={create} /> : <>
-            {layout === 'cards' ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 16 }}>
-              {pagination.items.map(row => <article className="panel" key={row.key}>
-                <h2 style={{ fontSize: 18 }}>{row.name}</h2><p>{t(row.kind)}</p>
-                <p>{row.address || t('farms.notProvided')}</p>
-                <StatusBadge tone={registrationTones[row.status] ?? 'neutral'} label={t(`farms.status.${row.status}`)} />
-                <p><Link className="ui-button ui-button--secondary" to={row.href}>{t('farms.view')}</Link></p>
-              </article>)}
-              {!filtered.length && <EmptyState title={t('farms.noMatches')} />}
-            </div> : <div className="ui-table-scroll" tabIndex={0} role="region" aria-label={t('Farm Management')}>
+            <div className="ui-table-scroll" tabIndex={0} role="region" aria-label={t('Farm Management')}>
               <table className="ui-data-table">
                 <thead><tr>{['farms.number', 'farms.name', 'farms.address', 'farms.submittedAt', 'farms.statusFilter', 'farms.actions'].map(key => <th scope="col" key={key}>{t(key)}</th>)}</tr></thead>
                 <tbody>{pagination.items.map((row, index) => <tr key={row.key}>
@@ -99,7 +88,7 @@ export function ManageFarmsPage() {
                   <td><div className="table-action-btns"><Link className="table-icon-btn primary" to={row.href} title={t('farms.view')} aria-label={`${t('farms.view')}: ${row.name}`}><Icon name="eye" /></Link></div></td>
                 </tr>)}{!filtered.length && <tr><td colSpan={6}><EmptyState title={t('farms.noMatches')} /></td></tr>}</tbody>
               </table>
-            </div>}
+            </div>
             <TablePagination {...pagination} />
           </>}
         </div>}

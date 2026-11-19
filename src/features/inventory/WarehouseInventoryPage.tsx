@@ -1,3 +1,4 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { LoadError } from '../../shared/components/LoadError';
 import { TabList, tabPanelProps } from '../../shared/components/TabList';
@@ -316,8 +317,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* Status / Action Notification Banner */}
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           role={notification.type === 'error' ? 'alert' : 'status'}
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -333,8 +335,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Main Page Heading matching Mockup */}
       <PageHeading level={embedded ? 2 : 1}   title={<>
@@ -376,8 +377,8 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
         {/* Integrated Tabs */}
         <TabList idPrefix="warehouse" label={lang === 'en' ? 'Warehouse sections' : 'Các mục kho hàng'} inset
             value={activeSubTab} onChange={setActiveSubTab} items={[
-              { value: 'warehouses', label: <><Icon name="box" size={17} /> {lang === 'en' ? 'Warehouses' : 'Kho hàng'} <span className="tab-count">({warehouses.length})</span></> },
-              { value: 'inventory', label: <><Icon name="layers" size={17} /> {lang === 'en' ? 'Inventory' : 'Tồn kho vật tư'} <span className="tab-count">({inventories.length})</span></> },
+              { value: 'warehouses', label: <><Icon name="box" size={17} /> {lang === 'en' ? 'Warehouses' : 'Kho hàng'}</> },
+              { value: 'inventory', label: <><Icon name="layers" size={17} /> {lang === 'en' ? 'Inventory' : 'Tồn kho vật tư'}</> },
             ]} />
 
         {/* =========================================================
@@ -423,14 +424,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ background: 'var(--color-page)' }}>
-                      <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                      </th>
+
                       <th scope="col">
                         {lang === 'en' ? 'WAREHOUSE NAME' : 'TÊN KHO HÀNG'}
-                      </th>
-                      <th scope="col">
-                        {lang === 'en' ? 'CODE' : 'MÃ KHO'}
                       </th>
                       <th scope="col">
                         {lang === 'en' ? 'STORAGE ADDRESS' : 'ĐỊA CHỈ LƯU TRỮ'}
@@ -446,9 +442,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                   <tbody>
                     {warehousePagination.items.map((w) => (
                       <tr key={w.warehouseId} style={{ borderBottom: '1px solid var(--color-subtle)' }}>
-                        <td style={{ textAlign: 'center' }}>
-                          <input type="checkbox" aria-label={translate("Select") + " " + (w.warehouseName)} style={{ cursor: 'pointer' }} />
-                        </td>
+
                         <td>
                           <span
                             onClick={() => setSelectedWarehouse(w)}
@@ -468,9 +462,6 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                           <span style={{ fontSize: '13px', color: 'var(--color-muted)', display: 'block', marginTop: '3px' }}>
                             {w.address || (lang === 'en' ? 'VietGAP Farm Storage' : 'Cơ sở lưu trữ trang trại VietGAP')}
                           </span>
-                        </td>
-                        <td style={{ fontSize: '13.5px', color: 'var(--color-body)', fontWeight: 500 }}>
-                          WH-{String(w.warehouseId).padStart(3, '0')}
                         </td>
                         <td style={{ fontSize: '13.5px', color: 'var(--color-body)' }}>
                           {w.address || '—'}
@@ -594,9 +585,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ background: 'var(--color-page)' }}>
-                      <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                      </th>
+
                       <th scope="col">
                         {lang === 'en' ? 'MATERIAL NAME' : 'TÊN VẬT TƯ'}
                       </th>
@@ -623,9 +612,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                   <tbody>
                     {inventoryPagination.items.map((it) => (
                       <tr key={it.inventoryId} style={{ borderBottom: '1px solid var(--color-subtle)' }}>
-                        <td style={{ textAlign: 'center' }}>
-                          <input type="checkbox" aria-label={translate("Select") + " " + (it.materialName)} style={{ cursor: 'pointer' }} />
-                        </td>
+
                         <td>
                           <strong style={{ fontSize: '15px', color: 'var(--color-text)', display: 'block' }}>{it.materialName}</strong>
                           <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Unit:' : 'Đơn vị tính:'} {materialUnitLabel(it.unit, lang)}</span>
@@ -713,10 +700,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
       {/* MODAL: Warehouse Details */}
       {selectedWarehouse && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setSelectedWarehouse(null)} style={{ width: 'min(540px, 100%)' }}>
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => setSelectedWarehouse(null)} style={{ width: 'min(540px, 100%)' }}>
           <div className="modal-header">
-            <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Facility Information' : 'Thông tin cơ sở lưu trữ'}</span>
+            <div><span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Facility Information' : 'Thông tin cơ sở lưu trữ'}</span>
               <h2 style={{ margin: '4px 0 0' }}>
                 {selectedWarehouse.warehouseName}
               </h2>
@@ -724,25 +710,26 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setSelectedWarehouse(null)}><Icon name="close" /></button>
           </div>
           <div className="modal-body" style={{ padding: '20px 24px' }}>
+            <div className="ui-detail-field ui-detail-primary" style={{ marginBottom: '16px' }}><span>{lang === 'en' ? 'Warehouse name' : 'Tên kho hàng'}</span><div>{selectedWarehouse.warehouseName}</div></div>
             <div className="ui-form-grid" style={{ marginBottom: '16px', background: 'var(--color-page)', padding: '14px', borderRadius: '8px'  }}>
-              <div>
+              <div className="ui-detail-field">
                 <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Owning Farm' : 'Trang trại sở hữu'}</span>
                 <p style={{ margin: '2px 0 0', fontWeight: 600, color: 'var(--color-text)' }}>{selectedWarehouse.farmName}</p>
               </div>
-              <div>
+              <div className="ui-detail-field">
                 <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Stored Items Count' : 'Số mặt hàng lưu trữ'}</span>
                 <p style={{ margin: '2px 0 0', fontWeight: 700, color: 'var(--color-primary-text)' }}>{selectedWarehouse.totalItemCount} {lang === 'en' ? 'items' : 'sản phẩm'}</p>
               </div>
             </div>
-            <div>
-              <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--color-body)' }}>{lang === 'en' ? 'Facility Address:' : 'Địa chỉ kho bãi:'}</span>
-              <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--color-text)' }}>
+            <div className="ui-detail-field">
+                <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--color-body)' }}>{lang === 'en' ? 'Facility Address:' : 'Địa chỉ kho bãi:'}</span>
+                <p style={{ margin: '4px 0 0', fontSize: '14px', color: 'var(--color-text)' }}>
                 {selectedWarehouse.address || (lang === 'en' ? 'No address provided.' : 'Chưa cập nhật chi tiết địa chỉ.')}
               </p>
             </div>
           </div>
           <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--color-border)' }}>
-            <Button type="button" variant="secondary" onClick={() => setSelectedWarehouse(null)}>
+            <Button className={'ui-close-action'} type="button" variant="secondary" onClick={() => setSelectedWarehouse(null)}>
               {lang === 'en' ? 'Close' : 'Đóng'}
             </Button>
           </div>
@@ -751,10 +738,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
       {/* MODAL: Inventory Item Details */}
       {selectedInventoryItem && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setSelectedInventoryItem(null)} style={{ width: 'min(540px, 100%)' }}>
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => setSelectedInventoryItem(null)} style={{ width: 'min(540px, 100%)' }}>
           <div className="modal-header">
-            <div>
-              <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Material Stock Information' : 'Thông tin tồn kho vật tư'}</span>
+            <div><span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Material Stock Information' : 'Thông tin tồn kho vật tư'}</span>
               <h2 style={{ margin: '4px 0 0' }}>
                 {selectedInventoryItem.materialName}
               </h2>
@@ -762,13 +748,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setSelectedInventoryItem(null)}><Icon name="close" /></button>
           </div>
           <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="ui-detail-field ui-detail-primary" style={{ marginBottom: '16px' }}><span>{lang === 'en' ? 'Material name' : 'Tên vật tư'}</span><div>{selectedInventoryItem.materialName}</div></div>
             <div className="ui-form-grid" style={{ background: 'var(--color-page)', padding: '16px', borderRadius: '8px', gap: '12px' }}>
-              <div>
+              <div className="ui-detail-field">
                 <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Warehouse Location' : 'Kho lưu trữ'}</span>
                 <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>{selectedInventoryItem.warehouseName}</strong>
               </div>
-              <div>
-                <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Stock Status' : 'Tình trạng tồn kho'}</span>
+              <div><span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Stock Status' : 'Tình trạng tồn kho'}</span>
                 <span
                   style={{
                     padding: '3px 8px',
@@ -784,13 +770,13 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                   {selectedInventoryItem.isLowStock ? (lang === 'en' ? '⚠️ Low Stock' : '⚠️ Sắp hết hàng') : (lang === 'en' ? '✓ In Stock' : '✓ Đủ tồn kho')}
                 </span>
               </div>
-              <div>
+              <div className="ui-detail-field">
                 <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Quantity on Hand' : 'Số lượng thực tế'}</span>
                 <strong style={{ fontSize: '15px', color: 'var(--color-primary-text)' }}>
                   {uiFormatNumber(Number(selectedInventoryItem.quantityOnHand), lang)} {materialUnitLabel(selectedInventoryItem.unit, lang)}
                 </strong>
               </div>
-              <div>
+              <div className="ui-detail-field">
                 <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block' }}>{lang === 'en' ? 'Reorder Level' : 'Mức đặt lại hàng'}</span>
                 <strong style={{ fontSize: '13.5px', color: 'var(--color-text)' }}>
                   {uiFormatNumber(Number(selectedInventoryItem.reorderLevel), lang)} {translate(selectedInventoryItem.unit)}
@@ -804,10 +790,10 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             </div>
           </div>
           <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '8px', borderTop: '1px solid var(--color-border)' }}>
-            <Button type="button" variant="secondary" onClick={() => setSelectedInventoryItem(null)}>
+            <Button className={'ui-close-action'} type="button" variant="secondary" onClick={() => setSelectedInventoryItem(null)}>
               {lang === 'en' ? 'Close' : 'Đóng'}
             </Button>
-            <Button
+            <Button className={'ui-edit-action'}
               type="button"
               variant="primary"
               onClick={() => {
@@ -828,7 +814,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
       {/* MODAL: Create Warehouse */}
       {isCreateWarehouseOpen && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateWarehouseOpen(false)} style={{ width: 'min(500px, 100%)' }}>
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => setIsCreateWarehouseOpen(false)} style={{ width: 'min(500px, 100%)' }}>
           <div className="modal-header">
             <div>
               <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'New Storage Facility' : 'Tạo kho hàng mới'}</span>
@@ -837,7 +823,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setIsCreateWarehouseOpen(false)}><Icon name="close" /></button>
           </div>
           <form onSubmit={handleCreateWarehouse}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
               <div className="structured-field-card">
                 <label htmlFor="inventory-field-1">
@@ -866,7 +852,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               </div>
             </div>
             <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setIsCreateWarehouseOpen(false)} disabled={creatingWarehouse}>
+              <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setIsCreateWarehouseOpen(false)} disabled={creatingWarehouse}>
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={creatingWarehouse}>
@@ -879,7 +865,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
       {/* MODAL: Update Inventory */}
       {editingInventory && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setEditingInventory(null)} style={{ width: 'min(480px, 100%)' }}>
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => setEditingInventory(null)} style={{ width: 'min(480px, 100%)' }}>
           <div className="modal-header">
             <div>
               <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Inventory' : 'Cập nhật tồn kho'}</span>
@@ -890,8 +876,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setEditingInventory(null)}><Icon name="close" /></button>
           </div>
           <form onSubmit={handleUpdateInventory}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
+              <div className="structured-field-card ui-form-context"><div className="structured-field-header"><span className="structured-field-label">{lang === 'en' ? 'Material / warehouse' : 'Vật tư / Kho hàng'}</span></div><strong>{editingInventory.materialName} · {editingInventory.warehouseName}</strong></div>
               <div className="structured-field-card">
                 <label htmlFor="inventory-field-3">
                   {lang === 'en' ? `Actual Stock on Hand (${editingInventory.unit}) *` : `Số lượng tồn kho thực tế (${editingInventory.unit}) *`}
@@ -927,7 +914,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               </div>
             </div>
             <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setEditingInventory(null)} disabled={updatingInventory}>
+              <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setEditingInventory(null)} disabled={updatingInventory}>
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={updatingInventory}>
@@ -940,7 +927,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
       {/* MODAL: Edit Warehouse */}
       {editingWarehouse && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setEditingWarehouse(null)} style={{ width: 'min(500px, 100%)' }}>
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => setEditingWarehouse(null)} style={{ width: 'min(500px, 100%)' }}>
           <div className="modal-header">
             <div>
               <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Storage Facility' : 'Cập nhật cơ sở lưu trữ'}</span>
@@ -949,7 +936,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setEditingWarehouse(null)}><Icon name="close" /></button>
           </div>
           <form onSubmit={handleUpdateWarehouse}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
               <div className="structured-field-card">
                 <label htmlFor="inventory-field-5">
@@ -976,7 +963,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               </div>
             </div>
             <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setEditingWarehouse(null)} disabled={updatingWarehouse}>
+              <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setEditingWarehouse(null)} disabled={updatingWarehouse}>
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={updatingWarehouse}>
@@ -989,7 +976,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
       {/* MODAL: Create Inventory */}
       {isCreateInventoryOpen && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateInventoryOpen(false)} style={{ width: 'min(520px, 100%)' }}>
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => setIsCreateInventoryOpen(false)} style={{ width: 'min(520px, 100%)' }}>
           <div className="modal-header">
             <div>
               <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Inventory Management' : 'Quản lý tồn kho'}</span>
@@ -998,7 +985,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'} onClick={() => setIsCreateInventoryOpen(false)}><Icon name="close" /></button>
           </div>
           <form onSubmit={handleCreateInventory}>
-            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {formError && <p role="alert" className="form-error-banner">{translate(formError)}</p>}
               <div className="structured-field-card">
                 <label htmlFor="inventory-field-7">
@@ -1070,7 +1057,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               </div>
             </div>
             <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-              <Button type="button" variant="secondary" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
+              <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={creatingInventory}>

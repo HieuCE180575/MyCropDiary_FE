@@ -1,3 +1,4 @@
+import { DeleteErrorToast, isDeleteError } from '../shared/components/DeleteErrorToast';
 import '../styles/farm-profile.css';
 import { message, type TranslationMessage } from "../shared/i18n/translate";
 import { EmptyState } from '../shared/components/EmptyState';
@@ -130,7 +131,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const [cancelRegError, setCancelRegError] = useState<string | null>(null);
 
   const activeFarmSummary = farms.find((f) => f.id === activeFarmId) || (routeFarmId ? null : selectedFarm || (farms.length > 0 ? farms[0] : null));
-  const profileTitle = `${lang === 'en' ? 'Farm Profile' : 'Hồ sơ'}: ${farmDetail?.farmName || activeFarmSummary?.farmName || `#${activeFarmId}`}`;
+  const profileTitle = `${lang === 'en' ? 'Farm Profile' : 'Hồ sơ'}: ${farmDetail?.farmName || activeFarmSummary?.farmName || '—'}`;
   const isOwner = farmDetail?.id === activeFarmId && farmDetail.status?.toUpperCase() === 'ACTIVE' && farmDetail.currentUserRole?.toUpperCase() === 'OWNER';
 
   // Filtered farms list matching layout of ZoneListPage / StaffManagementPage
@@ -375,8 +376,9 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* Notification Toast matching ZoneListPage / StaffManagementPage */}
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
@@ -391,35 +393,34 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Main Page Heading */}
       <PageHeading
         title={viewMode === 'detail' ? profileTitle : (lang === 'en' ? 'Farm Management' : 'Quản lý trang trại')}
-        description={<>
+        description={viewMode === 'detail' ? undefined : <>
           {lang === 'en'
             ? `${farms.length} farms registered · Active Workspace: ${selectedFarm ? selectedFarm.farmName : 'Personal'}`
             : `${farms.length} trang trại · Không gian làm việc đang chọn: ${selectedFarm ? selectedFarm.farmName : 'Cá nhân'}`}
         </>}
-        leading={<p className="welcome-kicker">{lang === 'en' ? 'Farm Setup' : 'Không gian trang trại'}</p>}
+        leading={viewMode === 'detail' ? undefined : <p className="welcome-kicker">{lang === 'en' ? 'Farm Setup' : 'Không gian trang trại'}</p>}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {viewMode === 'detail' && (
-            <Button type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              <Icon name="arrow-left" size={16} /> {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
+            <Button className="ui-back-action" type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+               {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
             </Button>
           )}
 
           {viewMode === 'register' && farms.length > 0 && (
-            <Button type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              <Icon name="arrow-left" size={16} /> {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
+            <Button className="ui-back-action" type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+               {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
             </Button>
           )}
 
           {viewMode === 'detail' && activeFarmId && isOwner && (
-            <Button type="button" variant="primary" onClick={() => setIsEditOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              <Icon name="check" size={16} /> {lang === 'en' ? 'Edit Farm & Map' : 'Chỉnh sửa trang trại'}
+            <Button className="ui-edit-action farm-edit-action" type="button" variant="primary" onClick={() => setIsEditOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="edit" size={16} /> {lang === 'en' ? 'Edit Farm Information' : 'Chỉnh sửa thông tin trang trại'}
             </Button>
           )}
 
@@ -565,9 +566,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                     <table className="ui-data-table ui-data-table--wide" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'auto' }}>
                       <thead>
                         <tr style={{ background: 'var(--color-page)' }}>
-                          <th scope="col" style={{ width: '44px', minWidth: '44px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                            <input type="checkbox" aria-label={lang === 'en' ? 'Select all farms' : 'Chọn tất cả trang trại'} style={{ cursor: 'pointer' }} />
-                          </th>
+
                           <th scope="col" style={{ width: '28%', textAlign: 'left' }}>
                             {lang === 'en' ? 'Farm Name' : 'Trang trại'}
                           </th>
@@ -602,29 +601,11 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                                 background: isCurrentActive ? 'rgba(34, 197, 94, 0.04)' : undefined,
                               }}
                             >
-                              <td style={{ textAlign: 'center' }}>
-                                <input type="checkbox" aria-label={`Select ${f.farmName}`} style={{ cursor: 'pointer' }} />
-                              </td>
+
 
                               <td>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                  <div
-                                    style={{
-                                      width: '38px',
-                                      height: '38px',
-                                      borderRadius: '10px',
-                                      background: isCurrentActive
-                                        ? 'linear-gradient(135deg, var(--color-primary) 0%, #15803d 100%)'
-                                        : 'var(--color-page)',
-                                      color: isCurrentActive ? '#ffffff' : 'var(--color-primary-text)',
-                                      display: 'grid',
-                                      placeItems: 'center',
-                                      fontSize: '18px',
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    🌱
-                                  </div>
+                                  
                                   <div>
                                     <button
                                       type="button"
@@ -650,7 +631,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                                       {f.farmName}
                                     </button>
                                     <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginTop: '2px' }}>
-                                      {codeDisplay} · ID #{f.id}
+                                      {codeDisplay} ·
                                     </span>
                                   </div>
                                 </div>
@@ -783,26 +764,9 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                       )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                          <div
-                            style={{
-                              width: '52px',
-                              height: '52px',
-                              borderRadius: '14px',
-                              background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: 'var(--color-on-primary)',
-                              fontSize: '22px',
-                            }}
-                          >
-                            🌱
-                          </div>
+                          
                           <div>
                             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--color-text)' }}>{farmDetail.farmName}</h2>
-                            <p style={{ margin: '3px 0 0', color: 'var(--color-muted)', fontSize: '13px' }}>
-                              {lang === 'en' ? 'Farm ID: #' : 'Mã trang trại: #'}{farmDetail.id}
-                            </p>
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -888,7 +852,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                           </p>
                         </div>
                         {isOwner && (
-                          <Button type="button" variant="secondary" onClick={() => setIsAddMemberOpen(true)} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                          <Button type="button" variant="primary" onClick={() => setIsAddMemberOpen(true)} style={{ padding: '6px 12px', fontSize: '13px' }}>
                             <Icon name="plus" size={15} /> {lang === 'en' ? 'Add Member' : 'Thêm thành viên'}
                           </Button>
                         )}
@@ -1030,7 +994,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       )}
 
       {/* Edit Farm Modal */}
-      <Modal
+      <Modal structured
         open={isEditOpen}
         onClose={() => setIsEditOpen(false)}
         title={lang === 'en' ? 'Edit Farm Information & Map' : 'Chỉnh sửa thông tin & Bản đồ trang trại'}
@@ -1116,7 +1080,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
             />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Button type="button" variant="secondary" onClick={() => setIsEditOpen(false)}>
+            <Button className="ui-cancel-button" type="button" variant="secondary" style={{ background: '#fff', color: 'var(--color-danger)' }} onClick={() => setIsEditOpen(false)}>
               {lang === 'en' ? 'Cancel' : 'Hủy'}
             </Button>
             <Button type="submit" variant="primary" loading={updating}>
@@ -1127,7 +1091,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       </Modal>
 
       {/* Add Member Modal */}
-      <Modal
+      <Modal structured
         open={isAddMemberOpen}
         onClose={() => setIsAddMemberOpen(false)}
         title={lang === 'en' ? 'Add Member' : 'Thêm thành viên mới'}
@@ -1161,7 +1125,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
             </select>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Button type="button" variant="secondary" onClick={() => setIsAddMemberOpen(false)}>
+            <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setIsAddMemberOpen(false)}>
               {lang === 'en' ? 'Cancel' : 'Hủy'}
             </Button>
             <Button type="submit" variant="primary" disabled={addingMember}>
@@ -1177,8 +1141,8 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
         title={lang === 'en' ? 'Remove member' : 'Xóa thành viên'}
         description={
           lang === 'en'
-            ? `Are you sure you want to remove member "${removeMemberTarget?.name}" from the farm?`
-            : `Bạn có chắc muốn xóa thành viên "${removeMemberTarget?.name}" khỏi trang trại?`
+            ? <>Are you sure you want to remove member &quot;<strong>{removeMemberTarget?.name}</strong>&quot; from the farm?</>
+            : <>Bạn có chắc muốn xóa thành viên &quot;<strong>{removeMemberTarget?.name}</strong>&quot; khỏi trang trại?</>
         }
         confirmLabel={lang === 'en' ? 'Remove member' : 'Xóa thành viên'}
         tone="danger"

@@ -16,11 +16,12 @@ interface ModalProps {
   headerIcon?: ReactNode;
   variant?: 'default' | 'admin';
   customLayout?: boolean;
+  structured?: boolean;
   style?: CSSProperties;
 }
 
 /** Modal/hộp thoại dùng lại để hiển thị chi tiết hoặc xác nhận. */
-export function Modal({ open, onClose, title, children, className, headerIcon, variant = 'default', customLayout = false, style }: ModalProps) {
+export function Modal({ open, onClose, title, children, className, headerIcon, variant = 'default', customLayout = false, structured = false, style }: ModalProps) {
   const { lang, t: translate } = useLanguage();
   const ref = useRef<HTMLDialogElement>(null);
   const closeRef = useRef(onClose);
@@ -69,7 +70,7 @@ export function Modal({ open, onClose, title, children, className, headerIcon, v
   if (!open) return null;
 
   return (
-      <dialog ref={ref} tabIndex={-1} style={{ ...style, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100dvh - 32px)' }} className={[variant === 'admin' ? 'admin-modal' : 'modal-card', 'ui-modal', className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined} aria-label={title || customLayout ? undefined : (lang === 'en' ? 'Dialog' : 'Hộp thoại')}
+      <dialog ref={ref} tabIndex={-1} style={{ ...style, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100dvh - 32px)' }} className={[variant === 'admin' ? 'admin-modal' : 'modal-card', 'ui-modal', structured && 'form-standard-modal', className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined} aria-label={title || customLayout ? undefined : (lang === 'en' ? 'Dialog' : 'Hộp thoại')}
         onCancel={event => { event.preventDefault(); onClose(); }}
         onClick={event => {
           if (event.target !== event.currentTarget) return;

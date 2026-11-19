@@ -65,6 +65,7 @@ export async function fetchTrainingHistoryApi(
 
 export async function fetchTrainingDetailsApi(id: number): Promise<TrainingRecordResp> {
   const res = await apiRequest<ApiResponse<TrainingRecordResp>>(`/training-records/${id}`);
+  if (!res.success || !res.data) throw new Error(res.message || 'Unable to load training details.');
   return res.data;
 }
 
@@ -76,6 +77,9 @@ export async function createTrainingRecordApi(
     method: 'POST',
     data: payload,
   });
+  if (!res.success || !res.data) {
+    throw new Error(res.message || 'Unable to create training record.');
+  }
   return res.data;
 }
 

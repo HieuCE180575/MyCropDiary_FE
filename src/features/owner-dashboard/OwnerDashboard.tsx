@@ -45,7 +45,7 @@ export function OwnerDashboard({ farm }: { farm: FarmSummary }) {
   ];
   return <section className="owner-dashboard" aria-label={translate("Farm Overview")}>
     <header className="owner-hero">
-      <Link to="/farm?edit=1" className="owner-edit-link"><Icon name="edit" size={16} />{lang === 'en' ? 'Edit Farm Information' : 'Chỉnh sửa thông tin trang trại'}</Link>
+      <Link to="/farm?edit=1" className="owner-edit-link ui-edit-action farm-edit-action"><Icon name="edit" size={16} />{lang === 'en' ? 'Edit Farm Information' : 'Chỉnh sửa thông tin trang trại'}</Link>
       <span className="owner-role-badge">{lang === 'en' ? 'FARM OWNER' : 'CHỦ TRANG TRẠI'}</span>
       <h1>{farm.farmName}<Icon name="leaf" size={30} /></h1>
       <p className="owner-hero-description">{lang === 'en' ? 'Sustainable farm management, aiming for clean and safe agricultural produce' : 'Quản lý trang trại bền vững, hướng đến nông sản sạch và an toàn'}</p>

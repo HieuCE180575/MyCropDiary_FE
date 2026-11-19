@@ -1,3 +1,7 @@
+import { apiRequest } from '../../shared/api/httpClient';
+import type { ApiResponse } from '../../shared/types/api';
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
+import { useDetailRequest } from '../../shared/hooks/useDetailRequest';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { LoadError } from '../../shared/components/LoadError';
 import { StatusBadge } from '../../shared/components/StatusBadge';
@@ -19,7 +23,6 @@ import { useLanguage } from '../../shared/i18n/LanguageContext';
 import {
   fetchInputPurchases,
   fetchInputPurchaseDetails,
-  searchInputPurchases,
   recordInputPurchase,
   deleteInputPurchase,
   linkWarehouseReceipt,
@@ -33,6 +36,7 @@ import {
 export function InputPurchasesPage({ embedded = false }: { embedded?: boolean }) {
   const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
+  const detailLoader = useDetailRequest(selectedFarm?.id);
   const farmId = selectedFarm?.id;
 
   const [purchases, setPurchases] = useState<InputPurchaseItem[]>([]);
@@ -66,8 +70,27 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
   const [newReferenceNo, setNewReferenceNo] = useState('');
   const [newWarehouseReceiptNo, setNewWarehouseReceiptNo] = useState('');
   const [newNotes, setNewNotes] = useState('');
+  const [materialOptions, setMaterialOptions] = useState<{ id: number; materialName: string }[]>([]);
+  const [materialsLoading, setMaterialsLoading] = useState(false);
+  const [materialsError, setMaterialsError] = useState<string | null>(null);
+  const [materialsRetry, setMaterialsRetry] = useState(0);
+  useEffect(() => {
+    if (!isCreateOpen || !farmId) return;
+    const controller = new AbortController();
+    setMaterialOptions([]);
+    setMaterialsLoading(true);
+    setMaterialsError(null);
+    apiRequest<ApiResponse<{ id: number; materialName: string }[]>>('/material-usages/materials?farmId=' + farmId, { signal: controller.signal })
+      .then(response => {
+        if (!response.success || !Array.isArray(response.data)) throw new Error(response.message || 'Unable to load materials.');
+        if (!controller.signal.aborted) setMaterialOptions(response.data);
+      }).catch(err => {
+        if (!controller.signal.aborted) setMaterialsError(err instanceof Error ? err.message : (lang === 'en' ? 'Unable to load materials.' : 'Không tải được danh mục vật tư.'));
+      }).finally(() => { if (!controller.signal.aborted) setMaterialsLoading(false); });
+    return () => controller.abort();
+  }, [isCreateOpen, farmId, materialsRetry]);
   const [newItems, setNewItems] = useState<PurchaseItemPayload[]>([
-    { materialId: 1, quantity: 10, unitCost: 50000 },
+    { materialId: 0, quantity: 10, unitCost: 50000 },
   ]);
   const [submittingCreate, setSubmittingCreate] = useState(false);
 
@@ -93,30 +116,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
     void loadData();
   }, [farmId]);
 
-  const handleSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!farmId) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const suppId = supplierFilter !== 'ALL' ? Number(supplierFilter) : undefined;
-      const filtered = await searchInputPurchases(farmId, {
-        keyword: keyword.trim() || undefined,
-        supplierId: suppId,
-        fromDate: fromDate || undefined,
-        toDate: toDate || undefined,
-      });
-      setPurchases(filtered);
-    } catch (err) {
-      setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to search material purchase records." : err instanceof Error ? err.message : 'Lỗi khi tìm kiếm phiếu mua vật tư.'),
-        type: 'error',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleResetFilters = () => {
     setKeyword('');
     setSupplierFilter('ALL');
@@ -127,19 +126,9 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
   };
 
   const handleOpenDetails = async (purchaseId: number) => {
-
-    try {
-      const detail = await fetchInputPurchaseDetails(purchaseId);
-      setSelectedPurchase(detail);
-    } catch {
-      // Fallback to item in local list
-      const fallback = purchases.find((p) => p.purchaseId === purchaseId) || null;
-      setSelectedPurchase(fallback);
-    } finally {
-
-    }
+    setSelectedPurchase(null);
+    await detailLoader.load(() => fetchInputPurchaseDetails(purchaseId), setSelectedPurchase);
   };
-
   const handleOpenLinkModal = (purchase: InputPurchaseItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setLinkingPurchase(purchase);
@@ -191,7 +180,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
         setSelectedPurchase(null);
       }
       setNotification({
-        text: (message("Deleted material purchase #{value1} successfully.", { value1: purchaseId })),
+        text: lang === 'en' ? 'Material purchase deleted successfully.' : 'Đã xóa phiếu mua vật tư.',
         type: 'success',
       });
     } catch (err) {
@@ -206,7 +195,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
   };
 
   const handleAddItemRow = () => {
-    setNewItems((prev) => [...prev, { materialId: 1, quantity: 1, unitCost: 10000 }]);
+    setNewItems((prev) => [...prev, { materialId: 0, quantity: 1, unitCost: 10000 }]);
   };
 
   const handleRemoveItemRow = (index: number) => {
@@ -223,8 +212,8 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!farmId) return;
-    if (newItems.length === 0) {
-      setNotification({ text: lang === 'en' ? 'Add at least one material item.' : 'Vui lòng thêm ít nhất một mặt hàng vật tư.', type: 'error' });
+    if (newItems.length === 0 || newItems.some(item => !materialOptions.some(material => material.id === item.materialId))) {
+      setNotification({ text: lang === 'en' ? 'Select a material for every item.' : 'Vui lòng chọn vật tư cho từng mặt hàng.', type: 'error' });
       return;
     }
     setNotification(null);
@@ -241,7 +230,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
       const created = await recordInputPurchase(farmId, payload);
       setPurchases((prev) => [created, ...prev]);
       setNotification({
-        text: (message("Recorded material purchase \"{value1}\" successfully!", { value1: created.referenceNo || '#' + created.purchaseId })),
+        text: (message("Recorded material purchase \"{value1}\" successfully!", { value1: created.referenceNo || (lang === 'en' ? 'Material purchase' : 'Phiếu mua vật tư') })),
         type: 'success',
       });
       setIsCreateOpen(false);
@@ -250,7 +239,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
       setNewReferenceNo('');
       setNewWarehouseReceiptNo('');
       setNewNotes('');
-      setNewItems([{ materialId: 1, quantity: 10, unitCost: 50000 }]);
+      setNewItems([{ materialId: 0, quantity: 10, unitCost: 50000 }]);
     } catch (err) {
       setNotification({
         text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to record material purchase." : err instanceof Error ? err.message : 'Không thể ghi nhận phiếu mua vật tư.'),
@@ -261,26 +250,29 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
     }
   };
 
-  // Filtered purchases by warehouse link
+  // Apply filters to the complete purchase list before pagination.
   const displayedPurchases = useMemo(() => {
+    const query = keyword.trim().toLocaleLowerCase();
     return purchases.filter((p) => {
+      if (supplierFilter !== 'ALL' && p.supplierId !== Number(supplierFilter)) return false;
+      if (query && ![p.referenceNo, p.notes, p.supplierName].some(value => value?.toLocaleLowerCase().includes(query))) return false;
+      if (fromDate && p.purchaseDate.slice(0, 10) < fromDate) return false;
+      if (toDate && p.purchaseDate.slice(0, 10) > toDate) return false;
       if (warehouseFilter === 'LINKED') return Boolean(p.warehouseReceiptNo);
       if (warehouseFilter === 'UNLINKED') return !p.warehouseReceiptNo;
       return true;
     });
-  }, [purchases, warehouseFilter]);
-
-  const totalSpent = useMemo(() => {
-    return purchases.reduce((sum, p) => sum + (Number(p.totalAmount) || 0), 0);
-  }, [purchases]);
+  }, [purchases, keyword, supplierFilter, warehouseFilter, fromDate, toDate]);
 
   const purchasesPagination = usePagination(displayedPurchases, JSON.stringify([farmId, keyword, warehouseFilter, supplierFilter, fromDate, toDate]));
 
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+      {detailLoader.feedback}
       {/* Status / Action Notification Banner */}
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           role={notification.type === 'error' ? 'alert' : 'status'}
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -296,16 +288,11 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Main Page Heading matching Mockup */}
       <PageHeading level={embedded ? 2 : 1}   title={<>
             {lang === 'en' ? 'Input Purchases' : 'Mua sắm vật tư'}
-          </>} description={<>
-            {lang === 'en'
-              ? `${purchases.length} purchases · Total: ${displayCurrency(totalSpent ?? 0, lang)} at ${selectedFarm?.farmName || 'Farm'}`
-              : `${purchases.length} phiếu mua · Tổng chi phí: ${displayCurrency(totalSpent ?? 0, lang)} tại ${selectedFarm?.farmName || 'trang trại'}`}
           </>}><div>
           <Button
             type="button"
@@ -320,7 +307,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
       {/* Main Unified Clean Card Container matching Mockup */}
       <div className="zone-clean-card">
         {/* Filter Bar */}
-        <form onSubmit={handleSearch} className="zone-clean-filter-bar">
+        <div className="zone-clean-filter-bar">
           <div className="zone-clean-search" style={{ flex: '1 1 240px' }}>
             <span className="search-icon" aria-hidden="true">
               <Icon name="search" size={17} />
@@ -349,34 +336,24 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             <span className="select-arrow"><Icon name="chevron" size={16} /></span>
           </div>
 
-          <Button
-            type="submit"
-            variant="primary"
 
-          >
-            {lang === 'en' ? 'Filter' : 'Lọc'}
-          </Button>
-
-          {(keyword || supplierFilter !== 'ALL') && (
             <button
               type="button"
               className="zone-clean-reload-btn"
               title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+              aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
               onClick={handleResetFilters}
             >
               <Icon name="refresh" size={16} />
             </button>
-          )}
-        </form>
+        </div>
 
         {/* Table Wrap */}
         <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
           <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ background: 'var(--color-page)' }}>
-                <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                  <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                </th>
+
                 <th scope="col">
                   {lang === 'en' ? 'PURCHASE / INVOICE NO.' : 'MÃ PHIẾU / SỐ HĐ'}
                 </th>
@@ -385,12 +362,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 </th>
                 <th scope="col">
                   {lang === 'en' ? 'PURCHASE DATE' : 'NGÀY MUA'}
-                </th>
-                <th scope="col">
-                  {lang === 'en' ? 'PURCHASED BY' : 'NGƯỜI THU MUA'}
-                </th>
-                <th scope="col" style={{ textAlign: 'center' }}>
-                  {lang === 'en' ? 'ITEMS' : 'SỐ MẶT HÀNG'}
                 </th>
                 <th scope="col" style={{ textAlign: 'right' }}>
                   {lang === 'en' ? 'TOTAL AMOUNT' : 'TỔNG THANH TOÁN'}
@@ -406,15 +377,15 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                  <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'Loading input purchases data...' : 'Đang tải danh sách phiếu mua vật tư...'}
                   </td>
                 </tr>
               ) : loadError ? (
-                <tr><td colSpan={9}><LoadError message={loadError} onRetry={() => { void loadData(); }} /></td></tr>
+                <tr><td colSpan={6}><LoadError message={loadError} onRetry={() => { void loadData(); }} /></td></tr>
               ) : displayedPurchases.length === 0 ? (
                 <tr>
-                  <td colSpan={9} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                  <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'No input purchases found.' : 'Không tìm thấy phiếu mua vật tư nào phù hợp với bộ lọc.'}
                   </td>
                 </tr>
@@ -423,9 +394,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                   const hasWarehouse = Boolean(purchase.warehouseReceiptNo);
                   return (
                     <tr key={purchase.purchaseId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={translate("Select") + " #" + (purchase.purchaseId)} style={{ cursor: 'pointer' }} />
-                      </td>
+
                       <td>
                         <span
                           onClick={() => handleOpenDetails(purchase.purchaseId)}
@@ -440,10 +409,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                           onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--color-primary-text)')}
                           onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                         >
-                          {purchase.referenceNo || `#PUR-${purchase.purchaseId}`}
-                        </span>
-                        <span style={{ fontSize: '12.5px', color: 'var(--color-muted)', display: 'block', marginTop: '3px' }}>
-                          {purchase.supplierName || (lang === 'en' ? 'Unnamed supplier' : 'Nhà cung cấp chưa đặt tên')}
+                          {purchase.referenceNo || (lang === 'en' ? 'Material purchase' : 'Phiếu mua vật tư')}
                         </span>
                       </td>
                       <td style={{ color: 'var(--color-body)', fontSize: '13.5px', fontWeight: 500 }}>
@@ -451,14 +417,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                       </td>
                       <td style={{ color: 'var(--color-muted)', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
                         {displayDate(purchase.purchaseDate, lang)}
-                      </td>
-                      <td style={{ color: 'var(--color-body)', fontSize: '13.5px' }}>
-                        {purchase.purchasedByName || '—'}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span className="profile-tag-pill" style={{ background: 'var(--color-subtle)', color: 'var(--color-body)' }}>
-                          {purchase.items?.length || 0} {lang === 'en' ? 'items' : 'mặt hàng'}
-                        </span>
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-text)', fontSize: '14px' }}>
                         {displayCurrency(purchase.totalAmount ?? 0, lang)}
@@ -469,21 +427,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                             {purchase.warehouseReceiptNo}
                           </>} />
                         ) : (
-                          <button
-                            type="button"
-                            onClick={(e) => handleOpenLinkModal(purchase, e)}
-                            style={{
-                              padding: '3px 8px',
-                              fontSize: '11.5px',
-                              borderRadius: '6px',
-                              border: '1px dashed var(--color-input-border)',
-                              background: 'var(--color-surface)',
-                              color: 'var(--color-info)',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            + {lang === 'en' ? 'Link Warehouse' : 'Liên kết kho'}
-                          </button>
+                          <StatusBadge tone="neutral" label={lang === 'en' ? 'Unlinked' : 'Chưa liên kết'} />
                         )}
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -531,36 +475,39 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
 
       {/* View Input Purchase Details Modal */}
       {selectedPurchase && (
-        <Modal open={true}
+        <Modal structured open={true}
           onClose={() => setSelectedPurchase(null)}
           title={lang === 'en'
-            ? `Input Purchase Details ${selectedPurchase.referenceNo || '#' + selectedPurchase.purchaseId}`
-            : `Chi tiết phiếu mua vật tư ${selectedPurchase.referenceNo || '#' + selectedPurchase.purchaseId}`}
+            ? 'Input purchase details'
+            : 'Chi tiết phiếu mua vật tư'}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, maxWidth: '780px' }}>
             {/* Header Status & Total */}
             <div
+              className="ui-detail-primary"
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '14px 18px',
-                background: 'var(--color-page)',
-                borderRadius: '10px',
-                border: '1px solid var(--color-border)',
+                flexWrap: 'wrap',
+                gap: '16px',
               }}
             >
               <div>
-                <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Purchase Date:' : 'Ngày giao dịch:'}</span>{' '}
+                <div style={{ marginBottom: '6px' }}>
+                  {lang === 'en' ? 'Purchase reference / Invoice number:' : 'Mã phiếu / Số hóa đơn:'}{' '}
+                  <strong>{selectedPurchase.referenceNo || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}</strong>
+                </div>
+                <span style={{ fontSize: '12.5px' }}>{lang === 'en' ? 'Purchase Date:' : 'Ngày giao dịch:'}</span>{' '}
                 <strong>{displayDate(selectedPurchase.purchaseDate, lang)}</strong>
                 {selectedPurchase.purchasedByName && (
-                  <div style={{ fontSize: '12.5px', color: 'var(--color-muted)', marginTop: '3px' }}>
+                  <div style={{ fontSize: '12.5px', marginTop: '3px' }}>
                     {lang === 'en' ? 'Purchased by:' : 'Người mua:'} <strong>{selectedPurchase.purchasedByName}</strong>
                   </div>
                 )}
               </div>
               <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Total Amount:' : 'Tổng thanh toán:'}</span>
+                <span style={{ fontSize: '12.5px' }}>{lang === 'en' ? 'Total Amount:' : 'Tổng thanh toán:'}</span>
                 <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary-text)' }}>
                   {displayCurrency(selectedPurchase.totalAmount ?? 0, lang)}
                 </div>
@@ -569,8 +516,8 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
 
             {/* Supplier and Warehouse Info */}
             <div className="ui-form-grid" >
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>
+              <div className="structured-field-card">
+                <div className="structured-field-header">
                   {lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}
                 </div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-info)' }}>
@@ -583,8 +530,8 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 )}
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <div className="structured-field-card">
+                <div className="structured-field-header">
                   <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text)' }}>
                     {lang === 'en' ? 'Warehouse Receipt' : 'Phiếu nhập kho (Warehouse Receipt)'}
                   </div>
@@ -619,7 +566,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
               <h4 style={{ margin: '0 0 10px', fontSize: '14.5px', color: 'var(--color-text)' }}>
                 {lang === 'en' ? 'Input Items in Purchase' : 'Danh mục mặt hàng vật tư nhập kho'}
               </h4>
-              <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }} className="ui-table-scroll" tabIndex={0}>
+              <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflowX: 'auto' }} className="ui-table-scroll" tabIndex={0}>
                 <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ background: 'var(--color-page)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-body)' }}>
@@ -635,7 +582,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                       selectedPurchase.items.map((item, idx) => (
                         <tr key={item.purchaseItemId || idx} style={{ borderBottom: '1px solid var(--color-border)' }}>
                           <td style={{ fontWeight: 600, color: 'var(--color-text)' }}>
-                            {item.materialName || `${lang === 'en' ? 'Material' : 'Vật tư'} #${item.materialId}`}
+                            {item.materialName || `${lang === 'en' ? 'Material' : 'Vật tư'}`}
                           </td>
                           <td style={{ color: 'var(--color-muted)' }}>
                             {item.materialType || (lang === 'en' ? 'Farm Input' : 'Vật tư canh tác')}
@@ -659,37 +606,33 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                       </tr>
                     )}
                   </tbody>
-                  <tfoot>
-                    <tr style={{ background: 'var(--color-page)', fontWeight: 700 }}>
-                      <td colSpan={4} style={{ padding: '10px 14px', textAlign: 'right' }}>
-                        {lang === 'en' ? 'Total:' : 'Tổng cộng:'}
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--color-primary-text)', fontSize: '15px' }}>
-                        {displayCurrency(selectedPurchase.totalAmount ?? 0, lang)}
-                      </td>
-                    </tr>
-                  </tfoot>
                 </table>
+              </div>
+              <div className="purchase-detail-total">
+                <span>{lang === 'en' ? 'Total:' : 'Tổng cộng:'}</span>
+                <strong>{displayCurrency(selectedPurchase.totalAmount ?? 0, lang)}</strong>
               </div>
             </div>
 
             {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            <div className="confirm-dialog-actions" style={{ flexWrap: 'wrap', marginTop: '8px' }}>
               <Button
                 type="button"
                 variant="secondary"
+                className="purchase-link-button"
                 onClick={() => handleOpenLinkModal(selectedPurchase)}
               >
-                <Icon name="plots" size={14} /> {lang === 'en' ? 'Link Warehouse Receipt' : 'Liên kết phiếu kho'}
+                <Icon name="layers" size={16} /> {lang === 'en' ? 'Link Warehouse Receipt' : 'Liên kết phiếu kho'}
               </Button>
               <Button
                 type="button"
                 variant="danger"
+                className="purchase-delete-button"
                 onClick={() => requestDelete(selectedPurchase.purchaseId, selectedPurchase.referenceNo || '')}
               >
                 <Icon name="trash" size={14} /> {lang === 'en' ? 'Delete Purchase' : 'Xóa phiếu mua'}
               </Button>
-              <Button type="button" variant="primary" onClick={() => setSelectedPurchase(null)}>
+              <Button className={'ui-close-action'} type="button" variant="secondary" onClick={() => setSelectedPurchase(null)}>
                 {lang === 'en' ? 'Close' : 'Đóng'}
               </Button>
             </div>
@@ -699,22 +642,23 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
 
       {/* Link Warehouse Receipt Modal */}
       {linkingPurchase && (
-        <Modal open={true}
+        <Modal structured open={true}
           onClose={() => setLinkingPurchase(null)}
           title={lang === 'en'
             ? 'Link Purchase to Warehouse Receipt'
-            : 'Liên kết phiếu mua hàng với Phiếu nhập kho (Warehouse Receipt)'}
+            : 'Liên kết phiếu mua hàng với phiếu nhập kho'}
         >
-          <form onSubmit={handleSubmitLinkWarehouse} style={{ display: 'flex', flexDirection: 'column', gap: '14px', }}>
+          <form onSubmit={handleSubmitLinkWarehouse} style={{ display: 'flex', flexDirection: 'column', gap: '16px', }}>
             <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--color-body)' }}>
               {lang === 'en'
-                ? `Enter actual warehouse receipt number corresponding to purchase batch ${linkingPurchase.referenceNo || '#' + linkingPurchase.purchaseId}:`
-                : `Nhập mã số phiếu nhập kho thực tế tương ứng với lô vật tư mua hàng ${linkingPurchase.referenceNo || '#' + linkingPurchase.purchaseId}:`}
+                ? `Enter actual warehouse receipt number corresponding to purchase batch ${linkingPurchase.referenceNo || ''}:`
+                : `Nhập mã số phiếu nhập kho thực tế tương ứng với lô vật tư mua hàng ${linkingPurchase.referenceNo || ''}:`}
             </p>
 
             <div className="form-group structured-field-card">
               <label htmlFor="input-purchases-page-field-1">
-                {lang === 'en' ? 'Warehouse Receipt No. *' : 'Số phiếu nhập kho *'}
+                {lang === 'en' ? 'Warehouse Receipt No.' : 'Số phiếu nhập kho'}{' '}
+                <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
               <input id="input-purchases-page-field-1" className="ui-input"
                 type="text"
@@ -727,7 +671,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <Button type="button" variant="secondary" onClick={() => setLinkingPurchase(null)} disabled={submittingLink}>
+              <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setLinkingPurchase(null)} disabled={submittingLink}>
                 {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
               </Button>
               <Button type="submit" variant="primary" disabled={submittingLink || !receiptNoInput.trim()}>
@@ -740,17 +684,20 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
 
       {/* Create Purchase Modal */}
       {isCreateOpen && (
-        <Modal open={true}
+        <Modal structured open={true}
           onClose={() => setIsCreateOpen(false)}
           title={lang === 'en' ? 'Record New Agricultural Input Purchase' : 'Ghi nhận phiếu mua vật tư nông nghiệp mới'}
         >
           <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '750px' }}>
-            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="ui-form-grid">
-              <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-field-2">
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                  <label className="structured-field-label" htmlFor="input-purchases-page-field-2">
                   {lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}
                 </label>
+                  <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+                </div>
                 <select id="input-purchases-page-field-2" className="ui-select"
                   value={newSupplierId}
                   onChange={(e) => setNewSupplierId(e.target.value ? Number(e.target.value) : '')}
@@ -765,10 +712,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 </select>
               </div>
 
-              <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-control-1">
-                  {lang === 'en' ? 'Purchase Date *' : 'Ngày mua hàng *'}
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                  <label className="structured-field-label" htmlFor="input-purchases-page-control-1">
+                  {lang === 'en' ? 'Purchase Date' : 'Ngày mua hàng'}{' '}<span style={{ color: 'var(--color-danger)' }}>*</span>
                 </label>
+                  <span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
+                </div>
                 <input id="input-purchases-page-control-1" className="ui-input"
                   type="date"
                   required
@@ -778,10 +728,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 />
               </div>
 
-              <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-control-2">
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                  <label className="structured-field-label" htmlFor="input-purchases-page-control-2">
                   {lang === 'en' ? 'Invoice No. / Reference No.' : 'Số hóa đơn / Số tham chiếu'}
                 </label>
+                  <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+                </div>
                 <input id="input-purchases-page-control-2" className="ui-input"
                   type="text"
                   placeholder={lang === 'en' ? 'e.g. INV-2026-081...' : 'Ví dụ: HD-2026-081...'}
@@ -791,10 +744,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 />
               </div>
 
-              <div className="form-group structured-field-card">
-                <label htmlFor="input-purchases-page-field-3">
-                  {lang === 'en' ? 'Warehouse Receipt No. (optional)' : 'Số phiếu nhập kho (nếu có)'}
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                  <label className="structured-field-label" htmlFor="input-purchases-page-field-3">
+                  {lang === 'en' ? 'Warehouse Receipt No.' : 'Số phiếu nhập kho'}
                 </label>
+                  <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+                </div>
                 <input id="input-purchases-page-field-3" className="ui-input"
                   type="text"
                   placeholder={lang === 'en' ? 'e.g. PNK-2026-001...' : 'Ví dụ: PNK-2026-001...'}
@@ -805,10 +761,13 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
               </div>
             </div>
 
-            <div className="form-group structured-field-card">
-              <label htmlFor="input-purchases-page-field-4">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                  <label className="structured-field-label" htmlFor="input-purchases-page-field-4">
                 {lang === 'en' ? 'Purchase Notes' : 'Ghi chú mua hàng'}
               </label>
+                  <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+                </div>
               <textarea id="input-purchases-page-field-4" className="ui-textarea"
                 rows={2}
                 placeholder={lang === 'en' ? 'Storage conditions, VietGAP batch...' : 'Ghi chú điều kiện bảo quản, lô hàng VietGAP...'}
@@ -833,19 +792,18 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 </button>
               </div>
 
+              {materialsError && <div role="alert" className="form-error-banner">{materialsError} <Button onClick={() => setMaterialsRetry(value => value + 1)}>{lang === 'en' ? 'Retry' : 'Thử lại'}</Button></div>}
+              {!materialsLoading && !materialsError && materialOptions.length === 0 && <p>{lang === 'en' ? 'No materials available. Add a material to the catalog first.' : 'Chưa có vật tư. Vui lòng thêm vật tư vào danh mục trước.'}</p>}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {newItems.map((item, idx) => (
                   <div key={idx} className="purchase-item-row">
                     <label className="structured-field-card">
-                    <span>{lang === 'en' ? 'Material ID' : 'Mã vật tư'}</span>
-                    <input className="ui-input"
-                      type="number"
-                      min={1}
-                      placeholder={lang === 'en' ? 'Mat ID' : 'Mã VT'}
-                      value={item.materialId}
-                      onChange={(e) => handleItemChange(idx, 'materialId', Number(e.target.value))}
-                      style={{ padding: '6px 8px' }}
-                    />
+                    <span>{lang === 'en' ? 'Material' : 'Vật tư'}</span>
+                    <select className="ui-select" required value={item.materialId || ''} disabled={materialsLoading || Boolean(materialsError)}
+                      onChange={e => handleItemChange(idx, 'materialId', Number(e.target.value))}>
+                      <option value="">{materialsLoading ? (lang === 'en' ? 'Loading materials...' : 'Đang tải vật tư...') : (lang === 'en' ? 'Select material' : 'Chọn vật tư')}</option>
+                      {materialOptions.map(material => <option key={material.id} value={material.id}>{material.materialName}</option>)}
+                    </select>
                     </label>
                     <label className="structured-field-card">
                     <span>{lang === 'en' ? 'Quantity' : 'Số lượng'}</span>
@@ -874,23 +832,19 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                       type="button"
                       onClick={() => handleRemoveItemRow(idx)}
                       disabled={newItems.length <= 1}
-                      style={{
-                        padding: '6px',
-                        background: 'none',
-                        border: 'none',
-                        cursor: newItems.length <= 1 ? 'not-allowed' : 'pointer',
-                        color: newItems.length <= 1 ? 'var(--color-input-border)' : 'var(--color-danger)',
-                      }}
+                      className="table-icon-btn danger purchase-remove-item"
+                      title={lang === 'en' ? 'Remove item' : 'Xóa mặt hàng'}
+                      aria-label={lang === 'en' ? `Remove item ${idx + 1}` : `Xóa mặt hàng ${idx + 1}`}
                     >
-                      ✕
+                      <Icon name="trash" size={15} />
                     </button>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)} disabled={submittingCreate}>
+            <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+              <Button className={'ui-cancel-button'} type="button" variant="secondary" onClick={() => setIsCreateOpen(false)} disabled={submittingCreate}>
                 {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
               </Button>
               <Button type="submit" variant="primary" loading={submittingCreate}>
@@ -901,7 +855,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
         </Modal>
       )}
       <ConfirmDialog open={Boolean(deleteTarget)} title={lang === 'en' ? 'Delete material purchase' : 'Xóa phiếu mua vật tư'}
-        description={lang === 'en' ? `Confirm deletion of material purchase ${deleteTarget?.refNo || '#' + deleteTarget?.id}? This cannot be undone.` : `Xác nhận xóa phiếu mua vật tư ${deleteTarget?.refNo || '#' + deleteTarget?.id}? Thao tác này không thể hoàn tác.`}
+        description={lang === 'en' ? <>{"Confirm deletion of material purchase "}<strong>{deleteTarget?.refNo || '#' + deleteTarget?.id}</strong>{"? This cannot be undone."}</> : <>{"Xác nhận xóa phiếu mua vật tư "}<strong>{deleteTarget?.refNo || '#' + deleteTarget?.id}</strong>{"? Thao tác này không thể hoàn tác."}</>}
         tone="danger" loading={deleting} onClose={() => setDeleteTarget(null)}
         onConfirm={() => { if (deleteTarget) void handleDelete(deleteTarget.id); }} />
     </section>

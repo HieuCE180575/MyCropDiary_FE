@@ -198,7 +198,7 @@ export function ChecklistItemCard({
               flexShrink: 0,
             }}
           >
-            {localItem.ruleCode ?? `#${localItem.resultId}`}
+            {localItem.ruleCode ?? '—'}
           </span>
 
           {/* Dẫn chiếu điều khoản TCVN (Rút gọn) */}
@@ -310,7 +310,7 @@ export function ChecklistItemCard({
               marginLeft: '2px',
             }}
           >
-            {localItem.ruleName ?? (lang === 'en' ? `Criterion #${localItem.resultId}` : `Tiêu chí #${localItem.resultId}`)}
+            {localItem.ruleName ?? (lang === 'en' ? `Criterion` : `Tiêu chí`)}
           </span>
         </div>
 
@@ -719,39 +719,30 @@ export function ChecklistItemCard({
                 <span>{lang === 'en' ? 'Auditor Observation & Notes:' : 'Ghi chép & Nhận xét của kiểm toán viên:'}</span>
               </span>
               {!isLocked && !isEditingNotes && (
-                <button
+                <button className={(localItem.notes ? 'ui-edit-action' : '')}
                   type="button"
                   onClick={() => setIsEditingNotes(true)}
                   style={{ background: 'transparent', border: 'none', color: '#059669', fontSize: '11.5px', fontWeight: 600, cursor: 'pointer' }}
                 >
+                  {localItem.notes && <Icon name="edit" size={14} />}
                   {localItem.notes ? (lang === 'en' ? 'Edit' : 'Sửa') : (lang === 'en' ? '+ Add note' : '+ Thêm ghi chú')}
                 </button>
               )}
             </div>
 
             {isEditingNotes ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <textarea
+              <div className="structured-field-card" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <textarea className="ui-textarea" aria-label={lang === 'en' ? 'Auditor observation and notes' : 'Ghi chép và nhận xét của kiểm toán viên'}
                   value={notesText}
                   onChange={(e) => setNotesText(e.target.value)}
                   rows={2}
                   placeholder={lang === 'en' ? 'Enter observation or verification details...' : 'Ghi nhận thực tế tại hiện trường kiểm tra...'}
-                  style={{
-                    width: '100%',
-                    padding: '6px 10px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '12px',
-                    resize: 'vertical',
-                    boxSizing: 'border-box',
-                    fontFamily: 'inherit',
-                    outline: 'none',
-                  }}
+
                 />
                 <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
                   <button
                     type="button"
-                    className="ghost-button"
+                    className={"ghost-button" + ' ' + 'ui-cancel-button'}
                     style={{ fontSize: '11px', padding: '3px 8px' }}
                     onClick={() => {
                       setNotesText(localItem.notes ?? '');
@@ -898,7 +889,7 @@ export function ChecklistItemCard({
                 <button
                   type="button"
                   onClick={() => setIsPreviewModalOpen(false)}
-                  className="primary-button"
+                  className={"primary-button" + ' ' + 'ui-close-action'}
                   style={{ fontSize: '12px', padding: '6px 16px' }}
                 >
                   {lang === 'en' ? 'Close' : 'Đóng'}

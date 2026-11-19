@@ -278,7 +278,7 @@ export function CropCategoryCombobox({
                 whiteSpace: 'nowrap',
               }}
             >
-              {(lang === 'en' ? "🌱 Short-season crops" : "🌱 Cây ngắn ngày")}
+              {(lang === 'en' ? "Short-season crops" : "Cây ngắn ngày")}
             </button>
             <button
               type="button"

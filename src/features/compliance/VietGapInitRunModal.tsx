@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { Modal } from '../../shared/components/Modal';
+import { Button } from '../../shared/components/Button';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { fetchCropSeasonsByFarm } from '../operations/cropSeasonService';
 import type { CropSeasonResp } from '../operations/cropSeasonService';
@@ -52,7 +54,13 @@ export function VietGapInitRunModal({ farmId, onClose, onSuccess }: VietGapInitR
     setSubmitting(true);
     setError(null);
     try {
-      const run = await initVietGapAuditRunApi(farmId, form);
+      const run = await initVietGapAuditRunApi(farmId, {
+        ...form,
+        // The API accepts an Instant; the date input contains only a local calendar date.
+        scheduledAt: form.scheduledAt
+          ? new Date(`${form.scheduledAt}T00:00:00`).toISOString()
+          : null,
+      });
       onSuccess(run);
     } catch (err) {
       setError(
@@ -68,141 +76,61 @@ export function VietGapInitRunModal({ farmId, onClose, onSuccess }: VietGapInitR
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-card"
-        style={{ maxWidth: '520px', width: '100%' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="modal-header">
-          <div>
-            <h3 style={{ margin: 0, fontSize: '17px', color: '#0f172a' }}>
-              {lang === 'en' ? 'Initialize VietGAP Audit Run' : 'Khởi tạo đợt tự đánh giá VietGAP'}
-            </h3>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748b' }}>
-              {lang === 'en'
-                ? '33-criteria TCVN 11892-1:2017 internal checklist'
-                : 'Bảng kiểm nội bộ 33 tiêu chí TCVN 11892-1:2017'}
-            </p>
-          </div>
-          <button type="button" className="ghost-button" onClick={onClose} style={{ fontSize: '20px', lineHeight: 1 }}>
-            ×
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Crop Season Select */}
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>
-              {lang === 'en' ? 'Crop Season *' : 'Vụ mùa *'}
+    <Modal open structured onClose={() => { if (!submitting) onClose(); }}
+      title={lang === 'en' ? 'Initialize VietGAP Audit Run' : 'Khởi tạo đợt tự đánh giá VietGAP'}>
+      <form onSubmit={(event) => { event.preventDefault(); void handleSubmit(); }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <p style={{ margin: 0, color: 'var(--color-muted)', fontSize: 13 }}>
+          {lang === 'en' ? '33-criteria TCVN 11892-1:2017 internal checklist' : 'Bảng kiểm nội bộ 33 tiêu chí TCVN 11892-1:2017'}
+        </p>
+        <div className="structured-field-card">
+          <div className="structured-field-header">
+            <label htmlFor="audit-season" className="structured-field-label">
+              {lang === 'en' ? 'Crop season' : 'Mùa vụ'} <span style={{ color: 'var(--color-danger)' }}>*</span>
             </label>
-            {loadingSeasons ? (
-              <p style={{ color: '#64748b', fontSize: '13px' }}>
-                {lang === 'en' ? 'Loading seasons...' : 'Đang tải danh sách vụ mùa...'}
-              </p>
-            ) : (
-              <select
-                value={form.cropSeasonId}
-                onChange={(e) => setForm((f) => ({ ...f, cropSeasonId: Number(e.target.value) }))}
-                style={{
-                  width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
-                  borderRadius: '8px', fontSize: '14px', background: '#fff', color: '#0f172a',
-                }}
-              >
-                <option value={0}>{lang === 'en' ? '-- Select crop season --' : '-- Chọn vụ mùa --'}</option>
-                {cropSeasons.map((s) => (
-                  <option key={s.cropSeasonId} value={s.cropSeasonId}>
-                    {s.seasonName} ({s.cropCategoryName ?? '—'}) · {s.seasonStatus}
-                  </option>
-                ))}
-              </select>
-            )}
           </div>
-
-          {/* Scheduled Date */}
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>
-              {lang === 'en' ? 'Scheduled date (optional)' : 'Ngày dự kiến thực hiện (không bắt buộc)'}
-            </label>
-            <input
-              type="date"
-              value={form.scheduledAt ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, scheduledAt: e.target.value || null }))}
-              style={{
-                width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
-                borderRadius: '8px', fontSize: '14px', background: '#fff', boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>
-              {lang === 'en' ? 'Notes (optional)' : 'Ghi chú (không bắt buộc)'}
-            </label>
-            <textarea
-              value={form.notes ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value || null }))}
-              rows={3}
-              placeholder={
-                lang === 'en'
-                  ? 'Enter notes about this audit run...'
-                  : 'Nhập ghi chú về đợt tự đánh giá này...'
-              }
-              style={{
-                width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
-                borderRadius: '8px', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box',
-              }}
-            />
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div
-              style={{
-                background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px',
-                padding: '10px 14px', fontSize: '13px', color: '#991b1b',
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          {/* Info box */}
-          <div
-            style={{
-              background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px',
-              padding: '10px 14px', fontSize: '13px', color: '#166534', lineHeight: 1.5,
-            }}
-          >
-            {lang === 'en'
-              ? 'The system will create 33 checklist criteria based on VietGAP standards. The auto-check engine will evaluate criteria that can be verified automatically (PHI compliance, soil/water lab tests, training records).'
-              : 'Hệ thống sẽ tạo 33 tiêu chí kiểm tra theo chuẩn VietGAP. Bộ máy tự đánh giá sẽ kiểm tra trước các tiêu chí có thể xác minh (thời gian cách ly thuốc BVTV, hồ sơ đất/nước, tập huấn nhân sự).'}
-          </div>
+          <select id="audit-season" className="ui-select" required value={form.cropSeasonId}
+            disabled={loadingSeasons || submitting}
+            onChange={(event) => setForm((f) => ({ ...f, cropSeasonId: Number(event.target.value) }))}>
+            <option value={0}>{loadingSeasons ? (lang === 'en' ? 'Loading seasons...' : 'Đang tải danh sách mùa vụ...') : (lang === 'en' ? '-- Select crop season --' : '-- Chọn mùa vụ --')}</option>
+            {cropSeasons.map((season) => (
+              <option key={season.cropSeasonId} value={season.cropSeasonId}>
+                {season.seasonName} ({season.cropCategoryName ?? '—'})
+              </option>
+            ))}
+          </select>
         </div>
-
-        {/* Footer */}
-        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-          <button type="button" className="secondary-button" onClick={onClose} disabled={submitting}>
-            {lang === 'en' ? 'Cancel' : 'Hủy'}
-          </button>
-          <button
-            type="button"
-            className="primary-button"
-            onClick={() => void handleSubmit()}
-            disabled={submitting || !form.cropSeasonId}
-          >
-            {submitting ? (
-              <>{lang === 'en' ? 'Creating...' : 'Đang tạo...'}</>
-            ) : (
-              <>{lang === 'en' ? 'Start audit run' : 'Khởi tạo đợt đánh giá'}</>
-            )}
-          </button>
+        <div className="structured-field-card">
+          <div className="structured-field-header">
+            <label htmlFor="audit-scheduled" className="structured-field-label">{lang === 'en' ? 'Scheduled date' : 'Ngày dự kiến thực hiện'}</label>
+            <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+          </div>
+          <input id="audit-scheduled" className="ui-input" type="date" disabled={submitting}
+            value={form.scheduledAt ?? ''}
+            onChange={(event) => setForm((f) => ({ ...f, scheduledAt: event.target.value || null }))} />
         </div>
-      </div>
-    </div>
+        <div className="structured-field-card">
+          <div className="structured-field-header">
+            <label htmlFor="audit-notes" className="structured-field-label">{lang === 'en' ? 'Notes' : 'Ghi chú'}</label>
+            <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+          </div>
+          <textarea id="audit-notes" className="ui-textarea" rows={3} disabled={submitting}
+            value={form.notes ?? ''}
+            onChange={(event) => setForm((f) => ({ ...f, notes: event.target.value || null }))}
+            placeholder={lang === 'en' ? 'Enter notes about this audit run...' : 'Nhập ghi chú về đợt tự đánh giá này...'} />
+        </div>
+        {error && <p role="alert" style={{ margin: 0, color: 'var(--color-danger)' }}>{error}</p>}
+        <div style={{ background: 'var(--color-success-bg)', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: 'var(--color-success)', lineHeight: 1.5 }}>
+          {lang === 'en'
+            ? 'The system will create 33 checklist criteria based on VietGAP standards. The auto-check engine will evaluate criteria that can be verified automatically (PHI compliance, soil/water lab tests, training records).'
+            : 'Hệ thống sẽ tạo 33 tiêu chí kiểm tra theo chuẩn VietGAP. Bộ máy tự đánh giá sẽ kiểm tra trước các tiêu chí có thể xác minh (thời gian cách ly thuốc BVTV, hồ sơ đất/nước, tập huấn nhân sự).'}
+        </div>
+        <div className="confirm-actions" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
+          <Button className={'ui-cancel-button'} variant="secondary" onClick={onClose} disabled={submitting}>{lang === 'en' ? 'Cancel' : 'Hủy'}</Button>
+          <Button type="submit" variant="primary" loading={submitting} disabled={loadingSeasons || !form.cropSeasonId}>
+            {submitting ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Start audit run' : 'Khởi tạo đợt đánh giá')}
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
-

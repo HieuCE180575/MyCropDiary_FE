@@ -59,7 +59,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
   };
 
   return (
-    <Modal open={isOpen} onClose={onClose} title={lang === 'en' ? `Monitoring History: ${block.blockName}` : `Lịch sử theo dõi: ${block.blockName}`}>
+    <Modal structured open={isOpen} onClose={onClose} title={lang === 'en' ? `Monitoring History: ${block.blockName}` : `Lịch sử theo dõi: ${block.blockName}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <p style={{ margin: 0, color: 'var(--color-muted)', fontSize: '13px' }}>
           {lang === 'en' ? 'Total monitoring records: ' : 'Tổng số bản ghi theo dõi: '}<strong>{conditions.length}</strong>
@@ -136,7 +136,7 @@ export function BlockConditionHistoryModal({ isOpen, onClose, block, onOpenRecor
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-        <button type="button" className="btn btn-secondary" onClick={onClose}>
+        <button type="button" className={"btn btn-secondary" + ' ' + 'ui-close-action'} onClick={onClose}>
           {(lang === 'en' ? "Close" : "Đóng")}
         </button>
       </div>

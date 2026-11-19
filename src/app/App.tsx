@@ -13,6 +13,9 @@ import { FeaturesPage } from '../pages/FeaturesPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { ModulePage } from '../pages/ModulePage';
+import { InternalAssessmentDetailPage } from '../features/compliance/InternalAssessmentDetailPage';
+import { InternalAssessmentCreatePage } from '../features/compliance/InternalAssessmentCreatePage';
+import { TrainingDetailPage } from '../features/compliance/TrainingDetailPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProtectedRoute } from '../features/auth';
 import { ModuleAccess } from '../features/auth/ModuleAccess';
@@ -20,6 +23,7 @@ import { AdminPage } from '../features/admin/AdminPage';
 import { ZoneListPage, ZoneFormPage, ZoneDetailPage, BlockDetailPage } from '../pages/zone';
 import { CropSeasonsPage } from '../features/operations/CropSeasonsPage';
 import { LanguageProvider } from '../shared/i18n/LanguageContext';
+import { FormErrorVisibility } from '../shared/components/FormErrorVisibility';
 
 import { moduleDefinitions } from './routes/moduleDefinitions';
 
@@ -28,6 +32,7 @@ const farmModule = moduleDefinitions.find(module => module.key === 'farm')!;
 export function App() {
   return (
     <LanguageProvider>
+      <FormErrorVisibility />
       <Routes>
         {/* Public pages wrapped in shared PublicLayout */}
         <Route element={<PublicLayout />}>
@@ -69,6 +74,9 @@ export function App() {
             <Route path="/production-areas/:productionAreaId" element={<ZoneDetailPage />} />
 
             {/* Standard modules rendered through unified container */}
+            <Route path="/training/:trainingId" element={<ModuleAccess module={moduleDefinitions.find(module => module.key === 'training')!}><TrainingDetailPage /></ModuleAccess>} />
+            <Route path="/assessments/:assessmentId" element={<ModuleAccess module={moduleDefinitions.find(module => module.key === 'assessments')!}><InternalAssessmentDetailPage /></ModuleAccess>} />
+            <Route path="/assessments/new" element={<ModuleAccess module={moduleDefinitions.find(module => module.key === 'assessments')!}><InternalAssessmentCreatePage /></ModuleAccess>} />
             {moduleDefinitions.map((module) => (
               <Route
                 key={module.key}

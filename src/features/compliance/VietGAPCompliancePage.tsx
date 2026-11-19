@@ -1,14 +1,22 @@
+import { formatDate } from '../../shared/format/formatters';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
+import { DeleteErrorToast } from '../../shared/components/DeleteErrorToast';
 import { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { Icon } from '../../shared/components/Icon';
 import { PageHeading } from '../../shared/components/PageHeading';
+import { Modal } from '../../shared/components/Modal';
+import { useDetailRequest } from '../../shared/hooks/useDetailRequest';
+import { WaterAssessmentDetails } from '../production/components/WaterAssessmentDetails';
 import { Button } from '../../shared/components/Button';
 import { TabList, tabPanelProps } from '../../shared/components/TabList';
 import {
   fetchFarmRiskHistoryApi,
   fetchFarmSoilAssessmentHistoryApi,
+  fetchSoilAssessmentDetailsApi,
   fetchFarmWaterAssessmentHistoryApi,
+  fetchWaterAssessmentDetailsApi,
   createSoilAssessmentApi,
   createWaterAssessmentApi,
   fetchBlocks,
@@ -41,6 +49,9 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const { selectedFarm } = useFarmWorkspace();
   const { lang, t: translate } = useLanguage();
   const navigate = useNavigate();
+  const waterDetailLoader = useDetailRequest(selectedFarm?.id);
+  const soilDetailLoader = useDetailRequest(selectedFarm?.id);
+  useEffect(() => { setSelectedEnvWater(null); setSelectedEnvSoil(null); }, [selectedFarm?.id]);
   const [activeTab, setActiveTab] = useState<'checklists' | 'assessments' | 'environment' | 'training'>(initialTab);
   useEffect(() => {
     setActiveTab(initialTab);
@@ -52,6 +63,8 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const [selectedEnvWater, setSelectedEnvWater] = useState<WaterAssessmentBackendResp | null>(null);
   const [selectedEnvRisk, setSelectedEnvRisk] = useState<ZoneRiskBackendResp | null>(null);
   const [selectedEnvSoil, setSelectedEnvSoil] = useState<SoilAssessmentBackendResp | null>(null);
+  const [environmentReload, setEnvironmentReload] = useState(0);
+  const [soilEnvError, setSoilEnvError] = useState<string | null>(null);
   const [loadingEnv, setLoadingEnv] = useState(false);
 
   // Soil & Water Assessment Creation states
@@ -78,10 +91,14 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const [waterTemp, setWaterTemp] = useState<number | ''>(26);
   const [waterQualityStatus, setWaterQualityStatus] = useState<string>('DAT_CHUAN');
   const [waterLabReportUrl, setWaterLabReportUrl] = useState<string>('');
+  const [waterImageUrl, setWaterImageUrl] = useState('');
   const [waterNotes, setWaterNotes] = useState<string>('');
   const [waterAssessedAt, setWaterAssessedAt] = useState<string>(() => new Date().toISOString().slice(0, 10));
 
   // Training state
+  const [trainingToDelete, setTrainingToDelete] = useState<TrainingRecordResp | null>(null);
+  const [deletingTraining, setDeletingTraining] = useState(false);
+  const [trainingDeleteError, setTrainingDeleteError] = useState<string | null>(null);
   const [trainingRecords, setTrainingRecords] = useState<TrainingRecordResp[]>([]);
   const [trainingTotal, setTrainingTotal] = useState(0);
   const [trainingLoading, setTrainingLoading] = useState(false);
@@ -213,12 +230,16 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   };
 
   const handleDeleteTraining = async (id: number) => {
-    if (!window.confirm((lang === 'en' ? "Are you sure you want to delete this training record?" : 'Bạn có chắc chắn muốn xóa hồ sơ đào tạo này?'))) return;
+    setDeletingTraining(true);
+    setTrainingDeleteError(null);
     try {
       await deleteTrainingRecordApi(id);
       void loadTrainings();
     } catch (err) {
-      alert((lang === 'en' ? err instanceof Error ? err.message : "Unable to delete training record." : err instanceof Error ? err.message : 'Không thể xóa hồ sơ đào tạo.'));
+      setTrainingDeleteError((lang === 'en' ? err instanceof Error ? err.message : "Unable to delete training record." : err instanceof Error ? err.message : 'Không thể xóa hồ sơ đào tạo.'));
+    } finally {
+      setDeletingTraining(false);
+      setTrainingToDelete(null);
     }
   };
 
@@ -275,7 +296,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
 
   const handleSaveWaterAssessment = async (e: React.FormEvent) => {
     e.preventDefault();
-    const targetBlockId = waterBlockId || farmBlocks[0]?.blockId;
+    const targetBlockId = waterBlockId;
     if (!targetBlockId || savingAssessment) return;
     setSavingAssessment(true);
     setAssessmentError(null);
@@ -287,6 +308,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         temperatureC: waterTemp !== '' ? Number(waterTemp) : undefined,
         qualityStatus: waterQualityStatus,
         notes: waterNotes.trim() || undefined,
+        imageUrl: waterImageUrl.trim() || undefined,
         labTestReportUrl: waterLabReportUrl.trim() || undefined,
         assessedAt: waterAssessedAt ? new Date(waterAssessedAt).toISOString() : new Date().toISOString(),
       });
@@ -294,6 +316,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
       setIsCreateWaterModalOpen(false);
       setWaterNotes('');
       setWaterLabReportUrl('');
+      setWaterImageUrl('');
     } catch (err) {
       setAssessmentError(err instanceof Error ? err.message : 'Không lưu được phiếu đánh giá nước');
     } finally {
@@ -302,14 +325,18 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   };
 
   useEffect(() => {
+    let cancelled = false;
     if (activeTab === 'environment' && selectedFarm?.id) {
       setLoadingEnv(true);
+      setSoilEnvError(null);
+      setFarmSoils([]);
       Promise.all([
         fetchFarmRiskHistoryApi(selectedFarm.id).catch(() => []),
-        fetchFarmSoilAssessmentHistoryApi(selectedFarm.id).catch(() => []),
+        fetchFarmSoilAssessmentHistoryApi(selectedFarm.id).catch(err => { if (!cancelled) setSoilEnvError(err instanceof Error ? err.message : (lang === 'en' ? 'Unable to load soil assessments.' : 'Không tải được đánh giá đất.')); return []; }),
         fetchFarmWaterAssessmentHistoryApi(selectedFarm.id).catch(() => []),
         fetchBlocks(selectedFarm.id).catch(() => []),
       ]).then(([risks, soils, waters, blocks]) => {
+        if (cancelled) return;
         setFarmRisks(risks || []);
         setFarmSoils(soils || []);
         setFarmWaters(waters || []);
@@ -319,13 +346,25 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
           setWaterBlockId((prev) => prev || blocks[0].blockId);
         }
       }).finally(() => {
-        setLoadingEnv(false);
+        if (!cancelled) setLoadingEnv(false);
       });
     }
-  }, [activeTab, selectedFarm?.id]);
+    return () => { cancelled = true; };
+  }, [activeTab, selectedFarm?.id, environmentReload]);
 
   return (
     <section className="vietgap-compliance-page">
+      {trainingDeleteError && <DeleteErrorToast text={trainingDeleteError} onClose={() => setTrainingDeleteError(null)} />}
+      <ConfirmDialog open={Boolean(trainingToDelete)}
+        title={lang === 'en' ? 'Delete training record' : 'Xóa hồ sơ đào tạo'}
+        tone="danger" loading={deletingTraining}
+        confirmLabel={lang === 'en' ? 'Delete record' : 'Xóa hồ sơ'}
+        onClose={() => { if (!deletingTraining) setTrainingToDelete(null); }}
+        onConfirm={() => { if (trainingToDelete) void handleDeleteTraining(trainingToDelete.trainingRecordId); }}>
+        <p>{lang === 'en' ? 'Are you sure you want to delete training record ' : 'Bạn có chắc chắn muốn xóa hồ sơ đào tạo '}
+          <strong>{trainingToDelete?.trainingTitle}</strong>?</p>
+      </ConfirmDialog>
+
       {/* 1. Màn hình: Đánh giá nội bộ VietGAP (Tích hợp Checklist & Đánh giá nội bộ 33 tiêu chí TCVN 11892-1:2017) */}
       {(activeTab === 'checklists' || activeTab === 'assessments') && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -371,7 +410,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 <input
                   className="ui-input"
                   type="search"
-                  placeholder={lang === 'en' ? 'Search season, auditor, #ID...' : 'Tìm mùa vụ, người đánh giá, mã đợt...'}
+                  placeholder={lang === 'en' ? 'Search season or auditor...' : 'Tìm mùa vụ, người đánh giá, mã đợt...'}
                   value={checklistSearch}
                   onChange={(e) => setChecklistSearch(e.target.value)}
                   aria-label={lang === 'en' ? 'Search season, auditor, #ID...' : 'Tìm mùa vụ, người đánh giá, mã đợt...'}
@@ -558,7 +597,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                                   {run.seasonName || (lang === 'en' ? 'General Season Audit' : 'Đợt tự đánh giá mùa vụ')}
                                 </button>
                                 <span style={{ fontSize: '11.5px', color: '#94a3b8', fontWeight: 600, display: 'block', marginTop: '2px', fontFamily: 'ui-monospace, monospace' }}>
-                                  #{run.runId} · {run.ruleName || 'TCVN 11892-1:2017'}
+                                  {run.ruleName || 'TCVN 11892-1:2017'}
                                 </span>
                               </div>
                             </div>
@@ -728,9 +767,9 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 value={envSubTab}
                 onChange={setEnvSubTab}
                 items={[
-                  { value: 'risks', label: <>{(lang === 'en' ? "Production area risks (" : "Rủi ro vùng sản xuất (")}{farmRisks.length})</> },
-                  { value: 'soils', label: <>{(lang === 'en' ? "Block soil assessments (" : "Đánh giá thổ nhưỡng lô đất (")}{farmSoils.length})</> },
-                  { value: 'waters', label: <>{(lang === 'en' ? "Water assessments (" : "Đánh giá nguồn nước (")}{farmWaters.length})</> },
+                  { value: 'risks', label: <>{(lang === 'en' ? "Production area risks" : "Rủi ro vùng sản xuất")}</> },
+                  { value: 'soils', label: <>{(lang === 'en' ? "Block soil assessments" : "Đánh giá thổ nhưỡng lô đất")}</> },
+                  { value: 'waters', label: <>{(lang === 'en' ? "Water assessments" : "Đánh giá nguồn nước")}</> },
                 ]}
               />
 
@@ -777,7 +816,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                             </td>
                             <td>
                               <Link to={`/zones/${r.zoneId}`} style={{ fontWeight: 600, color: '#059669' }}>
-                                {r.zoneName || `Zone #${r.zoneId}`}
+                                {r.zoneName || `Zone`}
                               </Link>
                             </td>
                             <td style={{ maxWidth: '240px' }}>
@@ -849,7 +888,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     <table className="ui-data-table" style={{ width: '100%', fontSize: '13px' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "ID / Water source" : "ID / Nguồn nước")}</th>
+                          <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Water source" : "Nguồn nước")}</th>
                           <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Applicable block" : "Lô áp dụng")}</th>
                           <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "Sample date" : "Ngày lấy mẫu")}</th>
                           <th scope="col" style={{ padding: '10px 12px' }}>{(lang === 'en' ? "pH" : "Độ pH")}</th>
@@ -863,14 +902,14 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                         {farmWaters.map((w) => (
                           <tr key={w.assessmentId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '10px 12px' }}>
-                              <strong style={{ color: '#0f172a', display: 'block' }}>{(lang === 'en' ? w.waterSourceName || "Main water source" : w.waterSourceName || 'Nguồn nước chính')}</strong>
+                              <strong style={{ color: '#0f172a', display: 'block' }}>{(w.waterSourceName?.replace(/\s*#\d+\s*$/, '').trim() || (lang === 'en' ? 'Main water source' : 'Nguồn nước chính'))}</strong>
                               <small style={{ color: '#64748b' }}>{(lang === 'en' ? w.waterSourceType || "Surface water / Well" : w.waterSourceType || 'Nước mặt / Giếng')}</small>
                             </td>
                             <td style={{ padding: '10px 12px' }}>
                               {(lang === 'en' ? w.blockName ? (w.blockName + ' (' + (w.zoneName || '') + ')') : "Entire farm" : w.blockName ? w.blockName + ' (' + (w.zoneName || '') + ')' : 'Toàn trang trại')}
                             </td>
                             <td style={{ padding: '10px 12px' }}>
-                              {w.assessedAt ? w.assessedAt.split('T')[0] : '-'}
+                              {formatDate(w.assessedAt?.slice(0, 10), lang)}
                             </td>
                             <td style={{ padding: '10px 12px', fontWeight: 700, color: '#0284c7' }}>
                               {w.waterPh ?? '-'}
@@ -881,7 +920,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                             <td style={{ padding: '10px 12px' }}>
                               {(() => {
                                 const st = (w.qualityStatus || '').toUpperCase();
-                                const isPassed = st === 'DAT_CHUAN' || st.includes('COMPLIANT') || st.includes('QUALITY') || st === 'PASS';
+                                const isPassed = ['DAT_CHUAN', 'COMPLIANT', 'PASS'].includes(st);
                                 const isPending = st === 'CHO_KIEM_DINH' || st.includes('PENDING');
                                 const bg = isPassed ? '#ecfdf5' : isPending ? '#fffbeb' : '#fee2e2';
                                 const border = isPassed ? '#a7f3d0' : isPending ? '#fde68a' : '#fecaca';
@@ -890,7 +929,11 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                                   ? (lang === 'en' ? '✓ Compliant' : '✓ Đạt chuẩn')
                                   : isPending
                                     ? (lang === 'en' ? 'Pending test' : 'Chờ kiểm nghiệm')
-                                    : (lang === 'en' ? 'Filtration needed' : 'Cần xử lý');
+                                    : st === 'KHONG_DAT' || st === 'NON_COMPLIANT'
+                                      ? (lang === 'en' ? 'Non-compliant' : 'Không đạt')
+                                      : st === 'CAN_XU_LY'
+                                        ? (lang === 'en' ? 'Treatment required' : 'Cần xử lý')
+                                        : w.qualityStatus || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật');
                                 return (
                                   <span
                                     style={{
@@ -941,7 +984,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                                 type="button"
                                 className="action-button"
                                 style={{ padding: '4px 10px', fontSize: '12px' }}
-                                onClick={() => setSelectedEnvWater(w)}
+                                onClick={() => { void waterDetailLoader.load(() => fetchWaterAssessmentDetailsApi(w.assessmentId), setSelectedEnvWater); }}
                               >
                                 {(lang === 'en' ? "View details" : "Xem chi tiết")}
                               </button>
@@ -958,6 +1001,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
             {/* SubTab 2: Soil Assessments */}
             {envSubTab === 'soils' && (
               <div {...tabPanelProps('vietgap-environment', 'soils')}>
+                {soilEnvError && <div className="form-error-banner"><p role="alert">{soilEnvError}</p><Button onClick={() => setEnvironmentReload(value => value + 1)}>{lang === 'en' ? 'Retry' : 'Thử lại'}</Button></div>}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>{(lang === 'en' ? "Block soil assessment records" : "Hồ sơ đánh giá thổ nhưỡng lô đất")}</h3>
@@ -980,91 +1024,43 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 </div>
 
                 <div className="ui-table-scroll zone-table-wrap" tabIndex={0}>
-                  <table className="ui-data-table">
+                  <table className="ui-data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
+                    <colgroup>
+                      <col style={{ width: '17%' }} /><col style={{ width: '24%' }} /><col style={{ width: '9%' }} />
+                      <col style={{ width: '13%' }} /><col style={{ width: '25%' }} /><col style={{ width: '12%' }} />
+                    </colgroup>
                     <thead>
                       <tr>
-                        <th scope="col">{(lang === 'en' ? "Assessment date" : "Ngày đánh giá")}</th>
-                        <th scope="col">{(lang === 'en' ? "Block" : "Lô đất (Block)")}</th>
-                        <th scope="col">{(lang === 'en' ? "Zone" : "Phân khu (Zone)")}</th>
-                        <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "pH" : "Độ pH")}</th>
-                        <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "Moisture" : "Độ ẩm")}</th>
-                        <th scope="col">{(lang === 'en' ? "Analysis & Notes" : "Phân tích & Ghi chú")}</th>
-                        <th scope="col" style={{ textAlign: 'center' }}>{(lang === 'en' ? "Lab Report" : "Phiếu Lab")}</th>
-                        <th scope="col">{(lang === 'en' ? "Performed by" : "Người thực hiện")}</th>
-                        <th scope="col" style={{ textAlign: 'right' }}>{(lang === 'en' ? "Actions" : "Thao tác")}</th>
+                        <th scope="col">{lang === 'en' ? 'Assessment date' : 'Ngày đánh giá'}</th>
+                        <th scope="col">{lang === 'en' ? 'Block' : 'Lô trồng'}</th>
+                        <th scope="col">{lang === 'en' ? 'Soil pH' : 'Độ pH'}</th>
+                        <th scope="col">{lang === 'en' ? 'Moisture (%)' : 'Độ ẩm (%)'}</th>
+                        <th scope="col">{lang === 'en' ? 'Notes' : 'Ghi chú'}</th>
+                        <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {farmSoils.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                            {(lang === 'en' ? "No block soil assessments have been recorded." : "Chưa có phiếu đánh giá thổ nhưỡng nào được ghi nhận cho các lô đất.")}
-                          </td>
-                        </tr>
-                      ) : (
-                        farmSoils.map((s) => (
-                          <tr key={s.assessmentId}>
-                            <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                              {s.assessedAt ? s.assessedAt.split('T')[0] : '—'}
-                            </td>
-                            <td>
-                              <Link to={`/zones/${s.zoneId}/blocks/${s.blockId}`} style={{ fontWeight: 600, color: '#059669' }}>
-                                {s.blockName || `Block #${s.blockId}`}
-                              </Link>
-                            </td>
-                            <td style={{ color: '#475569' }}>{s.zoneName || `Zone #${s.zoneId}`}</td>
-                            <td style={{ textAlign: 'center', fontWeight: 700, color: Number(s.soilPh) >= 5.5 && Number(s.soilPh) <= 7.5 ? '#059669' : '#d97706' }}>
-                              {s.soilPh != null ? `pH ${s.soilPh}` : '—'}
-                            </td>
-                            <td style={{ textAlign: 'center', fontWeight: 600 }}>
-                              {s.moisturePercent != null ? `${s.moisturePercent}%` : '—'}
-                            </td>
-                            <td style={{ maxWidth: '280px', fontSize: '13px', color: '#334155' }}>
-                              {s.notes || s.nutrientData || '—'}
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              {s.labTestReportUrl ? (
-                                <a
-                                  href={s.labTestReportUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '3px',
-                                    fontSize: '11px',
-                                    fontWeight: 600,
-                                    color: '#065f46',
-                                    background: '#ecfdf5',
-                                    border: '1px solid #10b981',
-                                    padding: '2px 7px',
-                                    borderRadius: '4px',
-                                    textDecoration: 'none',
-                                  }}
-                                  title={lang === 'en' ? 'Open lab test report document' : 'Xem phiếu kết quả kiểm nghiệm Lab'}
-                                >
-                                  <span>{lang === 'en' ? 'Lab Report ↗' : 'Phiếu Lab ↗'}</span>
-                                </a>
-                              ) : (
-                                <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>—</span>
-                              )}
-                            </td>
-                            <td style={{ fontSize: '13px', color: '#64748b' }}>
-                              {s.conductedByName || '—'}
-                            </td>
-                            <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                              <button
-                                type="button"
-                                className="table-icon-btn primary"
-                                title={(lang === 'en' ? "View soil assessment details" : "Xem chi tiết phiếu thổ nhưỡng")}
-                                onClick={() => setSelectedEnvSoil(s)}
-                              >
+                        <tr><td colSpan={6}>{lang === 'en' ? 'No matching soil assessments.' : 'Chưa có đánh giá đất phù hợp.'}</td></tr>
+                      ) : farmSoils.map(s => (
+                        <tr key={s.assessmentId}>
+                          <td>{formatDate(s.assessedAt?.slice(0, 10), lang)}</td>
+                          <td><Link className="ui-text-preview" to={`/zones/${s.zoneId}/blocks/${s.blockId}`}>{s.blockName || '—'}</Link></td>
+                          <td>{s.soilPh ?? '—'}</td>
+                          <td>{s.moisturePercent ?? '—'}</td>
+                          <td><span className="ui-text-preview">{s.notes?.trim() || '—'}</span></td>
+                          <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                              <button type="button" className="table-icon-btn primary"
+                                title={lang === 'en' ? 'View soil assessment details' : 'Xem chi tiết đánh giá đất'}
+                                aria-label={lang === 'en' ? 'View soil assessment details' : 'Xem chi tiết đánh giá đất'}
+                                onClick={() => { void soilDetailLoader.load(() => fetchSoilAssessmentDetailsApi(s.assessmentId), setSelectedEnvSoil); }}>
                                 <Icon name="eye" size={16} />
                               </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1074,20 +1070,22 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
 
           {/* Details Modal: Selected Zone Risk */}
           {selectedEnvRisk && (
-            <div className="modal-overlay" role="dialog" aria-modal="true">
-              <div className="modal-card" style={{ width: 'min(600px, 100%)', maxHeight: '90vh' }}>
+            <Modal structured open customLayout className="modal-form-layout" title={selectedEnvRisk.riskType}
+              onClose={() => setSelectedEnvRisk(null)} style={{ width: 'min(600px, 100%)' }}>
                 <div className="modal-header">
                   <div>
                     <span className="eyebrow">{(lang === 'en' ? "Production area risk details" : "Chi tiết rủi ro vùng sản xuất")}</span>
                     <h2>{selectedEnvRisk.riskType}</h2>
                   </div>
-                  <button type="button" className="modal-close" onClick={() => setSelectedEnvRisk(null)}>✕</button>
+                  <button type="button" className="modal-close" aria-label={lang === 'en' ? 'Close' : 'Đóng'} onClick={() => setSelectedEnvRisk(null)}><Icon name="close" size={18} /></button>
                 </div>
                 <div className="modal-body">
+                  <div className="structured-field-card supplier-detail-field ui-detail-primary" style={{ marginBottom: '16px' }}>
+                    <div className="structured-field-header"><span className="structured-field-label">{lang === 'en' ? 'Applicable zone' : 'Khu vực áp dụng'}</span></div>
+                    <div>{selectedEnvRisk.zoneName || '—'}</div>
+                  </div>
                   <div className="structured-field-card" style={{ background: '#f8fafc', marginBottom: '12px' }}>
                     <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '150px 1fr', gap: '8px 12px', fontSize: '13.5px' }}>
-                      <dt style={{ color: '#64748b' }}>{(lang === 'en' ? "Zone:" : "Phân khu:")}</dt>
-                      <dd style={{ margin: 0, fontWeight: 700 }}>{selectedEnvRisk.zoneName || `Zone #${selectedEnvRisk.zoneId}`}</dd>
                       <dt style={{ color: '#64748b' }}>{(lang === 'en' ? "Assessment date:" : "Ngày đánh giá:")}</dt>
                       <dd style={{ margin: 0 }}>{selectedEnvRisk.assessedAt ? selectedEnvRisk.assessedAt.split('T')[0] : '—'}</dd>
                       <dt style={{ color: '#64748b' }}>{(lang === 'en' ? "Risk level:" : "Mức độ rủi ro:")}</dt>
@@ -1100,7 +1098,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     <span className="structured-field-label">{(lang === 'en' ? "Risk description" : "Mô tả rủi ro")}</span>
                     <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#1e293b' }}>{(lang === 'en' ? selectedEnvRisk.description || "No detailed description" : selectedEnvRisk.description || 'Không có mô tả chi tiết')}</p>
                   </div>
-                  <div className="structured-field-card" style={{ marginBottom: '16px', background: '#ecfdf5', borderColor: '#a7f3d0' }}>
+                  <div className="structured-field-card ui-detail-primary" style={{ marginBottom: '16px' }}>
                     <span className="structured-field-label" style={{ color: '#065f46' }}>{(lang === 'en' ? "Control & Risk mitigation measures" : "Biện pháp kiểm soát & Giảm thiểu rủi ro")}</span>
                     <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#047857', fontWeight: 600 }}>{(lang === 'en' ? selectedEnvRisk.mitigationPlan || "No control measures defined" : selectedEnvRisk.mitigationPlan || 'Chưa thiết lập biện pháp kiểm soát')}</p>
                   </div>
@@ -1108,11 +1106,10 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     <Link to={`/zones/${selectedEnvRisk.zoneId}`} className="action-button">
                       {(lang === 'en' ? "Go to Zone to update" : "Chuyển tới Zone để cập nhật")}
                     </Link>
-                    <button type="button" className="ghost-button" onClick={() => setSelectedEnvRisk(null)}>{(lang === 'en' ? "Close" : "Đóng")}</button>
+                    <Button type="button" variant="secondary" className="ui-close-action" onClick={() => setSelectedEnvRisk(null)}>{(lang === 'en' ? "Close" : "Đóng")}</Button>
                   </div>
                 </div>
-              </div>
-            </div>
+            </Modal>
           )}
 
           {/* Details Modal: Selected Soil Assessment */}
@@ -1122,15 +1119,17 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 <div className="modal-header">
                   <div>
                     <span className="eyebrow">{(lang === 'en' ? "Block soil assessment details" : "Chi tiết đánh giá thổ nhưỡng lô đất")}</span>
-                    <h2>{selectedEnvSoil.blockName || `Block #${selectedEnvSoil.blockId}`}</h2>
+                    <h2>{selectedEnvSoil.blockName || `Block`}</h2>
                   </div>
                   <button type="button" className="modal-close" onClick={() => setSelectedEnvSoil(null)}>✕</button>
                 </div>
                 <div className="modal-body">
+                  <div className="structured-field-card supplier-detail-field ui-detail-primary" style={{ marginBottom: '16px' }}>
+                    <div className="structured-field-header"><span className="structured-field-label">{lang === 'en' ? 'Applicable block' : 'Lô trồng áp dụng'}</span></div>
+                    <div>{selectedEnvSoil.blockName || '—'}</div>
+                  </div>
                   <div className="structured-field-card" style={{ background: '#f8fafc', marginBottom: '12px' }}>
                     <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '150px 1fr', gap: '8px 12px', fontSize: '13.5px' }}>
-                      <dt style={{ color: '#64748b' }}>{(lang === 'en' ? "Block:" : "Lô đất:")}</dt>
-                      <dd style={{ margin: 0, fontWeight: 700 }}>{selectedEnvSoil.blockName} ({selectedEnvSoil.zoneName})</dd>
                       <dt style={{ color: '#64748b' }}>{(lang === 'en' ? "Sample date:" : "Ngày lấy mẫu:")}</dt>
                       <dd style={{ margin: 0 }}>{selectedEnvSoil.assessedAt ? selectedEnvSoil.assessedAt.split('T')[0] : '—'}</dd>
                       <dt style={{ color: '#64748b' }}>{(lang === 'en' ? "Soil pH:" : "Độ pH đất:")}</dt>
@@ -1150,7 +1149,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     </div>
                   )}
                   {selectedEnvSoil.labTestReportUrl && (
-                    <div className="structured-field-card" style={{ marginBottom: '12px', background: '#ecfdf5', border: '1px solid #10b981' }}>
+                    <div className="structured-field-card ui-detail-primary" style={{ marginBottom: '12px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                         <div>
                           <span style={{ fontSize: '13px', fontWeight: 600, color: '#065f46' }}>
@@ -1266,7 +1265,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
               <Button
                 type="button"
                 variant="primary"
-                onClick={() => setIsCreateTrainingOpen(true)}
+                onClick={() => { setTrainingError(null); setIsCreateTrainingOpen(true); }}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: '36px' }}
               >
                 <Icon name="plus" size={15} />
@@ -1445,7 +1444,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                                 type="button"
                                 className="table-icon-btn danger"
                                 title={lang === 'en' ? 'Delete training record' : 'Xóa hồ sơ đào tạo'}
-                                onClick={() => void handleDeleteTraining(item.trainingRecordId)}
+                                onClick={() => { setTrainingDeleteError(null); setTrainingToDelete(item); }}
                               >
                                 <Icon name="trash" size={16} />
                               </button>
@@ -1571,170 +1570,95 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
 
           {/* Create Modal */}
           {isCreateTrainingOpen && (
-            <div className="modal-backdrop" style={{ zIndex: 1100 }}>
-              <div className="modal-card" style={{ maxWidth: '520px', width: '92%' }}>
-                <div className="modal-header">
-                  <div>
-                    <span className="eyebrow" style={{ color: '#059669' }}>{(lang === 'en' ? "Add training record" : "Thêm hồ sơ đào tạo")}</span>
-                    <h3 style={{ margin: '4px 0 0', fontSize: '18px', color: '#0f172a' }}>{(lang === 'en' ? "Record VietGAP training" : "Ghi nhận khóa tập huấn VietGAP")}</h3>
-                  </div>
-                  <button type="button" className="modal-close" onClick={() => setIsCreateTrainingOpen(false)}>
-                    ✕
-                  </button>
-                </div>
-                <form onSubmit={handleCreateTraining}>
-                  <div className="modal-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Training course title *" : "Tiêu đề khóa đào tạo / tập huấn *")}
+            <Modal structured open customLayout className="modal-form-layout" onClose={() => { if (!submittingTraining) setIsCreateTrainingOpen(false); }} title={lang === 'en' ? 'Record VietGAP training' : 'Ghi nhận khóa tập huấn VietGAP'}>
+            <div className="modal-header"><h2 style={{ margin: 0 }}>{lang === 'en' ? 'Record VietGAP training' : 'Ghi nhận khóa tập huấn VietGAP'}</h2><button type="button" className="modal-close" disabled={submittingTraining} onClick={() => setIsCreateTrainingOpen(false)} aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}><Icon name="close" /></button></div>
+            <form onSubmit={handleCreateTraining}>
+                  <div className="modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                    {trainingError && <p role="alert" className="form-error-banner">{trainingError}</p>}
+                    <div className="structured-field-card">
+                      <label htmlFor="training-trainingTitle" className="structured-field-label">
+                        {lang === 'en' ? 'Training course title' : 'Tiêu đề khóa đào tạo / tập huấn'} <span style={{ color: 'var(--color-danger)' }}>*</span>
                       </label>
-                      <input
+                      <input id="training-trainingTitle" className="ui-input"
                         type="text"
                         required
                         placeholder={(lang === 'en' ? "Example: VietGAP chemical safety and PHI training 2026" : "VD: Tập huấn quy trình VietGAP về an toàn hóa chất và PHI 2026")}
                         value={createTrainingForm.trainingTitle}
                         onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, trainingTitle: e.target.value }))}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        {(lang === 'en' ? "Training date *" : "Ngày tổ chức đào tạo *")}
+                    <div className="structured-field-card">
+                      <label htmlFor="training-trainingDate" className="structured-field-label">
+                        {lang === 'en' ? 'Training date' : 'Ngày tổ chức đào tạo'} <span style={{ color: 'var(--color-danger)' }}>*</span>
                       </label>
-                      <input
+                      <input id="training-trainingDate" className="ui-input"
                         type="date"
                         required
                         value={createTrainingForm.trainingDate}
                         onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, trainingDate: e.target.value }))}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    <div className="structured-field-card">
+                      <label htmlFor="training-description" className="structured-field-label">
                         {(lang === 'en' ? "Training content & Objectives" : "Nội dung & Mục tiêu tập huấn")}
                       </label>
-                      <textarea
+                      <textarea id="training-description" className="ui-textarea"
                         rows={3}
                         placeholder={(lang === 'en' ? "Summarize course content, training provider, and participant count..." : "Mô tả tóm tắt nội dung khóa học, đơn vị giảng dạy, số lượng công nhân tham gia...")}
                         value={createTrainingForm.description}
                         onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, description: e.target.value }))}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', resize: 'vertical' }}
                       />
                     </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    <div className="structured-field-card">
+                      <label htmlFor="training-imageUrl" className="structured-field-label">
                         {(lang === 'en' ? "Evidence image / Certificate URL (optional)" : "Link ảnh minh chứng / Chứng chỉ (Tùy chọn)")}
                       </label>
-                      <input
+                      <input id="training-imageUrl" className="ui-input"
                         type="url"
                         placeholder="https://example.com/certificate.jpg"
                         value={createTrainingForm.imageUrl}
                         onChange={(e) => setCreateTrainingForm((prev) => ({ ...prev, imageUrl: e.target.value }))}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
                       />
                     </div>
                   </div>
-                  <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <button
+                  <div className="modal-footer confirm-dialog-actions" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
+                    <Button
                       type="button"
-                      className="ghost-button"
+                      className="ui-cancel-button" variant="secondary"
                       onClick={() => setIsCreateTrainingOpen(false)}
                       disabled={submittingTraining}
                     >
                       {(lang === 'en' ? "Cancel" : "Hủy")}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
-                      className="action-button solid"
+                      variant="primary" loading={submittingTraining}
                       disabled={submittingTraining}
                     >
                       {(lang === 'en' ? submittingTraining ? "Saving..." : "Save training record" : submittingTraining ? 'Đang lưu...' : 'Lưu hồ sơ đào tạo')}
-                    </button>
+                    </Button>
                   </div>
                 </form>
-              </div>
-            </div>
+          </Modal>
           )}
         </div>
       </div>
       )}
 
-      {/* Water Assessment Detail Modal */}
-      {selectedEnvWater && (
-        <div className="modal-backdrop" onClick={() => setSelectedEnvWater(null)}>
-          <div className="modal-card" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700 }}>
-                {lang === 'en' ? 'Water Assessment Details' : 'Chi tiết đánh giá nguồn nước'}
-              </h3>
-              <button type="button" className="modal-close" onClick={() => setSelectedEnvWater(null)}>✕</button>
-            </div>
-            <div className="modal-body" style={{ padding: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
-                <div><strong>{lang === 'en' ? 'Water source:' : 'Nguồn nước:'}</strong> {selectedEnvWater.waterSourceName || '—'}</div>
-                <div><strong>{lang === 'en' ? 'Block:' : 'Lô trồng:'}</strong> {selectedEnvWater.blockName || '—'}</div>
-                <div><strong>pH:</strong> {selectedEnvWater.waterPh ?? '—'}</div>
-                <div><strong>{lang === 'en' ? 'Temp:' : 'Nhiệt độ:'}</strong> {selectedEnvWater.temperatureC ? `${selectedEnvWater.temperatureC}°C` : '—'}</div>
-                <div><strong>{lang === 'en' ? 'Quality:' : 'Chất lượng:'}</strong> {selectedEnvWater.qualityStatus || '—'}</div>
-                <div><strong>{lang === 'en' ? 'Date:' : 'Ngày đo:'}</strong> {selectedEnvWater.assessedAt ? new Date(selectedEnvWater.assessedAt).toLocaleDateString('vi-VN') : '—'}</div>
-              </div>
-              {selectedEnvWater.labTestReportUrl && (
-                <div style={{ marginTop: '12px', padding: '10px', background: '#ecfdf5', border: '1px solid #10b981', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                  <div style={{ fontSize: '12px', color: '#065f46' }}>
-                    <strong>{lang === 'en' ? 'Lab Test Report (VG-NL-01):' : 'Phiếu kiểm nghiệm nước (VG-NL-01):'}</strong>
-                    <div style={{ wordBreak: 'break-all', marginTop: '2px' }}>{selectedEnvWater.labTestReportUrl}</div>
-                  </div>
-                  <a
-                    href={selectedEnvWater.labTestReportUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="primary-button"
-                    style={{ padding: '4px 10px', fontSize: '11px', whiteSpace: 'nowrap', textDecoration: 'none' }}
-                  >
-                    {lang === 'en' ? 'View ↗' : 'Xem phiếu ↗'}
-                  </a>
-                </div>
-              )}
-              {selectedEnvWater.notes && (
-                <div style={{ marginTop: '12px', fontSize: '12.5px', color: '#475569' }}>
-                  <strong>{lang === 'en' ? 'Notes:' : 'Ghi chú:'}</strong> {selectedEnvWater.notes}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {soilDetailLoader.feedback}
+      {waterDetailLoader.feedback}
+      <Modal structured open={selectedEnvWater !== null} onClose={() => setSelectedEnvWater(null)} title={lang === 'en' ? 'Water assessment details' : 'Chi tiết đánh giá nước'} style={{ width: 'min(640px, 100%)' }}>
+        {selectedEnvWater && <WaterAssessmentDetails record={selectedEnvWater} />}
+        <div className="confirm-dialog-actions" style={{ marginTop: '16px' }}><Button className="ui-close-action" onClick={() => setSelectedEnvWater(null)}>{lang === 'en' ? 'Close' : 'Đóng'}</Button></div>
+      </Modal>
 
       {/* Create Soil Assessment Modal */}
       {isCreateSoilModalOpen && (
-        <div className="modal-backdrop" onClick={() => !savingAssessment && setIsCreateSoilModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <span className="eyebrow" style={{ color: '#059669' }}>
-                  {lang === 'en' ? 'VietGAP VG-NL-01 Compliance' : 'Tuân thủ VietGAP VG-NL-01'}
-                </span>
-                <h3 style={{ margin: '2px 0 0', fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
-                  {lang === 'en' ? 'Record Block Soil Assessment' : 'Ghi nhận phiếu đánh giá thổ nhưỡng'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                className="modal-close"
-                disabled={savingAssessment}
-                onClick={() => setIsCreateSoilModalOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => { if (!savingAssessment) setIsCreateSoilModalOpen(false); }} title={lang === 'en' ? 'Add soil assessment' : 'Thêm đánh giá đất'}>
+            <div className="modal-header"><h2 style={{ margin: 0 }}>{lang === 'en' ? 'Add soil assessment' : 'Thêm đánh giá đất'}</h2><button type="button" className="modal-close" disabled={savingAssessment} onClick={() => setIsCreateSoilModalOpen(false)} aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}><Icon name="close" /></button></div>
             <form onSubmit={handleSaveSoilAssessment}>
-              <div className="modal-body" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '72vh', overflowY: 'auto' }}>
-                {assessmentError && (
-                  <div style={{ padding: '10px 14px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '6px', color: '#b91c1c', fontSize: '13px' }}>
-                    {assessmentError}
-                  </div>
-                )}
+              <div className="modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {assessmentError && <p role="alert" className="form-error-banner">{assessmentError}</p>}
 
                 <div className="structured-field-card" style={{ marginBottom: 0 }}>
                   <label htmlFor="soil-modal-block" className="structured-field-label">
@@ -1758,7 +1682,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                   </select>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px' }}>
                   <div className="structured-field-card" style={{ marginBottom: 0 }}>
                     <div className="structured-field-header">
                       <label htmlFor="soil-modal-ph" className="structured-field-label">
@@ -1861,62 +1785,38 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
+              <div className="modal-footer confirm-dialog-actions" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <Button
                   type="button"
-                  className="ghost-button"
+                  className="ui-cancel-button" variant="secondary"
                   disabled={savingAssessment}
                   onClick={() => setIsCreateSoilModalOpen(false)}
                 >
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="primary-button"
+                  variant="primary" loading={savingAssessment}
                   disabled={savingAssessment || !soilBlockId}
                 >
                   {savingAssessment
                     ? (lang === 'en' ? 'Saving...' : 'Đang lưu...')
                     : (lang === 'en' ? 'Save Soil Record' : 'Lưu phiếu đánh giá đất')}
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* Create Water Assessment Modal */}
       {isCreateWaterModalOpen && (
-        <div className="modal-backdrop" onClick={() => !savingAssessment && setIsCreateWaterModalOpen(false)}>
-          <div className="modal-card" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <span className="eyebrow" style={{ color: '#0284c7' }}>
-                  {lang === 'en' ? 'QCVN 39:2011/BTNMT & VietGAP VG-NL-01' : 'QCVN 39:2011/BTNMT & VietGAP VG-NL-01'}
-                </span>
-                <h3 style={{ margin: '2px 0 0', fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
-                  {lang === 'en' ? 'Record Water Quality Assessment' : 'Ghi nhận phiếu đánh giá chất lượng nước'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                className="modal-close"
-                disabled={savingAssessment}
-                onClick={() => setIsCreateWaterModalOpen(false)}
-              >
-                ✕
-              </button>
-            </div>
-
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => { if (!savingAssessment) setIsCreateWaterModalOpen(false); }} title={lang === 'en' ? 'Add water assessment' : 'Thêm đánh giá nước'}>
+            <div className="modal-header"><h2 style={{ margin: 0 }}>{lang === 'en' ? 'Add water assessment' : 'Thêm đánh giá nước'}</h2><button type="button" className="modal-close" disabled={savingAssessment} onClick={() => setIsCreateWaterModalOpen(false)} aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}><Icon name="close" /></button></div>
             <form onSubmit={handleSaveWaterAssessment}>
-              <div className="modal-body" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '72vh', overflowY: 'auto' }}>
-                {assessmentError && (
-                  <div style={{ padding: '10px 14px', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '6px', color: '#b91c1c', fontSize: '13px' }}>
-                    {assessmentError}
-                  </div>
-                )}
+              <div className="modal-body" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {assessmentError && <p role="alert" className="form-error-banner">{assessmentError}</p>}
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px' }}>
                   <div className="structured-field-card" style={{ marginBottom: 0 }}>
                     <label htmlFor="water-modal-name" className="structured-field-label">
                       {lang === 'en' ? 'Water Source Name' : 'Tên nguồn nước'} <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -2004,23 +1904,25 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                     >
                       <option value="DAT_CHUAN">{lang === 'en' ? '✓ Compliant' : '✓ Đạt chuẩn'}</option>
                       <option value="CHO_KIEM_DINH">{lang === 'en' ? 'Pending test' : 'Chờ kiểm định'}</option>
+                      <option value="KHONG_DAT">{lang === 'en' ? 'Non-compliant' : 'Không đạt'}</option>
                       <option value="CAN_XU_LY">{lang === 'en' ? 'Filtration needed' : 'Cần xử lý lắng'}</option>
                     </select>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '16px' }}>
                   <div className="structured-field-card" style={{ marginBottom: 0 }}>
                     <label htmlFor="water-modal-block" className="structured-field-label">
                       {lang === 'en' ? 'Applicable Block' : 'Lô đất tưới tiêu'}
                     </label>
                     <select
                       id="water-modal-block"
+                      required
                       className="ui-select"
                       value={waterBlockId}
                       onChange={(e) => setWaterBlockId(e.target.value ? Number(e.target.value) : '')}
                     >
-                      <option value="">{lang === 'en' ? 'Entire farm / All blocks' : 'Toàn trang trại'}</option>
+                      <option value="">{lang === 'en' ? 'Select a block' : 'Chọn lô trồng'}</option>
                       {farmBlocks.map((b) => (
                         <option key={b.blockId} value={b.blockId}>
                           {b.blockName} {b.zoneName ? `(${b.zoneName})` : ''}
@@ -2044,6 +1946,10 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                   </div>
                 </div>
 
+                <div className="structured-field-card">
+                  <label htmlFor="water-modal-image" className="structured-field-label">{lang === 'en' ? 'Evidence Image URL' : 'Đường dẫn ảnh minh chứng'}</label>
+                  <input id="water-modal-image" className="ui-input" type="url" placeholder="https://..." value={waterImageUrl} disabled={savingAssessment} onChange={e => setWaterImageUrl(e.target.value)} />
+                </div>
                 <div>
                   <FileUpload
                     value={waterLabReportUrl}
@@ -2071,28 +1977,27 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
+              <div className="modal-footer confirm-dialog-actions" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <Button
                   type="button"
-                  className="ghost-button"
+                  className="ui-cancel-button" variant="secondary"
                   disabled={savingAssessment}
                   onClick={() => setIsCreateWaterModalOpen(false)}
                 >
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="primary-button"
+                  variant="primary" loading={savingAssessment}
                   disabled={savingAssessment || !waterSourceName.trim()}
                 >
                   {savingAssessment
                     ? (lang === 'en' ? 'Saving...' : 'Đang lưu...')
                     : (lang === 'en' ? 'Save Water Record' : 'Lưu phiếu đánh giá nước')}
-                </button>
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
+          </Modal>
       )}
 
       {/* VietGAP 33-criteria Init Run Modal */}

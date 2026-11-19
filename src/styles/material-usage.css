@@ -64,18 +64,16 @@
 .mu-history-heading p { color: var(--mu-muted); font-size: 12.5px; margin: 4px 0 0; line-height: 1.4; }
 .mu-result-count { border: 1px solid var(--mu-border); border-radius: 6px; background: var(--mu-subtle); padding: 4px 10px; color: var(--mu-muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
 .mu-table-scroll { overflow-x: auto; max-width: 100%; scrollbar-width: thin; }
-.material-usage-page .mu-table { width: 100%; min-width: 1040px; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 13px; table-layout: fixed; }
-.mu-table th {  background: var(--mu-subtle); color: var(--mu-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; border-bottom: 1px solid var(--mu-border); }
+.material-usage-page .mu-table { width: 100%; min-width: 720px; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 13px; table-layout: fixed; }
+.material-usage-page .mu-table th { background: var(--color-page); color: var(--color-body); font-family: inherit; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; font-weight: 700; border-bottom: 1px solid var(--mu-border); white-space: normal; word-break: normal; overflow-wrap: break-word; line-height: 1.5; vertical-align: middle; }
 .mu-table td {  border-bottom: 1px solid var(--mu-border); vertical-align: middle; background: var(--mu-surface); color: var(--mu-text); line-height: 1.5; }
 .mu-table tbody tr:last-child td { border-bottom: 0; }
 .mu-table tbody tr:hover td { background: var(--mu-subtle); }
-.mu-table th:first-child { width: 230px; }
-.mu-table th:nth-child(2) { width: 130px; }
-.mu-table th:nth-child(3) { width: 105px; }
-.mu-table th:nth-child(4) { width: 175px; }
-.mu-table th:nth-child(5) { width: 145px; }
-.mu-table th:nth-child(6) { width: 140px; }
-.mu-table th:last-child { width: 130px; text-align: right; }
+.mu-table th:first-child { width: 30%; }
+.mu-table th:nth-child(2) { width: 17%; }
+.mu-table th:nth-child(3) { width: 14%; }
+.mu-table th:nth-child(4) { width: 22%; }
+.mu-table th:last-child { width: 17%; text-align: center; }
 .mu-material-cell { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 var(--mu-border); }
 .mu-table th:first-child { position: sticky; left: 0; z-index: 2; box-shadow: 1px 0 var(--mu-border); }
 .mu-material-cell > strong { display: block; line-height: 1.4; font-size: 13.5px; margin: 2px 0 6px; overflow-wrap: anywhere; }
@@ -160,8 +158,6 @@
 }
 @media (max-width: 900px) {
   .mu-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .mu-table th:first-child { width: 200px; }
-  .mu-material-cell { max-width: 200px; }
   .app-shell:has(.material-usage-page) .topbar { gap: 12px; padding: 12px 16px; height: auto; min-height: 64px; }
   .app-shell:has(.material-usage-page) .topbar-left { min-width: 0; flex: 1; }
   .app-shell:has(.material-usage-page) .workspace-switcher { min-width: 0; }
@@ -202,11 +198,13 @@
 }
 
 /* Material usage entry layout. */
-.material-usage-page .modal-card.mu-entry-dialog { width: min(1120px, 100%); max-height: min(85dvh, 720px); padding: 0; border-radius: 20px; overflow-y: auto; }
+.material-usage-page .modal-card.mu-entry-dialog { width: min(900px, 100%); max-height: min(90dvh, 800px); padding: 0; border-radius: 14px; overflow: hidden; }
 .mu-entry-dialog .modal-header { position: sticky; top: 0; z-index: 3; margin: 0; background: var(--mu-surface); }
 .material-usage-page .mu-entry-dialog .modal-header h2 { font-size: 20px; line-height: 1.3; margin: 0; }
 .material-usage-page .mu-entry-dialog .modal-body { padding: 0; }
-.material-usage-page .mu-entry-dialog .mu-entry-form { gap: 16px; padding-top: 24px; }
+.material-usage-page .mu-entry-dialog .mu-entry-form { gap: 0; padding: 0; }
+.material-usage-page .mu-entry-dialog .mu-entry-body { display: flex; flex-direction: column; gap: 16px; padding: 24px 0; }
+.mu-entry-body .mu-field.ui-form-context > div:last-child { overflow-wrap: anywhere; white-space: normal; font-size: 14px; line-height: 1.6; }
 .mu-entry-section { margin: 0 28px; min-width: 0; }
 .mu-entry-section-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--mu-text); }
 .mu-entry-step { flex: 0 0 auto; font-size: 15px; font-weight: 700; }
@@ -257,7 +255,7 @@
 .mu-entry-footer { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 28px; border-top: 1px solid var(--mu-border); background: var(--mu-surface); }
 .mu-entry-footer > span { color: var(--mu-muted); font-size: 12px; }
 .mu-entry-footer > div { display: flex; gap: 10px; }
-.mu-entry-dialog .mu-entry-error { margin: 0 28px; }
+.mu-entry-dialog .mu-entry-footer > .mu-entry-error { flex: 0 0 100%; margin: 0; }
 .mu-icon-field { position: relative; min-width: 0; }
 .mu-icon-field > .ui-icon { position: absolute; left: 12px; top: 10px; color: var(--mu-text); pointer-events: none; width: 18px; height: 18px; z-index: 1; }
 .material-usage-page .mu-entry-dialog .mu-icon-field select { padding-left: 38px; }

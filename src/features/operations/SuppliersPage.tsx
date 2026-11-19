@@ -1,3 +1,5 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
+import { useDetailRequest } from '../../shared/hooks/useDetailRequest';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { LoadError } from '../../shared/components/LoadError';
 import { PageHeading } from '../../shared/components/PageHeading';
@@ -29,12 +31,14 @@ import {
 export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
   const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
+  const detailLoader = useDetailRequest(selectedFarm?.id);
   const farmId = selectedFarm?.id;
 
   const [suppliers, setSuppliers] = useState<SupplierItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
+  const [purchaseFilter, setPurchaseFilter] = useState<'all' | 'with-orders' | 'without-orders'>('all');
   const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
 
   // View Details Modal
@@ -94,23 +98,15 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
 
   const handleResetSearch = () => {
     setKeyword('');
+    setPurchaseFilter('all');
     void loadSuppliers();
   };
 
   // View Details
   const handleOpenDetails = async (supplierId: number) => {
-
-    try {
-      const detail = await fetchSupplierDetails(supplierId);
-      setSelectedSupplier(detail);
-    } catch {
-      const fallback = suppliers.find((s) => s.supplierId === supplierId) || null;
-      setSelectedSupplier(fallback);
-    } finally {
-
-    }
+    setSelectedSupplier(null);
+    await detailLoader.load(() => fetchSupplierDetails(supplierId), setSelectedSupplier);
   };
-
   // Create
   const handleOpenCreate = () => {
     setNotification(null);
@@ -221,6 +217,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
 
   const handleDeleteSubmit = async () => {
     if (!deletingSupplier) return;
+    if ((deletingSupplier.totalPurchasesCount || 0) > 0) {
+      setNotification({ type: 'error', text: lang === 'en'
+        ? 'Cannot delete this supplier because it has purchase orders.'
+        : 'Không thể xóa nhà cung cấp vì đã có phiếu mua vật tư.' });
+      setDeletingSupplier(null);
+      return;
+    }
     setSubmittingDelete(true);
     try {
       await deleteSupplier(deletingSupplier.supplierId);
@@ -238,31 +241,37 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
         text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete supplier with linked purchase invoices." : err instanceof Error ? err.message : 'Không thể xóa nhà cung cấp (đã phát sinh hóa đơn mua hàng).'),
         type: 'error',
       });
+      setDeletingSupplier(null);
     } finally {
       setSubmittingDelete(false);
     }
   };
 
   const filteredSuppliers = useMemo(() => {
-    if (!keyword.trim()) return suppliers;
     const lower = keyword.trim().toLowerCase();
     return suppliers.filter(
-      (s) =>
-        s.supplierName.toLowerCase().includes(lower) ||
+      (s) => {
+        const purchaseCount = s.totalPurchasesCount ?? 0;
+        if (purchaseFilter === 'with-orders' && purchaseCount === 0) return false;
+        if (purchaseFilter === 'without-orders' && purchaseCount > 0) return false;
+        return !lower || s.supplierName.toLowerCase().includes(lower) ||
         (s.contactName && s.contactName.toLowerCase().includes(lower)) ||
         (s.phone && s.phone.includes(lower)) ||
         (s.email && s.email.toLowerCase().includes(lower)) ||
-        (s.address && s.address.toLowerCase().includes(lower))
+        (s.address && s.address.toLowerCase().includes(lower));
+      }
     );
-  }, [suppliers, keyword]);
+  }, [suppliers, keyword, purchaseFilter]);
 
-  const suppliersPagination = usePagination(filteredSuppliers, JSON.stringify([keyword]));
+  const suppliersPagination = usePagination(filteredSuppliers, JSON.stringify([keyword, purchaseFilter]));
 
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
+      {detailLoader.feedback}
       {/* Status / Action Notification Banner */}
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           role={notification.type === 'error' ? 'alert' : 'status'}
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
@@ -278,16 +287,11 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Main Page Heading matching Mockup */}
       <PageHeading level={embedded ? 2 : 1}   title={<>
             {lang === 'en' ? 'Suppliers' : 'Nhà cung cấp'}
-          </>} description={<>
-            {lang === 'en'
-              ? `${suppliers.length} input and service suppliers at ${selectedFarm?.farmName || 'Farm'}`
-              : `${suppliers.length} nhà cung ứng vật tư & dịch vụ tại ${selectedFarm?.farmName || 'trang trại'}`}
           </>}><div>
           <Button
             type="button"
@@ -315,24 +319,30 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             />
           </div>
 
-          <Button
-            type="submit"
-            variant="primary"
-
-          >
-            {lang === 'en' ? 'Search' : 'Tìm kiếm'}
-          </Button>
-
-          {keyword && (
-            <button
-              type="button"
-              className="zone-clean-reload-btn"
-              title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
-              onClick={handleResetSearch}
+          <div className="zone-clean-select-wrap">
+            <select
+              id="supplier-purchase-filter"
+              className="ui-select"
+              aria-label={lang === 'en' ? 'Purchase history' : 'Lịch sử mua'}
+              value={purchaseFilter}
+              onChange={(event) => setPurchaseFilter(event.target.value as typeof purchaseFilter)}
             >
-              <Icon name="refresh" size={16} />
-            </button>
-          )}
+              <option value="all">{lang === 'en' ? 'All' : 'Tất cả'}</option>
+              <option value="with-orders">{lang === 'en' ? 'Previously purchased' : 'Đã từng mua'}</option>
+              <option value="without-orders">{lang === 'en' ? 'Never purchased' : 'Chưa từng mua'}</option>
+            </select>
+            <span className="select-arrow" aria-hidden="true"><Icon name="chevron-down" size={16} /></span>
+          </div>
+
+          <button
+            type="button"
+            className="zone-clean-reload-btn"
+            title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+            aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+            onClick={handleResetSearch}
+          >
+            <Icon name="refresh" size={16} />
+          </button>
         </form>
 
         {/* Table Wrap */}
@@ -340,9 +350,7 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
           <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ background: 'var(--color-page)' }}>
-                <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                  <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                </th>
+
                 <th scope="col">
                   {lang === 'en' ? 'SUPPLIER NAME' : 'TÊN NHÀ CUNG CẤP'}
                 </th>
@@ -351,12 +359,6 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                 </th>
                 <th scope="col">
                   {lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}
-                </th>
-                <th scope="col">
-                  {lang === 'en' ? 'EMAIL' : 'EMAIL'}
-                </th>
-                <th scope="col">
-                  {lang === 'en' ? 'ADDRESS' : 'ĐỊA CHỈ'}
                 </th>
                 <th scope="col" style={{ textAlign: 'center' }}>
                   {lang === 'en' ? 'PURCHASE HISTORY' : 'LỊCH SỬ MUA'}
@@ -369,24 +371,22 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                  <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'Loading suppliers directory...' : 'Đang tải danh bạ nhà cung cấp...'}
                   </td>
                 </tr>
               ) : loadError ? (
-                <tr><td colSpan={8}><LoadError message={loadError} onRetry={() => { void loadSuppliers(keyword.trim() || undefined); }} /></td></tr>
+                <tr><td colSpan={5}><LoadError message={loadError} onRetry={() => { void loadSuppliers(keyword.trim() || undefined); }} /></td></tr>
               ) : filteredSuppliers.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                  <td colSpan={5} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'No suppliers matching keywords.' : 'Không tìm thấy nhà cung cấp nào phù hợp với từ khóa.'}
                   </td>
                 </tr>
               ) : (
                 suppliersPagination.items.map((supplier) => (
                   <tr key={supplier.supplierId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={{ textAlign: 'center' }}>
-                      <input type="checkbox" aria-label={translate("Select") + " #" + (supplier.supplierId)} style={{ cursor: 'pointer' }} />
-                    </td>
+
                     <td>
                       <span
                         onClick={() => handleOpenDetails(supplier.supplierId)}
@@ -403,9 +403,6 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                       >
                         {supplier.supplierName}
                       </span>
-                      <span style={{ fontSize: '12px', color: 'var(--color-primary-text)', fontWeight: 600, display: 'block', marginTop: '2px' }}>
-                        #SUP-{supplier.supplierId} • VietGAP
-                      </span>
                     </td>
                     <td style={{ color: 'var(--color-body)', fontSize: '13.5px', fontWeight: 500 }}>
                       {supplier.contactName || '—'}
@@ -418,12 +415,6 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                       ) : (
                         '—'
                       )}
-                    </td>
-                    <td style={{ color: 'var(--color-muted)', fontSize: '13.5px' }}>
-                      {supplier.email || '—'}
-                    </td>
-                    <td style={{ color: 'var(--color-body)', fontSize: '13.5px', maxWidth: '220px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {supplier.address || '—'}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <span className="profile-tag-pill" style={{ background: 'var(--color-subtle)', color: 'var(--color-body)' }}>
@@ -474,97 +465,68 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
 
       {/* View Supplier Details Modal */}
       {selectedSupplier && (
-        <Modal
+        <Modal structured
           open={true}
           onClose={() => setSelectedSupplier(null)}
-          title={lang === 'en' ? `Supplier Profile: ${selectedSupplier.supplierName}` : `Hồ sơ nhà cung cấp: ${selectedSupplier.supplierName}`}
+          title={lang === 'en' ? 'Supplier details' : 'Chi tiết nhà cung cấp'}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, maxWidth: '600px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'var(--color-page)', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
-              <div>
-                <span className="profile-tag-pill" style={{ background: 'var(--color-success-bg)', color: 'var(--color-primary-text)', marginBottom: '4px' }}>
-                  {lang === 'en' ? '✓ VietGAP Verified' : '✓ Đã kiểm định VietGAP'}
-                </span>
-                <h3 style={{ margin: '6px 0 2px', fontSize: '18px', color: 'var(--color-text)' }}>{selectedSupplier.supplierName}</h3>
-                <small style={{ color: 'var(--color-muted)' }}>{lang === 'en' ? 'System Code:' : 'Mã hệ thống:'} #SUP-{selectedSupplier.supplierId}</small>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '600px' }}>
+            <div className="ui-form-grid" style={{ gap: '16px' }}>
+              <div className="structured-field-card supplier-detail-field ui-detail-primary">
+                <div>{lang === 'en' ? 'Supplier name' : 'Tên nhà cung cấp'}</div>
+                <div style={{ overflowWrap: 'anywhere' }}>{selectedSupplier.supplierName || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}</div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Purchase History:' : 'Lịch sử thu mua:'}</span>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-info)' }}>
-                  {selectedSupplier.totalPurchasesCount || 0} {lang === 'en' ? 'orders' : 'hóa đơn'}
-                </div>
+              <div className="structured-field-card supplier-detail-field">
+                <div>{lang === 'en' ? 'Purchase history' : 'Lịch sử thu mua'}</div>
+                <div>{selectedSupplier.totalPurchasesCount == null ? (lang === 'en' ? 'Not updated' : 'Chưa cập nhật') : `${selectedSupplier.totalPurchasesCount} ${lang === 'en' ? 'orders' : 'phiếu mua'}`}</div>
               </div>
             </div>
 
             {/* Information Grid */}
-            <div className="ui-form-grid" >
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'CONTACT PERSON' : 'NGƯỜI ĐẠI DIỆN LIÊN HỆ'}</div>
+            <div className="ui-form-grid" style={{ gap: '16px' }}>
+              <div className="structured-field-card supplier-detail-field">
+                <div style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 750 }}>{lang === 'en' ? 'Contact person' : 'Người đại diện liên hệ'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', marginTop: '4px' }}>
                   {selectedSupplier.contactName || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}</div>
+              <div className="structured-field-card supplier-detail-field">
+                <div style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 750 }}>{lang === 'en' ? 'Phone number' : 'Số điện thoại'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-info)', marginTop: '4px' }}>
                   {selectedSupplier.phone || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'EMAIL ADDRESS' : 'ĐỊA CHỈ EMAIL'}</div>
+              <div className="structured-field-card supplier-detail-field">
+                <div style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 750 }}>{lang === 'en' ? 'Email address' : 'Địa chỉ email'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginTop: '4px' }}>
                   {selectedSupplier.email || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'DATE CREATED' : 'NGÀY TẠO HỒ SƠ'}</div>
+              <div className="structured-field-card supplier-detail-field">
+                <div style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 750 }}>{lang === 'en' ? 'Date created' : 'Ngày tạo hồ sơ'}</div>
                 <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginTop: '4px' }}>
                   {selectedSupplier.createdAt ? uiFormatDate(selectedSupplier.createdAt, lang) : '—'}
                 </div>
               </div>
             </div>
 
-            <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-              <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'HEADQUARTERS / WAREHOUSE ADDRESS' : 'ĐỊA CHỈ TRỤ SỞ / KHO HÀNG'}</div>
+            <div className="structured-field-card supplier-detail-field">
+              <div style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 750 }}>{lang === 'en' ? 'Headquarters / warehouse address' : 'Địa chỉ trụ sở / kho hàng'}</div>
               <div style={{ fontSize: '14px', color: 'var(--color-body)', marginTop: '4px' }}>
                 {selectedSupplier.address || (lang === 'en' ? 'No address provided' : 'Chưa cập nhật địa chỉ')}
               </div>
             </div>
 
-            {selectedSupplier.notes && (
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-warning-bg)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-warning)', fontWeight: 700 }}>{lang === 'en' ? 'CONTRACT NOTES / SUPPLIED MATERIALS' : 'GHI CHÚ HỢP ĐỒNG / VẬT TƯ CUNG CẤP'}</div>
-                <div style={{ fontSize: '13.5px', color: 'var(--color-warning)', marginTop: '4px' }}>{selectedSupplier.notes}</div>
-              </div>
-            )}
+            <div className="structured-field-card supplier-detail-field">
+                <div style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 750 }}>{lang === 'en' ? 'Contract notes / supplied materials' : 'Ghi chú hợp đồng / vật tư cung cấp'}</div>
+                <div style={{ fontSize: '14px', color: 'var(--color-body)', marginTop: '4px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{selectedSupplier.notes || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}</div>
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <Button
-                type="button"
-                variant="secondary" className="edit"
-                onClick={() => {
-                  const s = selectedSupplier;
-                  setSelectedSupplier(null);
-                  handleOpenEdit(s);
-                }}
-              >
-                <Icon name="edit" size={14} /> {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
-              </Button>
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => {
-                  const s = selectedSupplier;
-                  setSelectedSupplier(null);
-                  handleOpenDelete(s);
-                }}
-              >
-                <Icon name="trash" size={14} /> {lang === 'en' ? 'Delete' : 'Xóa nhà cung cấp'}
-              </Button>
-              <Button type="button" variant="primary" onClick={() => setSelectedSupplier(null)}>
+              <Button className={'ui-close-action'} type="button" variant="secondary" onClick={() => setSelectedSupplier(null)}>
                 {lang === 'en' ? 'Close' : 'Đóng'}
               </Button>
             </div>
@@ -574,93 +536,112 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
 
       {/* Create Supplier Modal */}
       {isCreateOpen && (
-        <Modal open={true} onClose={() => setIsCreateOpen(false)} title={lang === 'en' ? 'Add New Supplier' : 'Thêm mới nhà cung cấp vật tư'}>
-          <form onSubmit={handleCreateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', }}>
-            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-1">
-                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
+        <Modal structured customLayout className="modal-form-layout" open={true} onClose={() => { if (!submittingCreate) setIsCreateOpen(false); }} title={lang === 'en' ? 'Add New Supplier' : 'Thêm mới nhà cung cấp vật tư'}>
+          <div className="modal-header">
+            <h2 style={{ margin: 0 }}>{lang === 'en' ? 'Add New Supplier' : 'Thêm mới nhà cung cấp vật tư'}</h2>
+            <button type="button" className="modal-close" disabled={submittingCreate} onClick={() => setIsCreateOpen(false)} aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}><Icon name="close" /></button>
+          </div>
+          <form onSubmit={handleCreateSubmit}>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-1">
+                {lang === 'en' ? 'Company / Supplier Name' : 'Tên công ty / Nhà cung cấp'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
+                <span className="structured-field-badge">{createForm.supplierName.length}/160 · {lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
+              </div>
               <input id="suppliers-page-field-1" className="ui-input"
+                maxLength={160}
                 type="text"
                 required
                 placeholder={lang === 'en' ? 'e.g. Green Agriculture JSC...' : 'Ví dụ: Công ty Cổ phần Nông nghiệp Xanh...'}
                 value={createForm.supplierName}
                 onChange={(e) => setCreateForm({ ...createForm, supplierName: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="ui-form-grid">
-              <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-2">
+            <div className="ui-form-grid" style={{ gap: '16px' }}>
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-2">
                   {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
                 </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
                 <input id="suppliers-page-field-2" className="ui-input"
                   type="text"
                   placeholder={lang === 'en' ? 'Full name...' : 'Họ và tên...'}
                   value={createForm.contactName || ''}
                   onChange={(e) => setCreateForm({ ...createForm, contactName: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
 
-              <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-3">
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-3">
                   {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
                 </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
                 <input id="suppliers-page-field-3" className="ui-input"
                   type="tel"
                   placeholder="09xx..."
                   value={createForm.phone || ''}
                   onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
             </div>
 
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-4">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-4">
                 {lang === 'en' ? 'Email' : 'Email'}
               </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <input id="suppliers-page-field-4" className="ui-input"
                 type="email"
                 placeholder="supplier@example.com..."
                 value={createForm.email || ''}
                 onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-5">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-5">
                 {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
               </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <input id="suppliers-page-field-5" className="ui-input"
                 type="text"
                 placeholder={lang === 'en' ? 'Street, Ward, District, City...' : 'Số nhà, đường, quận/huyện, tỉnh thành...'}
                 value={createForm.address || ''}
                 onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-6">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-6">
                 {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
               </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <textarea id="suppliers-page-field-6" className="ui-textarea"
                 rows={2}
                 placeholder={lang === 'en' ? 'Supplies organic fertilizers, F1 seeds...' : 'Chuyên cung ứng phân trùn quế, hạt giống F1...'}
                 value={createForm.notes || ''}
                 onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <Button type="button" variant="secondary" onClick={() => setIsCreateOpen(false)} disabled={submittingCreate}>
-                {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
+            </div>
+            <div className="modal-footer confirm-dialog-actions" style={{ margin: 0, padding: '16px 24px', borderTop: '1px solid var(--color-border)' }}>
+              <Button className={'ui-cancel-button'} type="button" variant="secondary" onClick={() => setIsCreateOpen(false)} disabled={submittingCreate}>
+                {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={submittingCreate}>
                 {submittingCreate ? (lang === 'en' ? 'Creating...' : 'Đang tạo...') : (lang === 'en' ? 'Create Supplier' : 'Tạo nhà cung cấp')}
@@ -672,87 +653,106 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
 
       {/* Update Supplier Modal */}
       {editingSupplier && (
-        <Modal open={true} onClose={() => setEditingSupplier(null)} title={lang === 'en' ? `Update Supplier #${editingSupplier.supplierId}` : `Cập nhật nhà cung cấp #${editingSupplier.supplierId}`}>
-          <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', }}>
-            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-7">
-                {lang === 'en' ? 'Company / Supplier Name *' : 'Tên công ty / Nhà cung cấp *'}
+        <Modal structured customLayout className="modal-form-layout" open={true} onClose={() => { if (!submittingUpdate) setEditingSupplier(null); }} title={lang === 'en' ? 'Update Supplier' : 'Cập nhật nhà cung cấp'}>
+          <div className="modal-header">
+            <h2 style={{ margin: 0 }}>{lang === 'en' ? 'Update Supplier' : 'Cập nhật nhà cung cấp'}</h2>
+            <button type="button" className="modal-close" disabled={submittingUpdate} onClick={() => setEditingSupplier(null)} aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}><Icon name="close" /></button>
+          </div>
+          <form onSubmit={handleUpdateSubmit}>
+            <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-7">
+                {lang === 'en' ? 'Company / Supplier Name' : 'Tên công ty / Nhà cung cấp'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
+                <span className="structured-field-badge">{updateForm.supplierName.length}/160 · {lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
+              </div>
               <input id="suppliers-page-field-7" className="ui-input"
+                maxLength={160}
                 type="text"
                 required
                 value={updateForm.supplierName}
                 onChange={(e) => setUpdateForm({ ...updateForm, supplierName: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="ui-form-grid">
-              <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-8">
+            <div className="ui-form-grid" style={{ gap: '16px' }}>
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-8">
                   {lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}
                 </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
                 <input id="suppliers-page-field-8" className="ui-input"
                   type="text"
                   value={updateForm.contactName || ''}
                   onChange={(e) => setUpdateForm({ ...updateForm, contactName: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
 
-              <div className="form-group structured-field-card">
-                <label htmlFor="suppliers-page-field-9">
+              <div className="structured-field-card">
+                <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-9">
                   {lang === 'en' ? 'Phone Number' : 'Số điện thoại'}
                 </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
                 <input id="suppliers-page-field-9" className="ui-input"
                   type="tel"
                   value={updateForm.phone || ''}
                   onChange={(e) => setUpdateForm({ ...updateForm, phone: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px' }}
                 />
               </div>
             </div>
 
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-10">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-10">
                 {lang === 'en' ? 'Email' : 'Email'}
               </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <input id="suppliers-page-field-10" className="ui-input"
                 type="email"
                 value={updateForm.email || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, email: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-11">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-11">
                 {lang === 'en' ? 'Address' : 'Địa chỉ trụ sở / kho hàng'}
               </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <input id="suppliers-page-field-11" className="ui-input"
                 type="text"
                 value={updateForm.address || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, address: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div className="form-group structured-field-card">
-              <label htmlFor="suppliers-page-field-12">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="suppliers-page-field-12">
                 {lang === 'en' ? 'Supplied Materials Notes' : 'Ghi chú vật tư cung ứng'}
               </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <textarea id="suppliers-page-field-12" className="ui-textarea"
                 rows={2}
                 value={updateForm.notes || ''}
                 onChange={(e) => setUpdateForm({ ...updateForm, notes: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px' }}
               />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <Button type="button" variant="secondary" onClick={() => setEditingSupplier(null)} disabled={submittingUpdate}>
-                {lang === 'en' ? 'Cancel' : 'Hủy bỏ'}
+            </div>
+            <div className="modal-footer confirm-dialog-actions" style={{ margin: 0, padding: '16px 24px', borderTop: '1px solid var(--color-border)' }}>
+              <Button className={'ui-cancel-button'} type="button" variant="secondary" onClick={() => setEditingSupplier(null)} disabled={submittingUpdate}>
+                {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={submittingUpdate}>
                 {submittingUpdate ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
@@ -762,73 +762,22 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
         </Modal>
       )}
 
-      {/* Delete Eligible Supplier Modal */}
-      {deletingSupplier && (() => {
-        const hasPurchases = (deletingSupplier.totalPurchasesCount || 0) > 0;
-        const isEligible = !hasPurchases;
-
-        return (
-          <Modal
+      {deletingSupplier && (
+          <Modal structured
             open={true}
             onClose={() => setDeletingSupplier(null)}
             title={lang === 'en' ? 'Delete Supplier Confirmation' : 'Xác nhận xóa nhà cung cấp'}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '520px' }}>
-              <div style={{ padding: '12px 16px', background: 'var(--color-page)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px', color: 'var(--color-text)' }}>{deletingSupplier.supplierName}</h4>
-                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-muted)' }}>
-                  {lang === 'en' ? 'Supplier ID:' : 'Mã đơn vị:'} #SUP-{deletingSupplier.supplierId} • {lang === 'en' ? 'Contact:' : 'Người liên hệ:'} {deletingSupplier.contactName || '—'}
-                </p>
-              </div>
 
-              {/* Eligibility Check Indicator */}
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  background: isEligible ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-                  border: `1px solid ${isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)'}`,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)', marginBottom: '4px' }}>
-                  <Icon name={isEligible ? 'check' : 'warning'} size={16} />
-                  <span>{isEligible ? (lang === 'en' ? 'Supplier eligible for deletion' : 'Nhà cung cấp đủ điều kiện xóa (Eligible)') : (lang === 'en' ? 'Ineligible for deletion' : 'Không đủ điều kiện xóa (Ineligible)')}</span>
-                </div>
-                <p style={{ margin: 0, fontSize: '12.5px', color: isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)' }}>
-                  {hasPurchases
-                    ? (lang === 'en'
-                      ? `This supplier has ${deletingSupplier.totalPurchasesCount} purchase orders recorded in the system. To ensure VietGAP traceability audit compliance, suppliers with active transaction history cannot be deleted.`
-                      : `Nhà cung cấp này đã có ${deletingSupplier.totalPurchasesCount} hóa đơn mua vật tư trong hệ thống. Để bảo đảm kiểm toán truy xuất nguồn gốc theo quy chuẩn VietGAP, không thể xóa nhà cung cấp đã có giao dịch mua hàng.`)
-                    : (lang === 'en'
-                      ? 'This supplier has no recorded purchase orders in this farm. Deletion can be performed safely.'
-                      : 'Nhà cung cấp này chưa phát sinh hóa đơn mua hàng nào trong trang trại. Thao tác xóa sẽ được thực hiện an toàn.')}
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setDeletingSupplier(null)}
-                  disabled={submittingDelete}
-                >
-                  {isEligible ? (lang === 'en' ? 'Cancel' : 'Hủy bỏ') : (lang === 'en' ? 'Close' : 'Đóng')}
-                </Button>
-                {isEligible && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    disabled={submittingDelete}
-                    onClick={handleDeleteSubmit}
-                  >
-                    {submittingDelete ? (lang === 'en' ? 'Deleting...' : 'Đang xóa...') : (lang === 'en' ? 'Confirm Delete' : 'Xác nhận xóa')}
-                  </Button>
-                )}
-              </div>
+            <p>{lang === 'en' ? 'Are you sure you want to delete supplier ' : 'Bạn có chắc chắn muốn xóa nhà cung cấp '}
+              <strong>{deletingSupplier.supplierName}</strong>?
+            </p>
+            <div className="confirm-dialog-actions">
+              <Button className="ui-cancel-button" disabled={submittingDelete} onClick={() => setDeletingSupplier(null)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</Button>
+              <Button variant="danger" loading={submittingDelete} onClick={handleDeleteSubmit}>{lang === 'en' ? 'Delete supplier' : 'Xóa nhà cung cấp'}</Button>
             </div>
           </Modal>
-        );
-      })()}
+      )}
     </section>
   );
 }

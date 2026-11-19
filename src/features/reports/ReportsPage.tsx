@@ -80,9 +80,7 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
 
   return (
     <section className="reports-page">
-      <PageHeading   title={<>{(lang === 'en' ? "Production Reports & Financial Management" : "Báo cáo sản xuất & Quản trị tài chính")}</>} description={<>
-            {(lang === 'en' ? "Summarize farming data, input costs, inventory, and material suppliers for farm " : "Tổng hợp dữ liệu canh tác, hạch toán chi phí đầu vào, quản trị kho và theo dõi nhà cung cấp vật tư trang trại ")} {selectedFarm?.farmName || ''}
-          </>}><div style={{ display: 'flex', gap: '10px' }}>
+      <PageHeading   title={<>{(lang === 'en' ? "Production Reports & Financial Management" : "Báo cáo sản xuất & Quản trị tài chính")}</>}><div style={{ display: 'flex', gap: '10px' }}>
           <Button type="button" variant="secondary" onClick={() => window.print()}>
             {(lang === 'en' ? "📊 Export PDF / Print" : "📊 Xuất báo cáo PDF / In ấn")}
           </Button>

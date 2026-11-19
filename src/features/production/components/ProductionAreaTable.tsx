@@ -100,7 +100,7 @@ export function ProductionAreaTable({
                     </Link>
                     <Link
                       to={`/production-areas/${area.productionAreaId}/edit`}
-                      className="icon-button"
+                      className={"icon-button" + ' ' + 'ui-edit-action'}
                       aria-label={(lang === 'en' ? `Edit ${area.areaName}` : `Sửa ${area.areaName}`)}
                       title={(lang === 'en' ? "Edit" : "Chỉnh sửa")}
                     >

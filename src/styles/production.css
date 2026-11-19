@@ -404,6 +404,24 @@
   gap: 16px;
 }
 
+.harvest-season-filters .filter-group {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.harvest-season-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.harvest-season-filters select {
+  width: 100%;
+  min-width: 0;
+}
+
 .production-filter-panel .form-field {
   margin-bottom: 0;
   flex: 1 1 220px;
@@ -750,7 +768,7 @@
 
 .worker-profile-table {
   width: 100%;
-  min-width: 960px;
+  min-width: 800px;
   table-layout: fixed;
 }
 
@@ -788,6 +806,7 @@
 .worker-profile-table .table-action-btns {
   justify-content: center;
   gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .worker-profile-person {
@@ -817,6 +836,12 @@
   color: var(--color-muted);
   font-size: 12.5px;
   line-height: 1.5;
+}
+.worker-profile-notes-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .staff-initials-avatar {
@@ -871,6 +896,43 @@
   gap: 24px;
   width: 100%;
   min-width: 0;
+}
+
+.ui-button.assignment-unassign-action {
+  min-height: 32px;
+  padding: 5px 10px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: color-mix(in srgb, var(--color-danger) 20%, var(--color-surface));
+  box-shadow: none;
+}
+.ui-button.assignment-unassign-action:hover:not(:disabled) {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-surface));
+  box-shadow: none;
+}
+
+.zone-overview-content {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.zone-overview-panel { padding: 24px; min-width: 0; }
+.zone-overview-panel > h2 { margin: 0 0 20px; font-size: 20px; line-height: 1.4; }
+.detail-list.zone-overview-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+.zone-assigned-staff-table th:first-child { width: 40%; }
+.zone-assigned-person { display: flex; align-items: center; gap: 10px; }
+.zone-assigned-person .staff-initials-avatar { flex-shrink: 0; }
+@media (max-width: 640px) {
+  .zone-overview-panel { padding: 16px; }
+  .detail-list.zone-overview-facts { grid-template-columns: minmax(0, 1fr); }
 }
 
 .zone-overview-grid {

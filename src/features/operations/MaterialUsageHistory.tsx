@@ -1,10 +1,9 @@
 import { Icon } from '../../shared/components/Icon';
-import { formatDateTime as uiFormatDateTime } from '../../shared/format/formatters';
 import { formatDate as uiFormatDate, formatNumber as uiFormatNumber } from '../../shared/format/formatters';
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import type { MaterialUsage } from './MaterialUsagePage';
-import { materialTypeLabel, materialUnitLabel } from './materialUsageLabels';
+import { materialUnitLabel } from './materialUsageLabels';
 
 export function isOrganicMaterial(type?: string) {
   const name = type?.toLowerCase() ?? '';
@@ -20,37 +19,26 @@ export function MaterialUsageHistory({ usages, busy, deletingId, onOpen, onDelet
 }) {
   const { lang } = useLanguage();
   return <>
-    <p className="mu-scroll-hint"><Icon name="arrow" /> {(lang === 'en' ? " Scroll horizontally to view all information and actions." : " Cuộn ngang để xem đầy đủ thông tin và thao tác.")}</p>
     <div className="mu-table-scroll ui-table-scroll" role="region" aria-label={(lang === 'en' ? "Material usage history table, scrollable horizontally" : "Bảng lịch sử sử dụng vật tư, có thể cuộn ngang")} tabIndex={0}>
       <table className="ui-data-table mu-table">
         <thead><tr>
           <th scope="col">{lang === 'en' ? 'Material' : 'Vật tư'}</th><th scope="col">{lang === 'en' ? 'Date Used' : 'Ngày sử dụng'}</th>
-          <th scope="col">{lang === 'en' ? 'Quantity' : 'Số lượng'}</th><th scope="col">{lang === 'en' ? 'Dosage / Method' : 'Liều lượng / Phương pháp'}</th>
-          <th scope="col">{lang === 'en' ? 'Safety Interval (PHI)' : 'Cách ly (PHI)'}</th><th scope="col">{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}</th><th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+          <th scope="col">{lang === 'en' ? 'Quantity' : 'Số lượng'}</th>
+          <th scope="col">{lang === 'en' ? 'Safety Interval (PHI)' : 'Cách ly (PHI)'}</th><th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
         </tr></thead>
         <tbody>{usages.map(usage => <tr key={usage.materialUsageId}>
           <td className="mu-material-cell">
-            <span className="mu-record-id">#{usage.materialUsageId}</span>
             <strong>{usage.materialName}</strong>
-            <span className={`mu-badge ${isOrganicMaterial(usage.materialType) ? 'mu-badge-green' : 'mu-badge-neutral'}`}>
-              {isOrganicMaterial(usage.materialType) && <Icon name="leaf" size={13} />}
-              {usage.materialType ? materialTypeLabel(usage.materialType, lang) : (lang === 'en' ? 'Input Material' : 'Vật tư đầu vào')}
-            </span>
-            {usage.activityName && <span className="mu-secondary">{usage.activityName}</span>}
-            {usage.notes && <span className="mu-record-note" title={usage.notes}>{usage.notes}</span>}
           </td>
           <td className="mu-nowrap"><time dateTime={usage.usedAt}>{uiFormatDate(usage.usedAt, lang)}</time>
-            <span className="mu-secondary">{uiFormatDateTime(usage.usedAt, lang, { hour: '2-digit', minute: '2-digit' })}</span>
           </td>
           <td className="mu-quantity">{uiFormatNumber(usage.quantity, lang)} <span>{materialUnitLabel(usage.unit, lang)}</span></td>
-          <td className="mu-application"><strong>{usage.dosage || (lang === 'en' ? 'No dosage' : 'Chưa có dữ liệu')}</strong><span className="mu-secondary">{usage.method || (lang === 'en' ? 'No method' : 'Chưa có phương pháp')}</span></td>
           <td>{usage.safetyIntervalDays == null ? <span className="mu-secondary">{(lang === 'en' ? "No data yet" : "Chưa có dữ liệu")}</span> : usage.safetyIntervalDays > 0 ?
             <span className="mu-badge mu-badge-amber"><Icon name="warning" size={14} />{usage.safetyIntervalDays} {(lang === 'en' ? " PHI days" : " ngày PHI")}</span> :
             <span className="mu-badge mu-badge-green"><Icon name="check-circle" size={14} />{(lang === 'en' ? "Safe (0 days)" : "An toàn (0 ngày)")}</span>}
           </td>
-          <td className="mu-recorder">{usage.recorderFullName || (lang === 'en' ? 'Farm Staff' : 'Thành viên nông trại')}</td>
-          <td className="mu-actions-cell" style={{ textAlign: 'right' }}>
-            <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
+          <td className="mu-actions-cell" style={{ textAlign: 'center' }}>
+            <div className="table-action-btns" style={{ justifyContent: 'center' }}>
               <button
                 type="button"
                 className="table-icon-btn primary"

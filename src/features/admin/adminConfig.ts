@@ -326,7 +326,6 @@ export const adminConfigs: Record<Collection, CollectionConfig> = {
     details: [
       { key: 'actor', label: 'Người thực hiện' },
       { key: 'resource', label: 'Đối tượng' },
-      { key: 'resourceId', label: 'Mã bản ghi' },
       { key: 'description', label: 'Nội dung thay đổi' },
     ],
   },

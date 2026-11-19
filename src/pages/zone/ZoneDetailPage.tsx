@@ -1,3 +1,5 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
+import { useDetailRequest } from '../../shared/hooks/useDetailRequest';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { TabList, tabPanelProps } from '../../shared/components/TabList';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -56,12 +58,14 @@ export function ZoneDetailPage() {
   const zoneId = parseInt(rawId.replace(/^(pa|zn)-/, ''), 10) || 1;
 
   const { selectedFarm } = useFarmWorkspace();
+  const detailLoader = useDetailRequest(selectedFarm?.id);
   const farmId = selectedFarm?.id || 1;
-  const farmName = selectedFarm?.farmName || `Farm #${farmId}`;
+  const farmName = selectedFarm?.farmName || `Farm`;
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : true;
 
   // 3 Tabs: Overview | Blocks | Risk Records
-  const [activeTab, setActiveTab] = useState<'overview' | 'blocks' | 'risks'>('blocks');
+  const [activeTab, setActiveTab] = useState<'overview' | 'blocks' | 'risks'>('overview');
+  useEffect(() => { setActiveTab('overview'); }, [zoneId, farmId]);
 
   // Data states
   const [zone, setZone] = useState<Zone | null>(null);
@@ -187,6 +191,14 @@ export function ZoneDetailPage() {
 
   const handleConfirmDeleteZone = async () => {
     if (!zone) return;
+
+    if (blocks.length > 0) {
+      showToast(lang === 'en'
+        ? `Cannot delete this zone because it still has ${blocks.length} blocks. Delete the blocks first.`
+        : `Không thể xóa khu vực vì còn ${blocks.length} lô trồng. Vui lòng xóa các lô trồng trước.`, 'error');
+      setIsDeleteZoneOpen(false);
+      return;
+    }
     try {
       await deleteZone(zone.zoneId);
       navigate('/zones');
@@ -203,7 +215,7 @@ export function ZoneDetailPage() {
       setBlocks((prev) => prev.filter((b) => b.blockId !== blockToDelete.blockId));
       showToast((message("Deleted Block \"{value1}\" successfully!", { value1: blockToDelete.blockName })));
     } catch (err) {
-      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete Block." : err instanceof Error ? err.message : 'Không thể xóa lô sản xuất.'), 'error');
+      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete Block." : err instanceof Error ? err.message : 'Không thể xóa lô trồng.'), 'error');
     } finally {
       setBlockToDelete(null);
     }
@@ -246,8 +258,7 @@ export function ZoneDetailPage() {
   const openEditRiskModal = async (record: RiskAssessmentRecord, mode: 'edit' | 'view') => {
     setSelectedRisk(record);
     if (mode === 'view') {
-      try {
-        const details = await fetchZoneRiskDetailsApi(record.riskId);
+      await detailLoader.load(() => fetchZoneRiskDetailsApi(record.riskId), (details) => {
         setRiskForm({
           assessedAt: details.assessedAt ? details.assessedAt.split('T')[0] : record.assessedAt,
           riskType: details.riskType || record.riskType,
@@ -259,10 +270,8 @@ export function ZoneDetailPage() {
           status: record.status,
         });
         setRiskModalMode('view');
-        return;
-      } catch {
-        // fallback
-      }
+      });
+      return;
     }
     setRiskForm({
       assessedAt: record.assessedAt,
@@ -380,15 +389,15 @@ export function ZoneDetailPage() {
   if (error || !zone) {
     return (
       <section className="farm-registration-page" style={{ maxWidth: '1240px' }}>
-        <EmptyState role="alert" className="panel" title={<>{(lang === 'en' ? "Zone not found" : "Không tìm thấy thông tin khu vực")}</>} description={<>{(lang === 'en' ? error || `Zone #${zoneId} does not exist or has been deleted.` : error || `Zone #${zoneId} không tồn tại hoặc đã bị xóa.`)}</>} icon={<>⚠️</>} action={<><Link to="/zones" className="ui-button ui-button--primary">{translate("Back to Zones")}</Link></>} />
+        <EmptyState role="alert" className="panel" title={<>{(lang === 'en' ? "Zone not found" : "Không tìm thấy thông tin khu vực")}</>} description={<>{(lang === 'en' ? error || `Zone does not exist or has been deleted.` : error || `Zone không tồn tại hoặc đã bị xóa.`)}</>} icon={<>⚠️</>} action={<><Link to="/zones" className="ui-button ui-button--primary ui-back-action">{translate("Back to Zones")}</Link></>} />
       </section>
     );
   }
 
-  const canDeleteZone = isOwner && blocks.length === 0;
 
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1240px' }}>
+      {detailLoader.feedback}
       {/* Breadcrumb Bar */}
       <div className="production-breadcrumb">
         <Link to="/zones">{lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất'}</Link>
@@ -397,14 +406,11 @@ export function ZoneDetailPage() {
       </div>
 
       {/* Page Heading matching FarmRegistrationPage */}
-      <PageHeading   title={<>{zone.zoneName}</>} description={<>
-            {zone.description || (lang === 'en' ? 'Agricultural production management zone under VietGAP standards.' : 'Khu vực quản lý sản xuất nông nghiệp theo tiêu chuẩn VietGAP.')}
-          </>} leading={<><span className="eyebrow">
-            {zone.areaCode || `ZN-${String(zone.zoneId).padStart(3, '0')}`} {(lang === 'en' ? " · Farm: " : " · Trang trại: ")} {farmName}
-          </span></>}></PageHeading>
+      <PageHeading title={zone.zoneName} />
 
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
@@ -419,15 +425,13 @@ export function ZoneDetailPage() {
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Summary Panel matching FarmRegistrationStatus */}
       <div className="panel" style={{ marginBottom: '24px' }}>
         <div className="panel-title" style={{ marginBottom: '18px' }}>
           <div>
             <span className="eyebrow">{(lang === 'en' ? "Management zone record" : "Hồ sơ khu vực quản lý")}</span>
-            <h2 style={{ margin: '4px 0 0' }}>{zone.zoneName}</h2>
           </div>
           <span className="profile-role-pill">
             {blocks.length}{' '}{translate("blocks ·")}{' '}{displayNumber(zone.areaValue, lang)} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
@@ -436,9 +440,9 @@ export function ZoneDetailPage() {
 
         <dl className="detail-list" style={{ marginBottom: 0 }}>
           <div>
-            <dt>{(lang === 'en' ? "Zone Name & Code" : "Tên và mã khu vực")}</dt>
+            <dt>{(lang === 'en' ? "Zone Name" : "Tên khu vực")}</dt>
             <dd>
-              {zone.zoneName} ({zone.areaCode || `ZN-${String(zone.zoneId).padStart(3, '0')}`})
+              {zone.zoneName}
             </dd>
           </div>
           <div>
@@ -453,13 +457,13 @@ export function ZoneDetailPage() {
           </div>
           <div>
             <dt>{translate("Total Blocks")}</dt>
-            <dd>{blocks.length} {(lang === 'en' ? " production blocks" : " lô sản xuất")}</dd>
+            <dd>{blocks.length} {(lang === 'en' ? " production blocks" : " lô trồng")}</dd>
           </div>
           <div>
             <dt>{(lang === 'en' ? "Assigned staff" : "Nhân sự phụ trách")}</dt>
             <dd>
               {activeAssignments.length > 0
-                ? activeAssignments.map((a) => a.staffName || (lang === 'en' ? `Staff #${a.farmMemberId}` : `Nhân viên #${a.farmMemberId}`)).join(', ')
+                ? activeAssignments.map((a) => a.staffName || (lang === 'en' ? `Staff` : `Nhân viên`)).join(', ')
                 : (lang === 'en' ? "Unassigned" : 'Chưa phân công')}
             </dd>
           </div>
@@ -470,28 +474,18 @@ export function ZoneDetailPage() {
         </dl>
       </div>
 
-      <div className="dashboard-actions" style={{ justifyContent: 'flex-start', marginBottom: '16px' }}>
-          <Link to="/zones" className="ui-button ui-button--secondary">
-            {lang === 'en' ? '← Back to Zones' : '← Quay lại danh sách'}
+      <div className="dashboard-actions" style={{ justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <Link to="/zones" className="ui-button ui-button--secondary ui-back-action">
+            {lang === 'en' ? 'Back to Zones' : 'Quay lại danh sách'}
           </Link>
           {isOwner && (
             <>
-              <Button type="button" variant="secondary" onClick={() => setIsEditZoneOpen(true)}>{translate("Edit Zone")}</Button>
-              <Button type="button" variant="secondary" onClick={() => setIsAssignStaffOpen(true)}>{translate("Assign Staff")}</Button>
+              <Button className={'ui-edit-action'} type="button" variant="secondary" onClick={() => setIsEditZoneOpen(true)}>{translate("Edit Zone")}</Button>
+              <Button className="ui-assign-action" type="button" variant="secondary" onClick={() => setIsAssignStaffOpen(true)}><Icon name="users" size={16} />{translate("Assign Staff")}</Button>
               <Button
                 type="button"
-                variant={canDeleteZone ? 'danger' : 'secondary'}
-                style={{ opacity: canDeleteZone ? 1 : 0.55 }}
-                onClick={() => {
-                  if (!canDeleteZone) {
-                    showToast(
-                      (lang === 'en' ? `Cannot delete zone "${zone.zoneName}" while it has ${blocks.length} child blocks.` : `Không thể xóa khu vực "${zone.zoneName}" khi đang có ${blocks.length} blocks trực thuộc.`),
-                      'error'
-                    );
-                    return;
-                  }
-                  setIsDeleteZoneOpen(true);
-                }}
+                variant="danger"
+              onClick={() => setIsDeleteZoneOpen(true)}
               >{translate("Delete Zone")}</Button>
             </>
           )}
@@ -501,32 +495,21 @@ export function ZoneDetailPage() {
       <TabList idPrefix="zone-detail" label={lang === 'en' ? 'Zone details' : 'Chi tiết khu vực'}
             value={activeTab} onChange={setActiveTab} items={[
               { value: 'overview', label: <><Icon name="home" size={16} /> {(lang === 'en' ? " Overview" : " Tổng quan")}</> },
-              { value: 'blocks', label: <><Icon name="leaf" size={16} /> {(lang === 'en' ? " Production blocks (" : " Lô sản xuất (")}{blocks.length})</> },
-              { value: 'risks', label: <><Icon name="warning" size={16} /> {(lang === 'en' ? " Risk assessments (" : " Đánh giá rủi ro (")}{riskRecords.length})</> },
+              { value: 'blocks', label: <><Icon name="leaf" size={16} /> {(lang === 'en' ? " Production blocks" : " Lô trồng")}</> },
+              { value: 'risks', label: <><Icon name="warning" size={16} /> {(lang === 'en' ? " Risk assessments" : " Đánh giá rủi ro")}</> },
             ]} />
 
       {/* =========================================================
           TAB 1: OVERVIEW
          ========================================================= */}
       {activeTab === 'overview' && (
-        <div {...tabPanelProps('zone-detail', 'overview')} className="zone-overview-grid">
+        <div {...tabPanelProps('zone-detail', 'overview')} className="zone-overview-content">
           {/* Zone Information Panel */}
-          <div className="panel" style={{ padding: '28px' }}>
-            <div className="panel-title" style={{ marginBottom: '18px' }}>
-              <div>
-                <span className="eyebrow">{translate("Zone Information")}</span>
-                <h2 style={{ margin: '4px 0 0' }}>{translate("Overview:")}{' '}{zone.zoneName}</h2>
-              </div>
-              {isOwner && (
-                <Button type="button" variant="secondary" onClick={() => setIsEditZoneOpen(true)}>{translate("Edit Zone")}</Button>
-              )}
-            </div>
+          <div className="panel zone-overview-panel">
+            <h2>{translate('Zone Information')}</h2>
 
-            <dl className="detail-list" style={{ marginBottom: 0 }}>
-              <div>
-                <dt>{translate("Identifier")}</dt>
-                <dd>#{zone.zoneId}</dd>
-              </div>
+            <dl className="detail-list zone-overview-facts">
+              
               <div>
                 <dt>{translate("Zone Code")}</dt>
                 <dd>{zone.areaCode || `ZN-${String(zone.zoneId).padStart(3, '0')}`}</dd>
@@ -549,60 +532,42 @@ export function ZoneDetailPage() {
           </div>
 
           {/* Assigned Staff Panel */}
-          <div className="panel" style={{ padding: '28px' }}>
-            <div className="panel-title" style={{ marginBottom: '18px' }}>
-              <div>
-                <span className="eyebrow">{translate("Assigned Team")}</span>
-                <h2 style={{ margin: '4px 0 0' }}>{translate("Assigned Staff (")}{activeAssignments.length})</h2>
-              </div>
-              {isOwner && (
-                <Button type="button" variant="primary" onClick={() => setIsAssignStaffOpen(true)}>{translate("Assign Staff")}</Button>
-              )}
-            </div>
+          <div className="panel zone-overview-panel">
+            <h2>{lang === 'en' ? 'Assigned Staff' : 'Nhân sự được phân công'}</h2>
 
             {activeAssignments.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--color-muted)' }}>
-                <p>{translate("No staff members currently assigned to this zone.")}</p>
-                {isOwner && (
-                  <Button type="button" variant="secondary" onClick={() => setIsAssignStaffOpen(true)}>{translate("+ Assign Staff")}</Button>
-                )}
-              </div>
+              <p style={{ color: 'var(--color-muted)', margin: 0 }}>{translate('No staff members currently assigned to this zone.')}</p>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {activeAssignments.map((asgn) => (
-                  <div
-                    key={asgn.assignmentId}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: '14px 18px',
-                      borderRadius: '14px',
-                      background: 'var(--color-page)',
-                      border: '1px solid var(--color-border)',
-                    }}
-                  >
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '15px', color: 'var(--color-text)' }}>
-                        👤 {(lang === 'en' ? asgn.staffName || `Staff #${asgn.farmMemberId}` : asgn.staffName || `Nhân viên #${asgn.farmMemberId}`)}
-                      </strong>
-                      <span style={{ fontSize: '13px', color: 'var(--color-muted)' }}>
-                        {(lang === 'en' ? asgn.jobTitle || "Technical staff" : asgn.jobTitle || 'Nhân viên kỹ thuật')} {(lang === 'en' ? " · Assigned date:" : " · Ngày phân công:")}{' '}
-                        {displayDate(asgn.assignedAt, lang)}
-                      </span>
-                    </div>
-                    {isOwner && (
-                      <Button
-                        type="button"
-                        variant="danger"
-
-                        onClick={() => setAssignmentToCancel(asgn)}
-                      >
-                        {(lang === 'en' ? "Cancel assignment" : "Hủy phân công")}
-                      </Button>
-                    )}
-                  </div>
-                ))}
+              <div className="zone-table-wrap ui-table-scroll" tabIndex={0}>
+                <table className="ui-data-table zone-assigned-staff-table">
+                  <thead><tr>
+                    <th scope="col">{lang === 'en' ? 'Staff member' : 'Nhân sự'}</th>
+                    <th scope="col">{lang === 'en' ? 'Role' : 'Vai trò'}</th>
+                    <th scope="col">{lang === 'en' ? 'Assigned date' : 'Ngày phân công'}</th>
+                    {isOwner && <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>}
+                  </tr></thead>
+                  <tbody>{activeAssignments.map(asgn => {
+                    const name = asgn.staffName?.replace(/\s*\([^)]*\)\s*$/, '').trim() || (lang === 'en' ? 'Staff' : 'Nhân viên');
+                    const words = name.split(/\s+/);
+                    const initials = (words[0][0] + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase();
+                    const roles: Record<string, string> = {
+                      owner: lang === 'en' ? 'Farm owner' : 'Chủ trang trại',
+                      manager: lang === 'en' ? 'Manager' : 'Quản lý',
+                      member: lang === 'en' ? 'Member' : 'Thành viên',
+                    };
+                    const role = asgn.jobTitle?.trim() || '';
+                    return <tr key={asgn.assignmentId}>
+                      <td><div className="zone-assigned-person"><span className="staff-initials-avatar" aria-hidden="true">{initials}</span><strong>{name}</strong></div></td>
+                      <td><span className="knowledge-tag" style={role.toLowerCase() === 'owner' ? undefined : { background: 'var(--color-page)', color: 'var(--color-body)' }}>{roles[role.toLowerCase()] || role || '—'}</span></td>
+                      <td>{displayDate(asgn.assignedAt?.slice(0, 10), lang)}</td>
+                      {isOwner && <td style={{ textAlign: 'right' }}><div className="table-action-btns" style={{ justifyContent: 'flex-end' }}>
+                        <button type="button" className="table-icon-btn danger" onClick={() => setAssignmentToCancel(asgn)}
+                          title={lang === 'en' ? 'Cancel assignment' : 'Hủy phân công'}
+                          aria-label={lang === 'en' ? `Cancel assignment for ${name}` : `Hủy phân công cho ${name}`}><Icon name="close" size={16} /></button>
+                      </div></td>}
+                    </tr>;
+                  })}</tbody>
+                </table>
               </div>
             )}
           </div>
@@ -614,68 +579,11 @@ export function ZoneDetailPage() {
          ========================================================= */}
       {activeTab === 'blocks' && (
         <div {...tabPanelProps('zone-detail', 'blocks')}>
-          <div className="production-filter-panel">
-            <label className="form-field" style={{ flex: '1.5 1 280px' }}>
-              <span>
-                {(lang === 'en' ? " Search Blocks in " : " Tìm lô sản xuất trong ")} {zone.zoneName}
-                <small style={{ color: 'var(--color-primary-text)', fontWeight: 700 }}>{(lang === 'en' ? "Fixed zone" : "Cố định khu vực")}</small>
-              </span>
-              <input className="ui-input"
-                id="zone-blocks-search"
-                type="search"
-                placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã blocks (VD: Lô B01, BLK-001)...'}
-                value={blockSearch}
-                onChange={(e) => setBlockSearch(e.target.value)}
-              />
-            </label>
-
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setBlockSearch('')}
-
-            >
-              {lang === 'en' ? 'Reset Filters' : 'Đặt lại bộ lọc'}
-            </Button>
-
-            {isOwner && (
-              <Button
-                type="button"
-                variant="primary"
-
-                onClick={() => {
-                  setBlockToEdit(null);
-                  setIsBlockModalOpen(true);
-                }}
-              >
-                <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm lô sản xuất'}
-              </Button>
-            )}
-          </div>
-
-          {filteredBlocks.length === 0 ? (
-            <EmptyState  className="panel" title={<>{translate("No blocks created yet")}</>} description={<>
-                {isOwner
-                  ? (lang === 'en' ? `Click "Add Block" to add a production block to ${zone.zoneName}.` : `Nhấn "Thêm lô sản xuất" để thêm lô sản xuất vào ${zone.zoneName}.`)
-                  : (lang === 'en' ? "No blocks match the search keyword." : 'Không tìm thấy blocks nào khớp với từ khóa tìm kiếm.')}
-              </>} icon={<>🌿</>} action={<><span className="sr-only">{(lang === 'en' ? "This Zone has no Blocks" : "Khu vực chưa có lô sản xuất nào")}</span>{isOwner && (
-                <Button
-                    type="button"
-                    variant="primary"
-                    onClick={() => {
-                      setBlockToEdit(null);
-                      setIsBlockModalOpen(true);
-                    }}
-                  >
-                  <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm lô sản xuất'}
-                </Button>
-              )}</>} />
-          ) : (
-            <div className="panel" style={{ padding: '24px' }}>
+          <div className="panel" style={{ padding: '24px' }}>
               <div className="panel-title" style={{ marginBottom: '18px' }}>
                 <div>
-                  <span className="eyebrow">{(lang === 'en' ? "Production blocks in " : "Danh sách lô sản xuất thuộc ")} {zone.zoneName}</span>
-                  <h2 style={{ margin: '4px 0 0' }}>{translate("Blocks (")}{filteredBlocks.length})</h2>
+                  <span className="eyebrow">{(lang === 'en' ? "Production blocks in " : "Danh sách lô trồng thuộc ")} {zone.zoneName}</span>
+                  <h2 style={{ margin: '4px 0 0' }}>{lang === 'en' ? 'Blocks' : 'Lô trồng'}</h2>
                 </div>
                 {isOwner && (
                   <Button
@@ -686,11 +594,43 @@ export function ZoneDetailPage() {
                       setIsBlockModalOpen(true);
                     }}
                   >
-                    <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm lô sản xuất'}
+                    <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm lô trồng'}
                   </Button>
                 )}
               </div>
 
+              <div className="zone-clean-filter-bar" style={{ padding: '0 0 16px', borderBottom: 'none' }}>
+                <div className="zone-clean-search">
+                  <span className="search-icon" aria-hidden="true"><Icon name="search" size={17} /></span>
+                  <input className="ui-input" id="zone-blocks-search" type="search"
+                    aria-label={lang === 'en' ? 'Search by block name or code' : 'Tìm theo tên hoặc mã lô trồng'}
+                    placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã lô trồng...'}
+                    value={blockSearch} onChange={event => setBlockSearch(event.target.value)} />
+                </div>
+                <button type="button" className="zone-clean-reload-btn"
+                  title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+                  aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+                  onClick={() => setBlockSearch('')}><Icon name="refresh" size={16} /></button>
+              </div>
+            {filteredBlocks.length === 0 ? (
+
+            <EmptyState  className="panel" title={<>{translate("No blocks created yet")}</>} description={<>
+                {isOwner
+                  ? (lang === 'en' ? `Click "Add Block" to add a production block to ${zone.zoneName}.` : `Nhấn "Thêm lô trồng" để thêm lô trồng vào ${zone.zoneName}.`)
+                  : (lang === 'en' ? "No blocks match the search keyword." : 'Không tìm thấy blocks nào khớp với từ khóa tìm kiếm.')}
+              </>} icon={<>🌿</>} action={<><span className="sr-only">{(lang === 'en' ? "This Zone has no Blocks" : "Khu vực chưa có lô trồng nào")}</span>{isOwner && (
+                <Button
+                    type="button"
+                    variant="primary"
+                    onClick={() => {
+                      setBlockToEdit(null);
+                      setIsBlockModalOpen(true);
+                    }}
+                  >
+                  <Icon name="plus" /> {lang === 'en' ? 'Add Block' : 'Thêm lô trồng'}
+                </Button>
+              )}</>} />
+                      ) : (
               <div className="zone-table-wrap ui-table-scroll" style={{ marginBottom: 0 }} tabIndex={0}>
                 <table className="ui-data-table zone-blocks-table">
                   <colgroup>
@@ -704,7 +644,7 @@ export function ZoneDetailPage() {
                     <tr>
                       <th scope="col">{lang === 'en' ? 'Block Name' : 'Tên lô đất'}</th>
                       <th scope="col">{lang === 'en' ? 'Zone' : 'Khu vực'}</th>
-                      <th scope="col">{lang === 'en' ? 'Description & Soil Type' : 'Mô tả & Loại đất'}</th>
+                      <th scope="col">{lang === 'en' ? 'Soil Type' : 'Loại đất'}</th>
                       <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Area' : 'Diện tích'}</th>
                       <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                     </tr>
@@ -714,9 +654,6 @@ export function ZoneDetailPage() {
                       <tr key={b.blockId}>
                         <td>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            <span className="module-code" style={{ alignSelf: 'flex-start' }}>
-                              BLK-{String(b.blockId).padStart(3, '0')}
-                            </span>
                             {/* Quick-preview trigger keeping aria-label="Xem chi tiết ${b.blockName}" for tests/block-detail.test.mjs */}
                             <button
                               type="button"
@@ -740,15 +677,11 @@ export function ZoneDetailPage() {
                         </td>
 
                         <td>
-                          <span className="knowledge-tag">🗺️ {zone.zoneName}</span>
+                          <span className="knowledge-tag">{zone.zoneName}</span>
                         </td>
 
                         <td className="zone-blocks-description">
-                          <div>{(lang === 'en' ? b.description || "Agricultural production block within the zone." : b.description || 'Lô sản xuất nông nghiệp trong khu vực.')}</div>
-                          {b.soilType && (
-                            <small style={{ color: 'var(--color-primary-text)', fontWeight: 700, display: 'block', marginTop: '4px' }}>{translate("Soil Type:")}{' '}{b.soilType}
-                            </small>
-                          )}
+                          {b.soilType || '—'}
                         </td>
 
                         <td className="zone-blocks-area" style={{ textAlign: 'center' }}>
@@ -809,8 +742,8 @@ export function ZoneDetailPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 
@@ -822,7 +755,7 @@ export function ZoneDetailPage() {
           <div className="panel-title" style={{ marginBottom: '18px' }}>
             <div>
               <span className="eyebrow">{(lang === 'en' ? "Production area risk assessment" : "Đánh giá rủi ro vùng sản xuất")}</span>
-              <h2 style={{ margin: '4px 0 0' }}>{(lang === 'en' ? "Zone risk records (" : "Hồ sơ rủi ro khu vực (")}{riskRecords.length})</h2>
+              <h2 style={{ margin: '4px 0 0' }}>{(lang === 'en' ? "Zone risk records" : "Hồ sơ rủi ro khu vực")}</h2>
               <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: 'var(--color-muted)' }}>
                 {(lang === 'en' ? "Production area risks and control measures are linked directly to " : "Rủi ro vùng sản xuất và biện pháp kiểm soát gắn trực tiếp với ")} {zone.zoneName}
               </p>
@@ -837,9 +770,8 @@ export function ZoneDetailPage() {
               <thead>
                 <tr>
                   <th scope="col">{lang === 'en' ? 'Assessment Date' : 'Ngày đánh giá'}</th>
-                  <th scope="col">{lang === 'en' ? 'Risk Type & Description' : 'Loại rủi ro & Mô tả'}</th>
+                  <th scope="col">{lang === 'en' ? 'Risk Type' : 'Loại rủi ro'}</th>
                   <th scope="col" style={{ textAlign: 'center' }}>{lang === 'en' ? 'Risk Level' : 'Mức độ rủi ro'}</th>
-                  <th scope="col">{lang === 'en' ? 'Mitigation Measures' : 'Biện pháp kiểm soát'}</th>
                   <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
                 </tr>
               </thead>
@@ -848,14 +780,10 @@ export function ZoneDetailPage() {
                   <tr key={r.riskId}>
                     <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{r.assessedAt}</td>
                     <td style={{ maxWidth: '280px' }}>
-                      <strong style={{ color: 'var(--color-text)', display: 'block', marginBottom: '4px' }}>{r.riskType}</strong>
-                      <span style={{ fontSize: '13.5px', color: 'var(--color-body)' }}>{r.description}</span>
+                      <strong style={{ color: 'var(--color-text)', display: 'block' }}>{r.riskType}</strong>
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <span className="knowledge-tag">{translate(r.riskLevel)}</span>
-                    </td>
-                    <td style={{ maxWidth: '320px', fontSize: '13.5px', color: 'var(--color-text)', lineHeight: 1.5 }}>
-                      {r.controlMeasures}
                     </td>
                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div className="table-action-btns zone-card-actions" style={{ justifyContent: 'flex-end' }}>
@@ -872,12 +800,12 @@ export function ZoneDetailPage() {
                         <button
                           type="button"
                           className="table-icon-btn edit"
-                          title={(lang === 'en' ? "Update measures" : "Cập nhật biện pháp")}
-                          aria-label={(lang === 'en' ? `Update measures ${r.riskType}` : `Cập nhật biện pháp ${r.riskType}`)}
+                          title={lang === 'en' ? 'Update risk assessment' : 'Cập nhật đánh giá rủi ro'}
+                          aria-label={lang === 'en' ? `Update risk assessment ${r.riskType}` : `Cập nhật đánh giá rủi ro ${r.riskType}`}
                           onClick={() => openEditRiskModal(r, 'edit')}
                         >
                           <Icon name="edit" size={16} />
-                          <span className="sr-only">{(lang === 'en' ? "Update measures" : "Cập nhật biện pháp")}</span>
+                          <span className="sr-only">{lang === 'en' ? 'Update risk assessment' : 'Cập nhật đánh giá rủi ro'}</span>
                         </button>
                         <button
                           type="button"
@@ -907,16 +835,15 @@ export function ZoneDetailPage() {
       )}
 
       {riskModalMode && (
-        <Modal open customLayout onClose={() => setRiskModalMode(null)} style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
+        <Modal structured open customLayout className="risk-assessment-modal" onClose={() => setRiskModalMode(null)} style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
             <div className="modal-header">
               <div>
-                <span className="eyebrow">{(lang === 'en' ? "Risk assessment · " : "Đánh giá rủi ro · ")} {zone.zoneName}</span>
                 <h2>
                   {riskModalMode === 'create'
                     ? (lang === 'en' ? 'Add Risk Record' : 'Thêm ghi nhận rủi ro')
                     : riskModalMode === 'edit'
-                    ? (lang === 'en' ? "Update control measures" : 'Cập nhật biện pháp kiểm soát')
-                    : (lang === 'en' ? "Risk record details" : 'Chi tiết hồ sơ rủi ro')}
+                    ? (lang === 'en' ? 'Update risk assessment' : 'Cập nhật đánh giá rủi ro')
+                    : (lang === 'en' ? 'Risk assessment details' : 'Chi tiết đánh giá rủi ro')}
                 </h2>
               </div>
               <button type="button" className="modal-close" onClick={() => setRiskModalMode(null)}>
@@ -925,14 +852,14 @@ export function ZoneDetailPage() {
             </div>
 
             <form className="modal-body" onSubmit={handleSaveRiskRecord}>
-              <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+              <div className="structured-field-card ui-form-context" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
                 <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
                   <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
                     {(lang === 'en' ? "Applicable zone" : "Khu vực áp dụng")}
                   </span>
                   <span className="structured-field-badge">{(lang === 'en' ? "Fixed" : "Cố định")}</span>
                 </div>
-                <strong style={{ color: 'var(--color-primary-text)' }}>🗺️ {zone.zoneName} · {farmName}</strong>
+                <strong style={{ color: 'var(--color-primary-text)' }}>{zone.zoneName} · {farmName}</strong>
               </div>
 
               <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
@@ -1033,7 +960,7 @@ export function ZoneDetailPage() {
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                <Button type="button" variant="secondary" onClick={() => setRiskModalMode(null)}>
+                <Button className={((riskModalMode === 'view' ? '' : 'ui-cancel-button')) + ' ' + (riskModalMode === 'view' ? 'ui-close-action' : '')} type="button" variant="secondary" onClick={() => setRiskModalMode(null)}>
                   {(lang === 'en' ? riskModalMode === 'view' ? "Close" : "Cancel" : riskModalMode === 'view' ? 'Đóng' : 'Hủy')}
                 </Button>
                 {riskModalMode !== 'view' && (
@@ -1102,7 +1029,7 @@ export function ZoneDetailPage() {
       <ConfirmDialog
         open={Boolean(riskToDelete)}
         title={(lang === 'en' ? "Confirm risk record deletion" : "Xác nhận xóa hồ sơ rủi ro")}
-        description={(lang === 'en' ? `Are you sure you want to delete risk record "${riskToDelete?.riskType}"? This will delete the data from the system.` : `Bạn có chắc chắn muốn xóa hồ sơ rủi ro "${riskToDelete?.riskType}"? Hành động này sẽ xóa dữ liệu trên hệ thống.`)}
+        description={(lang === 'en' ? <>{"Are you sure you want to delete risk record \""}<strong>{riskToDelete?.riskType}</strong>{"\"? This will delete the data from the system."}</> : <>{"Bạn có chắc chắn muốn xóa hồ sơ rủi ro \""}<strong>{riskToDelete?.riskType}</strong>{"\"? Hành động này sẽ xóa dữ liệu trên hệ thống."}</>)}
         confirmLabel="Xóa rủi ro"
         tone="danger"
         onClose={() => setRiskToDelete(null)}
@@ -1112,17 +1039,25 @@ export function ZoneDetailPage() {
       <ConfirmDialog
         open={isDeleteZoneOpen}
         title={translate("Confirm Zone Deletion")}
-        description={`Are you sure you want to delete zone "${zone.zoneName}"?`}
         confirmLabel="Delete Zone"
         tone="danger"
         onClose={() => setIsDeleteZoneOpen(false)}
         onConfirm={handleConfirmDeleteZone}
-      />
+      >
+        <p>
+          {lang === 'en' ? 'Are you sure you want to delete zone ' : 'Bạn có chắc chắn muốn xóa khu vực '}
+          &quot;<strong>{zone.zoneName}</strong>&quot;?
+          <br />
+          {lang === 'en'
+            ? 'Deletion is allowed only for zones without linked blocks.'
+            : 'Hệ thống chỉ cho phép xóa khi khu vực không còn lô trồng trực thuộc.'}
+        </p>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={Boolean(blockToDelete)}
-        title={(lang === 'en' ? "Confirm block deletion" : "Xác nhận xóa lô sản xuất")}
-        description={(lang === 'en' ? `Are you sure you want to delete block "${blockToDelete?.blockName}" from ${zone.zoneName}?` : `Bạn có chắc chắn muốn xóa lô sản xuất "${blockToDelete?.blockName}" khỏi ${zone.zoneName}?`)}
+        title={(lang === 'en' ? "Confirm block deletion" : "Xác nhận xóa lô trồng")}
+        description={(lang === 'en' ? <>{"Are you sure you want to delete block \""}<strong>{blockToDelete?.blockName}</strong>{"\" from "}<strong>{zone.zoneName}</strong>{"?"}</> : <>{"Bạn có chắc chắn muốn xóa lô trồng \""}<strong>{blockToDelete?.blockName}</strong>{"\" khỏi "}<strong>{zone.zoneName}</strong>{"?"}</>)}
         confirmLabel="Delete Block"
         tone="danger"
         onClose={() => setBlockToDelete(null)}
@@ -1132,7 +1067,7 @@ export function ZoneDetailPage() {
       <ConfirmDialog
         open={Boolean(assignmentToCancel)}
         title={(lang === 'en' ? "Revoke staff assignment" : "Thu hồi phân công staff members")}
-        description={(lang === 'en' ? `Revoke assignment for "${assignmentToCancel?.staffName || 'nhân viên'}" at ${zone.zoneName}?` : `Thu hồi phân công của "${assignmentToCancel?.staffName || 'nhân viên'}" tại ${zone.zoneName}?`)}
+        description={(lang === 'en' ? <>{"Revoke assignment for \""}<strong>{assignmentToCancel?.staffName || 'nhân viên'}</strong>{"\" at "}<strong>{zone.zoneName}</strong>{"?"}</> : <>{"Thu hồi phân công của \""}<strong>{assignmentToCancel?.staffName || 'nhân viên'}</strong>{"\" tại "}<strong>{zone.zoneName}</strong>{"?"}</>)}
         confirmLabel="Thu hồi"
         tone="danger"
         onClose={() => setAssignmentToCancel(null)}

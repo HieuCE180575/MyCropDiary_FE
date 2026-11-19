@@ -755,10 +755,12 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
         />
       </div>
 
-      {onCancel && <Button type="button" variant="secondary" disabled={submitting} onClick={onCancel}>{translate("Cancel")}</Button>}
-      <Button type="submit" variant="primary" loading={submitting}>
-        {submitting ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...') : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
-      </Button>
+      <div className="farm-registration-actions" style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 12, width: '100%' }}>
+        {onCancel && <Button className="ui-cancel-button" type="button" variant="secondary" disabled={submitting} onClick={onCancel}>{translate("Cancel")}</Button>}
+        <Button type="submit" variant="primary" loading={submitting}>
+          {submitting ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...') : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
+        </Button>
+      </div>
     </form>
   );
 }

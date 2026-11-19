@@ -175,7 +175,7 @@ export function FilePreviewModal({
             )}
           </div>
 
-          <button type="button" className="primary-button" onClick={onClose}>
+          <button type="button" className={"primary-button" + ' ' + 'ui-close-action'} onClick={onClose}>
             {lang === 'en' ? 'Close' : 'Đóng'}
           </button>
         </div>

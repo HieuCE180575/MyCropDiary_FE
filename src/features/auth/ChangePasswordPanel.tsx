@@ -125,7 +125,7 @@ export function ChangePasswordPanel({
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: embedded ? '6px' : '14px' }}>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: embedded ? '6px' : '14px' }}>
         <PasswordField
           name="currentPassword"
           label="Current Password"
@@ -154,7 +154,6 @@ export function ChangePasswordPanel({
 
         <div style={{ marginTop: '10px', display: 'flex', justifyContent: embedded ? 'flex-end' : 'flex-start', gap: '10px' }}>
           <Button variant="primary" type="submit" disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-            <Icon name="save" />
             {loading ? translate("Saving password...") : translate("Save New Password")}
           </Button>
         </div>
