@@ -1,3 +1,4 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
 import { PageHeading } from '../../shared/components/PageHeading';
 import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
@@ -261,6 +262,13 @@ function MaterialUsageContent() {
     void loadUsages(0, filters);
   };
   const filterUsages = () => applyFilters({ keyword: searchKeyword.trim(), materialType: filterType, fromDate, toDate });
+  useEffect(() => {
+    const filters = { keyword: searchKeyword.trim(), materialType: filterType, fromDate, toDate };
+    if (!farmId || JSON.stringify(filters) === JSON.stringify(appliedFilters)) return;
+    const timer = window.setTimeout(() => applyFilters(filters), filters.keyword !== appliedFilters.keyword ? 300 : 0);
+    return () => window.clearTimeout(timer);
+  }, [farmId, searchKeyword, filterType, fromDate, toDate, appliedFilters]);
+
 
   const handleSelectMaterial = (id: number | '') => {
     setSelectedMaterialId(id);
@@ -423,7 +431,6 @@ function MaterialUsageContent() {
   };
 
   const hasAppliedFilters = Boolean(appliedFilters.keyword || appliedFilters.materialType !== 'ALL' || appliedFilters.fromDate || appliedFilters.toDate);
-  const hasDraftFilters = Boolean(searchKeyword || filterType !== 'ALL' || fromDate || toDate);
   const busy = saving || detailLoading || deletingId !== null;
   const resetFilters = () => {
     setSearchKeyword(''); setFilterType('ALL'); setFromDate(''); setToDate('');
@@ -446,18 +453,22 @@ function MaterialUsageContent() {
 
   return (
     <section className="material-usage-page">
-      <PageHeading   title={<>{lang === 'en' ? 'Agricultural Input & Material Usage History' : 'Quản lý & Lịch sử sử dụng vật tư nông nghiệp'}</>} description={<>{lang === 'en' ? 'Monitor fertilizers, bio-pesticides and pre-harvest safety intervals (PHI) in compliance with VietGAP standards' : 'Giám sát lượng phân bón, thuốc BVTV sinh học và thời gian cách ly an toàn (PHI) theo tiêu chuẩn VietGAP'}</>}><div className="mu-heading-actions">
+      <PageHeading className="material-usage-heading" title={<>{lang === 'en' ? 'Agricultural Input & Material Usage History' : 'Quản lý & Lịch sử sử dụng vật tư nông nghiệp'}</>}><div className="mu-heading-actions">
           <Button type="button" variant="secondary" onClick={() => { void loadUsages(); void loadMaterials(); }} disabled={!farmId || loading || busy} aria-busy={loading}>
             <Icon name={loading ? 'loader' : 'refresh'} className={loading ? 'mu-spin' : undefined} />{(lang === 'en' ? loading ? "Loading..." : "Reload" : loading ? 'Đang tải...' : 'Tải lại')}</Button>
           <Button type="button" variant="primary" disabled={!farmId || busy} onClick={openCreate}>
             <Icon name={saving ? 'loader' : 'plus'} className={saving ? 'mu-spin' : undefined} />{saving ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : (lang === 'en' ? 'Record Material Usage' : 'Ghi nhận sử dụng vật tư')}</Button>
         </div></PageHeading>
-      {notification && <div role={notification.type === 'error' && !isCreateModalOpen ? 'alert' : 'status'} className={'mu-notice mu-notice-' + notification.type}>
-        <Icon name={notification.type === 'error' ? 'warning' : 'check-circle'} /><span>{translate(notification.text)}</span></div>}
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div role={notification.type === 'error' && !isCreateModalOpen ? 'alert' : 'status'} className={'mu-notice mu-notice-' + notification.type}>
+        <Icon name={notification.type === 'error' ? 'warning' : 'check-circle'} /><span>{translate(notification.text)}</span></div>))}
       {detailLoading && <p className="mu-loading-detail" role="status"><Icon name="loader" className="mu-spin" />{(lang === 'en' ? "Loading material usage details..." : "Đang tải chi tiết sử dụng vật tư...")}</p>}
       {/* Metrics hidden to streamline management page per user request */}
 
-      <form className="panel mu-filters" onSubmit={event => { event.preventDefault(); filterUsages(); }} aria-label={(lang === 'en' ? "Search and filter materials" : "Tìm kiếm và lọc vật tư")}>
+
+      <section className="panel mu-history" aria-label={lang === 'en' ? 'Usage history' : 'Lịch sử sử dụng'} aria-busy={loading}>
+      <form className="mu-filters mu-history-filters" onSubmit={event => { event.preventDefault(); filterUsages(); }} aria-label={(lang === 'en' ? "Search and filter materials" : "Tìm kiếm và lọc vật tư")}>
         <div className="mu-filter-grid">
           <div className="mu-field mu-search-field"><label htmlFor="mu-search">{(lang === 'en' ? "Keyword search" : "Tìm kiếm từ khóa")}</label>
             <div className="mu-search-input"><Icon name="search" /><input className="ui-input" id="mu-search" type="search" placeholder={(lang === 'en' ? "Material name, notes..." : "Tên vật tư, ghi chú...")} value={searchKeyword} onChange={event => setSearchKeyword(event.target.value)} /></div></div>
@@ -466,8 +477,9 @@ function MaterialUsageContent() {
           </select></div>
           <div className="mu-field"><label htmlFor="mu-from">{(lang === 'en' ? "From date" : "Từ ngày")}</label><input className="ui-input" id="mu-from" type="date" value={fromDate} onChange={event => { setFromDate(event.target.value); setFilterError(null); }} aria-invalid={Boolean(filterError)} aria-describedby={filterError ? 'mu-date-error' : undefined} /></div>
           <div className="mu-field"><label htmlFor="mu-to">{(lang === 'en' ? "To date" : "Đến ngày")}</label><input className="ui-input" id="mu-to" type="date" value={toDate} onChange={event => { setToDate(event.target.value); setFilterError(null); }} aria-invalid={Boolean(filterError)} aria-describedby={filterError ? 'mu-date-error' : undefined} /></div>
-          <div className="mu-filter-actions"><Button type="submit" variant="primary" disabled={!farmId || busy}><Icon name="search" />{(lang === 'en' ? "Filter" : "Lọc")}</Button>
-            {(hasDraftFilters || hasAppliedFilters) && <Button type="button" variant="secondary" disabled={busy} onClick={resetFilters}>{(lang === 'en' ? "Reset" : "Đặt lại")}</Button>}</div>
+          <div className="mu-filter-actions"><button type="button" className="zone-clean-reload-btn" disabled={busy}
+            title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+            aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'} onClick={resetFilters}><Icon name="refresh" size={16} /></button></div>
         </div>
         {filterError && <p id="mu-date-error" className="mu-field-error" role="alert">{translate(filterError)}</p>}
         {hasAppliedFilters && <div className="mu-applied-filters" aria-label={(lang === 'en' ? "Applied filters" : "Bộ lọc đang áp dụng")}><span>{(lang === 'en' ? "Filtering:" : "Đang lọc:")}</span>
@@ -477,9 +489,6 @@ function MaterialUsageContent() {
           {appliedFilters.toDate && <span className="mu-filter-chip">{(lang === 'en' ? "To: " : "Đến: ")} {appliedFilters.toDate.split('-').reverse().join('/')}</span>}
         </div>}
       </form>
-      <section className="panel mu-history" aria-labelledby="mu-history-title" aria-busy={loading}>
-        <div className="mu-history-heading"><div><h2 id="mu-history-title">{(lang === 'en' ? "Usage history" : "Lịch sử sử dụng")}</h2><p>{(lang === 'en' ? "Track the farm's material usage records" : "Theo dõi các lần ghi nhận vật tư của trang trại")}</p></div>
-          {!loading && !loadError && farmId && <span className="mu-result-count">{uiFormatNumber(totalElements, lang)} {(lang === 'en' ? " results" : " kết quả")}</span>}</div>
         {loading ? <div className="mu-table-loading" role="status"><span className="mu-sr-only">{(lang === 'en' ? "Loading material usage history..." : "Đang tải nhật ký sử dụng vật tư...")}</span>{[0, 1, 2, 3].map(row => <div key={row} className="mu-skeleton mu-row-skeleton" aria-hidden="true" />)}</div> :
           loadError ? <div className="mu-empty" role="alert"><span className="mu-empty-icon"><Icon name="warning" size={28} /></span><h3>{(lang === 'en' ? "Unable to load usage history" : "Chưa tải được lịch sử sử dụng")}</h3><p>{translate(loadError)}</p><Button type="button" variant="secondary" onClick={() => void loadUsages()}><Icon name="refresh" />{(lang === 'en' ? "Retry" : "Thử lại")}</Button></div> :
           !farmId ? <div className="mu-empty"><Icon name="plots" size={28} /><h3>{(lang === 'en' ? "Select a farm first" : "Hãy chọn trang trại trước")}</h3><p>{(lang === 'en' ? "Select a farm workspace to view history and record material usage." : "Chọn không gian trang trại để xem lịch sử và ghi nhận vật tư.")}</p></div> :
@@ -492,27 +501,40 @@ function MaterialUsageContent() {
           <Pagination page={page + 1} totalPages={totalPages} disabled={loading || busy} onChange={number => { void loadUsages(number - 1); }} /></div>}
       </section>
 
-      <Modal open={isCreateModalOpen} onClose={() => { if (!saving) setIsCreateModalOpen(false); }}
-        className="mu-entry-dialog"
+      <Modal structured customLayout open={isCreateModalOpen} onClose={() => { if (!saving) setIsCreateModalOpen(false); }}
+        className="mu-entry-dialog modal-form-layout"
         title={editingUsage ? (lang === 'en' ? 'Edit Material Usage' : 'Chỉnh sửa sử dụng vật tư') : (lang === 'en' ? 'Record Material Usage' : 'Ghi nhận sử dụng vật tư')}>
+        <div className="modal-header">
+          <h2>{editingUsage ? (lang === 'en' ? 'Edit Material Usage' : 'Chỉnh sửa sử dụng vật tư') : (lang === 'en' ? 'Record Material Usage' : 'Ghi nhận sử dụng vật tư')}</h2>
+          <button type="button" className="modal-close" disabled={saving} aria-label={lang === 'en' ? 'Close' : 'Đóng'} onClick={() => setIsCreateModalOpen(false)}><Icon name="close" size={18} /></button>
+        </div>
         <form ref={usageFormRef} noValidate onSubmit={handleSaveUsage} className="mu-entry-form"
           onChangeCapture={event => { const id = (event.target as unknown as HTMLElement).id; if (fieldErrors[id]) setFieldErrors(errors => ({ ...errors, [id]: '' })); }}
           onBlurCapture={event => { const input = event.target as unknown as HTMLElement; if (input.id && input.id !== 'usage-material-search' && input.tagName !== 'BUTTON') { const error = getFormErrors()[input.id] ?? ''; setFieldErrors(errors => ({ ...errors, [input.id]: error })); } }}>
-          {notification?.type === 'error' && <p role="alert" className="form-error-banner mu-entry-error">{translate(notification.text)}</p>}
+          <div className="modal-body mu-entry-body">
           <fieldset disabled={saving} className="mu-form-fieldset">
             <MaterialUsageFormSection number={1} title={lang === 'en' ? 'Usage information' : 'Thông tin sử dụng'}>
-              <div className="mu-entry-grid mu-entry-three-columns">
+              <div className="mu-entry-grid">
                 {editingUsage ? <>
-                  <div className="mu-field structured-field-card"><label htmlFor="usage-season-readonly">{(lang === 'en' ? "Linked season" : "Mùa vụ liên kết")}</label><input className="ui-input" id="usage-season-readonly" readOnly value={usageActivity?.seasonName || (lang === 'en' ? editingUsage.cropSeasonId ? ("Season #" + editingUsage.cropSeasonId) : "Based on linked activity" : editingUsage.cropSeasonId ? 'Mùa vụ #' + editingUsage.cropSeasonId : 'Theo hoạt động liên kết')} /></div>
-                  <div className="mu-field structured-field-card"><label htmlFor="usage-activity">{(lang === 'en' ? "Farming activity" : "Hoạt động canh tác")}</label><input className="ui-input" id="usage-activity" readOnly value={(lang === 'en' ? editingUsage.activityName || ("Activity #" + editingUsage.farmingActivityId) : editingUsage.activityName || 'Hoạt động #' + editingUsage.farmingActivityId)} /></div>
+                  <div className="mu-field structured-field-card ui-form-context">
+                    <div className="structured-field-header"><span className="structured-field-label" id="usage-season-label">{lang === 'en' ? 'Linked season' : 'Mùa vụ liên kết'}</span><span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span></div>
+                    <div id="usage-season-readonly" aria-labelledby="usage-season-label">{usageActivity?.seasonName || (lang === 'en' ? 'Based on linked activity' : 'Theo hoạt động liên kết')}</div>
+                  </div>
+                  <div className="mu-field structured-field-card ui-form-context">
+                    <div className="structured-field-header"><span className="structured-field-label" id="usage-activity-label">{lang === 'en' ? 'Farming activity' : 'Hoạt động canh tác'}</span><span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span></div>
+                    <div id="usage-activity" tabIndex={-1} aria-labelledby="usage-activity-label">{editingUsage.activityName || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}</div>
+                  </div>
                 </> : farmId ? <FarmingActivityPicker farmId={farmId} value={farmingActivityId} onChange={setFarmingActivityId} disabled={saving} errors={fieldErrors} /> : null}
               <div className="mu-field structured-field-card"><label htmlFor="usage-time">{lang === 'en' ? 'Application date and time' : 'Ngày giờ sử dụng'} <span className="mu-required">*</span></label><input className="ui-input" id="usage-time" {...fieldProps('usage-time')} aria-label={(lang === 'en' ? "Application date and time" : "Ngày giờ sử dụng")} type="datetime-local" step="any" required value={usedAtTime} onChange={event => setUsedAtTime(event.target.value)} />{fieldError('usage-time')}</div>
+              <div className="mu-field structured-field-card ui-form-context">
+                <div className="structured-field-header"><span className="structured-field-label">{lang === 'en' ? 'Cultivation block' : 'Lô canh tác'}</span><span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span></div>
+                <div className="mu-linked-block" role="status">
+                  {!farmingActivityId ? (lang === 'en' ? 'Select an activity to view its cultivation block' : 'Chọn hoạt động để xem lô canh tác')
+                    : activityContextFailed ? <><span>{lang === 'en' ? 'Unable to load cultivation block' : 'Không tải được lô canh tác'}</span><button type="button" disabled={saving} onClick={retryActivityContext}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></>
+                    : !usageActivity ? (lang === 'en' ? 'Loading cultivation block...' : 'Đang tải lô canh tác...')
+                    : usageActivity.blockName || (lang === 'en' ? 'Not linked' : 'Chưa liên kết lô')}
+                </div>
               </div>
-              <div className="mu-activity-context" role="status"><Icon name="map-pin" />
-                {!farmingActivityId ? (lang === 'en' ? 'Select an activity to view its cultivation block' : 'Chọn hoạt động để xem lô canh tác')
-                  : activityContextFailed ? <><span>{lang === 'en' ? 'Unable to load cultivation block' : 'Không tải được lô canh tác'}</span><button type="button" disabled={saving} onClick={retryActivityContext}>{lang === 'en' ? 'Retry' : 'Thử lại'}</button></>
-                  : !usageActivity ? (lang === 'en' ? 'Loading cultivation block...' : 'Đang tải lô canh tác...')
-                  : (lang === 'en' ? 'Cultivation block: ' : 'Lô canh tác: ') + (usageActivity.blockName || (usageActivity.blockId ? '#' + usageActivity.blockId : (lang === 'en' ? 'Not linked' : 'Chưa liên kết lô')))}
               </div>
             </MaterialUsageFormSection>
             <MaterialUsageFormSection number={2} title={lang === 'en' ? 'Material used' : 'Vật tư sử dụng'}>
@@ -631,7 +653,7 @@ function MaterialUsageContent() {
               <div className="mu-entry-grid"><div className="mu-field structured-field-card"><label htmlFor="usage-phi">{lang === 'en' ? 'Pre-harvest interval (days)' : 'Thời gian cách ly trước thu hoạch (ngày)'}</label><div className="mu-input-with-unit"><input className="ui-input" id="usage-phi" {...fieldProps('usage-phi')} type="number" aria-label={(lang === 'en' ? "Pre-harvest interval days" : "Số ngày cách ly")} min="0" max="2147483647" step="1" placeholder={(lang === 'en' ? "Example: 7" : "Ví dụ: 7")} value={safetyDays} onChange={event => setSafetyDays(event.target.value === '' ? '' : Number(event.target.value))} /><span>{lang === 'en' ? 'days' : 'ngày'}</span></div>
                   {fieldError('usage-phi')}
                 </div>
-                <div className="mu-field structured-field-card"><label htmlFor="usage-isolation-end">{lang === 'en' ? 'Expected harvest date' : 'Dự kiến được thu hoạch từ'}</label>
+                <div className="mu-field structured-field-card ui-form-context"><label htmlFor="usage-isolation-end">{lang === 'en' ? 'Expected harvest date' : 'Dự kiến được thu hoạch từ'}</label>
                   <div className="mu-calculated-date"><input className="ui-input" id="usage-isolation-end" readOnly value={isolationEndsAt} placeholder={lang === 'en' ? 'Not determined' : 'Chưa xác định'} /><Icon name="calendar" /></div>
 
                 </div>
@@ -640,17 +662,20 @@ function MaterialUsageContent() {
             </MaterialUsageFormSection>
             </>}
           </fieldset>
-          <div className="mu-entry-footer"><span>{!showRemainingSections ? (lang === 'en' ? 'Complete the fields above to add application and safety details.' : 'Nhập đủ thông tin bên trên để bổ sung cách sử dụng và thông tin an toàn.') : <><span className="mu-required">*</span> {(lang === 'en' ? " Required information" : " Thông tin bắt buộc")}</>}</span><div>
-            <Button type="button" variant="secondary" disabled={saving} onClick={() => setIsCreateModalOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</Button>
-            {showRemainingSections && <Button type="submit" variant="primary" loading={saving}><Icon name={saving ? 'loader' : 'save'} className={saving ? 'mu-spin' : undefined} />{saving ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : editingUsage ? (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi') : (lang === 'en' ? 'Save Record' : 'Lưu ghi nhận')}</Button>}
+          </div>
+          <div className="modal-footer mu-entry-footer">
+          {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner mu-entry-error">{translate(notification.text)}</p>}
+          <span>{!showRemainingSections ? (lang === 'en' ? 'Complete the fields above to add application and safety details.' : 'Nhập đủ thông tin bên trên để bổ sung cách sử dụng và thông tin an toàn.') : <><span className="mu-required">*</span> {(lang === 'en' ? " Required information" : " Thông tin bắt buộc")}</>}</span><div>
+            <Button className="ui-cancel-button" type="button" variant="secondary" disabled={saving} onClick={() => setIsCreateModalOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</Button>
+            {showRemainingSections && <Button type="submit" variant="primary" loading={saving}>{saving ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : editingUsage ? (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi') : (lang === 'en' ? 'Save Record' : 'Lưu ghi nhận')}</Button>}
           </div></div>
         </form>
       </Modal>
 
       {/* Modal 2: Xem chi tiết lịch sử sử dụng vật tư */}
       {selectedDetail && (
-        <Modal open onClose={() => { if (deletingId === null) setSelectedDetail(null); }} title={(lang === 'en' ? "Material usage details #" + selectedDetail.materialUsageId : 'Chi tiết sử dụng vật tư #' + selectedDetail.materialUsageId)}>
-          <h3>{selectedDetail.materialName}</h3>
+        <Modal structured open className="material-usage-detail-modal" onClose={() => { if (deletingId === null) setSelectedDetail(null); }} title={lang === 'en' ? 'Material usage details' : 'Chi tiết sử dụng vật tư'}>
+          <div className="ui-detail-field ui-detail-primary" style={{ marginBottom: '16px' }}><span>{lang === 'en' ? 'Material name' : 'Tên vật tư'}</span><div>{selectedDetail.materialName}</div></div>
             <div className="mu-form-grid">
               <div>
                 <span className="mu-detail-label">{(lang === 'en' ? "Type" : "Chủng loại")}</span>
@@ -702,7 +727,7 @@ function MaterialUsageContent() {
               <div className="mu-form-wide">
                 <span className="mu-detail-label">{(lang === 'en' ? "Linked farming activity" : "Hoạt động canh tác liên kết")}</span>
                 <strong>
-                  {(lang === 'en' ? selectedDetail.activityName || `Activity #${selectedDetail.farmingActivityId ?? 'Chưa liên kết'}` : selectedDetail.activityName || `Hoạt động #${selectedDetail.farmingActivityId ?? 'Chưa liên kết'}`)}
+                  {(lang === 'en' ? selectedDetail.activityName || `Activity` : selectedDetail.activityName || `Hoạt động`)}
                 </strong>
               </div>
               <div className="mu-form-wide mu-detail-note">
@@ -715,22 +740,23 @@ function MaterialUsageContent() {
               </div>
             </div>
 
-            <div className="mu-modal-actions">
+            <div className="confirm-dialog-actions" style={{ marginTop: '24px' }}>
               <Button
                 type="button"
-                variant="secondary"
+                variant="danger"
+                className="material-usage-delete-button"
                 disabled={deletingId !== null} onClick={() => setDeleteTarget({ id: selectedDetail.materialUsageId, name: selectedDetail.materialName })}
               >
                 <Icon name="trash" /> {(lang === 'en' ? " Delete record" : " Xóa bản ghi")}
               </Button>
-              <Button type="button" variant="primary" onClick={() => setSelectedDetail(null)}>
+              <Button className={'ui-close-action'} type="button" variant="secondary" onClick={() => setSelectedDetail(null)}>
                 {(lang === 'en' ? "Close" : "Đóng")}
               </Button>
             </div>
         </Modal>
       )}
       <ConfirmDialog open={Boolean(deleteTarget)} title={lang === 'en' ? 'Delete material usage' : 'Xóa sử dụng vật tư'}
-        description={lang === 'en' ? `Delete material usage record "${deleteTarget?.name}"?` : `Xóa bản ghi sử dụng vật tư "${deleteTarget?.name}"?`}
+        description={lang === 'en' ? <>{"Delete material usage record \""}<strong>{deleteTarget?.name}</strong>{"\"?"}</> : <>{"Xóa bản ghi sử dụng vật tư \""}<strong>{deleteTarget?.name}</strong>{"\"?"}</>}
         tone="danger" loading={deletingId !== null} onClose={() => setDeleteTarget(null)}
         onConfirm={() => { if (deleteTarget) void handleDelete(deleteTarget.id); }} />
     </section>

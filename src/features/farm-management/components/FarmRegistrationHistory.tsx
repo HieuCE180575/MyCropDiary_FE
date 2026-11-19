@@ -20,7 +20,7 @@ function RegistrationHistory({ userId }: { farmId: number; userId: number | unde
   return <section id="farm-registration-documents" className="farm-registration-history" style={{ scrollMarginTop: 100 }}>
     {loading ? <p role="status">{t('farms.loading')}</p> : error ? <LoadError message={error} onRetry={retry} /> : <>
       {approved.length === 0 && <p>{t('farms.noApprovedRegistrations')}</p>}
-      {approved.map(record => <section key={record.farmRegistrationId} aria-label={`#${record.farmRegistrationId} - ${record.proposedFarmName}`}>
+      {approved.map(record => <section key={record.farmRegistrationId} aria-label={record.proposedFarmName}>
         <SelectedRegistration id={record.farmRegistrationId} />
       </section>)}
     </>}

@@ -318,7 +318,7 @@ export function FarmGoongMap({
     const popupHtml = `
       <div style="font-family: Inter, sans-serif; min-width: 180px; padding: 2px;">
         <strong style="color: #065f46; font-size: 13.5px; display: block; margin-bottom: 3px;">
-          🌱 ${farmName || (lang === 'en' ? "Farm location" : 'Vị trí trang trại')}
+          ${farmName || (lang === 'en' ? "Farm location" : 'Vị trí trang trại')}
         </strong>
         <span style="color: #475569; font-size: 12px; display: block;">
           ${[address, ward, district, province].filter(Boolean).join(', ') || (lang === 'en' ? "Coordinates pinned on map" : 'Đã ghim tọa độ trên bản đồ')}
@@ -436,7 +436,7 @@ export function FarmGoongMap({
       }
       const farmIcon = L.divIcon({
         className: 'custom-farm-pin',
-        html: `<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:linear-gradient(135deg,#10b981,#047857);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(4,120,87,0.45);border:2px solid #fff;"><span style="transform:rotate(45deg);font-size:15px;">🌱</span></div>`,
+        html: `<div style="width:32px;height:32px;border-radius:50% 50% 50% 0;background:linear-gradient(135deg,#10b981,#047857);transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(4,120,87,0.45);border:2px solid #fff;"></div>`,
         iconSize: [32, 32],
         iconAnchor: [16, 32],
         popupAnchor: [0, -28],

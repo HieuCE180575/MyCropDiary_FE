@@ -26,7 +26,7 @@ import type { ModuleDefinition } from '../shared/types/module';
 import { useAuth } from '../features/auth';
 
 export function ModulePage({ module }: { module: ModuleDefinition }) {
-  const { lang, t: translate } = useLanguage();
+  const { lang } = useLanguage();
   const { user } = useAuth();
   if (module.key === 'password') return <Navigate to="/profile" replace />;
 
@@ -57,7 +57,7 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
 
   return (
     <section className="profile-page-section">
-      <PageHeading   title={`${lang === 'en' ? "Hello, " : "Xin chào, "}${displayName}!`} description={<>{translate(module.description)}</>}></PageHeading>
+      <PageHeading   title={`${lang === 'en' ? "Hello, " : "Xin chào, "}${displayName}!`}></PageHeading>
       <div className="profile-container">
         {/* Profile Hero Card */}
         <div className="profile-hero-card">

@@ -144,7 +144,7 @@ export function UserProfilePanel() {
                 </Button>
                 <Button
                   type="button"
-                  variant="primary" size="compact" className="ui-icon-button"
+                  variant="primary" size="compact" className={"ui-icon-button" + ' ' + 'ui-edit-action'}
                   onClick={() => { setIsEditing(true); setMessage(null); }}
                   title={translate("Edit Profile")}
                   aria-label={translate("Edit Profile")}
@@ -158,6 +158,8 @@ export function UserProfilePanel() {
 
         {message && (
           <div
+            role={message.type === 'error' ? 'alert' : 'status'}
+            className={message.type === 'error' ? 'form-error-banner' : undefined}
             style={{
               margin: '14px 0',
               padding: '10px 14px',
@@ -269,7 +271,7 @@ export function UserProfilePanel() {
               />
             </div>
 
-            <div className="structured-field-card">
+            <div className="structured-field-card ui-form-context">
               <label htmlFor="user-profile-panel-field-2">{translate("Login Email (Cannot be changed)")}</label>
               <input id="user-profile-panel-field-2" className="ui-input"
                 type="email"
@@ -293,7 +295,7 @@ export function UserProfilePanel() {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
-              <Button
+              <Button className="ui-cancel-button"
                 type="button"
                 variant="secondary"
                 onClick={handleCancel}
@@ -307,7 +309,7 @@ export function UserProfilePanel() {
                 loading={saving}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', margin: 0 }}
               >
-                <Icon name="save" size={16} /> {saving ? translate("Saving...") : translate("Save Profile")}
+                {saving ? translate("Saving...") : translate("Save Profile")}
               </Button>
             </div>
           </form>

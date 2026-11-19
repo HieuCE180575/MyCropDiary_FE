@@ -151,6 +151,9 @@ export interface RiskAssessmentRecord {
  * Soil Assessment Record (Block Soil Assessments - UC-20)
  */
 export interface SoilAssessmentRecord {
+  moisturePercent?: number | null;
+  imageUrl?: string | null;
+  labTestReportUrl?: string | null;
   assessmentId: number;
   blockId: number;
   blockName?: string;

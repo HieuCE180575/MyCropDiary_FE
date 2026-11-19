@@ -139,11 +139,11 @@ export function ZoneModal({
   };
 
   return (
-    <Modal open customLayout onClose={onClose} style={{ width: 'min(680px, 100%)', maxHeight: '90vh' }}>
+    <Modal structured open customLayout onClose={onClose} style={{ width: 'min(680px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
             <span className="eyebrow">
-              {mode === 'create' ? (lang === 'en' ? 'New Production Zone' : 'Khu vực sản xuất mới') : (lang === 'en' ? `Update Zone #${initialZone?.zoneId}` : `Cập nhật khu vực #${initialZone?.zoneId}`)}
+              {mode === 'create' ? (lang === 'en' ? 'New Production Zone' : 'Khu vực sản xuất mới') : (lang === 'en' ? `Update Zone` : `Cập nhật khu vực`)}
             </span>
             <h2>{mode === 'create' ? (lang === 'en' ? 'Create New Production Zone' : 'Tạo khu vực sản xuất mới') : (lang === 'en' ? 'Update Production Zone' : 'Cập nhật khu vực sản xuất')}</h2>
           </div>
@@ -152,7 +152,7 @@ export function ZoneModal({
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
           {error && (
-            <div style={{
+            <div className="form-error-banner" role="alert" style={{
               padding: '12px 16px',
               borderRadius: '8px',
               background: '#fef2f2',
@@ -169,7 +169,7 @@ export function ZoneModal({
             </div>
           )}
 
-          <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+          <div className="structured-field-card ui-form-context" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
               <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
                 {lang === 'en' ? 'Affiliated Farm' : 'Trang trại trực thuộc'}
@@ -177,7 +177,7 @@ export function ZoneModal({
               <span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span>
             </div>
             <div style={{ fontWeight: 700, color: 'var(--color-primary-text)', fontSize: '15px' }}>
-              🌱 {farmName || `Farm #${farmId}`}
+              {farmName || `Farm`}
             </div>
           </div>
 
@@ -281,7 +281,7 @@ export function ZoneModal({
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{translate("Cancel")}</Button>
+            <Button className="ui-cancel-button" type="button" variant="secondary" onClick={onClose} disabled={loading}>{translate("Cancel")}</Button>
             <Button type="submit" variant="primary" disabled={loading}>
               {loading ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : mode === 'create' ? (lang === 'en' ? 'Create Zone' : 'Tạo khu vực') : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
             </Button>

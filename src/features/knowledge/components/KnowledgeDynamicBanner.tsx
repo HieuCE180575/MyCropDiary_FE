@@ -211,7 +211,6 @@ export function KnowledgeDynamicBanner({ onSelectCategory }: KnowledgeDynamicBan
           </div>
 
           <h1 className="banner-main-title">{slide.title}</h1>
-          <p className="banner-description">{slide.description}</p>
 
           <div className="banner-stats-row">
             {slide.stats.map((stat, idx) => (

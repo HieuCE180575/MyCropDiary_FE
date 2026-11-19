@@ -96,7 +96,7 @@ export function RecordConditionModal({
   };
 
   return (
-    <Modal open customLayout onClose={onClose} style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
+    <Modal structured open customLayout onClose={onClose} style={{ width: 'min(640px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
             <span className="eyebrow">{lang === 'en' ? 'Production Records' : 'Hồ sơ sản xuất'}</span>
@@ -107,7 +107,7 @@ export function RecordConditionModal({
 
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
           {error && (
-            <div style={{
+            <div className="form-error-banner" role="alert" style={{
               padding: '12px 16px',
               borderRadius: '8px',
               background: '#fef2f2',
@@ -124,16 +124,16 @@ export function RecordConditionModal({
             </div>
           )}
 
-          <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+          <div className="structured-field-card ui-form-context" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
               <span className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
-                {lang === 'en' ? 'Target Block' : 'Lô sản xuất mục tiêu'}
+                {lang === 'en' ? 'Target Block' : 'Lô trồng mục tiêu'}
               </span>
               <span className="structured-field-badge">{lang === 'en' ? 'Auto-selected' : 'Tự động chọn'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 700, color: 'var(--color-primary-text)' }}>
               <span>
-                🌿 {block.blockName} {block.zoneName ? `· ${block.zoneName}` : ''}
+                {block.blockName} {block.zoneName ? `· ${block.zoneName}` : ''}
               </span>
               <span>
                 {block.areaValue} {translate(block.areaUnit)}
@@ -221,7 +221,7 @@ export function RecordConditionModal({
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>
+            <Button className="ui-cancel-button" type="button" variant="secondary" onClick={onClose} disabled={loading}>
               {(lang === 'en' ? "Cancel" : "Hủy")}
             </Button>
             <Button type="submit" variant="primary" disabled={loading}>

@@ -205,7 +205,7 @@ export function VietGapAuditWorkspaceModal({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Bien_Ban_Tu_Danh_Gia_VietGAP_#${currentRun.runId}_${currentRun.seasonName ?? 'VuMua'}.pdf`;
+      a.download = `Bien_Ban_Tu_Danh_Gia_VietGAP_${currentRun.seasonName ?? 'VuMua'}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -545,7 +545,7 @@ export function VietGapAuditWorkspaceModal({
               </div>
 
               <div>
-                <button
+                <button className={'ui-close-action'}
                   type="button"
                   onClick={onClose}
                   style={{

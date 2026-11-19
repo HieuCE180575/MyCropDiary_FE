@@ -105,7 +105,7 @@ export function AuditConfirmationModal({
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button
             type="button"
-            className="secondary-button"
+            className={"secondary-button" + ' ' + 'ui-cancel-button'}
             disabled={isLoading}
             onClick={onClose}
             style={{ fontSize: '13px', padding: '8px 16px', border: 'none', background: '#f1f5f9', color: '#334155' }}

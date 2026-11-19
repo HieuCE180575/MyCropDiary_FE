@@ -100,20 +100,22 @@ export function FarmRegistrationStatus({
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <button
                           type="button"
-                          className="action-button file-upload-item-view-btn"
+                          className="table-icon-btn primary"
                           onClick={() => setPreviewIndex(idx)}
                           title={lang === 'en' ? 'Preview on web' : 'Xem trực tiếp trên web'}
+                          aria-label={lang === 'en' ? `Preview ${file.name}` : `Xem trực tiếp ${file.name}`}
                         >
-                          <Icon name="eye" /> {lang === 'en' ? 'Preview' : 'Xem trực tiếp'}
+                          <Icon name="eye" size={16} />
                         </button>
                         <a
                           href={file.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="action-button file-preview-open-link"
+                          className="table-icon-btn assign"
                           title={lang === 'en' ? 'Open original Cloudinary link in new tab' : 'Mở liên kết gốc Cloudinary trong tab mới'}
+                          aria-label={lang === 'en' ? `Open link ${file.name}` : `Mở liên kết ${file.name}`}
                         >
-                          <Icon name="external-link" /> {lang === 'en' ? 'Open link' : 'Mở link'}
+                          <Icon name="external-link" size={16} />
                         </a>
                       </div>
                     </div>
@@ -175,7 +177,7 @@ export function FarmRegistrationStatus({
 
       <div className="farm-registration-actions">
         {canCancel ? (
-          <Button
+          <Button className="ui-cancel-button"
             type="button"
             variant="danger"
             onClick={() => setConfirmOpen(true)}

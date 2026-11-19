@@ -1,3 +1,4 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
 import { LoadError } from '../../shared/components/LoadError';
 import { PageHeading } from '../../shared/components/PageHeading';
 import { Button } from '../../shared/components/Button';
@@ -18,15 +19,15 @@ import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { fetchCropSeasonsByFarm, type CropSeasonResp } from './cropSeasonService';
 import {
   fetchExpenses,
+  fetchExpenseSummary,
+  type ExpenseSummaryResp,
   fetchExpenseDetails,
   recordExpense,
   updateExpense,
   deleteExpense,
-  fetchExpenseSummary,
   type ExpenseItem,
   type CreateExpensePayload,
   type UpdateExpensePayload,
-  type ExpenseSummaryResp,
   type ExpenseFilterParams,
 } from './expenseService';
 
@@ -305,8 +306,9 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* Status / Action Notification Banner */}
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
@@ -321,8 +323,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Main Page Heading matching Mockup */}
       <PageHeading level={embedded ? 2 : 1}   title={<>
@@ -411,6 +412,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ background: 'var(--color-page)' }}>
+
                 <th scope="col">
                   {lang === 'en' ? 'EXPENSE DESCRIPTION' : 'DIỄN GIẢI KHOẢN CHI'}
                 </th>
@@ -423,7 +425,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                 <th scope="col">
                   {lang === 'en' ? 'DATE' : 'NGÀY CHI'}
                 </th>
-                <th scope="col" style={{ textAlign: 'left' }}>
+                <th scope="col" style={{ textAlign: 'right' }}>
                   {lang === 'en' ? 'AMOUNT' : 'SỐ TIỀN'}
                 </th>
                 <th scope="col" style={{ width: '140px', textAlign: 'right' }}>
@@ -434,15 +436,15 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                  <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'Loading expenses data...' : 'Đang tải dữ liệu chi phí sản xuất...'}
                   </td>
                 </tr>
               ) : loadError ? (
-                <tr><td colSpan={7}><LoadError message={loadError} onRetry={() => { void loadData(); }} /></td></tr>
+                <tr><td colSpan={6}><LoadError message={loadError} onRetry={() => { void loadData(); }} /></td></tr>
               ) : expenses.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                  <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'No expense records found.' : 'Không tìm thấy khoản chi phí nào phù hợp.'}
                   </td>
                 </tr>
@@ -451,6 +453,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                   const styleColors = CATEGORY_COLORS[item.expenseCategory] || CATEGORY_COLORS['Other'];
                   return (
                     <tr key={item.expenseId} style={{ borderBottom: '1px solid var(--color-border)' }}>
+
                       <td>
                         <span
                           onClick={() => handleOpenDetails(item.expenseId)}
@@ -500,7 +503,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                       <td style={{ fontSize: '13.5px', color: 'var(--color-muted)', whiteSpace: 'nowrap' }}>
                         {formatDate(item.expenseDate, lang)}
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text)', fontSize: '14.5px', width: '120px' }}>
+                      <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-text)', fontSize: '14.5px' }}>
                         {formatCurrency(item.amount)}
                       </td>
                       <td style={{ textAlign: 'right' }}>
@@ -509,7 +512,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                             type="button"
                             className="table-icon-btn primary"
                             title={lang === 'en' ? 'View Details' : 'Xem chi tiết'}
-                            aria-label={(lang === 'en' ? `View expense details #${item.expenseId}` : `Xem chi tiết chi phí #${item.expenseId}`)}
+                            aria-label={(lang === 'en' ? `View expense details` : `Xem chi tiết chi phí`)}
                             onClick={() => handleOpenDetails(item.expenseId)}
                           >
                             <Icon name="eye" size={15} />
@@ -518,7 +521,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                             type="button"
                             className="table-icon-btn edit"
                             title={lang === 'en' ? 'Update Expense' : 'Sửa chi phí'}
-                            aria-label={(lang === 'en' ? `Edit expense #${item.expenseId}` : `Sửa chi phí #${item.expenseId}`)}
+                            aria-label={(lang === 'en' ? `Edit expense` : `Sửa chi phí`)}
                             onClick={() => handleOpenUpdate(item)}
                           >
                             <Icon name="edit" size={15} />
@@ -527,7 +530,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
                             type="button"
                             className="table-icon-btn danger"
                             title={lang === 'en' ? 'Delete Expense' : 'Xóa chi phí'}
-                            aria-label={(lang === 'en' ? `Delete expense #${item.expenseId}` : `Xóa chi phí #${item.expenseId}`)}
+                            aria-label={(lang === 'en' ? `Delete expense` : `Xóa chi phí`)}
                             onClick={() => handleOpenDelete(item)}
                           >
                             <Icon name="trash" size={15} />
@@ -549,185 +552,139 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
       {/* ========================================================= */}
       {/* MODAL 1: VIEW EXPENSE DETAILS                    */}
       {/* ========================================================= */}
-      {/* MODAL: Expense Details */}
-      <Modal
+      <Modal structured
         open={Boolean(selectedExpense)}
         onClose={() => setSelectedExpense(null)}
         title={lang === 'en' ? 'Expense Details' : 'Chi tiết khoản chi phí sản xuất'}
       >
-        {selectedExpense && (() => {
-          const cat = CATEGORY_COLORS[selectedExpense.expenseCategory];
-          const recordedAt = selectedExpense.createdAt
-            ? new Date(selectedExpense.createdAt).toLocaleString(lang === 'en' ? 'en-US' : 'vi-VN', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-            })
-            : null;
-
-          return (
-            <div className="exp-detail">
-              {/* Hero: amount + category */}
-              <div className="exp-hero">
-                <div className="exp-hero-main">
-                  <span className="exp-label">{lang === 'en' ? 'Expense Amount' : 'Số tiền chi'}</span>
-                  <strong className="exp-amount">{formatCurrency(selectedExpense.amount)}</strong>
-                </div>
-                <span
-                  className="exp-chip"
-                  style={
-                    cat
-                      ? { background: cat.bg, color: cat.text, borderColor: cat.border }
-                      : undefined
-                  }
-                >
-                  {translate(selectedExpense.expenseCategory)}
+        {selectedExpense && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* Amount Banner */}
+            <div
+              style={{
+                backgroundColor: 'var(--color-page)',
+                padding: '16px 20px',
+                borderRadius: '10px',
+                border: '1px solid var(--color-border)',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div className="ui-detail-field ui-detail-primary">
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600, textTransform: 'uppercase' }}>
+                  {lang === 'en' ? 'Expense Amount' : 'Số tiền chi'}
                 </span>
+                <div style={{ fontSize: '26px', fontWeight: 700, color: 'var(--color-text)', marginTop: '2px' }}>
+                  {formatCurrency(selectedExpense.amount)}
+                </div>
+              </div>
+              <span
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '999px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  backgroundColor: CATEGORY_COLORS[selectedExpense.expenseCategory]?.bg || 'var(--color-subtle)',
+                  color: CATEGORY_COLORS[selectedExpense.expenseCategory]?.text || 'var(--color-body)',
+                  border: `1px solid ${CATEGORY_COLORS[selectedExpense.expenseCategory]?.border || 'var(--color-border)'}`,
+                }}
+              >
+                {translate(selectedExpense.expenseCategory)}
+              </span>
+            </div>
+
+            {/* Field Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              <div className="ui-detail-field">
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Expense Date' : 'Ngày chi tiêu'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>{formatDate(selectedExpense.expenseDate, lang)}</div>
               </div>
 
-              {/* Key facts */}
-              <dl className="exp-grid">
-                <div className="exp-field">
-                  <dt>{lang === 'en' ? 'Expense Date' : 'Ngày chi tiêu'}</dt>
-                  <dd>{formatDate(selectedExpense.expenseDate, lang)}</dd>
+              <div className="ui-detail-field">
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Crop Season' : 'Mùa vụ canh tác'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
+                  {selectedExpense.seasonName || (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}
                 </div>
+              </div>
 
-                <div className="exp-field">
-                  <dt>{lang === 'en' ? 'Crop Season' : 'Mùa vụ canh tác'}</dt>
-                  <dd className={selectedExpense.seasonName ? '' : 'is-empty'}>
-                    {selectedExpense.seasonName ||
-                      (lang === 'en' ? 'General farm expense' : 'Chi phí chung toàn trang trại')}
-                  </dd>
+              <div className="ui-detail-field">
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Associated Task' : 'Công việc liên quan'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
+                  {selectedExpense.taskTitle || (lang === 'en' ? 'None' : 'Không có')}
                 </div>
+              </div>
 
-                <div className="exp-field">
-                  <dt>{lang === 'en' ? 'Associated Task' : 'Công việc liên quan'}</dt>
-                  <dd className={selectedExpense.taskTitle ? '' : 'is-empty'}>
-                    {selectedExpense.taskTitle || (lang === 'en' ? 'None' : 'Không có')}
-                  </dd>
+              <div className="ui-detail-field">
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}:</span>
+                <div style={{ fontWeight: 600, color: 'var(--color-text)', marginTop: '2px' }}>
+                  {selectedExpense.recordedByName || (lang === 'en' ? 'System Member' : 'Thành viên trang trại')}
                 </div>
-
-                <div className="exp-field">
-                  <dt>{lang === 'en' ? 'Recorded By' : 'Người ghi nhận'}</dt>
-                  <dd className="exp-person">
-                    <span className="exp-avatar" aria-hidden="true">
-                      {(selectedExpense.recordedByName || 'M').charAt(0).toUpperCase()}
-                    </span>
-                    {selectedExpense.recordedByName ||
-                      (lang === 'en' ? 'System Member' : 'Thành viên trang trại')}
-                  </dd>
-                </div>
-              </dl>
-
-              {/* Notes */}
-              <section className="exp-section">
-                <h3>{lang === 'en' ? 'Description & Notes' : 'Diễn giải / Ghi chú'}</h3>
-                <p className={`exp-notes${selectedExpense.description ? '' : ' is-empty'}`}>
-                  {selectedExpense.description ||
-                    (lang === 'en' ? 'No notes provided.' : 'Không có ghi chú chi tiết.')}
-                </p>
-              </section>
-
-              {/* Receipt */}
-              <section className="exp-section">
-                <h3>
-                  {lang === 'en' ? 'Receipt / Invoice Photo' : 'Ảnh hóa đơn / Chứng từ thanh toán'}
-                  {selectedExpense.receiptImageUrl && (
-                    <a
-                      className="exp-link"
-                      href={selectedExpense.receiptImageUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {lang === 'en' ? 'Open full size' : 'Xem ảnh gốc'}
-                    </a>
-                  )}
-                </h3>
-                {selectedExpense.receiptImageUrl ? (
-                  <a
-                    className="exp-receipt"
-                    href={selectedExpense.receiptImageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <img src={selectedExpense.receiptImageUrl} alt={translate('Receipt')} />
-                  </a>
-                ) : (
-                  <p className="exp-notes is-empty">
-                    {lang === 'en' ? 'No receipt attached.' : 'Chưa đính kèm chứng từ.'}
-                  </p>
-                )}
-              </section>
-
-              {/* Audit trail */}
-              {recordedAt && (
-                <p className="exp-audit">
-                  {lang === 'en' ? 'Logged on ' : 'Ghi nhận lúc '}
-                  {recordedAt}
-                </p>
-              )}
-
-              {/* FOOTER */}
-              <div className="modal-footer" style={{
-                padding: '14px 0px',
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '8px',
-                borderTop: '1px solid var(--color-border)',
-              }}>
-
-                  {/* EDIT INVENTORY */}
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="edit"
-                    onClick={() => {
-                      const item = selectedExpense;
-                      setSelectedExpense(null);
-                      handleOpenUpdate(item);
-                    }}
-                  >
-                    <Icon name="edit" size={14} />
-                    {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
-                  </Button>
-
-                  {/* DELETE INVENTORY */}
-                  <Button
-                    type="button"
-                    variant="danger"
-                    onClick={() => {
-                      const item = selectedExpense;
-                      setSelectedExpense(null);
-                      handleOpenDelete(item);
-                    }}
-                  >
-                    <Icon name="trash" size={14} />
-                    {lang === 'en' ? 'Delete' : 'Xóa tồn kho'}
-                  </Button>
-
-                  {/* CLOSE */}
-                  <Button
-                    type="button"
-                    variant="primary"
-                    onClick={() => setSelectedExpense(null)}
-                  >
-                    {lang === 'en' ? 'Close' : 'Đóng'}
-                  </Button>
-                </div>
+              </div>
             </div>
-          );
-        })()}
+
+            {/* Description */}
+            <div className="ui-detail-field">
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Description & Notes' : 'Diễn giải / Ghi chú'}:</span>
+                <div
+                style={{
+                  backgroundColor: 'var(--color-page)',
+                  padding: '12px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--color-border)',
+                  color: 'var(--color-body)',
+                  marginTop: '4px',
+                  fontSize: '13px',
+                  lineHeight: '1.5',
+                }}
+              >
+                {selectedExpense.description || (lang === 'en' ? 'No notes provided.' : 'Không có ghi chú chi tiết.')}
+              </div>
+            </div>
+
+            {/* Receipt Image Preview */}
+            {selectedExpense.receiptImageUrl && (
+              <div className="ui-detail-field">
+                <span style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Receipt / Invoice Photo' : 'Ảnh hóa đơn / Chứng từ thanh toán'}:</span>
+                <div style={{ marginTop: '6px', textAlign: 'center' }}>
+                  <img
+                    src={selectedExpense.receiptImageUrl}
+                    alt={translate("Receipt")}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '300px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--color-border)',
+                      objectFit: 'contain',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px' }}>
+              <Button className={'ui-close-action'} variant="secondary"
+                type="button"
+                onClick={() => setSelectedExpense(null)}
+
+              >
+                {lang === 'en' ? 'Close' : 'Đóng'}
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* ========================================================= */}
       {/* MODAL 2: RECORD EXPENSE                          */}
       {/* ========================================================= */}
-      <Modal
+      <Modal structured
         open={isRecordOpen}
         onClose={() => !submittingRecord && setIsRecordOpen(false)}
         title={lang === 'en' ? 'Record Production Expense' : 'Ghi nhận chi phí sản xuất mới'}
       >
         <form onSubmit={handleSubmitRecord} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+          {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
           <div className="structured-field-card">
             <label htmlFor="expenses-page-field-1">
               {lang === 'en' ? 'Expense Category *' : 'Danh mục chi phí *'}
@@ -744,7 +701,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </select>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div className="structured-field-card">
               <label htmlFor="expenses-page-control-1">
                 {lang === 'en' ? 'Amount (VND) *' : 'Số tiền (VND) *'}
@@ -817,7 +774,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Button variant="secondary"
+            <Button className="ui-cancel-button" variant="secondary"
               type="button"
               disabled={submittingRecord}
               onClick={() => setIsRecordOpen(false)}
@@ -839,14 +796,14 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
       {/* ========================================================= */}
       {/* MODAL 3: UPDATE EXPENSE                          */}
       {/* ========================================================= */}
-      <Modal
+      <Modal structured
         open={Boolean(editingExpense)}
         onClose={() => !submittingUpdate && setEditingExpense(null)}
         title={lang === 'en' ? 'Update Production Expense' : 'Cập nhật khoản chi phí sản xuất'}
       >
         {editingExpense && (
           <form onSubmit={handleSubmitUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+          {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="structured-field-card">
               <label htmlFor="expenses-page-field-3">
                 {lang === 'en' ? 'Expense Category' : 'Danh mục chi phí'}
@@ -862,7 +819,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
               </select>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div className="structured-field-card">
                 <label htmlFor="expenses-page-control-5">
                   {lang === 'en' ? 'Amount (VND)' : 'Số tiền (VND)'}
@@ -931,7 +888,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-              <Button variant="secondary"
+              <Button className="ui-cancel-button" variant="secondary"
                 type="button"
                 disabled={submittingUpdate}
                 onClick={() => setEditingExpense(null)}
@@ -954,14 +911,14 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
       {/* ========================================================= */}
       {/* MODAL 4: DELETE ELIGIBLE EXPENSE                 */}
       {/* ========================================================= */}
-      <Modal
+      <Modal structured
         open={Boolean(deletingExpense)}
         onClose={() => !submittingDelete && setDeletingExpense(null)}
         title={lang === 'en' ? 'Delete Eligible Expense' : 'Xóa chi phí đủ điều kiện'}
       >
         {deletingExpense && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {notification?.type === 'error' && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
+            {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div
               style={{
                 backgroundColor: 'var(--color-danger-bg)',
@@ -1006,7 +963,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <Button variant="secondary"
+              <Button className="ui-cancel-button" variant="secondary"
                 type="button"
                 disabled={submittingDelete}
                 onClick={() => setDeletingExpense(null)}

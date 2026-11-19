@@ -1,3 +1,4 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { TabList, tabPanelProps } from '../../shared/components/TabList';
 import { EmptyState } from '../../shared/components/EmptyState';
@@ -50,7 +51,7 @@ export function ZoneListPage() {
 
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id || 1;
-  const farmName = selectedFarm?.farmName || `Farm #${farmId}`;
+  const farmName = selectedFarm?.farmName || `Farm`;
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : true;
 
   // Screen mode: Zones vs Blocks
@@ -161,7 +162,7 @@ export function ZoneListPage() {
     const map = new Map<string, string>();
     assignments.forEach((a) => {
       if (!a.active) return;
-      map.set(String(a.farmMemberId), a.staffName || `Staff #${a.farmMemberId}`);
+      map.set(String(a.farmMemberId), a.staffName || `Staff`);
     });
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [assignments]);
@@ -247,19 +248,21 @@ export function ZoneListPage() {
   };
 
   const handleAttemptDeleteZone = (z: Zone) => {
-    const count = blockCountByZoneMap.get(z.zoneId) ?? z.totalBlocks ?? 0;
-    if (count > 0) {
-      showToast(
-        (lang === 'en' ? `Cannot delete "${z.zoneName}" because it contains ${count} Blocks. Deleting a Zone does not automatically delete linked Blocks, seasons, or diary entries.` : `Không thể xóa "${z.zoneName}" vì đang chứa ${count} Block. Hệ thống không xóa dây chuyền Block, mùa vụ hoặc nhật ký khi xóa Zone.`),
-        'error'
-      );
-      return;
-    }
     setZoneToDelete(z);
   };
 
   const handleConfirmDeleteZone = async () => {
     if (!zoneToDelete) return;
+    const z = zoneToDelete;
+    const count = blockCountByZoneMap.get(z.zoneId) ?? z.totalBlocks ?? 0;
+    if (count > 0) {
+      showToast(
+        (lang === 'en' ? `Cannot delete this zone because it still has ${count} blocks. Delete the blocks first.` : `Không thể xóa khu vực vì còn ${count} lô trồng. Vui lòng xóa các lô trồng trước.`),
+        'error'
+      );
+      setZoneToDelete(null);
+      return;
+    }
     try {
       await deleteZone(zoneToDelete.zoneId);
       setZones((prev) => prev.filter((item) => item.zoneId !== zoneToDelete.zoneId));
@@ -274,7 +277,7 @@ export function ZoneListPage() {
   const handleCreateBlockClick = (zone?: Zone) => {
     const targetZone = zone || visibleZones[0];
     if (!targetZone) {
-      showToast((lang === 'en' ? "Create at least 1 Zone before creating a Block!" : 'Vui lòng tạo ít nhất một khu vực trước khi tạo lô sản xuất!'), 'error');
+      showToast((lang === 'en' ? "Create at least 1 Zone before creating a Block!" : 'Vui lòng tạo ít nhất một khu vực trước khi tạo lô trồng!'), 'error');
       return;
     }
     setBlockToEdit(null);
@@ -287,7 +290,7 @@ export function ZoneListPage() {
     const parentZone = zones.find((z) => z.zoneId === b.zoneId);
     setTargetZoneForNewBlock({
       id: b.zoneId,
-      name: b.zoneName || parentZone?.zoneName || `Zone #${b.zoneId}`,
+      name: b.zoneName || parentZone?.zoneName || `Zone`,
     });
     setIsBlockModalOpen(true);
   };
@@ -299,7 +302,10 @@ export function ZoneListPage() {
       setBlocks((prev) => prev.filter((item) => item.blockId !== blockToDelete.blockId));
       showToast((message("Deleted Block \"{value1}\" successfully!", { value1: blockToDelete.blockName })));
     } catch (err) {
-      showToast((lang === 'en' ? err instanceof Error ? translate(err.message) : "Cannot delete Block with linked seasons or condition records." : err instanceof Error ? err.message : 'Không thể xóa lô sản xuất khi đang có hồ sơ mùa vụ/điều kiện liên kết.'), 'error');
+      const errorMessage = err instanceof Error ? err.message : '';
+      showToast(/mùa vụ|season/i.test(errorMessage)
+        ? (lang === 'en' ? 'Cannot delete this block while it is assigned to a season. Remove it from the season or complete the season first.' : 'Không thể xóa lô trồng vì đang thuộc mùa vụ. Vui lòng gỡ lô khỏi mùa vụ hoặc hoàn thành mùa vụ trước.')
+        : (errorMessage || (lang === 'en' ? 'Unable to delete this block.' : 'Không thể xóa lô trồng.')), 'error');
     } finally {
       setBlockToDelete(null);
     }
@@ -323,8 +329,9 @@ export function ZoneListPage() {
       </div>
 
       {/* Status / Action Notification Banner */}
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginTop: 0, marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
@@ -339,18 +346,11 @@ export function ZoneListPage() {
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Main Page Heading matching Mockup */}
       <PageHeading   title={<>
-            {activeTab === 'zones' ? (lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất') : (lang === 'en' ? 'Production Blocks' : 'Lô sản xuất')}
-          </>} description={<>
-            {statsReady
-              ? (lang === 'en'
-                ? `${zones.length} zones · ${blocks.length} blocks · Total Area: ${displayNumber(totalZoneAreaM2, lang)} m²`
-                : `${zones.length} khu vực · ${blocks.length} Block · Total Area: ${displayNumber(totalZoneAreaM2, lang)} m²`)
-              : (lang === 'en' ? 'Loading zones and blocks...' : 'Đang tải dữ liệu khu vực và lô sản xuất...')}
+            {activeTab === 'zones' ? (lang === 'en' ? 'Production Zones' : 'Khu vực sản xuất') : (lang === 'en' ? 'Production Blocks' : 'Lô trồng')}
           </>}><div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {isOwner && activeTab === 'zones' && (
             <Button
@@ -370,14 +370,14 @@ export function ZoneListPage() {
               onClick={() => handleCreateBlockClick()}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
-              <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Block' : 'Thêm lô sản xuất'}
+              <Icon name="plus" size={17} /> {lang === 'en' ? 'Add Block' : 'Thêm lô trồng'}
             </Button>
           )}
         </div></PageHeading>
 
       {/* Loading & Error States */}
       {loading && (
-        <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading zones & production blocks..." : "Đang tải dữ liệu phân khu & lô sản xuất...")}</>} description={<>{(lang === 'en' ? "Syncing zones and production blocks from the farm server." : "Hệ thống đang đồng bộ danh sách khu vực và lô sản xuất từ máy chủ trang trại.")}</>} icon={<>⏳</>} />
+        <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading zones & production blocks..." : "Đang tải dữ liệu phân khu & lô trồng...")}</>} description={<>{(lang === 'en' ? "Syncing zones and production blocks from the farm server." : "Hệ thống đang đồng bộ danh sách khu vực và lô trồng từ máy chủ trang trại.")}</>} icon={<>⏳</>} />
       )}
 
       {!loading && error && (
@@ -392,8 +392,8 @@ export function ZoneListPage() {
           {/* Integrated Tabs */}
           <TabList idPrefix="zone-list" label={lang === 'en' ? 'Production area sections' : 'Các mục khu vực sản xuất'} inset
             value={activeTab} onChange={setActiveTab} items={[
-              { value: 'zones', label: <><Icon name="book" size={17} /> {lang === 'en' ? 'Zones' : 'Khu vực'} <span className="tab-count">({visibleZones.length})</span></> },
-              { value: 'blocks', label: <><Icon name="leaf" size={17} /> {lang === 'en' ? 'Blocks' : 'Block'} <span className="tab-count">({visibleBlocks.length})</span></> },
+              { value: 'zones', label: <><Icon name="book" size={17} /> {lang === 'en' ? 'Zones' : 'Khu vực'}</> },
+              { value: 'blocks', label: <><Icon name="leaf" size={17} /> {lang === 'en' ? 'Blocks' : 'Lô trồng'}</> },
             ]} />
 
           {/* =========================================================
@@ -461,17 +461,19 @@ export function ZoneListPage() {
               ) : (
                 <>
                   <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
-                    <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                    <table className="ui-data-table production-zones-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+                      <colgroup>
+                        <col style={{ width: 330 }} />
+                        <col style={{ width: 115 }} />
+                        <col style={{ width: 85 }} />
+                        <col style={{ width: 285 }} />
+                        <col style={{ width: 180 }} />
+                      </colgroup>
                       <thead>
                         <tr style={{ background: 'var(--color-page)' }}>
-                          <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                            <input type="checkbox" aria-label={(lang === 'en' ? "Select all" : "Chọn tất cả")} style={{ cursor: 'pointer' }} />
-                          </th>
+
                           <th scope="col">
                             {lang === 'en' ? 'Zone Name' : 'Tên khu vực'}
-                          </th>
-                          <th scope="col">
-                            {lang === 'en' ? 'Zone Code' : 'Mã khu vực'}
                           </th>
                           <th scope="col">
                             {lang === 'en' ? 'Area' : 'Diện tích'}
@@ -482,7 +484,7 @@ export function ZoneListPage() {
                           <th scope="col">
                             {lang === 'en' ? 'In Charge' : 'Phụ trách'}
                           </th>
-                          <th scope="col" style={{ width: '120px', textAlign: 'right' }}>
+                          <th scope="col" style={{ textAlign: 'right' }}>
                             {lang === 'en' ? 'Actions' : 'Thao tác'}
                           </th>
                         </tr>
@@ -491,14 +493,10 @@ export function ZoneListPage() {
                         {zonePagination.items.map((zone) => {
                           const blockCount = blockCountByZoneMap.get(zone.zoneId) ?? zone.totalBlocks ?? 0;
                           const zoneStaff = staffByZoneMap.get(zone.zoneId) || [];
-                          const canDelete = isOwner && blockCount === 0;
-                          const codeDisplay = zone.areaCode || `KV-${String(zone.zoneId).padStart(3, '0')}`;
 
                           return (
                             <tr key={zone.zoneId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                              <td style={{ textAlign: 'center' }}>
-                                <input type="checkbox" aria-label={(lang === 'en' ? `Select ${zone.zoneName}` : `Chọn ${zone.zoneName}`)} style={{ cursor: 'pointer' }} />
-                              </td>
+
 
                               <td>
                                 <Link
@@ -516,14 +514,8 @@ export function ZoneListPage() {
                                 >
                                   {zone.zoneName}
                                 </Link>
-                                <span style={{ fontSize: '13px', color: 'var(--color-muted)', display: 'block', marginTop: '3px' }}>
-                                  {(lang === 'en' ? zone.description || "VietGAP farming management zone" : zone.description || 'Khu vực quản lý canh tác VietGAP')}
-                                </span>
                               </td>
 
-                              <td style={{ fontSize: '13.5px', color: 'var(--color-body)', fontWeight: 500 }}>
-                                {codeDisplay}
-                              </td>
 
                               <td style={{ fontSize: '13.5px', color: 'var(--color-text)', fontWeight: 600 }}>
                                 {displayNumber(zone.areaValue, lang)} {zone.areaUnit === 'm2' ? 'm²' : zone.areaUnit}
@@ -535,22 +527,19 @@ export function ZoneListPage() {
 
                               <td>
                                 {zoneStaff.length === 0 ? (
-                                  <span style={{ color: 'var(--color-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+                                  <span className="status-badge status-badge--neutral">
                                     {(lang === 'en' ? "Unassigned" : "Chưa phân công")}
                                   </span>
                                 ) : (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-                                    <div className="staff-initials-avatar">
-                                      {getStaffInitials(zoneStaff[0].staffName)}
-                                    </div>
-                                    <span style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--color-text)' }}>
-                                      {zoneStaff[0].staffName || `Staff #${zoneStaff[0].farmMemberId}`}
-                                    </span>
-                                    {zoneStaff.length > 1 && (
-                                      <span style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>
-                                        +{zoneStaff.length - 1}
-                                      </span>
-                                    )}
+                                  <div className="zone-assigned-staff-list">
+                                    {zoneStaff.map(staff => (
+                                      <div className="zone-assigned-staff" key={staff.assignmentId}>
+                                        <div className="staff-initials-avatar" aria-hidden="true">
+                                          {getStaffInitials(staff.staffName)}
+                                        </div>
+                                        <span>{staff.staffName || `Staff`}</span>
+                                      </div>
+                                    ))}
                                   </div>
                                 )}
                               </td>
@@ -588,15 +577,7 @@ export function ZoneListPage() {
                                       <button
                                         type="button"
                                         className="table-icon-btn danger"
-                                        style={{
-                                          opacity: canDelete ? 1 : 0.45,
-                                          cursor: canDelete ? 'pointer' : 'not-allowed',
-                                        }}
-                                        title={
-                                          (lang === 'en' ? canDelete ? "Delete zone" : `Cannot delete while there are ${blockCount} linked Blocks` : canDelete
-                                            ? 'Delete khu vực'
-                                            : `Không thể xóa khi còn ${blockCount} Block liên kết`)
-                                        }
+                                        title={lang === 'en' ? 'Delete zone' : 'Xóa khu vực'}
                                         aria-label={translate("Delete") + " " + (zone.zoneName)}
                                         onClick={() => handleAttemptDeleteZone(zone)}
                                       >
@@ -631,10 +612,10 @@ export function ZoneListPage() {
                   <span className="search-icon" aria-hidden="true">
                     <Icon name="search" size={17} />
                   </span>
-                  <input aria-label={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã lô sản xuất'} className="ui-input"
+                  <input aria-label={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã lô trồng'} className="ui-input"
                     id="search-blocks-input"
                     type="search"
-                    placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã lô sản xuất'}
+                    placeholder={lang === 'en' ? 'Search by block name or code...' : 'Tìm theo tên hoặc mã lô trồng'}
                     value={blockKeyword}
                     onChange={(e) => setBlockKeyword(e.target.value)}
                   />
@@ -673,13 +654,13 @@ export function ZoneListPage() {
               </div>
 
               {filteredBlocks.length === 0 ? (
-                <EmptyState  className="panel" title={<>{(lang === 'en' ? "No production blocks found" : "Chưa tìm thấy lô sản xuất nào")}</>} description={<>
+                <EmptyState  className="panel" title={<>{(lang === 'en' ? "No production blocks found" : "Chưa tìm thấy lô trồng nào")}</>} description={<>
                     {isOwner
-                      ? (lang === 'en' ? 'Click "Add Block" to add a new production block inside this zone.' : 'Nhấn "Thêm lô sản xuất" để thêm lô sản xuất mới bên trong khu vực.')
-                      : (lang === 'en' ? 'No blocks match the filter criteria within your assigned zones.' : 'Không có lô sản xuất nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.')}
+                      ? (lang === 'en' ? 'Click "Add Block" to add a new production block inside this zone.' : 'Nhấn "Thêm lô trồng" để thêm lô trồng mới bên trong khu vực.')
+                      : (lang === 'en' ? 'No blocks match the filter criteria within your assigned zones.' : 'Không có lô trồng nào khớp với điều kiện tìm kiếm trong phạm vi khu vực được giao.')}
                   </>} icon={<>🌿</>} action={<>{isOwner && visibleZones.length > 0 && (
                     <Button type="button" variant="primary" onClick={() => handleCreateBlockClick()}>
-                      <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Block' : 'Thêm lô sản xuất'}
+                      <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Block' : 'Thêm lô trồng'}
                     </Button>
                   )}</>} />
               ) : (
@@ -688,14 +669,9 @@ export function ZoneListPage() {
                     <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                       <thead>
                         <tr style={{ background: 'var(--color-page)' }}>
-                          <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                            <input type="checkbox" aria-label={(lang === 'en' ? "Select all blocks" : "Chọn tất cả lô")} style={{ cursor: 'pointer' }} />
-                          </th>
+
                           <th scope="col">
                             {lang === 'en' ? 'Block Name' : 'Tên lô đất'}
-                          </th>
-                          <th scope="col">
-                            {lang === 'en' ? 'Block Code' : 'Mã lô đất'}
                           </th>
                           <th scope="col">
                             {lang === 'en' ? 'Parent Zone' : 'Khu vực trực thuộc'}
@@ -712,14 +688,11 @@ export function ZoneListPage() {
                       <tbody>
                         {blockPagination.items.map((b) => {
                           const parentZone = zones.find((z) => z.zoneId === b.zoneId);
-                          const zoneDisplay = b.zoneName || parentZone?.zoneName || `Khu #${b.zoneId}`;
-                          const codeDisplay = `BLK-${String(b.blockId).padStart(3, '0')}`;
+                          const zoneDisplay = b.zoneName || parentZone?.zoneName || `Khu`;
 
                           return (
                             <tr key={b.blockId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                              <td style={{ textAlign: 'center' }}>
-                                <input type="checkbox" aria-label={(lang === 'en' ? `Select ${b.blockName}` : `Chọn ${b.blockName}`)} style={{ cursor: 'pointer' }} />
-                              </td>
+
 
                               <td>
                                 <Link
@@ -742,9 +715,6 @@ export function ZoneListPage() {
                                 </span>
                               </td>
 
-                              <td style={{ fontSize: '13.5px', color: 'var(--color-body)', fontWeight: 500 }}>
-                                {codeDisplay}
-                              </td>
 
                               <td>
                                 <Link
@@ -792,7 +762,7 @@ export function ZoneListPage() {
                                   <button
                                     type="button"
                                     className="table-icon-btn edit"
-                                    title={(lang === 'en' ? "Edit Block information" : "Chỉnh sửa thông tin lô sản xuất")}
+                                    title={(lang === 'en' ? "Edit Block information" : "Chỉnh sửa thông tin lô trồng")}
                                     aria-label={translate("Edit") + " " + (b.blockName)}
                                     onClick={() => handleEditBlockClick(b)}
                                   >
@@ -906,22 +876,38 @@ export function ZoneListPage() {
       <ConfirmDialog
         open={Boolean(zoneToDelete)}
         title={(lang === 'en' ? "Confirm zone deletion" : "Xác nhận xóa khu vực")}
-        description={(lang === 'en' ? `Are you sure you want to delete zone "${zoneToDelete?.zoneName}"? This zone has no linked Blocks or seasons.` : `Bạn có chắc chắn muốn xóa khu vực "${zoneToDelete?.zoneName}"? Khu vực này hiện không có Block hay mùa vụ liên kết.`)}
-        confirmLabel="Delete khu vực"
+        confirmLabel={lang === 'en' ? 'Delete zone' : 'Xóa khu vực'}
         tone="danger"
         onClose={() => setZoneToDelete(null)}
         onConfirm={handleConfirmDeleteZone}
-      />
+      >
+        <p>
+          {lang === 'en' ? 'Are you sure you want to delete zone ' : 'Bạn có chắc chắn muốn xóa khu vực '}
+          &quot;<strong>{zoneToDelete?.zoneName}</strong>&quot;?
+          <br />
+          {lang === 'en'
+            ? 'Deletion is allowed only for zones without linked blocks.'
+            : 'Hệ thống chỉ cho phép xóa khi khu vực không còn lô trồng trực thuộc.'}
+        </p>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={Boolean(blockToDelete)}
-        title={(lang === 'en' ? "Confirm Block deletion" : "Xác nhận xóa lô sản xuất")}
-        description={(lang === 'en' ? `Are you sure you want to delete Block "${blockToDelete?.blockName}"? Deletion is allowed only for Blocks without linked seasons or diary entries.` : `Bạn có chắc chắn muốn xóa Block "${blockToDelete?.blockName}"? Hệ thống chỉ cho phép xóa khi Block chưa phát sinh mùa vụ hoặc nhật ký liên kết.`)}
+        title={(lang === 'en' ? "Confirm Block deletion" : "Xác nhận xóa lô trồng")}
         confirmLabel="Delete Block"
         tone="danger"
         onClose={() => setBlockToDelete(null)}
         onConfirm={handleConfirmDeleteBlock}
-      />
+      >
+        <p>
+          {lang === 'en' ? 'Are you sure you want to delete Block ' : 'Bạn có chắc chắn muốn xóa lô trồng '}
+          &quot;<strong>{blockToDelete?.blockName}</strong>&quot;?
+          <br />
+          {lang === 'en'
+            ? 'Deletion is allowed only for Blocks without linked seasons or diary entries.'
+            : 'Hệ thống chỉ cho phép xóa khi lô trồng chưa phát sinh mùa vụ hoặc nhật ký liên kết.'}
+        </p>
+      </ConfirmDialog>
     </section>
   );
 }

@@ -8,6 +8,7 @@ import {
 } from '../api/fileUploadService';
 import { FilePreviewModal } from './FilePreviewModal';
 import { Icon } from './Icon';
+import { Button } from './Button';
 import { useLanguage } from '../i18n/LanguageContext';
 
 export interface FileUploadProps {
@@ -243,29 +244,32 @@ export function FileUpload({
                   <div className="file-upload-item-actions">
                     <button
                       type="button"
-                      className="action-button file-upload-item-view-btn"
+                      className="table-icon-btn primary"
                       onClick={() => setPreviewIndex(idx)}
                       title={lang === 'en' ? 'Preview on web' : 'Xem trực tiếp trên web'}
+                      aria-label={lang === 'en' ? `Preview ${file.name}` : `Xem trực tiếp ${file.name}`}
                     >
-                      <Icon name="eye" /> {lang === 'en' ? 'Preview' : 'Xem trực tiếp'}
+                      <Icon name="eye" size={16} />
                     </button>
                     <a
                       href={file.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="action-button file-preview-open-link"
+                      className="table-icon-btn assign"
                       title={lang === 'en' ? 'Open original Cloudinary link in new tab' : 'Mở liên kết gốc Cloudinary trong tab mới'}
+                      aria-label={lang === 'en' ? `Open link ${file.name}` : `Mở liên kết ${file.name}`}
                     >
-                      <Icon name="external-link" /> {lang === 'en' ? 'Open link' : 'Mở link'}
+                      <Icon name="external-link" size={16} />
                     </a>
                     <button
                       type="button"
-                      className="icon-button file-upload-item-del-btn"
+                      className="table-icon-btn danger"
                       onClick={() => handleRemoveFile(idx)}
                       disabled={disabled || isUploading}
                       title={lang === 'en' ? 'Delete this file' : 'Xóa tập tin này'}
+                      aria-label={lang === 'en' ? `Delete ${file.name}` : `Xóa ${file.name}`}
                     >
-                      <Icon name="trash" />
+                      <Icon name="trash" size={16} />
                     </button>
                   </div>
                 </div>
@@ -274,15 +278,15 @@ export function FileUpload({
           </div>
 
           <div className="file-upload-list-footer">
-            <button
+            <Button
               type="button"
-              className="action-button"
+              variant="primary"
+              size="compact"
               onClick={openFilePicker}
               disabled={disabled || isUploading}
-              style={{ fontSize: '13px' }}
             >
-              <Icon name="plus" /> {lang === 'en' ? 'Upload more files' : 'Tải thêm tệp khác'}
-            </button>
+              <Icon name="plus" size={16} /> {lang === 'en' ? 'Upload more files' : 'Tải thêm tệp khác'}
+            </Button>
           </div>
         </div>
       )}

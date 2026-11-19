@@ -108,9 +108,7 @@ export function AuditHeader({
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#64748b', marginBottom: '2px' }}>
               <span>{lang === 'en' ? 'VietGAP Compliance' : 'Tuân thủ VietGAP'}</span>
               <span>/</span>
-              <span style={{ fontWeight: 600, color: '#334155', fontFamily: 'ui-monospace, monospace' }}>
-                #{run.runId}
-              </span>
+              
               <span
                 style={{
                   fontSize: '11px',

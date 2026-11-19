@@ -42,9 +42,7 @@ export function KnowledgeDetailModal({ article, onClose }: KnowledgeDetailModalP
           <p style={{ whiteSpace: 'pre-wrap' }}>{detail.content}</p>
           <div className="knowledge-tag-row">
             {detail.tags.map((tag) => (
-              <span key={tag} className="knowledge-tag">
-                #{tag}
-              </span>
+              <span key={tag} className="knowledge-tag">#{tag}</span>
             ))}
           </div>
         </>

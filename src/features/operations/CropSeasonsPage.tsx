@@ -1,3 +1,4 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { EmptyState } from '../../shared/components/EmptyState';
 import { StatusBadge } from '../../shared/components/StatusBadge';
@@ -15,7 +16,7 @@ import { formatNumber as uiFormatNumber } from '../../shared/format/formatters';
 
 import { usePagination } from '../../shared/hooks/usePagination';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { farmRole } from '../auth/accessPolicy';
@@ -56,7 +57,7 @@ export function CropSeasonsPage() {
 
   const { selectedFarm } = useFarmWorkspace();
   const farmId = selectedFarm?.id || 1;
-  const farmName = selectedFarm?.farmName || `Farm #${farmId}`;
+  const farmName = selectedFarm?.farmName || `Farm`;
   const isOwner = selectedFarm ? farmRole(selectedFarm) === 'OWNER' : true;
 
   const [seasons, setSeasons] = useState<CropSeasonResp[]>([]);
@@ -69,6 +70,10 @@ export function CropSeasonsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
+  const notificationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (notificationTimer.current !== null) clearTimeout(notificationTimer.current);
+  }, []);
 
   // Filters: Search Crop Seasons, Season Category, Status
   const [searchKeyword, setSearchKeyword] = useState('');
@@ -90,17 +95,6 @@ export function CropSeasonsPage() {
   const [saving, setSaving] = useState(false);
   const [seasonModalError, setSeasonModalError] = useState<TranslationMessage | null>(null);
 
-  // Assign Block to Season Modal (from Detail View)
-  const [isAssignBlockOpen, setIsAssignBlockOpen] = useState(false);
-  const [assignBlockModalError, setAssignBlockModalError] = useState<TranslationMessage | null>(null);
-  const [assignBlockForm, setAssignBlockForm] = useState({
-    blockId: 0,
-    plantedArea: '',
-    areaUnit: 'm2',
-    plantedAt: new Date().toISOString().split('T')[0],
-    expectedHarvestAt: '',
-  });
-
   // Delete Season Dialog
   const [seasonToDelete, setSeasonToDelete] = useState<CropSeasonResp | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -116,8 +110,9 @@ export function CropSeasonsPage() {
   });
 
   const showToast = (text: TranslationMessage, type: 'success' | 'error' = 'success') => {
+    if (notificationTimer.current !== null) clearTimeout(notificationTimer.current);
     setNotification({ text, type });
-    setTimeout(() => setNotification(null), 4000);
+    notificationTimer.current = setTimeout(() => setNotification(null), 4000);
   };
 
   async function loadData(silent = false) {
@@ -411,7 +406,7 @@ export function CropSeasonsPage() {
             });
             if (res) assignedResults.push(res);
           } catch (err) {
-            assignErrors.push(err instanceof Error ? err.message : (lang === 'en' ? `Unable to assign block #${cfg.blockId}` : `Lỗi phân bổ lô #${cfg.blockId}`));
+            assignErrors.push(err instanceof Error ? err.message : (lang === 'en' ? `Unable to assign block` : `Lỗi phân bổ lô`));
           }
         }
 
@@ -508,73 +503,6 @@ export function CropSeasonsPage() {
     }
   };
 
-  const handleAssignBlock = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSeason || !assignBlockForm.blockId) return;
-
-    const blockIdNum = Number(assignBlockForm.blockId);
-    const chosenBlock = allFarmBlocks.find((b) => b.blockId === blockIdNum);
-    const plantedAreaNum = parseFloat(assignBlockForm.plantedArea) || 0;
-
-    // BR: Check if block already in this season
-    if (seasonBlocks.some((b) => b.blockId === blockIdNum)) {
-      const msg = message("Block \"{value1}\" is already assigned to season \"{value2}\". Duplicate assignments are not allowed!", { value1: (chosenBlock?.blockName || '#' + blockIdNum), value2: selectedSeason.seasonName });
-      setAssignBlockModalError(msg);
-      showToast(msg, 'error');
-      return;
-    }
-
-    if (chosenBlock && chosenBlock.areaValue && plantedAreaNum > chosenBlock.areaValue) {
-      const msg = message("Assigned area ({value1} {value2}) must not exceed the block's actual area ({value3} {value4}).", { value1: plantedAreaNum, value2: assignBlockForm.areaUnit, value3: chosenBlock.areaValue, value4: (chosenBlock.areaUnit || "m²") });
-      setAssignBlockModalError(msg);
-      showToast(msg, 'error');
-      return;
-    }
-
-    const plantedAt = assignBlockForm.plantedAt || selectedSeason.startDate;
-    const expectedHarvest = assignBlockForm.expectedHarvestAt || selectedSeason.endDate;
-    if (plantedAt && expectedHarvest && expectedHarvest < plantedAt) {
-      const msg = message("Expected harvest date ({value1}) cannot be before the planting date ({value2}) in the block.", { value1: expectedHarvest, value2: plantedAt });
-      setAssignBlockModalError(msg);
-      showToast(msg, 'error');
-      return;
-    }
-
-    const conflict = findBlockScheduleConflict(
-      blockIdNum,
-      plantedAt,
-      expectedHarvest,
-      selectedSeason.cropSeasonId
-    );
-    if (conflict) {
-      const msg = message("This block is already growing crops in season \"{value1}\" ({value2} → {value3}). Assignment to overlapping seasons is not allowed!", { value1: conflict.seasonName, value2: conflict.startDate, value3: (conflict.endDate || message("Current")) });
-      setAssignBlockModalError(msg);
-      showToast(msg, 'error');
-      return;
-    }
-
-    try {
-      const added = await assignBlockToSeason(selectedSeason.cropSeasonId, {
-        blockId: Number(assignBlockForm.blockId),
-        plantedArea: parseFloat(assignBlockForm.plantedArea) || 100,
-        areaUnit: assignBlockForm.areaUnit || 'm2',
-        plantedAt: assignBlockForm.plantedAt || selectedSeason.startDate,
-        expectedHarvestAt: assignBlockForm.expectedHarvestAt || selectedSeason.endDate || null,
-      });
-      setSeasonBlocks((prev) => {
-        const next = [...prev.filter((b) => b.blockId !== added.blockId), added];
-        setSeasonBlocksMap((m) => ({ ...m, [selectedSeason.cropSeasonId]: next }));
-        return next;
-      });
-      setIsAssignBlockOpen(false);
-      showToast((message("Assigned block \"{value1}\" to season {value2}.", { value1: added.blockName || '#' + added.blockId, value2: selectedSeason.seasonName })));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Không thể gán lô đất vào mùa vụ.';
-      setAssignBlockModalError(msg);
-      showToast(msg, 'error');
-    }
-  };
-
   const handleRemoveBlockFromSeason = async (blockId: number) => {
     if (!selectedSeason) return;
     try {
@@ -616,23 +544,19 @@ export function CropSeasonsPage() {
     const selectedCount = Object.keys(selectedBlockConfigs).length;
 
   return (
-      <Modal open customLayout onClose={() => setModalMode(null)} style={{ width: 'min(760px, 100%)', maxHeight: '92vh' }}>
+      <Modal structured open customLayout className="modal-form-layout" onClose={() => { if (!saving) setModalMode(null); }} style={{ width: 'min(760px, 100%)', maxHeight: '92vh' }}>
           <div className="modal-header">
             <div>
-              <span className="eyebrow">{lang === 'en' ? 'Season Profile & Block Allocation (N-N)' : 'Hồ sơ mùa vụ & Phân bổ lô đất (N-N)'}</span>
+              <span className="eyebrow">{lang === 'en' ? 'Season Profile & Block Allocation' : 'Hồ sơ mùa vụ & Phân bổ lô đất'}</span>
               <h2>{modalMode === 'create' ? (lang === 'en' ? 'Create New Crop Season' : 'Tạo mùa vụ canh tác mới') : (lang === 'en' ? 'Update Season & Blocks' : 'Cập nhật mùa vụ và lô đất áp dụng')}</h2>
             </div>
-            <button type="button" className="modal-close" onClick={() => setModalMode(null)} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
+            <button type="button" className="modal-close" disabled={saving} onClick={() => setModalMode(null)} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
               ✕
             </button>
           </div>
 
-          <form className="modal-body" onSubmit={handleSaveSeason} noValidate>
-            {seasonModalError && (
-              <p className="form-error-banner" role="alert" style={{ margin: '0 0 16px' }}>
-                {translate(seasonModalError)}
-              </p>
-            )}
+          <form onSubmit={handleSaveSeason} noValidate>
+            <div className="modal-body">
             <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
@@ -718,7 +642,7 @@ export function CropSeasonsPage() {
               >
                 <div>
                   <span className="structured-field-label" style={{ fontSize: '14.5px', color: 'var(--color-text)' }}>
-                    {lang === 'en' ? '🌱 Select target blocks for this season (Single or multiple blocks)' : '🌱 Chọn lô đất áp dụng cho mùa vụ này (Có thể chọn 1 hoặc nhiều lô)'}
+                    {lang === 'en' ? 'Select target blocks for this season (Single or multiple blocks)' : 'Chọn lô đất áp dụng cho mùa vụ này (Có thể chọn 1 hoặc nhiều lô)'}
                   </span>
                   <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'Selected blocks will be available for farming activities, task assignment, and QR-traceable harvests in this season.' : 'Các lô được chọn sẽ được phép ghi Nhật ký canh tác, Giao việc và Thu hoạch truy xuất QR VietGAP trong vụ này.'}
@@ -825,7 +749,7 @@ export function CropSeasonsPage() {
                             <span>
                               <strong>{block.blockName}</strong>{' '}
                               <span style={{ color: 'var(--color-muted)', fontWeight: 500, fontSize: '13px' }}>
-                                ({block.zoneName || `Khu #${block.zoneId}`})
+                                ({block.zoneName || `Khu`})
                               </span>
                             </span>
                           </div>
@@ -944,8 +868,15 @@ export function CropSeasonsPage() {
               </div>
             </div>
 
-            <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-              <Button type="button" variant="secondary" onClick={() => setModalMode(null)} disabled={saving}>
+            </div>
+            <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border)' }}>
+              {seasonModalError && (
+                <p className="form-error-banner" role="alert" style={{ margin: '0 0 12px', maxHeight: '20vh', overflowY: 'auto' }}>
+                  {translate(seasonModalError)}
+                </p>
+              )}
+            <div className="confirm-dialog-actions" style={{ margin: 0 }}>
+              <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setModalMode(null)} disabled={saving}>
                 {lang === 'en' ? 'Cancel' : 'Hủy'}
               </Button>
               <Button type="submit" variant="primary" loading={saving}>
@@ -953,6 +884,7 @@ export function CropSeasonsPage() {
                   ? (lang === 'en' ? 'Saving...' : 'Đang lưu...')
                   : modalMode === 'create' ? (lang === 'en' ? `Create Season${selectedCount > 0 ? ` & Assign ${selectedCount} block(s)` : ''}` : `Tạo mùa vụ${selectedCount > 0 ? ` và gán ${selectedCount} lô đất` : ''}`) : (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi')}
               </Button>
+            </div>
             </div>
           </form>
         </Modal>
@@ -979,9 +911,9 @@ export function CropSeasonsPage() {
           <div className="alert-error" role="alert">
             <div>
               <strong>{(lang === 'en' ? "Crop season not found" : "Không tìm thấy thông tin mùa vụ")}</strong>
-              <p style={{ margin: '4px 0 0' }}>{(lang === 'en' ? error || `Season #${detailSeasonId} does not exist.` : error || `Mùa vụ #${detailSeasonId} không tồn tại.`)}</p>
+              <p style={{ margin: '4px 0 0' }}>{(lang === 'en' ? error || `Season does not exist.` : error || `Mùa vụ không tồn tại.`)}</p>
             </div>
-            <Link to="/crop-seasons" className="ui-button ui-button--primary" style={{ textDecoration: 'none' }}>
+            <Link to="/crop-seasons" className="ui-button ui-button--primary ui-back-action" style={{ textDecoration: 'none' }}>
               {(lang === 'en' ? "Back to crop seasons" : "Quay lại danh sách mùa vụ")}
             </Link>
           </div>
@@ -993,14 +925,14 @@ export function CropSeasonsPage() {
 
     return (
       <div className="farm-registration-page">
-        {notification && (
-          <div className={notification.type === 'success' ? 'alert-success' : 'alert-error'} role="status">
+        {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div className={notification.type === 'success' ? 'alert-success' : 'alert-error'} role="status">
             <span>{translate(notification.text)}</span>
             <Button type="button" variant="secondary" onClick={() => setNotification(null)}>
               ✕
             </Button>
-          </div>
-        )}
+          </div>))}
 
         {/* Full Hierarchy Breadcrumb: Zone List → Zone Details → Block Details → Crop Season Details */}
         <nav className="production-breadcrumb" aria-label={translate("Breadcrumb")}>
@@ -1009,7 +941,7 @@ export function CropSeasonsPage() {
             <>
               <span className="sep">→</span>
               <Link to={`/zones/${primaryBlock.zoneId}`}>
-                {primaryBlock.zoneName || `Khu #${primaryBlock.zoneId}`}
+                {primaryBlock.zoneName || `Khu`}
               </Link>
             </>
           )}
@@ -1017,7 +949,7 @@ export function CropSeasonsPage() {
             <>
               <span className="sep">→</span>
               <Link to={`/zones/${primaryBlock.zoneId || 1}/blocks/${primaryBlock.blockId}`}>
-                {(lang === 'en' ? primaryBlock.blockName || `Block #${primaryBlock.blockId}` : primaryBlock.blockName || `Lô #${primaryBlock.blockId}`)}
+                {(lang === 'en' ? primaryBlock.blockName || `Block` : primaryBlock.blockName || `Lô`)}
               </Link>
             </>
           )}
@@ -1027,15 +959,11 @@ export function CropSeasonsPage() {
 
         <PageHeading   title={<>
               {selectedSeason.seasonName}
-            </>} description={<>
-              {selectedSeason.notes || (lang === 'en' ? 'Detailed crop season profile and affiliated production blocks.' : 'Hồ sơ chi tiết mùa vụ canh tác và các lô sản xuất trực thuộc.')}
-            </>} leading={<><p className="eyebrow">
-              {lang === 'en' ? 'Season Details' : 'Chi tiết mùa vụ'} · CS-{String(selectedSeason.cropSeasonId).padStart(3, '0')} · {selectedSeason.farmName || farmName}
-            </p></>}><div className="dashboard-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Link to="/crop-seasons" className="ui-button ui-button--secondary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-              <Icon name="arrow-left" size={15} /> {lang === 'en' ? 'Back to Seasons' : 'Danh sách mùa vụ'}
+            </>}><div className="dashboard-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <Link to="/crop-seasons" className="ui-button ui-button--secondary ui-back-action" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+               {lang === 'en' ? 'Back to Seasons' : 'Danh sách mùa vụ'}
             </Link>
-            <Button
+            <Button className={'ui-edit-action'}
               type="button"
               variant="secondary"
               style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
@@ -1074,7 +1002,7 @@ export function CropSeasonsPage() {
             <div className="zone-stat-content">
               <h4>{(lang === 'en' ? "Crop" : "Cây trồng")}</h4>
               <strong className="stat-number" style={{ fontSize: '1.05rem' }}>
-                {(lang === 'en' ? selectedSeason.cropCategoryName || `Group #${selectedSeason.cropCategoryId}` : selectedSeason.cropCategoryName || `Nhóm #${selectedSeason.cropCategoryId}`)}
+                {(lang === 'en' ? selectedSeason.cropCategoryName || `Group` : selectedSeason.cropCategoryName || `Nhóm`)}
               </strong>
             </div>
           </div>
@@ -1129,16 +1057,12 @@ export function CropSeasonsPage() {
 
             <dl className="detail-list">
               <div>
-                <dt>{(lang === 'en' ? "Season ID" : "Mã định danh mùa vụ")}</dt>
-                <dd>#{selectedSeason.cropSeasonId}{' '}(CS-{String(selectedSeason.cropSeasonId).padStart(3, '0')})</dd>
-              </div>
-              <div>
                 <dt>{translate("Season Name")}</dt>
                 <dd>{selectedSeason.seasonName}</dd>
               </div>
               <div>
                 <dt>{(lang === 'en' ? "Crop categories" : "Danh mục cây trồng")}</dt>
-                <dd>{(lang === 'en' ? selectedSeason.cropCategoryName || `Group #${selectedSeason.cropCategoryId}` : selectedSeason.cropCategoryName || `Nhóm #${selectedSeason.cropCategoryId}`)}</dd>
+                <dd>{(lang === 'en' ? selectedSeason.cropCategoryName || `Group` : selectedSeason.cropCategoryName || `Nhóm`)}</dd>
               </div>
               <div>
                 <dt>{(lang === 'en' ? "Farm" : "Trang trại trực thuộc")}</dt>
@@ -1164,36 +1088,25 @@ export function CropSeasonsPage() {
             <div className="panel-title">
               <div>
                 <p className="eyebrow">{(lang === 'en' ? "Season blocks (CropSeasonBlock)" : "Lô canh tác tham gia mùa vụ (CropSeasonBlock)")}</p>
-                <h3>{(lang === 'en' ? "Season production blocks (" : "Lô sản xuất tham gia mùa vụ (")}{seasonBlocks.length})</h3>
+                <h3>{(lang === 'en' ? "Season production blocks" : "Lô trồng tham gia mùa vụ")}</h3>
               </div>
               <div className="button-row" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Link to="/activities" className="ui-button ui-button--secondary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Link to="/activities" className="ui-button ui-button--secondary ui-navigation-action" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Icon name="book" size={15} /> {(lang === 'en' ? " Farming diary" : " Nhật ký canh tác")}
                 </Link>
-                <Link to="/harvests" className="ui-button ui-button--secondary" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <Link to="/harvests" className="ui-button ui-button--secondary ui-navigation-action" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Icon name="qr" size={15} /> {(lang === 'en' ? " Harvest & QR" : " Thu hoạch & QR")}
                 </Link>
                 <Button
                   type="button"
                   variant="primary"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  onClick={() => {
-                    const unassigned = allFarmBlocks.find(
-                      (b) => !seasonBlocks.some((sb) => sb.blockId === b.blockId)
-                    );
-                    const firstBlk = unassigned || allFarmBlocks[0];
-                    setAssignBlockForm({
-                      blockId: firstBlk?.blockId || 0,
-                      plantedArea: String(firstBlk?.areaValue || 500),
-                      areaUnit: firstBlk?.areaUnit || 'm2',
-                      plantedAt: selectedSeason.startDate,
-                      expectedHarvestAt: selectedSeason.endDate || '',
-                    });
-                    setAssignBlockModalError(null);
-                    setIsAssignBlockOpen(true);
-                  }}
+                  onClick={() => void openEditModal(selectedSeason)}
                 >
-                  <Icon name="plus" size={15} /> {(lang === 'en' ? " Assign more blocks" : " Gán thêm lô đất")}
+                  <Icon name="plus" size={15} />{' '}
+                  {seasonBlocks.length === 0
+                    ? (lang === 'en' ? 'Select blocks' : 'Chọn lô trồng')
+                    : (lang === 'en' ? 'Add blocks' : 'Thêm lô trồng')}
                 </Button>
               </div>
             </div>
@@ -1201,14 +1114,7 @@ export function CropSeasonsPage() {
             {seasonBlocks.length === 0 ? (
               <div className="zone-empty-hero" style={{ padding: '32px 20px' }}>
                 <p className="muted">{(lang === 'en' ? "No blocks assigned to this season." : "Chưa có lô đất nào được gán vào mùa vụ này.")}</p>
-                <Button
-                  type="button"
-                  variant="primary"
-                  style={{ marginTop: '10px' }}
-                  onClick={() => void openEditModal(selectedSeason)}
-                >
-                  {(lang === 'en' ? "+ Select blocks for the season" : "+ Chọn lô đất áp dụng cho mùa vụ")}
-                </Button>
+
               </div>
             ) : (
               <div className="zone-table-wrap ui-table-scroll" tabIndex={0}>
@@ -1245,7 +1151,7 @@ export function CropSeasonsPage() {
                               to={`/zones/${sb.zoneId || 1}/blocks/${sb.blockId}`}
                               style={{ color: 'var(--color-text)', fontWeight: 700, textDecoration: 'none' }}
                             >
-                              {(lang === 'en' ? sb.blockName || `Block #${sb.blockId}` : sb.blockName || `Lô #${sb.blockId}`)}
+                              {(lang === 'en' ? sb.blockName || `Block` : sb.blockName || `Lô`)}
                             </Link>
                           </div>
                         </td>
@@ -1254,7 +1160,7 @@ export function CropSeasonsPage() {
                             to={`/zones/${sb.zoneId || 1}`}
                             style={{ color: 'var(--color-primary-text)', fontWeight: 600, textDecoration: 'none' }}
                           >
-                            {sb.zoneName || `Khu #${sb.zoneId}`}
+                            {sb.zoneName || `Khu`}
                           </Link>
                         </td>
                         <td>
@@ -1299,127 +1205,12 @@ export function CropSeasonsPage() {
           </article>
         </div>
 
-        {/* Assign Block Modal */}
-        {isAssignBlockOpen && (
-          <Modal open customLayout onClose={() => setIsAssignBlockOpen(false)} style={{ width: 'min(580px, 100%)', maxHeight: '90vh' }}>
-              <div className="modal-header">
-                <div>
-                  <span className="eyebrow">{lang === 'en' ? 'Block Allocation' : 'Phân công lô đất canh tác'}</span>
-                  <h2>{lang === 'en' ? 'Allocate Block to: ' : 'Gán lô đất vào: '}{selectedSeason.seasonName}</h2>
-                </div>
-                <button type="button" className="modal-close" onClick={() => setIsAssignBlockOpen(false)} aria-label={(lang === 'en' ? "Close" : "Đóng")}>
-                  ✕
-                </button>
-              </div>
-
-              <form className="modal-body" onSubmit={handleAssignBlock} noValidate>
-                {assignBlockModalError && (
-                  <p className="form-error-banner" role="alert" style={{ margin: '0 0 16px' }}>
-                    {translate(assignBlockModalError)}
-                  </p>
-                )}
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <label htmlFor="assign-block-select" className="structured-field-label">
-                      {lang === 'en' ? 'Target Production Block' : 'Lô sản xuất mục tiêu'} <span style={{ color: 'var(--color-danger)' }}>*</span>
-                    </label>
-                    <label htmlFor="assign-block-select" className="structured-field-badge">{(lang === 'en' ? "Farm " : "Trang trại ")} {farmName}</label>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <select className="ui-select"
-                      id="assign-block-select"
-                      value={assignBlockForm.blockId}
-                      onChange={(e) => {
-                        const bid = Number(e.target.value);
-                        const found = allFarmBlocks.find((b) => b.blockId === bid);
-                        setAssignBlockForm({
-                          ...assignBlockForm,
-                          blockId: bid,
-                          plantedArea: found ? String(found.areaValue) : assignBlockForm.plantedArea,
-                          areaUnit: found?.areaUnit || assignBlockForm.areaUnit,
-                        });
-                      }}
-                    >
-                      {allFarmBlocks.map((b) => (
-                        <option key={b.blockId} value={b.blockId}>
-                          {b.blockName} ({b.zoneName || `Khu #${b.zoneId}`} - {b.areaValue} {translate(b.areaUnit)})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                  <div className="structured-field-header">
-                    <label htmlFor="assign-block-area" className="structured-field-label">
-                      {lang === 'en' ? 'Planted Area' : 'Diện tích gieo trồng'} ({translate(assignBlockForm.areaUnit || 'm²')}) <span style={{ color: 'var(--color-danger)' }}>*</span>
-                    </label>
-                    <label htmlFor="assign-block-area" className="structured-field-badge">{(lang === 'en' ? "Positive number" : "Số dương")}</label>
-                  </div>
-                  <div className="form-field" style={{ marginBottom: 0 }}>
-                    <input className="ui-input"
-                      id="assign-block-area"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      placeholder={(lang === 'en' ? "e.g. 500" : "VD: 500")}
-                      value={assignBlockForm.plantedArea}
-                      onChange={(e) => setAssignBlockForm({ ...assignBlockForm, plantedArea: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
-                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                    <div className="structured-field-header">
-                      <label htmlFor="assign-block-planted-at" className="structured-field-label">
-                        {(lang === 'en' ? "Planting date" : "Ngày xuống giống")}
-                      </label>
-                      <label htmlFor="assign-block-planted-at" className="structured-field-badge">{(lang === 'en' ? "Date" : "Ngày")}</label>
-                    </div>
-                    <div className="form-field" style={{ marginBottom: 0 }}>
-                      <input className="ui-input"
-                        id="assign-block-planted-at"
-                        type="date"
-                        value={assignBlockForm.plantedAt}
-                        onChange={(e) => setAssignBlockForm({ ...assignBlockForm, plantedAt: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="structured-field-card" style={{ marginBottom: 0 }}>
-                    <div className="structured-field-header">
-                      <label htmlFor="assign-block-harvest-at" className="structured-field-label">
-                        {(lang === 'en' ? "Expected harvest" : "Dự kiến thu hoạch")}
-                      </label>
-                      <label htmlFor="assign-block-harvest-at" className="structured-field-badge">{(lang === 'en' ? "Optional" : "Tùy chọn")}</label>
-                    </div>
-                    <div className="form-field" style={{ marginBottom: 0 }}>
-                      <input className="ui-input"
-                        id="assign-block-harvest-at"
-                        type="date"
-                        value={assignBlockForm.expectedHarvestAt}
-                        onChange={(e) => setAssignBlockForm({ ...assignBlockForm, expectedHarvestAt: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-                  <Button type="button" variant="secondary" onClick={() => setIsAssignBlockOpen(false)}>{translate("Cancel")}</Button>
-                  <Button type="submit" variant="primary">{lang === 'en' ? 'Allocate Block' : 'Gán lô đất'}</Button>
-                </div>
-              </form>
-            </Modal>
-        )}
-
         {renderCreateEditModal()}
 
         <ConfirmDialog
           open={Boolean(seasonToDelete)}
           title={(lang === 'en' ? "Confirm season deletion" : "Xác nhận xóa mùa vụ")}
-          description={(lang === 'en' ? `Are you sure you want to delete season "${seasonToDelete?.seasonName}"? This removes the season record if it has no linked diary entries.` : `Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`)}
+          description={(lang === 'en' ? <>{"Are you sure you want to delete season \""}<strong>{seasonToDelete?.seasonName}</strong>{"\"? This removes the season record if it has no linked diary entries."}</> : <>{"Bạn có chắc chắn muốn xóa mùa vụ \""}<strong>{seasonToDelete?.seasonName}</strong>{"\"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan."}</>)}
           confirmLabel="Xóa mùa vụ"
           cancelLabel="Cancel"
           tone="danger"
@@ -1430,26 +1221,6 @@ export function CropSeasonsPage() {
       </div>
     );
   }
-
-  const getCropMeta = (categoryName?: string | null) => {
-    const name = (categoryName || '').toLowerCase();
-    if (name.includes('ớt') || name.includes('tiêu') || name.includes('chilli')) {
-      return { icon: '🌶️', color: 'red' };
-    }
-    if (name.includes('cà chua') || name.includes('tomato')) {
-      return { icon: '🍅', color: 'red' };
-    }
-    if (name.includes('dưa leo') || name.includes('cucumber')) {
-      return { icon: '🥒', color: 'green' };
-    }
-    if (name.includes('dưa') || name.includes('melon')) {
-      return { icon: '🍈', color: 'green' };
-    }
-    if (name.includes('dâu') || name.includes('berry')) {
-      return { icon: '🍓', color: 'red' };
-    }
-    return { icon: '🌱', color: 'green' };
-  };
 
   const formatVietnameseDate = (dateStr?: string | null) => {
     if (!dateStr) return '';
@@ -1469,24 +1240,22 @@ export function CropSeasonsPage() {
   // =========================================================
   return (
     <div className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
-      {notification && (
-        <div className={notification.type === 'success' ? 'alert-success' : 'alert-error'} role="status">
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div className={notification.type === 'success' ? 'alert-success' : 'alert-error'} role="status">
           <span>{translate(notification.text)}</span>
           <Button type="button" variant="secondary" onClick={() => setNotification(null)}>
             ✕
           </Button>
-        </div>
-      )}
+        </div>))}
 
       {/* Breadcrumb matching exact mockup */}
       <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', color: 'var(--color-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
-        {lang === 'en' ? 'FARM ' : 'TRANG TRẠI '}{farmName || farmId} <span style={{ margin: '0 6px', color: 'var(--color-input-border)' }}>/</span> {lang === 'en' ? 'CROP SEASONS' : 'MÙA VỤ'}
+        {lang === 'en' ? 'FARM ' : 'TRANG TRẠI '}{farmName || '—'} <span style={{ margin: '0 6px', color: 'var(--color-input-border)' }}>/</span> {lang === 'en' ? 'CROP SEASONS' : 'MÙA VỤ'}
       </div>
 
       {/* Main Page Heading */}
-      <PageHeading   title={<>{translate("Crop Seasons")}</>} description={<>
-            {lang === 'en' ? 'Manage crop seasons and allocated production blocks.' : 'Quản lý mùa vụ và lô đất áp dụng.'}
-          </>}><div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <PageHeading   title={<>{translate("Crop Seasons")}</>}><div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Button
             type="button"
             variant="primary"
@@ -1548,10 +1317,11 @@ export function CropSeasonsPage() {
           </span>
         </div>
 
-        {(searchKeyword || categoryFilter !== 'all' || statusFilter !== 'all') && (
           <button
             type="button"
-            className="filter-reset-btn"
+            className="zone-clean-reload-btn"
+            title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+            aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
             onClick={() => {
               setSearchKeyword('');
               setCategoryFilter('all');
@@ -1559,9 +1329,8 @@ export function CropSeasonsPage() {
             }}
             style={{ height: '44px' }}
           >
-            {lang === 'en' ? '✕ Reset' : '✕ Đặt lại'}
+            <Icon name="refresh" size={16} />
           </button>
-        )}
       </div>
 
       {/* Card Content & Table */}
@@ -1593,11 +1362,19 @@ export function CropSeasonsPage() {
             </div></>} />
         ) : (
           <div className="zone-table-wrap ui-table-scroll" style={{ marginBottom: 0 }} tabIndex={0}>
-            <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+            <table className="ui-data-table crop-seasons-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+              <colgroup>
+                <col style={{ width: 250 }} />
+                <col style={{ width: 170 }} />
+                <col style={{ width: 220 }} />
+                <col style={{ width: 235 }} />
+                <col style={{ width: 155 }} />
+                <col style={{ width: 140 }} />
+              </colgroup>
               <thead>
                 <tr style={{ background: 'var(--color-page)' }}>
                   <th scope="col" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
-                    {lang === 'en' ? 'CODE & SEASON NAME ↕' : 'MÃ & TÊN MÙA VỤ ↕'}
+                    {lang === 'en' ? 'SEASON NAME ↕' : 'TÊN MÙA VỤ ↕'}
                   </th>
                   <th scope="col" style={{ textTransform: 'uppercase', letterSpacing: '0.04em', borderTop: '1px solid var(--color-border)', borderBottom: '1px solid var(--color-border)' }}>
                     {lang === 'en' ? 'CROP CATEGORY' : 'CÂY TRỒNG'}
@@ -1619,7 +1396,6 @@ export function CropSeasonsPage() {
               <tbody>
                 {seasonsPagination.items.map((s) => {
                   const assignedBlocks = seasonBlocksMap[s.cropSeasonId] || [];
-                  const meta = getCropMeta(s.cropCategoryName);
                   const statusKey = (s.seasonStatus || 'planned').toLowerCase();
                   const isCompleted = statusKey === 'completed';
                   const isActive = statusKey === 'active';
@@ -1636,9 +1412,7 @@ export function CropSeasonsPage() {
                     <tr key={s.cropSeasonId} style={{ borderBottom: '1px solid var(--color-border)' }}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div className={`crop-avatar-circle ${meta.color}`}>
-                            {meta.icon}
-                          </div>
+                          
                           <div>
                             <Link
                               to={`/crop-seasons/${s.cropSeasonId}`}
@@ -1655,31 +1429,24 @@ export function CropSeasonsPage() {
                             >
                               {s.seasonName}
                             </Link>
-                            <span style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600, display: 'block', marginTop: '2px' }}>
-                              CS-{String(s.cropSeasonId).padStart(3, '0')}
-                            </span>
                           </div>
                         </div>
                       </td>
 
                       <td>
-                        <span className={`crop-cat-pill ${meta.color}`}>
+                        <span className="crop-cat-pill green">
                           {(lang === 'en' ? s.cropCategoryName || "General crop" : s.cropCategoryName || 'Cây trồng chung')}
                         </span>
                       </td>
 
-                      <td style={{ color: 'var(--color-body)', fontSize: '13.5px', fontWeight: 600 }}>
+                      <td className="crop-season-blocks" style={{ color: 'var(--color-body)', fontSize: '13.5px', fontWeight: 600 }}>
                         {assignedBlocks.length === 0 ? (
-                          <Button
-                            type="button"
-                            variant="secondary"
-
-                            onClick={() => void openEditModal(s)}
-                          >
-                            {(lang === 'en' ? "+ Assign blocks" : "+ Gán lô đất")}
-                          </Button>
+                          <StatusBadge tone="neutral" label={lang === 'en' ? 'No blocks assigned' : 'Chưa gán lô'} />
                         ) : (
-                          <span>{blockText}</span>
+                          <div title={blockText}>
+                            <span className="crop-season-block-names">{assignedBlocks.map(b => b.blockName).join(', ')}</span>
+                            <small className="crop-season-block-area">{blockText.slice(blockText.lastIndexOf('•') + 1).trim()}</small>
+                          </div>
                         )}
                       </td>
 
@@ -1716,8 +1483,8 @@ export function CropSeasonsPage() {
                             <button
                               type="button"
                               className="table-icon-btn edit"
-                              title={(lang === 'en' ? "Edit season & blocks" : "Chỉnh sửa mùa vụ & lô đất")}
-                              aria-label={(lang === 'en' ? `Edit ${s.seasonName}` : `Chỉnh sửa ${s.seasonName}`)}
+                              title={lang === 'en' ? 'Edit season and growing blocks' : 'Chỉnh sửa mùa vụ và lô trồng'}
+                              aria-label={lang === 'en' ? `Edit season and growing blocks: ${s.seasonName}` : `Chỉnh sửa mùa vụ và lô trồng: ${s.seasonName}`}
                               onClick={() => void openEditModal(s)}
                             >
                               <Icon name="edit" size={16} />
@@ -1752,7 +1519,7 @@ export function CropSeasonsPage() {
       <ConfirmDialog
         open={Boolean(seasonToDelete)}
         title={(lang === 'en' ? "Confirm season deletion" : "Xác nhận xóa mùa vụ")}
-        description={(lang === 'en' ? `Are you sure you want to delete season "${seasonToDelete?.seasonName}"? This removes the season record if it has no linked diary entries.` : `Bạn có chắc chắn muốn xóa mùa vụ "${seasonToDelete?.seasonName}"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan.`)}
+        description={(lang === 'en' ? <>{"Are you sure you want to delete season \""}<strong>{seasonToDelete?.seasonName}</strong>{"\"? This removes the season record if it has no linked diary entries."}</> : <>{"Bạn có chắc chắn muốn xóa mùa vụ \""}<strong>{seasonToDelete?.seasonName}</strong>{"\"? Hành động này sẽ loại bỏ hồ sơ mùa vụ nếu chưa có phát sinh nhật ký liên quan."}</>)}
         confirmLabel="Xóa mùa vụ"
         cancelLabel="Cancel"
         tone="danger"

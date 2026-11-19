@@ -1,3 +1,5 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
+import { useDetailRequest } from '../../shared/hooks/useDetailRequest';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { EmptyState } from '../../shared/components/EmptyState';
 import { StatusBadge } from '../../shared/components/StatusBadge';
@@ -6,6 +8,7 @@ import { Button } from '../../shared/components/Button';
 import { TablePagination } from '../../shared/components/TablePagination';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
+import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
 import { usePagination } from '../../shared/hooks/usePagination';
@@ -19,6 +22,7 @@ import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 import {
   fetchFarmTasks,
+  fetchTaskDetail,
   createFarmTask,
   updateFarmTask,
   updateFarmTaskStatus,
@@ -41,6 +45,7 @@ import '../../styles/tasks.css';
 export function TasksPage() {
   const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
+  const detailLoader = useDetailRequest(selectedFarm?.id);
   const farmId = selectedFarm?.id;
 
   const [tasks, setTasks] = useState<FarmTaskResp[]>([]);
@@ -48,7 +53,6 @@ export function TasksPage() {
   const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
 
   // Filters & View mode
-  const [viewMode, setViewMode] = useState<'KANBAN' | 'TABLE'>('TABLE');
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -310,11 +314,11 @@ export function TasksPage() {
     try {
       await deleteFarmTask(deletingTask.taskId);
       setTasks((prev) => prev.filter((t) => t.taskId !== deletingTask.taskId));
-      setNotification({ text: (lang === 'en' ? "Task deleted successfully!" : 'Đã xóa tasks thành công!'), type: 'success' });
+      setNotification({ text: (lang === 'en' ? "Task deleted successfully!" : 'Đã xóa công việc thành công!'), type: 'success' });
       setDeletingTask(null);
     } catch (err) {
       setNotification({
-        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete task." : err instanceof Error ? err.message : 'Không thể xóa tasks.'),
+        text: (lang === 'en' ? err instanceof Error ? translate(err.message) : "Unable to delete task." : err instanceof Error ? err.message : 'Không thể xóa công việc.'),
         type: 'error',
       });
     } finally {
@@ -355,125 +359,14 @@ export function TasksPage() {
 
   const nowIso = new Date().toISOString();
 
-  // Helper function to render a task card in Kanban
-  const renderTaskCard = (t: FarmTaskResp) => {
-    const isOverdue = t.status !== 'completed' && t.dueAt && t.dueAt < nowIso;
-
-    return (
-      <article key={t.taskId} className="task-card">
-        <div className="task-card-header">
-          <span className="task-type-pill">{(lang === 'en' ? t.taskType || translate("Crop care") : t.taskType || 'Chăm sóc')}</span>
-          {getPriorityBadge(t.priority)}
-        </div>
-
-        <h3 className="task-card-title" onClick={() => setSelectedTaskDetail(t)}>
-          {t.taskName}
-        </h3>
-
-        {(t.seasonName || t.zoneName || t.blockName) && (
-          <div className="task-card-meta-tags">
-            {t.seasonName && <span className="task-meta-tag">🌱 {t.seasonName}</span>}
-            {(t.zoneName || t.blockName) && (
-              <span className="task-meta-tag">
-                📍 {(lang === 'en' ? t.zoneName || "Growing zone" : t.zoneName || 'Khu canh tác')}
-                {t.blockName ? ` / ${t.blockName}` : ''}
-              </span>
-            )}
-          </div>
-        )}
-
-        {t.description && <p className="task-card-desc">{t.description}</p>}
-
-        <div className="task-card-footer">
-          <div className="task-assignees">
-            {t.assignees && t.assignees.length > 0 ? (
-              t.assignees.map((a) => (
-                <span key={a.workerId} className="task-worker-chip" title={a.fullName}>
-                  👤 {a.fullName}
-                </span>
-              ))
-            ) : (
-              <span style={{ color: 'var(--color-muted)', fontSize: '12px' }}>{translate("Unassigned")}</span>
-            )}
-          </div>
-
-          {t.dueAt && (
-            <span className={`task-due-date ${isOverdue ? 'is-overdue' : ''}`}>
-              📅 {displayDate(t.dueAt, lang)}
-              {isOverdue && ' ⚠️'}
-            </span>
-          )}
-        </div>
-
-        {/* Quick Action Buttons */}
-        <div className="task-card-actions">
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {t.status === 'planned' && (
-              <button
-                type="button"
-                className="task-btn-action task-btn-primary"
-                onClick={() => handleQuickStatusChange(t.taskId, 'in_progress')}
-              >
-                {lang === 'en' ? '▶ Start' : '▶ Bắt đầu'}
-              </button>
-            )}
-            {t.status === 'in_progress' && (
-              <button
-                type="button"
-                className="task-btn-action task-btn-done"
-                onClick={() => handleQuickStatusChange(t.taskId, 'completed')}
-              >
-                {lang === 'en' ? '✓ Complete' : '✓ Complete'}
-              </button>
-            )}
-            {t.status === 'completed' && (
-              <button
-                type="button"
-                className="task-btn-action"
-                onClick={() => handleQuickStatusChange(t.taskId, 'in_progress')}
-              >
-                {lang === 'en' ? '↺ Reopen' : '↺ Reopen việc'}
-              </button>
-            )}
-          </div>
-
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button
-              type="button"
-              className="task-btn-action"
-              title={(lang === 'en' ? "View details" : "Xem chi tiết")}
-              onClick={() => setSelectedTaskDetail(t)}
-            >
-              <Icon name="arrow" />
-            </button>
-            <button
-              type="button"
-              className="task-btn-action"
-              title={(lang === 'en' ? "Edit" : "Chỉnh sửa")}
-              onClick={() => openEditModal(t)}
-            >
-              {(lang === 'en' ? "Edit" : "Sửa")}
-            </button>
-            <button
-              type="button"
-              className="task-btn-action"
-              style={{ color: 'var(--color-danger)' }}
-              title={(lang === 'en' ? "Delete task" : "Xóa việc")}
-              onClick={() => setDeletingTask(t)}
-            >
-              <Icon name="trash" />
-            </button>
-          </div>
-        </div>
-      </article>
-    );
-  };
 
   return (
     <section className="tasks-page" style={{ maxWidth: '100%', width: '100%', margin: '0 auto', padding: '12px 16px 32px', boxSizing: 'border-box' }}>
+      {detailLoader.feedback}
       {/* Notification Banner */}
-      {notification && (
-        <div
+      {notification && (isDeleteError(translate(notification.text), notification.type)
+        ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} />
+        : (<div
           role={notification.type === 'error' ? 'alert' : 'status'}
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
           style={{ marginBottom: '16px' }}
@@ -486,14 +379,11 @@ export function TasksPage() {
           >
             ✕
           </button>
-        </div>
-      )}
+        </div>))}
 
       {/* Main Page Heading matching FarmHub Modern Mockup */}
       <PageHeading   title={<>
             {lang === 'en' ? 'Task Assignment & Management' : 'Phân công và quản lý công việc'}
-          </>} description={<>
-            {lang === 'en' ? `${totalTasks} tasks · ${todoTasks.length} to do · ${inProgressTasks.length} in progress · ${completedTasks.length} completed at ${selectedFarm?.farmName || 'Farm'}` : `${totalTasks} nhiệm vụ · ${todoTasks.length} cần làm · ${inProgressTasks.length} đang làm · ${completedTasks.length} hoàn thành tại ${selectedFarm?.farmName || 'Trang trại'}`}
           </>}><div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           <Button
             type="button"
@@ -511,7 +401,7 @@ export function TasksPage() {
         {/* Clean Filter Bar in ONE line without overflowing */}
         <div className="zone-clean-filter-bar" style={{ flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
           {/* Search Box */}
-          <div className="zone-clean-search" style={{ flex: 1, minWidth: '200px' }}>
+          <div className="zone-clean-search" style={{ flex: '2 1 280px', minWidth: '200px' }}>
             <span className="search-icon" aria-hidden="true">
               <Icon name="search" size={17} />
             </span>
@@ -524,7 +414,7 @@ export function TasksPage() {
           </div>
 
           {/* Filter by Priority */}
-          <div className="zone-clean-select-wrap" style={{ minWidth: '135px' }}>
+          <div className="zone-clean-select-wrap" style={{ flex: '1 1 160px', minWidth: '135px' }}>
             <select className="ui-select"
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
@@ -536,10 +426,11 @@ export function TasksPage() {
               <option value="normal">{lang === 'en' ? 'Normal' : 'Bình thường'}</option>
               <option value="low">{lang === 'en' ? 'Low' : 'Mức thấp'}</option>
             </select>
+            <span className="select-arrow" aria-hidden="true"><Icon name="chevron" size={16} /></span>
           </div>
 
           {/* Filter by Season */}
-          <div className="zone-clean-select-wrap" style={{ minWidth: '140px' }}>
+          <div className="zone-clean-select-wrap" style={{ flex: '1 1 180px', minWidth: '140px' }}>
             <select className="ui-select"
               value={seasonFilter}
               onChange={(e) => setSeasonFilter(e.target.value ? Number(e.target.value) : '')}
@@ -552,10 +443,11 @@ export function TasksPage() {
                 </option>
               ))}
             </select>
+            <span className="select-arrow" aria-hidden="true"><Icon name="chevron" size={16} /></span>
           </div>
 
           {/* Filter by Zone */}
-          <div className="zone-clean-select-wrap" style={{ minWidth: '135px' }}>
+          <div className="zone-clean-select-wrap" style={{ flex: '1 1 160px', minWidth: '135px' }}>
             <select className="ui-select"
               value={zoneFilter}
               onChange={(e) => setZoneFilter(e.target.value ? Number(e.target.value) : '')}
@@ -568,6 +460,7 @@ export function TasksPage() {
                 </option>
               ))}
             </select>
+            <span className="select-arrow" aria-hidden="true"><Icon name="chevron" size={16} /></span>
           </div>
 
           {/* Reload / Reset */}
@@ -588,23 +481,7 @@ export function TasksPage() {
             <Icon name="refresh" size={16} />
           </button>
 
-          {/* View Switch */}
-          <div className="tasks-view-switch" role="group" aria-label={(lang === 'en' ? "View mode" : "Chế độ hiển thị")} style={{ marginLeft: 'auto' }}>
-            <button
-              type="button"
-              className={`tasks-view-btn ${viewMode === 'TABLE' ? 'active' : ''}`}
-              onClick={() => setViewMode('TABLE')}
-            >
-              {lang === 'en' ? 'List view' : 'Danh sách'}
-            </button>
-            <button
-              type="button"
-              className={`tasks-view-btn ${viewMode === 'KANBAN' ? 'active' : ''}`}
-              onClick={() => setViewMode('KANBAN')}
-            >
-              {lang === 'en' ? 'Kanban board' : 'Bảng công việc'}
-            </button>
-          </div>
+
         </div>
 
         {/* Quick Status Filter Pills */}
@@ -624,35 +501,35 @@ export function TasksPage() {
           </span>
           <button
             type="button"
-            onClick={() => setStatusFilter('all')}
-            className="task-status-chip" aria-pressed={statusFilter === 'all'}
+            onClick={() => { setStatusFilter('all'); setPriorityFilter('all'); }}
+            className="task-status-chip" aria-pressed={statusFilter === 'all' && priorityFilter !== 'urgent'}
           >
             {lang === 'en' ? 'All' : 'Tất cả'} ({totalTasks})
           </button>
           <button
             type="button"
-            onClick={() => setStatusFilter('planned')}
-            className="task-status-chip" aria-pressed={statusFilter === 'planned'}
+            onClick={() => { setStatusFilter('planned'); if (priorityFilter === 'urgent') setPriorityFilter('all'); }}
+            className="task-status-chip" aria-pressed={statusFilter === 'planned' && priorityFilter !== 'urgent'}
           >
             {lang === 'en' ? 'To do' : 'Cần làm'} ({todoTasks.length})
           </button>
           <button
             type="button"
-            onClick={() => setStatusFilter('in_progress')}
-            className="task-status-chip" aria-pressed={statusFilter === 'in_progress'}
+            onClick={() => { setStatusFilter('in_progress'); if (priorityFilter === 'urgent') setPriorityFilter('all'); }}
+            className="task-status-chip" aria-pressed={statusFilter === 'in_progress' && priorityFilter !== 'urgent'}
           >
             {lang === 'en' ? 'In progress' : 'Đang thực hiện'} ({inProgressTasks.length})
           </button>
           <button
             type="button"
-            onClick={() => setStatusFilter('completed')}
-            className="task-status-chip" aria-pressed={statusFilter === 'completed'}
+            onClick={() => { setStatusFilter('completed'); if (priorityFilter === 'urgent') setPriorityFilter('all'); }}
+            className="task-status-chip" aria-pressed={statusFilter === 'completed' && priorityFilter !== 'urgent'}
           >
             {lang === 'en' ? 'Completed' : 'Hoàn thành'} ({completedTasks.length})
           </button>
-          {urgentTasks.length > 0 && (
             <button
               type="button"
+              aria-pressed={priorityFilter === 'urgent'}
               onClick={() => {
                 setStatusFilter('all');
                 setPriorityFilter('urgent');
@@ -671,12 +548,10 @@ export function TasksPage() {
               }}
             >{translate("🚨 Urgent (")}{urgentTasks.length})
             </button>
-          )}
         </div>
 
-        {/* Main Content: Table List or Kanban */}
-        {viewMode === 'TABLE' ? (
-          loading ? (
+        {/* Task list */}
+        {loading ? (
             <EmptyState  className="panel" title={<>{(lang === 'en' ? "Loading tasks..." : "Đang tải danh sách tasks...")}</>} icon={<>⏳</>} />
           ) : tasks.length === 0 ? (
             <EmptyState  className="panel" title={<>
@@ -710,14 +585,12 @@ export function TasksPage() {
                 <table className="ui-data-table ui-data-table--wide" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                   <thead>
                     <tr style={{ background: 'var(--color-page)' }}>
-                      <th scope="col" style={{ width: '38px', textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={(lang === 'en' ? "Select all tasks" : "Chọn tất cả việc")} style={{ cursor: 'pointer' }} />
-                      </th>
+
                       <th scope="col" style={{ width: '23%', }}>
-                        {lang === 'en' ? 'Task Name & Type' : 'Tên công việc và phân loại'}
+                        {lang === 'en' ? 'Task name' : 'Tên công việc'}
                       </th>
                       <th scope="col" style={{ width: '13%', }}>
-                        {lang === 'en' ? 'Season & Location' : 'Mùa vụ & Vị trí'}
+                        {lang === 'en' ? 'Season & Block' : 'Mùa vụ & Lô trồng'}
                       </th>
                       <th scope="col" style={{ width: '10%', textAlign: 'center' }}>
                         {lang === 'en' ? 'Priority' : 'Độ ưu tiên'}
@@ -746,9 +619,7 @@ export function TasksPage() {
 
                       return (
                         <tr key={t.taskId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                          <td style={{ textAlign: 'center' }}>
-                            <input type="checkbox" aria-label={(lang === 'en' ? `Select ${t.taskName}` : `Chọn ${t.taskName}`)} style={{ cursor: 'pointer' }} />
-                          </td>
+
 
                           <td style={{ overflow: 'hidden' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -761,46 +632,17 @@ export function TasksPage() {
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                   display: 'inline-block',
-                                  maxWidth: 'calc(100% - 95px)',
+                                  maxWidth: '100%',
                                   transition: 'color 0.15s ease',
                                 }}
                                 title={t.taskName}
-                                onClick={() => setSelectedTaskDetail(t)}
+                                onClick={() => { void detailLoader.load(() => fetchTaskDetail(t.taskId), setSelectedTaskDetail); }}
                                 onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--color-primary-text)')}
                                 onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                               >
                                 {t.taskName}
                               </strong>
-                              <span
-                                className="crop-cat-pill blue"
-                                style={{
-                                  fontSize: '10.5px',
-                                  padding: '1px 6px',
-                                  whiteSpace: 'nowrap',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {(lang === 'en' ? t.taskType || translate("Crop care") : t.taskType || 'Chăm sóc')}
-                              </span>
                             </div>
-                            {t.description && (
-                              <p
-                                style={{
-                                  margin: '2px 0 0',
-                                  fontSize: '12px',
-                                  color: 'var(--color-muted)',
-                                  lineHeight: 1.3,
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  display: 'block',
-                                  maxWidth: '100%',
-                                }}
-                                title={t.description}
-                              >
-                                {t.description}
-                              </p>
-                            )}
                           </td>
 
                           <td style={{ overflow: 'hidden' }}>
@@ -815,9 +657,9 @@ export function TasksPage() {
                               }}
                               title={(lang === 'en' ? t.seasonName ? `Season: ${t.seasonName}` : "" : t.seasonName ? `Mùa vụ: ${t.seasonName}` : '')}
                             >
-                              {t.seasonName ? `🌱 ${t.seasonName}` : '—'}
+                              {t.seasonName ? `${t.seasonName}` : '—'}
                             </div>
-                            {(t.zoneName || t.blockName) && (
+                            {t.blockName && (
                               <div
                                 style={{
                                   fontSize: '11.5px',
@@ -827,10 +669,9 @@ export function TasksPage() {
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
                                 }}
-                                title={`${t.zoneName || ''} • ${t.blockName || ''}`}
+                                title={t.blockName}
                               >
-                                {t.zoneName ? `📍 ${t.zoneName}` : ''}
-                                {t.blockName ? ` • ${t.blockName}` : ''}
+                                {t.blockName}
                               </div>
                             )}
                           </td>
@@ -867,9 +708,9 @@ export function TasksPage() {
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                   }}
-                                  title={t.assignees.map((a) => a.fullName).join(', ')}
+                                  title={t.assignees.map((a) => a.fullName.replace(/\s*\([^()]*\)\s*$/, '').trim()).join(', ')}
                                 >
-                                  {t.assignees[0].fullName}
+                                  {t.assignees[0].fullName.replace(/\s*\([^()]*\)\s*$/, '').trim()}
                                   {t.assignees.length > 1 && ` +${t.assignees.length - 1}`}
                                 </span>
                               </div>
@@ -938,7 +779,7 @@ export function TasksPage() {
                                 className="table-icon-btn primary"
                                 title={(lang === 'en' ? "View task details" : "Xem chi tiết tasks")}
                                 aria-label={(lang === 'en' ? `Details ${t.taskName}` : `Chi tiết ${t.taskName}`)}
-                                onClick={() => setSelectedTaskDetail(t)}
+                                onClick={() => { void detailLoader.load(() => fetchTaskDetail(t.taskId), setSelectedTaskDetail); }}
                               >
                                 <Icon name="eye" size={15} />
                               </button>
@@ -972,77 +813,11 @@ export function TasksPage() {
               {/* Table Footer */}
               <TablePagination {...tasksPagination} disabled={loading} />
             </>
-          )
-        ) : (
-          /* Kanban Board Layout */
-          <div style={{ padding: '20px' }}>
-            <div className="tasks-kanban-board">
-              {/* Column 1: TODO / Planned */}
-              <div className="tasks-column col-todo">
-                <div className="tasks-column-header">
-                  <div className="tasks-column-title">
-                    <span className="tasks-column-dot" />
-                    <span>{lang === 'en' ? 'To Do' : 'Cần làm'}</span>
-                  </div>
-                  <span className="tasks-column-count">{todoTasks.length}</span>
-                </div>
-                <div className="tasks-column-body">
-                  {todoTasks.length === 0 ? (
-                    <div className="tasks-column-empty">
-                      <span>{(lang === 'en' ? "No tasks to do" : "Không có việc chờ thực hiện")}</span>
-                    </div>
-                  ) : (
-                    todoTasks.map((t) => renderTaskCard(t))
-                  )}
-                </div>
-              </div>
-
-              {/* Column 2: IN PROGRESS */}
-              <div className="tasks-column col-doing">
-                <div className="tasks-column-header">
-                  <div className="tasks-column-title">
-                    <span className="tasks-column-dot" />
-                    <span>{lang === 'en' ? 'In Progress' : 'Đang thực hiện'}</span>
-                  </div>
-                  <span className="tasks-column-count">{inProgressTasks.length}</span>
-                </div>
-                <div className="tasks-column-body">
-                  {inProgressTasks.length === 0 ? (
-                    <div className="tasks-column-empty">
-                      <span>{(lang === 'en' ? "No tasks in progress" : "Chưa có việc đang làm")}</span>
-                    </div>
-                  ) : (
-                    inProgressTasks.map((t) => renderTaskCard(t))
-                  )}
-                </div>
-              </div>
-
-              {/* Column 3: DONE / Completed */}
-              <div className="tasks-column col-done">
-                <div className="tasks-column-header">
-                  <div className="tasks-column-title">
-                    <span className="tasks-column-dot" />
-                    <span>{lang === 'en' ? 'Completed' : 'Hoàn thành'}</span>
-                  </div>
-                  <span className="tasks-column-count">{completedTasks.length}</span>
-                </div>
-                <div className="tasks-column-body">
-                  {completedTasks.length === 0 ? (
-                    <div className="tasks-column-empty">
-                      <span>{(lang === 'en' ? "No completed tasks" : "Chưa có việc hoàn thành")}</span>
-                    </div>
-                  ) : (
-                    completedTasks.map((t) => renderTaskCard(t))
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
         )}
       </div>
 
       {/* Modal 1: Tạo mới / Chỉnh sửa công việc */}
-      <Modal
+      <Modal structured
         open={isCreateModalOpen}
         onClose={() => {
           if (!submitting) setIsCreateModalOpen(false);
@@ -1057,7 +832,10 @@ export function TasksPage() {
           )}
           <div className="task-form-grid">
             <div className="task-form-field task-field-full structured-field-card">
-              <label htmlFor="task-name">{(lang === 'en' ? "Task name *" : "Tên công việc *")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-name" className="structured-field-label">{(lang === 'en' ? "Task name" : "Tên công việc")}{' '}<span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                <span className="structured-field-badge">{formTaskName.length}/160</span>
+              </div>
               <input className="ui-input"
                 id="task-name"
                 required
@@ -1069,7 +847,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-type">{(lang === 'en' ? "Task type *" : "Loại công việc *")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-type" className="structured-field-label">{(lang === 'en' ? "Task type" : "Loại công việc")}{' '}<span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
+              </div>
               <select className="ui-select"
                 id="task-type"
                 value={formTaskType}
@@ -1087,7 +868,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-priority">{(lang === 'en' ? "Priority *" : "Mức độ ưu tiên *")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-priority" className="structured-field-label">{(lang === 'en' ? "Priority" : "Mức độ ưu tiên")}{' '}<span style={{ color: 'var(--color-danger)' }}>*</span></label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
+              </div>
               <select className="ui-select"
                 id="task-priority"
                 value={formPriority}
@@ -1101,7 +885,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-season">{(lang === 'en' ? "Linked crop season" : "Mùa vụ canh tác liên kết")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-season" className="structured-field-label">{(lang === 'en' ? "Linked crop season" : "Mùa vụ canh tác liên kết")}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <select className="ui-select"
                 id="task-season"
                 value={formSeasonId}
@@ -1117,7 +904,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-status">{(lang === 'en' ? "Task status" : "Trạng thái công việc")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-status" className="structured-field-label">{(lang === 'en' ? "Task status" : "Trạng thái công việc")}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Status' : 'Trạng thái'}</span>
+              </div>
               <select className="ui-select"
                 id="task-status"
                 value={formStatus}
@@ -1131,7 +921,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-zone">{(lang === 'en' ? "Production zone" : "Khu vực sản xuất")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-zone" className="structured-field-label">{(lang === 'en' ? "Production zone" : "Khu vực sản xuất")}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <select className="ui-select"
                 id="task-zone"
                 value={formZoneId}
@@ -1150,8 +943,8 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-block">
-                {(lang === 'en' ? "Growing block" : "Lô sản xuất")}{' '}
+              <label htmlFor="task-block" className="structured-field-label">
+                {(lang === 'en' ? "Growing block" : "Lô trồng")}{' '}
                 {seasonBlocks.length > 0 && (
                   <span style={{ color: 'var(--color-primary-text)', fontSize: '11.5px', fontWeight: 700 }}>
                     {(lang === 'en' ? "(Within season: " : "(Thuộc mùa vụ: ")} {seasonBlocks.length} {translate('plots)')}
@@ -1175,7 +968,7 @@ export function TasksPage() {
                 {seasonBlocks.length > 0
                   ? seasonBlocks.map((sb) => (
                     <option key={sb.blockId} value={sb.blockId}>
-                      🌱 {sb.blockName} ({sb.zoneName || `Khu #${sb.zoneId}`} · {sb.plantedArea ?? sb.blockArea}{' '}
+                      {sb.blockName} ({sb.zoneName || `Khu`} · {sb.plantedArea ?? sb.blockArea}{' '}
                       {translate(sb.areaUnit || 'm²')})
                     </option>
                   ))
@@ -1188,7 +981,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-start">{lang === 'en' ? 'Start Time' : 'Thời gian bắt đầu'}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-start" className="structured-field-label">{lang === 'en' ? 'Start Time' : 'Thời gian bắt đầu'}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Date & time' : 'Ngày giờ'}</span>
+              </div>
               <input className="ui-input"
                 id="task-start"
                 type="datetime-local"
@@ -1198,7 +994,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field structured-field-card">
-              <label htmlFor="task-due">{(lang === 'en' ? "Due date (Deadline)" : "Hạn hoàn thành (Deadline)")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-due" className="structured-field-label">{(lang === 'en' ? "Due date (Deadline)" : "Hạn hoàn thành (Deadline)")}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Date & time' : 'Ngày giờ'}</span>
+              </div>
               <input className="ui-input"
                 id="task-due"
                 type="datetime-local"
@@ -1208,7 +1007,7 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field task-field-full structured-field-card">
-              <label>{(lang === 'en' ? "Assign staff" : "Phân công nhân sự thực hiện")}</label>
+              <label className="structured-field-label">{(lang === 'en' ? "Assign staff" : "Phân công nhân sự thực hiện")}</label>
               <div
                 style={{
                   maxHeight: '140px',
@@ -1262,7 +1061,10 @@ export function TasksPage() {
             </div>
 
             <div className="task-form-field task-field-full structured-field-card">
-              <label htmlFor="task-desc">{(lang === 'en' ? "Technical Description & Instructions" : "Mô tả kỹ thuật & Hướng dẫn thực hiện")}</label>
+              <div className="structured-field-header">
+                <label htmlFor="task-desc" className="structured-field-label">{(lang === 'en' ? "Technical Description & Instructions" : "Mô tả kỹ thuật & Hướng dẫn thực hiện")}</label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
               <textarea className="ui-textarea"
                 id="task-desc"
                 rows={3}
@@ -1273,8 +1075,8 @@ export function TasksPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-            <Button
+          <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
+            <Button className={'ui-cancel-button'}
               type="button"
               variant="secondary"
               disabled={submitting}
@@ -1283,7 +1085,6 @@ export function TasksPage() {
               {(lang === 'en' ? translate("Cancel") : "Hủy")}
             </Button>
             <Button type="submit" variant="primary" loading={submitting}>
-              <Icon name={submitting ? 'loader' : 'save'} />
               {submitting ? (lang === 'en' ? translate("Saving...") : 'Đang lưu...') : editingTask ? (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi') : (lang === 'en' ? 'Assign Task Now' : 'Giao việc ngay')}
             </Button>
           </div>
@@ -1292,11 +1093,12 @@ export function TasksPage() {
 
       {/* Modal 2: Xem chi tiết tasks */}
       {selectedTaskDetail && (
-        <Modal
+        <Modal structured
           open
           onClose={() => setSelectedTaskDetail(null)}
-          title={(lang === 'en' ? `Task details #${selectedTaskDetail.taskId}` : `Chi tiết tasks #${selectedTaskDetail.taskId}`)}
+          title={lang === 'en' ? 'Task details' : 'Chi tiết công việc'}
         >
+          <div className="structured-field-card ui-detail-primary">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="task-type-pill">{(lang === 'en' ? selectedTaskDetail.taskType || translate("Crop care") : selectedTaskDetail.taskType || 'Chăm sóc')}</span>
             {getPriorityBadge(selectedTaskDetail.priority)}
@@ -1310,9 +1112,12 @@ export function TasksPage() {
             {(lang === 'en' ? selectedTaskDetail.description || "No detailed description." : selectedTaskDetail.description || 'Không có mô tả chi tiết.')}
           </p>
 
-          <dl className="task-detail-grid">
-            <dt>{(lang === 'en' ? "Current status:" : "Trạng thái hiện tại:")}</dt>
-            <dd>
+          </div>
+
+          <dl className="detail-list" style={{ margin: '18px 0 0' }}>
+            <div>
+              <dt>{(lang === 'en' ? "Current status:" : "Trạng thái hiện tại:")}</dt>
+              <dd>
               <span
                 style={{
                   padding: '3px 8px',
@@ -1336,18 +1141,24 @@ export function TasksPage() {
                 {translate(getStatusLabel(selectedTaskDetail.status))}
               </span>
             </dd>
+            </div>
 
-            <dt>{(lang === 'en' ? "Crop season:" : "Mùa vụ canh tác:")}</dt>
-            <dd>{(lang === 'en' ? selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : "No linked season" : selectedTaskDetail.seasonName ? `🌱 ${selectedTaskDetail.seasonName}` : 'Chưa liên kết mùa vụ')}</dd>
+            <div>
+              <dt>{(lang === 'en' ? "Crop season:" : "Mùa vụ canh tác:")}</dt>
+              <dd>{(lang === 'en' ? selectedTaskDetail.seasonName ? `${selectedTaskDetail.seasonName}` : "No linked season" : selectedTaskDetail.seasonName ? `${selectedTaskDetail.seasonName}` : 'Chưa liên kết mùa vụ')}</dd>
+            </div>
 
-            <dt>{(lang === 'en' ? "Zone & Block:" : "Khu vực & Thửa đất:")}</dt>
-            <dd>
+            <div>
+              <dt>{(lang === 'en' ? "Zone & Block:" : "Khu vực & Lô trồng:")}</dt>
+              <dd>
               {(lang === 'en' ? selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : "No zone assigned" : selectedTaskDetail.zoneName ? `📍 ${selectedTaskDetail.zoneName}` : 'Chưa gắn khu vực')}
               {selectedTaskDetail.blockName ? ` / ${selectedTaskDetail.blockName}` : ''}
             </dd>
+            </div>
 
-            <dt>{lang === 'en' ? 'Assigned Staff' : 'Nhân sự phụ trách'}:</dt>
-            <dd>
+            <div>
+              <dt>{lang === 'en' ? 'Assigned Staff' : 'Nhân sự phụ trách'}:</dt>
+              <dd>
               {selectedTaskDetail.assignees && selectedTaskDetail.assignees.length > 0 ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {selectedTaskDetail.assignees.map((a) => (
@@ -1357,30 +1168,37 @@ export function TasksPage() {
                   ))}
                 </div>
               ) : (
-                (lang === 'en' ? "No staff assigned" : 'Unassigned nhân sự')
+                (lang === 'en' ? "No staff assigned" : 'Chưa phân công nhân sự')
               )}
             </dd>
+            </div>
 
-            <dt>{(lang === 'en' ? "Start time:" : "Thời gian bắt đầu:")}</dt>
-            <dd>
+            <div>
+              <dt>{(lang === 'en' ? "Start time:" : "Thời gian bắt đầu:")}</dt>
+              <dd>
               {(lang === 'en' ? selectedTaskDetail.startsAt ? displayDateTime(selectedTaskDetail.startsAt, lang) : "Not set" : selectedTaskDetail.startsAt
                 ? displayDateTime(selectedTaskDetail.startsAt, lang)
                 : 'Chưa đặt')}
             </dd>
+            </div>
 
-            <dt>{(lang === 'en' ? "Due date:" : "Hạn hoàn thành:")}</dt>
-            <dd>
+            <div>
+              <dt>{(lang === 'en' ? "Due date:" : "Hạn hoàn thành:")}</dt>
+              <dd>
               {(lang === 'en' ? selectedTaskDetail.dueAt ? displayDateTime(selectedTaskDetail.dueAt, lang) : "Not set" : selectedTaskDetail.dueAt
                 ? displayDateTime(selectedTaskDetail.dueAt, lang)
                 : 'Chưa đặt')}
             </dd>
+            </div>
 
-            <dt>{(lang === 'en' ? "Assigned by:" : "Người giao việc:")}</dt>
-            <dd>{(lang === 'en' ? selectedTaskDetail.createdByFullName || "Farm administrator" : selectedTaskDetail.createdByFullName || 'Quản trị trang trại')}</dd>
+            <div>
+              <dt>{(lang === 'en' ? "Assigned by:" : "Người giao việc:")}</dt>
+              <dd>{(lang === 'en' ? selectedTaskDetail.createdByFullName || "Farm administrator" : selectedTaskDetail.createdByFullName || 'Quản trị trang trại')}</dd>
+            </div>
           </dl>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-            <Button
+          <div className="confirm-dialog-actions" style={{ marginTop: '24px' }}>
+            <Button className={'ui-edit-action'}
               type="button"
               variant="secondary"
               onClick={() => {
@@ -1391,9 +1209,9 @@ export function TasksPage() {
             >
               {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
             </Button>
-            <Button
+            <Button className={'ui-close-action'}
               type="button"
-              variant="primary"
+              variant="secondary"
               onClick={() => setSelectedTaskDetail(null)}
             >
               {(lang === 'en' ? "Close" : "Đóng")}
@@ -1402,45 +1220,18 @@ export function TasksPage() {
         </Modal>
       )}
 
-      {/* Modal 3: {lang === 'en' ? 'Delete Task' : 'Xác nhận xóa'} tasks */}
-      {deletingTask && (
-        <Modal
-          open
-          onClose={() => {
-            if (!submitting) setDeletingTask(null);
-          }}
-          title={(lang === 'en' ? "Confirm task deletion" : "Xác nhận xóa tasks")}
-        >
-          <div style={{ textAlign: 'center', padding: '16px 0' }}>
-            <div style={{ fontSize: '38px', marginBottom: '12px' }}>⚠️</div>
-            <h3 style={{ margin: '0 0 8px', fontSize: '17px', color: 'var(--color-text)' }}>
-              {(lang === 'en' ? "Delete task \"" : "Xóa tasks \"")}{deletingTask.taskName}&quot;?
-            </h3>
-            <p style={{ color: 'var(--color-muted)', fontSize: '14px', margin: 0 }}>
-              {(lang === 'en' ? "This will delete the task and related staff assignments. This cannot be undone." : "Hành động này sẽ xóa tasks và các phân công lao động liên quan. Không thể hoàn tác.")}
-            </p>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={submitting}
-              onClick={() => setDeletingTask(null)}
-            >
-              {(lang === 'en' ? translate("Cancel") : "Hủy")}
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-
-              disabled={submitting}
-              onClick={handleDeleteConfirm}
-            >
-              {(lang === 'en' ? submitting ? "Deleting..." : "Confirm deletion" : submitting ? 'Đang xóa...' : 'Xác nhận xóa')}
-            </Button>
-          </div>
-        </Modal>
-      )}
+      <ConfirmDialog
+        open={Boolean(deletingTask)}
+        title={lang === 'en' ? 'Delete task' : 'Xóa công việc'}
+        description={lang === 'en'
+          ? <>Are you sure you want to delete <strong>{deletingTask?.taskName}</strong>? This also removes related staff assignments and cannot be undone.</>
+          : <>Bạn có chắc chắn muốn xóa công việc <strong>{deletingTask?.taskName}</strong>? Các phân công liên quan cũng sẽ bị xóa. Thao tác này không thể hoàn tác.</>}
+        confirmLabel={lang === 'en' ? 'Delete task' : 'Xóa công việc'}
+        tone="danger"
+        loading={submitting}
+        onClose={() => setDeletingTask(null)}
+        onConfirm={() => { void handleDeleteConfirm(); }}
+      />
     </section>
   );
 }

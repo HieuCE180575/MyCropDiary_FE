@@ -449,7 +449,7 @@ export function ForgotPasswordPage() {
             )}
 
             <p className="auth-switch-prompt">{translate("Remembered your password?")}{' '}
-              <Link className="auth-switch-link" to="/login">{translate("Back to sign in")}{' '}<Icon name="arrow" />
+              <Link className="auth-switch-link ui-back-action" to="/login">{translate("Back to sign in")}{' '}
               </Link>
             </p>
           </form>

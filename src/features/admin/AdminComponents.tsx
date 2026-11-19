@@ -43,7 +43,7 @@ export function AdminBadge({ collection, status }: { collection: Collection; sta
 }
 
 export function AdminModal({ title, close, children, wide = false }: { title: string; close: () => void; children: ReactNode; wide?: boolean }) {
-  return <Modal open onClose={close} title={title} variant="admin" className={wide ? 'wide' : undefined}>{children}</Modal>;
+  return <Modal structured open onClose={close} title={title} variant="admin" className={wide ? 'wide' : undefined}>{children}</Modal>;
 }
 
 export function AdminField({ field, value, onChange }: { field: Field; value: string; onChange: (value: string) => void }) {

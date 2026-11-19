@@ -102,7 +102,7 @@ function farmToRecord(item: AdminFarmDirectoryItem): AdminRecord {
   const rawStatus = (item.status || 'ACTIVE').toUpperCase();
   return {
     id: String(item.farmId ?? item.id),
-    code: item.farmCode || `FARM-00${item.farmId ?? item.id}`,
+    code: item.farmCode || '',
     name: item.farmName,
     status: rawStatus === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
     createdAt: new Date().toISOString(),
@@ -124,7 +124,7 @@ function zoneToRecord(item: AdminZoneDirectoryItem): AdminRecord {
   const rawStatus = (item.status || 'ACTIVE').toUpperCase();
   return {
     id: String(item.zoneId ?? item.id),
-    code: item.zoneCode || `KV-00${item.zoneId ?? item.id}`,
+    code: item.zoneCode || '',
     name: item.zoneName,
     status: rawStatus === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
     createdAt: new Date().toISOString(),
@@ -149,7 +149,7 @@ function blockToRecord(item: AdminBlockDirectoryItem): AdminRecord {
   const rawStatus = (item.status || 'ACTIVE').toUpperCase();
   return {
     id: String(item.blockId ?? item.id),
-    code: item.blockCode || `LO-00${item.blockId ?? item.id}`,
+    code: item.blockCode || '',
     name: item.blockName,
     status: rawStatus === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
     createdAt: new Date().toISOString(),
@@ -175,7 +175,7 @@ function complianceToRecord(item: AdminComplianceDirectoryItem): AdminRecord {
   const rawStatus = (item.status || 'ACTIVE').toUpperCase();
   return {
     id: String(item.seasonId ?? item.id),
-    code: item.seasonCode || `MV-2026-00${item.seasonId ?? item.id}`,
+    code: item.seasonCode || '',
     name: item.seasonName,
     status: rawStatus,
     createdAt: new Date().toISOString(),
@@ -218,7 +218,7 @@ function cropToRecord(item: AdminCropCategoryItem): AdminRecord {
   return {
     id: String(item.id),
     name: item.categoryName,
-    code: `CROP_${item.id}`,
+    code: '',
     group: 'FRUIT',
     growthDays: '35–45 ngày',
     description: item.description || '',

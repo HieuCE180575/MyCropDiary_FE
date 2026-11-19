@@ -95,7 +95,7 @@ export function AssignStaffModal({
   if (!isOpen) return null;
 
   const resolvedZoneName =
-    availableZones.find((z) => z.zoneId === selectedZoneId)?.zoneName || zoneName || `Khu vực #${selectedZoneId}`;
+    availableZones.find((z) => z.zoneId === selectedZoneId)?.zoneName || zoneName || `Khu vực`;
 
   const handleUnassign = async (assignmentId: number) => {
     try {
@@ -142,11 +142,11 @@ export function AssignStaffModal({
   };
 
   return (
-    <Modal open customLayout onClose={onClose} style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
+    <Modal structured open customLayout onClose={onClose} style={{ width: 'min(660px, 100%)', maxHeight: '90vh' }}>
         <div className="modal-header">
           <div>
             <span className="eyebrow">{lang === 'en' ? 'Staff Assignment' : 'Phân công quản lý'}</span>
-            <h2>{lang === 'en' ? 'Assign Staff: ' : 'Phân công nhân sự: '}{resolvedZoneName}</h2>
+            <h2>{lang === 'en' ? 'Assign Staff' : 'Phân công nhân sự'}</h2>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label={(lang === 'en' ? "Close" : "Đóng")}><Icon name="close" /></button>
         </div>
@@ -154,7 +154,7 @@ export function AssignStaffModal({
         <form className="modal-body" onSubmit={handleSubmit} noValidate>
           {error ? <p className="form-error-banner" role="alert">{translate(error)}</p> : null}
 
-          <div className="structured-field-card" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
+          <div className={`structured-field-card${availableZones.length <= 1 ? ' ui-form-context' : ''}`} style={{ background: availableZones.length <= 1 ? 'var(--color-success-bg)' : 'var(--color-page)', borderColor: 'var(--color-border)', marginBottom: 0 }}>
             <div className="structured-field-header" style={{ borderBottomColor: 'var(--color-border)' }}>
               <label htmlFor="assign-zone-select" className="structured-field-label" style={{ color: 'var(--color-primary-text)' }}>
                 {lang === 'en' ? 'Assigned Zone' : 'Khu vực phân công'} <span style={{ color: 'var(--color-danger)' }}>*</span>
@@ -178,7 +178,7 @@ export function AssignStaffModal({
                 </select>
               </div>
             ) : (
-              <div style={{ fontWeight: 700, color: 'var(--color-primary-text)', fontSize: '15px' }}>🗺️ {resolvedZoneName}</div>
+              <div style={{ fontWeight: 700, color: 'var(--color-primary-text)', fontSize: '15px' }}>{resolvedZoneName}</div>
             )}
           </div>
 
@@ -199,7 +199,7 @@ export function AssignStaffModal({
                   <div key={asgn.assignmentId} className="file-list-item">
                     <div>
                       <strong style={{ color: 'var(--color-text)', display: 'block', fontSize: '14px' }}>
-                        {(lang === 'en' ? asgn.staffName || `Staff #${asgn.farmMemberId}` : asgn.staffName || `Nhân sự #${asgn.farmMemberId}`)}
+                        {(lang === 'en' ? asgn.staffName || `Staff` : asgn.staffName || `Nhân sự`)}
                       </strong>
                       <small style={{ color: 'var(--color-muted)' }}>
                         {(lang === 'en' ? asgn.jobTitle || "Staff" : asgn.jobTitle || 'Nhân viên')} {(lang === 'en' ? " · Assigned date: " : " · Ngày nhận: ")} {uiFormatDate(asgn.assignedAt, lang)}
@@ -207,8 +207,9 @@ export function AssignStaffModal({
                     </div>
                     <Button
                       type="button"
-                      variant="danger"
-
+                      variant="secondary"
+                      size="compact"
+                      className="assignment-unassign-action"
                       onClick={() => handleUnassign(asgn.assignmentId)}
                     >
                       {lang === 'en' ? 'Unassign' : 'Thu hồi'}
@@ -289,7 +290,7 @@ export function AssignStaffModal({
           </div>
 
           <div className="confirm-dialog-actions" style={{ marginTop: '8px' }}>
-            <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>{translate("Cancel")}</Button>
+            <Button className="ui-cancel-button" type="button" variant="secondary" onClick={onClose} disabled={loading}>{translate("Cancel")}</Button>
             <Button
               type="submit"
               variant="primary"

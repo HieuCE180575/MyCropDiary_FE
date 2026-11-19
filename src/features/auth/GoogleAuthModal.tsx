@@ -298,7 +298,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
-              <button
+              <button className="ui-back-action"
                 type="button"
                 onClick={() => setShowManual(false)}
                 disabled={loading}

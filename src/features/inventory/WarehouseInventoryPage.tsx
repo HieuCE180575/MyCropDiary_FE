@@ -1,3 +1,4 @@
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
 import { message, type TranslationMessage } from "../../shared/i18n/translate";
 import { LoadError } from '../../shared/components/LoadError';
 import { TabList, tabPanelProps } from '../../shared/components/TabList';
@@ -355,7 +356,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
   return (
     <section className="farm-registration-page" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '40px' }}>
       {/* Status / Action Notification Banner */}
-      {notification && (
+      {notification && (isDeleteError(translate(notification.text), notification.type) ? <DeleteErrorToast text={translate(notification.text)} onClose={() => setNotification(null)} /> : (
         <div
           role={notification.type === 'error' ? 'alert' : 'status'}
           className={notification.type === 'error' ? 'form-error-banner' : 'status-note'}
@@ -373,7 +374,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
             ✕
           </button>
         </div>
-      )}
+      ))}
 
       {/* Main Page Heading matching Mockup */}
       <PageHeading level={embedded ? 2 : 1} title={<>
@@ -930,7 +931,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
 
       {/* MODAL: Warehouse Details */}
       {loadingWarehouseOverview ? (
-        <Modal open onClose={() => setLoadingWarehouseOverview(false)}>
+        <Modal structured open onClose={() => setLoadingWarehouseOverview(false)}>
           <div className="modal-body wh-loading">
             <span className="wh-spinner" aria-hidden="true" />
             {lang === 'en'
@@ -939,7 +940,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
           </div>
         </Modal>
       ) : selectedWarehouse && (
-        <Modal
+        <Modal structured
           open
           customLayout
           className="modal-form-layout wh-modal"
@@ -1114,7 +1115,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
         const empty = '—';
 
         return (
-          <Modal
+          <Modal structured
             open
             customLayout
             className="modal-form-layout inv-modal"
@@ -1312,7 +1313,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       {/* MODAL: Create Warehouse */}
       {
         isCreateWarehouseOpen && (
-          <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateWarehouseOpen(false)} style={{ width: 'min(500px, 100%)' }}>
+          <Modal structured open customLayout className="modal-form-layout" onClose={() => setIsCreateWarehouseOpen(false)} style={{ width: 'min(500px, 100%)' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'New Storage Facility' : 'Tạo kho hàng mới'}</span>
@@ -1356,7 +1357,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 </div>
               </div>
               <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-                <Button type="button" variant="secondary" onClick={() => setIsCreateWarehouseOpen(false)} disabled={creatingWarehouse}>
+                <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setIsCreateWarehouseOpen(false)} disabled={creatingWarehouse}>
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
                 </Button>
                 <Button type="submit" variant="primary" loading={creatingWarehouse}>
@@ -1371,7 +1372,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       {/* MODAL: Update Inventory */}
       {
         editingInventory && (
-          <Modal open customLayout className="modal-form-layout" onClose={() => setEditingInventory(null)} style={{ width: 'min(480px, 100%)' }}>
+          <Modal structured open customLayout className="modal-form-layout" onClose={() => setEditingInventory(null)} style={{ width: 'min(480px, 100%)' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Inventory' : 'Cập nhật tồn kho'}</span>
@@ -1427,7 +1428,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 </div>
               </div>
               <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-                <Button type="button" variant="secondary" onClick={() => setEditingInventory(null)} disabled={updatingInventory}>
+                <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setEditingInventory(null)} disabled={updatingInventory}>
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
                 </Button>
                 <Button type="submit" variant="primary" loading={updatingInventory}>
@@ -1442,7 +1443,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       {/* MODAL: Edit Warehouse */}
       {
         editingWarehouse && (
-          <Modal open customLayout className="modal-form-layout" onClose={() => setEditingWarehouse(null)} style={{ width: 'min(500px, 100%)' }}>
+          <Modal structured open customLayout className="modal-form-layout" onClose={() => setEditingWarehouse(null)} style={{ width: 'min(500px, 100%)' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Update Storage Facility' : 'Cập nhật cơ sở lưu trữ'}</span>
@@ -1484,7 +1485,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 </div>
               </div>
               <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-                <Button type="button" variant="secondary" onClick={() => setEditingWarehouse(null)} disabled={updatingWarehouse}>
+                <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setEditingWarehouse(null)} disabled={updatingWarehouse}>
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
                 </Button>
                 <Button type="submit" variant="primary" loading={updatingWarehouse}>
@@ -1499,7 +1500,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
       {/* MODAL: Create Inventory */}
       {
         isCreateInventoryOpen && (
-          <Modal open customLayout className="modal-form-layout" onClose={() => setIsCreateInventoryOpen(false)} style={{ width: 'min(520px, 100%)' }}>
+          <Modal structured open customLayout className="modal-form-layout" onClose={() => setIsCreateInventoryOpen(false)} style={{ width: 'min(520px, 100%)' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{lang === 'en' ? 'Inventory Management' : 'Quản lý tồn kho'}</span>
@@ -1596,7 +1597,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 </div>
               </div>
               <div className="modal-footer" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)' }}>
-                <Button type="button" variant="secondary" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
+                <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setIsCreateInventoryOpen(false)} disabled={creatingInventory}>
                   {lang === 'en' ? 'Cancel' : 'Hủy'}
                 </Button>
                 <Button type="submit" variant="primary" loading={creatingInventory}>

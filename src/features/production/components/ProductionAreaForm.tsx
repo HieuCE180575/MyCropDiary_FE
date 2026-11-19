@@ -121,7 +121,7 @@ export function ProductionAreaForm({
         </label>
 
         <div className="form-actions">
-          <Link to={cancelHref} className="ui-button ui-button--secondary">
+          <Link to={cancelHref} className={"ui-button ui-button--secondary" + ' ' + 'ui-cancel-button'}>
             {lang === 'en' ? 'Cancel' : 'Huỷ'}
           </Link>
           <Button type="submit" variant="primary" loading={submitting}>

@@ -124,7 +124,8 @@ test('material usage loads real detail, reuses PUT form, preserves errors and us
     root = createRoot(document.getElementById('root'));
     await act(async () => root.render(createElement(AuthProvider, null,
       createElement(FarmWorkspaceProvider, null, createElement(MaterialUsagePage), createElement(SwitchFarm)))));
-    assert.match(document.querySelector('tbody').textContent, /Server recorder/);
+    assert.doesNotMatch(document.querySelector('tbody').textContent, /Server recorder/);
+    assert.equal(document.querySelectorAll('thead th').length, 5);
     assert.doesNotMatch(document.querySelector('tbody').textContent, /An toàn \(0 ngày\)/);
     records = [original, ...Array.from({ length: 50 }, (_, index) => ({ ...original, materialUsageId: 100 + index, materialName: `Material ${index}` }))];
     await act(async () => button('Tải lại').click());
@@ -198,9 +199,12 @@ test('material usage loads real detail, reuses PUT form, preserves errors and us
     }
     await act(async () => document.querySelector('.modal-close').click());
     await act(async () => button('Chỉnh sửa').click());
-    assert.equal(document.querySelector('#usage-activity').readOnly, true);
-    assert.equal(document.querySelector('#usage-activity').value, 'Bón phân');
-    assert.equal(document.querySelector('#usage-season-readonly').value, 'Season 17');
+    assert.equal(document.querySelector('#usage-activity').tagName, 'DIV');
+    assert.equal(document.querySelector('#usage-activity').textContent, 'Bón phân');
+    assert.equal(document.querySelector('#usage-season-readonly').textContent, 'Season 17');
+    assert.ok(document.querySelector('#usage-activity').closest('.ui-form-context'));
+    assert.ok(document.querySelector('.mu-linked-block').closest('.ui-form-context'));
+    assert.ok(document.querySelector('.mu-entry-form > .modal-body + .modal-footer'));
     assert.equal(document.querySelector('#usage-isolation-end').value, '04/11/2026 08:30');
     await setValue(document.querySelector('#usage-phi'), '');
     assert.equal(document.querySelector('#usage-isolation-end').value, '04/11/2026 08:30');
@@ -239,6 +243,7 @@ test('material usage loads real detail, reuses PUT form, preserves errors and us
     assert.equal(document.querySelector('[aria-label="Đơn vị"]').textContent, 'lít');
     await submit();
     assert.match(document.querySelector('[role="dialog"] [role="alert"]').textContent, /Server rejected/);
+    assert.match(document.querySelector('.mu-entry-footer [role="alert"]').textContent, /Server rejected/);
     assert.equal(document.querySelector('[aria-label="Liều lượng"]').value, '50');
     assert.equal(safetyInput.value, '0');
     assert.equal(records[0].quantity, 10);
@@ -277,7 +282,7 @@ test('material usage loads real detail, reuses PUT form, preserves errors and us
     await setValue(document.querySelector('#usage-season'), '17');
     assert.ok(document.querySelector('#usage-activity option[value="18"]'));
     await setValue(document.querySelector('#usage-activity'), '18');
-    assert.match(document.querySelector('.mu-activity-context').textContent, /RA-01 – Rau cải xanh/);
+    assert.match(document.querySelector('.mu-linked-block').textContent, /RA-01 – Rau cải xanh/);
     await setValue(document.querySelector('#usage-season'), '19');
     assert.equal(document.querySelector('#usage-activity').value, '');
     assert.equal(document.querySelector('#usage-activity option[value="18"]'), null);

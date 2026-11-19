@@ -6,6 +6,7 @@ import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 import { Icon } from '../../shared/components/Icon';
+import { DeleteErrorToast, isDeleteError } from '../../shared/components/DeleteErrorToast';
 import { formatDateTime as uiFormatDateTime } from '../../shared/format/formatters';
 
 import { formatDate as uiFormatDate } from '../../shared/format/formatters';
@@ -327,15 +328,15 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
   return (
     <section className="ai-assistant-page">
-      <PageHeading   title={<>{(lang === 'en' ? "VietGAP Farming AI Assistant" : "Trợ lý AI Nông nghiệp VietGAP")}</>} description={<>
-            {(lang === 'en' ? "Get pest diagnosis support and farming advice, save conversations, and submit feedback to specialists" : "Hỗ trợ chẩn đoán dịch hại, tư vấn canh tác chuẩn quốc gia, lưu trữ lịch sử hội thoại và phản hồi chuyên gia")}
-          </>}><div style={{ display: 'flex', gap: '10px' }}>
+      <PageHeading   title={<>{(lang === 'en' ? "VietGAP Farming AI Assistant" : "Trợ lý AI Nông nghiệp VietGAP")}</>}><div style={{ display: 'flex', gap: '10px' }}>
           <Button type="button" variant="primary" onClick={handleStartNewConversation}>
             <Icon name="plus" /> {(lang === 'en' ? " New conversation" : " Cuộc trò chuyện mới")}
           </Button>
         </div></PageHeading>
 
-      {toastMessage && (
+      {toastMessage && (isDeleteError(translate(toastMessage.text), toastMessage.type)
+        ? <DeleteErrorToast text={translate(toastMessage.text)} onClose={() => setToastMessage(null)} />
+        : (
         <div
           role={toastMessage.type === 'error' ? 'alert' : 'status'}
           style={{
@@ -354,12 +355,12 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           <Icon name={toastMessage.type === 'success' ? 'check' : 'warning'} />
           <span>{translate(toastMessage.text)}</span>
         </div>
-      )}
+      ))}
 
       <TabList idPrefix="ai" label={lang === 'en' ? 'AI assistant sections' : 'Các mục trợ lý AI'}
         value={activeTab} onChange={setActiveTab} items={[
           { value: 'ai', label: <>{lang === 'en' ? '🤖 AI Assistant Chat' : '🤖 Trò chuyện cùng AI'}</> },
-          { value: 'ai-history', label: <>{lang === 'en' ? '📜 Chat History' : '📜 Lịch sử & Tìm kiếm hội thoại'} ({conversations.length})</> },
+          { value: 'ai-history', label: <>{lang === 'en' ? '📜 Chat History' : '📜 Lịch sử & Tìm kiếm hội thoại'} (</> },
           { value: 'ai-feedback', label: <>{lang === 'en' ? '💬 User Feedback & Reports' : '💬 Phản hồi & Lịch sử báo cáo'}</> },
           { value: 'ai-drafts', label: <>{lang === 'en' ? '📝 AI Farming Drafts' : '📝 Dự thảo nhật ký AI'} ({drafts.filter((d) => d.status === 'PENDING').length})</> },
         ]} />
@@ -375,7 +376,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             <div className="ai-message-feed">
               {messages.length === 0 ? (
                 <div style={{ textAlign: 'center', margin: 'auto', color: 'var(--color-muted)' }}>
-                  <span style={{ fontSize: '36px', display: 'block', marginBottom: '8px' }}>🌱</span>
+                  
                   <strong>{(lang === 'en' ? "Hello! Ask the VietGAP AI Assistant a question." : "Chào bạn! Hãy đặt câu hỏi cho Trợ lý AI VietGAP.")}</strong>
                   <p style={{ margin: '4px 0 0', fontSize: '13px' }}>{(lang === 'en' ? "Ask about biological pest control, fertilizer formulas, or soil and water standards." : "Hỏi về phòng trừ sâu bệnh sinh học, công thức bón phân hoặc tiêu chuẩn đất nước.")}</p>
                 </div>
@@ -468,7 +469,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           </div>
 
           {/* Quick Suggestions Side */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="panel" style={{ padding: '18px' }}>
               <strong style={{ fontSize: '14px', color: 'var(--color-text)', display: 'block', marginBottom: '10px' }}>
                 {(lang === 'en' ? "💡 Suggested questions:" : "💡 Câu hỏi gợi ý nhanh:")}
@@ -520,7 +521,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
          ========================================================= */}
       {activeTab === 'ai-history' && (
         <div {...tabPanelProps('ai', 'ai-history')} className="panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
             <div>
               <h2 style={{ margin: 0, fontSize: '18px', color: 'var(--color-text)' }}>{(lang === 'en' ? "AI conversation history" : "Lịch sử các phiên tư vấn AI")}</h2>
               <p style={{ margin: '4px 0 0', color: 'var(--color-muted)', fontSize: '13.5px' }}>
@@ -636,7 +637,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                 <p>{(lang === 'en' ? "You have not submitted any reports or feedback on AI answers." : "Bạn chưa gửi báo cáo hoặc ý kiến phản hồi nào cho các câu trả lời AI.")}</p>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {feedbackHistory.map((fb) => (
                   <div
                     key={fb.feedbackId}
@@ -657,10 +658,11 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                         </small>
                         <button
                           type="button"
-                          className="outline-button"
+                          className={"outline-button" + ' ' + 'ui-edit-action'}
                           style={{ fontSize: '11.5px', padding: '3px 8px' }}
                           onClick={() => handleStartEditFeedback(fb)}
                         >
+                          <Icon name="edit" size={14} />
                           {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
                         </button>
                       </div>
@@ -705,14 +707,15 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             )}
 
             <form onSubmit={handleGeneralFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <textarea aria-label={(lang === 'en' ? "Enter your feedback..." : "Nhập nội dung đóng góp của bạn...")} className="ui-textarea"
+              <div className="structured-field-card"><label htmlFor="general-ai-feedback">{lang === 'en' ? 'Feedback' : 'Nội dung góp ý'}</label>
+              <textarea id="general-ai-feedback" aria-label={(lang === 'en' ? 'Enter your feedback...' : 'Nhập nội dung đóng góp của bạn...')} className="ui-textarea"
                 rows={4}
                 required
                 placeholder={(lang === 'en' ? "Enter your feedback..." : "Nhập nội dung đóng góp của bạn...")}
                 value={feedbackText}
                 onChange={(e) => setFeedbackText(e.target.value)}
                 style={{ width: '100%', padding: '10px' }}
-              />
+              /></div>
               <Button type="submit" variant="primary" style={{ alignSelf: 'flex-end' }}>
                 {(lang === 'en' ? "Send feedback" : "Gửi ý kiến")}
               </Button>
@@ -771,7 +774,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           REPORT MODAL: Report AI Response
          ========================================================= */}
       {reportingMessage && (
-        <Modal open customLayout onClose={() => setReportingMessage(null)} style={{ width: 'min(540px, 100%)' }}>
+        <Modal structured open customLayout onClose={() => setReportingMessage(null)} style={{ width: 'min(540px, 100%)' }}>
             <div className="modal-header">
               <div>
                 <span className="eyebrow" style={{ color: 'var(--color-danger)' }}>{(lang === 'en' ? "Report answer" : "Báo cáo câu trả lời")}</span>
@@ -781,13 +784,13 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             </div>
 
             <form className="modal-body" onSubmit={handleSubmitReport}>
-              <div style={{ background: 'var(--color-page)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-body)', maxHeight: '120px', overflowY: 'auto' }}>
+              <div className="ui-form-context" style={{ background: 'var(--color-page)', padding: '16px 18px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-body)', maxHeight: '120px', overflowY: 'auto' }}>
                 <strong>{(lang === 'en' ? "AI answer:" : "Nội dung câu trả lời của AI:")}</strong>
                 <p style={{ margin: '4px 0 0', fontStyle: 'italic' }}>&quot;{reportingMessage.uiMessageKey ? translate(reportingMessage.uiMessageKey) : reportingMessage.messageText}&quot;</p>
               </div>
 
-              <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
+              <div className="structured-field-card">
+              <label className="structured-field-label">
                   {(lang === 'en' ? "Satisfaction / Accuracy:" : "Mức độ hài lòng / Độ chính xác:")}
                 </label>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -828,7 +831,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
               </div>
 
               <div className="confirm-dialog-actions" style={{ marginTop: '10px' }}>
-                <Button type="button" variant="secondary" onClick={() => setReportingMessage(null)}>
+                <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setReportingMessage(null)}>
                   {(lang === 'en' ? "Cancel" : "Hủy")}
                 </Button>
                 <Button type="submit" variant="primary" loading={submittingReport}>
@@ -841,7 +844,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
       {/* Edit Feedback Modal */}
       {editingFeedback && (
-        <Modal open customLayout className="modal-form-layout" onClose={() => setEditingFeedback(null)} style={{ width: 'min(520px, 100%)' }}>
+        <Modal structured open customLayout className="modal-form-layout" onClose={() => setEditingFeedback(null)} style={{ width: 'min(520px, 100%)' }}>
           <div className="modal-header">
             <div>
               <span className="eyebrow" style={{ color: 'var(--color-primary-text)' }}>{(lang === 'en' ? "Update feedback" : "Cập nhật ý kiến")}</span>
@@ -852,14 +855,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
           <form className="modal-body" onSubmit={handleSubmitEditFeedback}>
             {editingFeedback.aiResponseSnippet && (
-              <div style={{ background: 'var(--color-page)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-body)', maxHeight: '120px', overflowY: 'auto' }}>
+              <div className="ui-form-context" style={{ background: 'var(--color-page)', padding: '16px 18px', borderRadius: '8px', border: '1px solid var(--color-border)', fontSize: '13px', color: 'var(--color-body)', maxHeight: '120px', overflowY: 'auto' }}>
                 <strong>{(lang === 'en' ? "AI answer:" : "Câu trả lời AI:")}</strong>
                 <p style={{ margin: '4px 0 0', fontStyle: 'italic' }}>&quot;{editingFeedback.aiResponseSnippet}&quot;</p>
               </div>
             )}
 
-            <div>
-              <label style={{ display: 'block', marginBottom: '6px', fontSize: '13.5px', fontWeight: 650 }}>
+            <div className="structured-field-card">
+              <label className="structured-field-label">
                 {(lang === 'en' ? "Star rating:" : "Đánh giá số sao:")}
               </label>
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -899,7 +902,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
             </div>
 
             <div className="confirm-dialog-actions" style={{ marginTop: '10px' }}>
-              <Button type="button" variant="secondary" onClick={() => setEditingFeedback(null)}>
+              <Button className="ui-cancel-button" type="button" variant="secondary" onClick={() => setEditingFeedback(null)}>
                 {(lang === 'en' ? "Cancel" : "Hủy")}
               </Button>
               <Button type="submit" variant="primary" loading={submittingEdit}>

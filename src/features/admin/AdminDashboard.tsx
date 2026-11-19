@@ -583,7 +583,7 @@ export function AdminDashboard() {
                         onClick={() => navigate('/admin/registrations')}
                       >
                         <strong>{item.name}</strong>
-                        <small>{item.applicant || item.email || item.id}</small>
+                        <small>{item.applicant || item.email || '—'}</small>
                       </button>
                     </td>
                     <td>
@@ -629,7 +629,7 @@ export function AdminDashboard() {
                 <i />
                 <div>
                   <strong>{translate(item.name)}</strong>
-                  <p>{item.actor ?? ""} {(lang === 'en' ? " · Resource ID: " : " · Mã đối tượng: ")} {item.resourceId}</p>
+                  <p>{item.actor ?? ""}</p>
                   <small>{displayValue('createdAt', item.createdAt, lang)}</small>
                 </div>
               </article>
@@ -803,7 +803,6 @@ export function AdminDashboard() {
               </span>
               <div className="alert-item-info">
                 <strong>{"HTX Nông Nghiệp Ba Vì"}</strong>
-                <small>{(lang === 'en' ? "Registration ID: DK-2026-089" : "Mã đăng ký: DK-2026-089")}</small>
               </div>
             </div>
 
