@@ -374,9 +374,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
           <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ background: 'var(--color-page)' }}>
-                <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                  <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                </th>
                 <th scope="col">
                   {lang === 'en' ? 'PURCHASE / INVOICE NO.' : 'MÃ PHIẾU / SỐ HĐ'}
                 </th>
@@ -388,9 +385,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 </th>
                 <th scope="col">
                   {lang === 'en' ? 'PURCHASED BY' : 'NGƯỜI THU MUA'}
-                </th>
-                <th scope="col" style={{ textAlign: 'center' }}>
-                  {lang === 'en' ? 'ITEMS' : 'SỐ MẶT HÀNG'}
                 </th>
                 <th scope="col" style={{ textAlign: 'right' }}>
                   {lang === 'en' ? 'TOTAL AMOUNT' : 'TỔNG THANH TOÁN'}
@@ -423,9 +417,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                   const hasWarehouse = Boolean(purchase.warehouseReceiptNo);
                   return (
                     <tr key={purchase.purchaseId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ textAlign: 'center' }}>
-                        <input type="checkbox" aria-label={translate("Select") + " #" + (purchase.purchaseId)} style={{ cursor: 'pointer' }} />
-                      </td>
                       <td>
                         <span
                           onClick={() => handleOpenDetails(purchase.purchaseId)}
@@ -454,11 +445,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                       </td>
                       <td style={{ color: 'var(--color-body)', fontSize: '13.5px' }}>
                         {purchase.purchasedByName || '—'}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <span className="profile-tag-pill" style={{ background: 'var(--color-subtle)', color: 'var(--color-body)' }}>
-                          {purchase.items?.length || 0} {lang === 'en' ? 'items' : 'mặt hàng'}
-                        </span>
                       </td>
                       <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-text)', fontSize: '14px' }}>
                         {displayCurrency(purchase.totalAmount ?? 0, lang)}
@@ -531,155 +517,144 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
 
       {/* View Input Purchase Details Modal */}
       {selectedPurchase && (
-        <Modal open={true}
+        <Modal
+          open={true}
           onClose={() => setSelectedPurchase(null)}
           title={lang === 'en'
             ? `Input Purchase Details ${selectedPurchase.referenceNo || '#' + selectedPurchase.purchaseId}`
             : `Chi tiết phiếu mua vật tư ${selectedPurchase.referenceNo || '#' + selectedPurchase.purchaseId}`}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, maxWidth: '780px' }}>
-            {/* Header Status & Total */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '14px 18px',
-                background: 'var(--color-page)',
-                borderRadius: '10px',
-                border: '1px solid var(--color-border)',
-              }}
-            >
-              <div>
-                <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Purchase Date:' : 'Ngày giao dịch:'}</span>{' '}
-                <strong>{displayDate(selectedPurchase.purchaseDate, lang)}</strong>
+          <div className="pur-detail">
+            {/* Hero: date / buyer + total */}
+            <div className="pur-hero">
+              <div className="pur-hero-meta">
+                <div className="pur-meta-row">
+                  <span className="pur-label">{lang === 'en' ? 'Purchase Date' : 'Ngày giao dịch'}</span>
+                  <strong>{displayDate(selectedPurchase.purchaseDate, lang)}</strong>
+                </div>
                 {selectedPurchase.purchasedByName && (
-                  <div style={{ fontSize: '12.5px', color: 'var(--color-muted)', marginTop: '3px' }}>
-                    {lang === 'en' ? 'Purchased by:' : 'Người mua:'} <strong>{selectedPurchase.purchasedByName}</strong>
+                  <div className="pur-meta-row">
+                    <span className="pur-label">{lang === 'en' ? 'Purchased by' : 'Người mua'}</span>
+                    <span className="pur-person">
+                      <span className="pur-avatar" aria-hidden="true">
+                        {selectedPurchase.purchasedByName.charAt(0).toUpperCase()}
+                      </span>
+                      <strong>{selectedPurchase.purchasedByName}</strong>
+                    </span>
                   </div>
                 )}
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Total Amount:' : 'Tổng thanh toán:'}</span>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-primary-text)' }}>
-                  {displayCurrency(selectedPurchase.totalAmount ?? 0, lang)}
-                </div>
+
+              <div className="pur-hero-total" >
+                <span className="pur-label">{lang === 'en' ? 'Total Amount' : 'Tổng thanh toán'}</span>
+                <strong className="pur-total" style={{ width: '200px' }}>{displayCurrency(selectedPurchase.totalAmount ?? 0, lang)}</strong>
               </div>
             </div>
 
-            {/* Supplier and Warehouse Info */}
-            <div className="ui-form-grid" >
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text)', marginBottom: '6px' }}>
-                  {lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}
-                </div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-info)' }}>
-                  {selectedPurchase.supplierName || (lang === 'en' ? 'Unnamed supplier' : 'Không có tên nhà cung cấp')}
-                </div>
+            {/* Supplier + warehouse receipt */}
+            <div className="pur-cards">
+              <section className="pur-card">
+                <h4>{lang === 'en' ? 'Supplier' : 'Nhà cung cấp'}</h4>
+                <p className="pur-card-main">
+                  {selectedPurchase.supplierName ||
+                    (lang === 'en' ? 'Unnamed supplier' : 'Không có tên nhà cung cấp')}
+                </p>
                 {selectedPurchase.notes && (
-                  <div style={{ fontSize: '12.5px', color: 'var(--color-muted)', marginTop: '6px' }}>
-                    {lang === 'en' ? 'Notes:' : 'Ghi chú:'} {selectedPurchase.notes}
-                  </div>
+                  <p className="pur-card-note">
+                    <b>{lang === 'en' ? 'Notes: ' : 'Ghi chú: '}</b>
+                    {selectedPurchase.notes}
+                  </p>
                 )}
-              </div>
+              </section>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text)' }}>
-                    {lang === 'en' ? 'Warehouse Receipt' : 'Phiếu nhập kho (Warehouse Receipt)'}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleOpenLinkModal(selectedPurchase)}
-                    style={{ fontSize: '12px', color: 'var(--color-info)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}
-                  >
+              <section className="pur-card">
+                <div className="pur-card-head">
+                  <h4>{lang === 'en' ? 'Warehouse Receipt' : 'Phiếu nhập kho'}</h4>
+                  <button type="button" className="pur-link-btn" onClick={() => handleOpenLinkModal(selectedPurchase)}>
                     {lang === 'en' ? 'Change' : 'Thay đổi'}
                   </button>
                 </div>
                 {selectedPurchase.warehouseReceiptNo ? (
-                  <div>
+                  <>
                     <StatusBadge tone="success" label={<>{selectedPurchase.warehouseReceiptNo}</>} />
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--color-primary-text)' }}>
+                    <p className="pur-card-hint ok">
                       {lang === 'en' ? '✓ Linked to VietGAP warehouse receipt' : '✓ Đã liên kết chứng từ kho VietGAP'}
                     </p>
-                  </div>
+                  </>
                 ) : (
-                  <div>
+                  <>
                     <StatusBadge tone="warning" label={<>{lang === 'en' ? 'Unlinked' : 'Chưa liên kết'}</>} />
-                    <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--color-warning)' }}>
+                    <p className="pur-card-hint warn">
                       {lang === 'en' ? 'No warehouse receipt linked.' : 'Chưa gắn số phiếu nhập kho lưu trữ.'}
                     </p>
-                  </div>
+                  </>
                 )}
-              </div>
+              </section>
             </div>
 
-            {/* Items Table */}
-            <div>
-              <h4 style={{ margin: '0 0 10px', fontSize: '14.5px', color: 'var(--color-text)' }}>
+            {/* Items */}
+            <section>
+              <h4 className="pur-section-title">
                 {lang === 'en' ? 'Input Items in Purchase' : 'Danh mục mặt hàng vật tư nhập kho'}
               </h4>
-              <div style={{ border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }} className="ui-table-scroll" tabIndex={0}>
-                <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <div className="pur-table-wrap ui-table-scroll" tabIndex={0}>
+                <table className="pur-table">
                   <thead>
-                    <tr style={{ background: 'var(--color-page)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-body)' }}>
-                      <th scope="col" style={{ textAlign: 'left' }}>{lang === 'en' ? 'Item Name' : 'Tên mặt hàng vật tư'}</th>
-                      <th scope="col" style={{ textAlign: 'left' }}>{lang === 'en' ? 'Type' : 'Phân loại'}</th>
-                      <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Quantity' : 'Số lượng'}</th>
-                      <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Unit Cost (VND)' : 'Đơn giá (VND)'}</th>
-                      <th scope="col" style={{ textAlign: 'right' }}>{lang === 'en' ? 'Subtotal' : 'Thành tiền'}</th>
+                    <tr>
+                      <th scope="col">{lang === 'en' ? 'Item Name' : 'Tên mặt hàng vật tư'}</th>
+                      <th scope="col">{lang === 'en' ? 'Type' : 'Phân loại'}</th>
+                      <th scope="col" className="num">{lang === 'en' ? 'Quantity' : 'Số lượng'}</th>
+                      <th scope="col" className="num">{lang === 'en' ? 'Unit Cost' : 'Đơn giá'}</th>
+                      <th scope="col" className="num">{lang === 'en' ? 'Subtotal' : 'Thành tiền'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedPurchase.items?.length > 0 ? (
                       selectedPurchase.items.map((item, idx) => (
-                        <tr key={item.purchaseItemId || idx} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                          <td style={{ fontWeight: 600, color: 'var(--color-text)' }}>
+                        <tr key={item.purchaseItemId || idx}>
+                          <td className="name">
                             {item.materialName || `${lang === 'en' ? 'Material' : 'Vật tư'} #${item.materialId}`}
                           </td>
-                          <td style={{ color: 'var(--color-muted)' }}>
-                            {item.materialType || (lang === 'en' ? 'Farm Input' : 'Vật tư canh tác')}
+                          <td>
+                            <span className="pur-type">
+                              {item.materialType || (lang === 'en' ? 'Farm Input' : 'Vật tư canh tác')}
+                            </span>
                           </td>
-                          <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                          <td className="num strong">
                             {item.quantity} {translate(item.unit || '')}
                           </td>
-                          <td style={{ textAlign: 'right', color: 'var(--color-body)' }}>
-                            {displayCurrency(item.unitCost ?? 0, lang)}
-                          </td>
-                          <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--color-primary-text)' }}>
-                            {displayCurrency(item.lineTotal ?? 0, lang)}
-                          </td>
+                          <td className="num">{displayCurrency(item.unitCost ?? 0, lang)}</td>
+                          <td className="num sub">{displayCurrency(item.lineTotal ?? 0, lang)}</td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: 'var(--color-muted)' }}>
+                        <td colSpan={5} className="pur-empty">
                           {lang === 'en' ? 'No item details available.' : 'Không có mặt hàng chi tiết.'}
                         </td>
                       </tr>
                     )}
                   </tbody>
                   <tfoot>
-                    <tr style={{ background: 'var(--color-page)', fontWeight: 700 }}>
-                      <td colSpan={4} style={{ padding: '10px 14px', textAlign: 'right' }}>
-                        {lang === 'en' ? 'Total:' : 'Tổng cộng:'}
-                      </td>
-                      <td style={{ textAlign: 'right', color: 'var(--color-primary-text)', fontSize: '15px' }}>
-                        {displayCurrency(selectedPurchase.totalAmount ?? 0, lang)}
-                      </td>
+                    <tr>
+                      <td colSpan={4} className="num">{lang === 'en' ? 'Total' : 'Tổng cộng'}</td>
+                      <td className="num sub total">{displayCurrency(selectedPurchase.totalAmount ?? 0, lang)}</td>
                     </tr>
                   </tfoot>
                 </table>
               </div>
-            </div>
+            </section>
 
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => handleOpenLinkModal(selectedPurchase)}
-              >
+            {/* Actions */}
+
+            <div className="modal-footer" style={{
+              padding: '14px 0px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '8px',
+              borderTop: '1px solid var(--color-border)',
+            }}>
+              <Button type="button" variant="secondary" onClick={() => handleOpenLinkModal(selectedPurchase)}>
                 <Icon name="plots" size={14} /> {lang === 'en' ? 'Link Warehouse Receipt' : 'Liên kết phiếu kho'}
               </Button>
               <Button
@@ -696,7 +671,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
           </div>
         </Modal>
       )}
-
       {/* Link Warehouse Receipt Modal */}
       {linkingPurchase && (
         <Modal open={true}
@@ -715,7 +689,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
             <div className="form-group structured-field-card">
               <div className="structured-field-header">
                 <label htmlFor="inventory-field-1">
-                  {lang === 'en' ? 'Warehouse Receipt No. *' : 'Số phiếu nhập kho *'}
+                  {lang === 'en' ? 'Warehouse Receipt No. ' : 'Số phiếu nhập kho '}
                   <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <span className="structured-field-badge">{(lang === 'en' ? "Required" : "Bắt buộc")}</span>

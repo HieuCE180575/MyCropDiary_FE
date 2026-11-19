@@ -340,9 +340,6 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
           <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr style={{ background: 'var(--color-page)' }}>
-                <th scope="col" style={{ width: '40px', textAlign: 'center' }}>
-                  <input type="checkbox" aria-label={lang === 'en' ? 'Select all' : 'Chọn tất cả'} style={{ cursor: 'pointer' }} />
-                </th>
                 <th scope="col">
                   {lang === 'en' ? 'SUPPLIER NAME' : 'TÊN NHÀ CUNG CẤP'}
                 </th>
@@ -384,9 +381,6 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
               ) : (
                 suppliersPagination.items.map((supplier) => (
                   <tr key={supplier.supplierId} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td style={{ textAlign: 'center' }}>
-                      <input type="checkbox" aria-label={translate("Select") + " #" + (supplier.supplierId)} style={{ cursor: 'pointer' }} />
-                    </td>
                     <td>
                       <span
                         onClick={() => handleOpenDetails(supplier.supplierId)}
@@ -402,9 +396,6 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                         onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                       >
                         {supplier.supplierName}
-                      </span>
-                      <span style={{ fontSize: '12px', color: 'var(--color-primary-text)', fontWeight: 600, display: 'block', marginTop: '2px' }}>
-                        #SUP-{supplier.supplierId} • VietGAP
                       </span>
                     </td>
                     <td style={{ color: 'var(--color-body)', fontSize: '13.5px', fontWeight: 500 }}>
@@ -427,7 +418,7 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <span className="profile-tag-pill" style={{ background: 'var(--color-subtle)', color: 'var(--color-body)' }}>
-                        {supplier.totalPurchasesCount || 0} {lang === 'en' ? 'orders' : 'đơn'}
+                        {supplier.totalPurchasesCount || 0} {lang === 'en' ? 'order(s)' : 'đơn'}
                       </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
@@ -479,69 +470,89 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
           onClose={() => setSelectedSupplier(null)}
           title={lang === 'en' ? `Supplier Profile: ${selectedSupplier.supplierName}` : `Hồ sơ nhà cung cấp: ${selectedSupplier.supplierName}`}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, maxWidth: '600px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', background: 'var(--color-page)', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
-              <div>
-                <span className="profile-tag-pill" style={{ background: 'var(--color-success-bg)', color: 'var(--color-primary-text)', marginBottom: '4px' }}>
-                  {lang === 'en' ? '✓ VietGAP Verified' : '✓ Đã kiểm định VietGAP'}
+          <div className="sup-detail">
+            {/* Hero */}
+            <div className="sup-hero">
+              <div className="sup-identity">
+                <span className="sup-logo" aria-hidden="true">
+                  {(selectedSupplier.supplierName || '?').charAt(0).toUpperCase()}
                 </span>
-                <h3 style={{ margin: '6px 0 2px', fontSize: '18px', color: 'var(--color-text)' }}>{selectedSupplier.supplierName}</h3>
-                <small style={{ color: 'var(--color-muted)' }}>{lang === 'en' ? 'System Code:' : 'Mã hệ thống:'} #SUP-{selectedSupplier.supplierId}</small>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Purchase History:' : 'Lịch sử thu mua:'}</span>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--color-info)' }}>
-                  {selectedSupplier.totalPurchasesCount || 0} {lang === 'en' ? 'orders' : 'hóa đơn'}
+                <div className="sup-identity-text">
+                  <span className="sup-verified">
+                    {lang === 'en' ? 'VietGAP Verified' : 'Đã kiểm định VietGAP'}
+                  </span>
+                  <h3>{selectedSupplier.supplierName}</h3>
                 </div>
+              </div>
+
+              <div className="sup-orders">
+                <strong>{selectedSupplier.totalPurchasesCount || 0}</strong>
+                <span>{lang === 'en' ? 'orders' : 'hóa đơn'}</span>
               </div>
             </div>
 
-            {/* Information Grid */}
-            <div className="ui-form-grid" >
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'CONTACT PERSON' : 'NGƯỜI ĐẠI DIỆN LIÊN HỆ'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text)', marginTop: '4px' }}>
+            {/* Contact details */}
+            <dl className="sup-grid">
+              <div className="sup-field">
+                <dt>{lang === 'en' ? 'Contact Person' : 'Người đại diện liên hệ'}</dt>
+                <dd className={selectedSupplier.contactName ? '' : 'is-empty'}>
                   {selectedSupplier.contactName || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
-                </div>
+                </dd>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'PHONE NUMBER' : 'SỐ ĐIỆN THOẠI'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-info)', marginTop: '4px' }}>
-                  {selectedSupplier.phone || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
-                </div>
+              <div className="sup-field">
+                <dt>{lang === 'en' ? 'Phone Number' : 'Số điện thoại'}</dt>
+                <dd className={selectedSupplier.phone ? '' : 'is-empty'}>
+                  {selectedSupplier.phone ? (
+                    <a href={`tel:${selectedSupplier.phone}`}>{selectedSupplier.phone}</a>
+                  ) : (
+                    lang === 'en' ? 'Not updated' : 'Chưa cập nhật'
+                  )}
+                </dd>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'EMAIL ADDRESS' : 'ĐỊA CHỈ EMAIL'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginTop: '4px' }}>
-                  {selectedSupplier.email || (lang === 'en' ? 'Not updated' : 'Chưa cập nhật')}
-                </div>
+              <div className="sup-field">
+                <dt>{lang === 'en' ? 'Email Address' : 'Địa chỉ email'}</dt>
+                <dd className={selectedSupplier.email ? '' : 'is-empty'}>
+                  {selectedSupplier.email ? (
+                    <a href={`mailto:${selectedSupplier.email}`}>{selectedSupplier.email}</a>
+                  ) : (
+                    lang === 'en' ? 'Not updated' : 'Chưa cập nhật'
+                  )}
+                </dd>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'DATE CREATED' : 'NGÀY TẠO HỒ SƠ'}</div>
-                <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text)', marginTop: '4px' }}>
+              <div className="sup-field">
+                <dt>{lang === 'en' ? 'Date Created' : 'Ngày tạo hồ sơ'}</dt>
+                <dd className={selectedSupplier.createdAt ? '' : 'is-empty'}>
                   {selectedSupplier.createdAt ? uiFormatDate(selectedSupplier.createdAt, lang) : '—'}
-                </div>
+                </dd>
               </div>
-            </div>
 
-            <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-              <div style={{ fontSize: '12px', color: 'var(--color-muted)', fontWeight: 600 }}>{lang === 'en' ? 'HEADQUARTERS / WAREHOUSE ADDRESS' : 'ĐỊA CHỈ TRỤ SỞ / KHO HÀNG'}</div>
-              <div style={{ fontSize: '14px', color: 'var(--color-body)', marginTop: '4px' }}>
-                {selectedSupplier.address || (lang === 'en' ? 'No address provided' : 'Chưa cập nhật địa chỉ')}
+              <div className="sup-field sup-field-wide">
+                <dt>{lang === 'en' ? 'Headquarters / Warehouse Address' : 'Địa chỉ trụ sở / kho hàng'}</dt>
+                <dd className={selectedSupplier.address ? '' : 'is-empty'}>
+                  {selectedSupplier.address || (lang === 'en' ? 'No address provided' : 'Chưa cập nhật địa chỉ')}
+                </dd>
               </div>
-            </div>
+            </dl>
 
+            {/* Notes */}
             {selectedSupplier.notes && (
-              <div style={{ padding: '14px', borderRadius: '8px', border: '1px solid var(--color-border)', background: 'var(--color-warning-bg)' }}>
-                <div style={{ fontSize: '12px', color: 'var(--color-warning)', fontWeight: 700 }}>{lang === 'en' ? 'CONTRACT NOTES / SUPPLIED MATERIALS' : 'GHI CHÚ HỢP ĐỒNG / VẬT TƯ CUNG CẤP'}</div>
-                <div style={{ fontSize: '13.5px', color: 'var(--color-warning)', marginTop: '4px' }}>{selectedSupplier.notes}</div>
-              </div>
+              <section className="sup-notes">
+                <h4>{lang === 'en' ? 'Contract Notes / Supplied Materials' : 'Ghi chú hợp đồng / Vật tư cung cấp'}</h4>
+                <p>{selectedSupplier.notes}</p>
+              </section>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            {/* Actions */}
+            <div style={{
+              padding: '14px 0px',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '10px', marginTop: '10px',
+              borderTop: '1px solid var(--color-border)'
+            }}>
               <Button
                 type="button"
                 variant="secondary" className="edit"
@@ -812,39 +823,57 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             onClose={() => setDeletingSupplier(null)}
             title={lang === 'en' ? 'Delete Supplier Confirmation' : 'Xác nhận xóa nhà cung cấp'}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', minWidth: 0, maxWidth: '520px' }}>
-              <div style={{ padding: '12px 16px', background: 'var(--color-page)', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <h4 style={{ margin: '0 0 4px', fontSize: '15px', color: 'var(--color-text)' }}>{deletingSupplier.supplierName}</h4>
-                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--color-muted)' }}>
-                  {lang === 'en' ? 'Supplier ID:' : 'Mã đơn vị:'} #SUP-{deletingSupplier.supplierId} • {lang === 'en' ? 'Contact:' : 'Người liên hệ:'} {deletingSupplier.contactName || '—'}
-                </p>
-              </div>
-
-              {/* Eligibility Check Indicator */}
-              <div
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  background: isEligible ? 'var(--color-success-bg)' : 'var(--color-danger-bg)',
-                  border: `1px solid ${isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)'}`,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', color: isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)', marginBottom: '4px' }}>
-                  <Icon name={isEligible ? 'check' : 'warning'} size={16} />
-                  <span>{isEligible ? (lang === 'en' ? 'Supplier eligible for deletion' : 'Nhà cung cấp đủ điều kiện xóa (Eligible)') : (lang === 'en' ? 'Ineligible for deletion' : 'Không đủ điều kiện xóa (Ineligible)')}</span>
+            <div className="sdel">
+              {/* Supplier identity */}
+              <div className="sdel-supplier">
+                <span className="sdel-logo" aria-hidden="true">
+                  {(deletingSupplier.supplierName || '?').charAt(0).toUpperCase()}
+                </span>
+                <div className="sdel-supplier-text">
+                  <h4>{deletingSupplier.supplierName}</h4>
+                  <p>
+                    <span>
+                      {lang === 'en' ? 'Contact:' : 'Người liên hệ:'} {deletingSupplier.contactName || '—'}
+                    </span>
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: '12.5px', color: isEligible ? 'var(--color-primary-text)' : 'var(--color-danger)' }}>
-                  {hasPurchases
-                    ? (lang === 'en'
-                      ? `This supplier has ${deletingSupplier.totalPurchasesCount} purchase orders recorded in the system. To ensure VietGAP traceability audit compliance, suppliers with active transaction history cannot be deleted.`
-                      : `Nhà cung cấp này đã có ${deletingSupplier.totalPurchasesCount} hóa đơn mua vật tư trong hệ thống. Để bảo đảm kiểm toán truy xuất nguồn gốc theo quy chuẩn VietGAP, không thể xóa nhà cung cấp đã có giao dịch mua hàng.`)
-                    : (lang === 'en'
-                      ? 'This supplier has no recorded purchase orders in this farm. Deletion can be performed safely.'
-                      : 'Nhà cung cấp này chưa phát sinh hóa đơn mua hàng nào trong trang trại. Thao tác xóa sẽ được thực hiện an toàn.')}
-                </p>
+                <div className={`sdel-orders ${isEligible ? 'ok' : 'blocked'}`} >
+                  <strong>{deletingSupplier.totalPurchasesCount || 0}</strong>
+                  <span style={{ color: `${isEligible ? '#047857' : '#b91c1c'}`}}>{lang === 'en' ? 'order(s)' : 'hóa đơn'}</span>
+                </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+              {/* Eligibility result */}
+              <div className={`sdel-status ${isEligible ? 'ok' : 'blocked'}`} role="status">
+                <span className="sdel-status-icon">
+                  <Icon name={isEligible ? 'check' : 'warning'} size={18} />
+                </span>
+                <div>
+                  <strong>
+                    {isEligible
+                      ? lang === 'en' ? 'Supplier eligible for deletion' : 'Nhà cung cấp đủ điều kiện xóa'
+                      : lang === 'en' ? 'Ineligible for deletion' : 'Không đủ điều kiện xóa'}
+                  </strong>
+                  <p>
+                    {hasPurchases
+                      ? (lang === 'en'
+                        ? `This supplier has ${deletingSupplier.totalPurchasesCount} purchase orders recorded in the system. To ensure VietGAP traceability audit compliance, suppliers with active transaction history cannot be deleted.`
+                        : `Nhà cung cấp này đã có ${deletingSupplier.totalPurchasesCount} hóa đơn mua vật tư trong hệ thống. Để bảo đảm kiểm toán truy xuất nguồn gốc theo quy chuẩn VietGAP, không thể xóa nhà cung cấp đã có giao dịch mua hàng.`)
+                      : (lang === 'en'
+                        ? 'This supplier has no recorded purchase orders in this farm. Deletion can be performed safely.'
+                        : 'Nhà cung cấp này chưa phát sinh hóa đơn mua hàng nào trong trang trại. Thao tác xóa sẽ được thực hiện an toàn.')}
+                  </p>
+                </div>
+              </div>
+
+              {isEligible && (
+                <p className="sdel-warning">
+                  {lang === 'en' ? 'This action cannot be undone.' : 'Hành động này không thể hoàn tác.'}
+                </p>
+              )}
+
+              {/* Actions */}
+              <div className="sdel-actions">
                 <Button
                   type="button"
                   variant="secondary"
@@ -860,7 +889,9 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                     disabled={submittingDelete}
                     onClick={handleDeleteSubmit}
                   >
-                    {submittingDelete ? (lang === 'en' ? 'Deleting...' : 'Đang xóa...') : (lang === 'en' ? 'Confirm Delete' : 'Xác nhận xóa')}
+                    {submittingDelete
+                      ? (lang === 'en' ? 'Deleting...' : 'Đang xóa...')
+                      : (lang === 'en' ? 'Confirm Delete' : 'Xác nhận xóa')}
                   </Button>
                 )}
               </div>

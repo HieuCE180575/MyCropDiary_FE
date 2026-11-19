@@ -10,15 +10,6 @@ const TYPES: [string[], string, string][] = [
   [['soil amendment', 'soil conditioner'], 'Chất cải tạo đất', 'Soil Amendment'],
   [['seed', 'seeds'], 'Hạt giống', 'Seeds'],
 ];
-const UNITS: [string[], string, string][] = [
-  [['bag', 'bags'], 'bao', 'bag'], [['bottle', 'bottles'], 'chai', 'bottle'],
-  [['canister', 'jug', 'jugs'], 'can', 'canister'], [['box', 'boxes', 'carton'], 'thùng', 'box'],
-  [['packet', 'pack', 'packets'], 'gói', 'packet'], [['ton', 'tonne'], 'tấn', 'tonne'],
-  [['quintal'], 'tạ', 'quintal'], [['tray'], 'khay', 'tray'], [['plant', 'plants'], 'cây', 'plant'],
-  [['seed', 'seeds'], 'hạt', 'seed'], [['pellet'], 'viên', 'pellet'],
-  [['piece', 'pieces'], 'cái', 'piece'],
-  [['liter', 'litre', 'l'], 'lít', 'L'], [['milliliter', 'millilitre'], 'mL', 'mL'],
-];
 
 function label(value: string, lang: 'en' | 'vi', entries: typeof TYPES) {
   const key = value.trim().toLowerCase();
@@ -26,7 +17,50 @@ function label(value: string, lang: 'en' | 'vi', entries: typeof TYPES) {
   return entry ? entry[lang === 'vi' ? 1 : 2] : value;
 }
 export const materialTypeLabel = (value: string, lang: 'en' | 'vi') => label(value, lang, TYPES);
-export const materialUnitLabel = (value: string, lang: 'en' | 'vi') => {
-  const match = value.match(/^([^()]+?)(\s*\(.*\))?$/);
-  return match ? label(match[1].trim(), lang, UNITS) + (match[2] ?? '') : value;
+
+type UnitEntry = {
+  aliases: string[];
+  vi: string;
+  enSingular: string;
+  enPlural: string;
+};
+
+const UNITS: UnitEntry[] = [
+  { aliases: ['bag', 'bags'], vi: 'bao', enSingular: 'bag', enPlural: 'bags' },
+  { aliases: ['bottle', 'bottles'], vi: 'chai', enSingular: 'bottle', enPlural: 'bottles' },
+  { aliases: ['canister', 'jug', 'jugs'], vi: 'can', enSingular: 'canister', enPlural: 'canisters' },
+  { aliases: ['box', 'boxes', 'carton'], vi: 'thùng', enSingular: 'box', enPlural: 'boxes' },
+  { aliases: ['packet', 'pack', 'packets'], vi: 'gói', enSingular: 'packet', enPlural: 'packets' },
+  { aliases: ['ton', 'tonne'], vi: 'tấn', enSingular: 'tonne', enPlural: 'tonnes' },
+  { aliases: ['quintal'], vi: 'tạ', enSingular: 'quintal', enPlural: 'quintals' },
+  { aliases: ['tray'], vi: 'khay', enSingular: 'tray', enPlural: 'trays' },
+  { aliases: ['plant', 'plants'], vi: 'cây', enSingular: 'plant', enPlural: 'plants' },
+  { aliases: ['seed', 'seeds'], vi: 'hạt', enSingular: 'seed', enPlural: 'seeds' },
+  { aliases: ['pellet'], vi: 'viên', enSingular: 'pellet', enPlural: 'pellets' },
+  { aliases: ['piece', 'pieces'], vi: 'cái', enSingular: 'piece', enPlural: 'pieces' },
+  { aliases: ['liter', 'litre', 'liters', 'litres', 'l'], vi: 'lít', enSingular: 'L', enPlural: 'L' },
+  { aliases: ['milliliter', 'millilitre', 'milliliters', 'millilitres'], vi: 'mL', enSingular: 'mL', enPlural: 'mL' },
+];
+
+export const materialUnitLabel = (
+  value: string,
+  lang: 'en' | 'vi',
+  quantity?: number
+) => {
+  const match = value.match(/^([^()]+?)(\s\(.*\))?$/);
+  if (!match) return value;
+
+  const key = match[1].trim().toLowerCase();
+  const entry = UNITS.find(unit => unit.aliases.includes(key));
+
+  if (!entry) return value;
+
+  const unitLabel =
+    lang === 'vi'
+      ? entry.vi
+      : quantity === undefined || quantity === 1
+        ? entry.enSingular
+        : entry.enPlural;
+
+  return unitLabel + (match[2] ?? '');
 };

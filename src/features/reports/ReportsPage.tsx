@@ -20,6 +20,7 @@ import {
   FarmReportResp,
   CropSeasonReportResp,
 } from './reportService';
+import { BanknoteArrowDown, ChartNoAxesCombined, Download, ReceiptText, Warehouse, Houses } from 'lucide-react';
 
 interface ReportsPageProps {
   initialTab?: 'reports' | 'expenses' | 'purchases' | 'suppliers' | 'warehouses';
@@ -80,21 +81,22 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
 
   return (
     <section className="reports-page">
-      <PageHeading   title={<>{(lang === 'en' ? "Production Reports & Financial Management" : "Báo cáo sản xuất & Quản trị tài chính")}</>} description={<>
-            {(lang === 'en' ? "Summarize farming data, input costs, inventory, and material suppliers for farm " : "Tổng hợp dữ liệu canh tác, hạch toán chi phí đầu vào, quản trị kho và theo dõi nhà cung cấp vật tư trang trại ")} {selectedFarm?.farmName || ''}
-          </>}><div style={{ display: 'flex', gap: '10px' }}>
+      <PageHeading title={<>{(lang === 'en' ? "Production Reports & Financial Management" : "Báo cáo sản xuất & Quản trị tài chính")}</>} description={<>
+        {(lang === 'en' ? "Summarize farming data, input costs, inventory, and material suppliers for farm " : "Tổng hợp dữ liệu canh tác, hạch toán chi phí đầu vào, quản trị kho và theo dõi nhà cung cấp vật tư trang trại ")} {selectedFarm?.farmName || ''}
+      </>}><div style={{ display: 'flex', gap: '10px' }}>
           <Button type="button" variant="secondary" onClick={() => window.print()}>
-            {(lang === 'en' ? "📊 Export PDF / Print" : "📊 Xuất báo cáo PDF / In ấn")}
+            <Download size={18} strokeWidth={1.5} />
+            {(lang === 'en' ? "Export PDF / Print" : "Xuất báo cáo PDF / In ấn")}
           </Button>
         </div></PageHeading>
 
       <TabList idPrefix="reports" label={lang === 'en' ? 'Report sections' : 'Các mục báo cáo'}
         value={activeTab} onChange={setActiveTab} items={[
-          { value: 'reports', label: <>{(lang === 'en' ? "📈 Seasonal production reports" : "📈 Báo cáo sản xuất mùa vụ")}</> },
-          { value: 'warehouses', label: <>{(lang === 'en' ? "🏢 Warehouses & Material inventory" : "🏢 Kho hàng & Tồn kho vật tư")}</> },
-          { value: 'expenses', label: <>{(lang === 'en' ? "💰 Production costs" : "💰 Chi phí sản xuất")}</> },
-          { value: 'purchases', label: <>{(lang === 'en' ? "🧾 Material purchase invoices" : "🧾 Hóa đơn mua vật tư")}</> },
-          { value: 'suppliers', label: <>{(lang === 'en' ? "🏭 Supplier directory" : "🏭 Danh bạ nhà cung cấp")}</> },
+          { value: 'reports', label: <> <ChartNoAxesCombined size={20} strokeWidth={2} /> {(lang === 'en' ? "Seasonal production reports" : "Báo cáo sản xuất mùa vụ")}</> },
+          { value: 'warehouses', label: <> <Warehouse size={20} strokeWidth={2} /> {(lang === 'en' ? "Warehouses & Material inventory" : "Kho hàng & Tồn kho vật tư")}</> },
+          { value: 'expenses', label: <> <BanknoteArrowDown size={20} strokeWidth={2} /> {(lang === 'en' ? "Production costs" : "Chi phí sản xuất")}</> },
+          { value: 'purchases', label: <> <ReceiptText size={20} strokeWidth={1.5} /> {(lang === 'en' ? "Material purchase invoices" : "Hóa đơn mua vật tư")}</> },
+          { value: 'suppliers', label: <> <Houses size={20} strokeWidth={1.5} /> {(lang === 'en' ? "Supplier directory" : "Danh bạ nhà cung cấp")}</> },
         ]} />
 
       {activeTab === 'reports' && (
