@@ -42,6 +42,8 @@ export interface Field {
   options?: Record<string, string>;
   required?: boolean;
   maxLength?: number;
+  full?: boolean;
+  help?: { vi: string; en: string };
 }
 
 export interface CollectionConfig {
@@ -51,6 +53,8 @@ export interface CollectionConfig {
   singular: string;
   statuses: Record<string, string>;
   columns: { key: string; label: string }[];
+  /** Visible list columns; complete columns remain available for CSV exports. */
+  listKeys?: string[];
   fields: Field[];
   details?: Field[];
   createLabel?: string;

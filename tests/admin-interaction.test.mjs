@@ -98,12 +98,15 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 1);
     await click('[aria-label="Trang 1"]');
     assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 5);
+    assert.equal(document.querySelectorAll('.admin-table thead th').length, 5, 'Registration list keeps three data columns and two action/status columns');
+    assert.ok(!query('.admin-table thead').textContent.includes('Email liên hệ'));
     await click('[aria-label="Trang sau"]');
     assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 1);
     await set('.admin-search input', 'binh minh');
     assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 1);
     assert.ok(query('.admin-table').textContent.includes('Trang trại Bình Minh'));
-    await button('Xóa bộ lọc', '.admin-filters');
+    assert.equal(query('.admin-reset-icon').textContent.trim(), '');
+    await click('.admin-filters [aria-label="Đặt lại bộ lọc"]');
     holdDetail = true;
     await click('[aria-label="Xem chi tiết Vườn rau An Nhiên"]');
     assert.match(query('dialog [role="status"]').textContent, /Đang tải chi tiết/);
@@ -123,7 +126,12 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('dialog').textContent.includes('Quận kiểm thử'));
     assert.ok(query('dialog').textContent.includes('Phường kiểm thử'));
     assert.equal(query('dialog a').href, 'https://example.com/ho-so.pdf');
+    assert.ok(query('dialog .admin-evidence-actions button').classList.contains('ui-button--secondary'));
+    assert.ok(query('dialog .admin-evidence-actions a').classList.contains('ui-navigation-action'));
+    assert.ok(query('dialog .admin-details').textContent.includes('Thời điểm gửi hồ sơ'));
+    assert.ok(!query('dialog .admin-details').textContent.includes('Người xét duyệt'));
     await button('Từ chối');
+    assert.ok([...query('dialog').querySelectorAll('button')].some(node => node.textContent.trim() === 'Hủy'));
     await submit();
     assert.ok(query('dialog [role="alert"]').textContent.includes('lý do từ chối'));
     await set('dialog textarea', 'Cần bổ sung mô tả khu sản xuất.');
@@ -133,13 +141,20 @@ test('admin uses registration APIs while other modules keep their existing behav
     await submit();
     assert.equal(document.querySelector('dialog'), null);
     assert.ok(query('.admin-table tbody tr').textContent.includes('Đã từ chối'));
+    fixtures[0].handlerFullName = 'Quản trị kiểm thử';
+    fixtures[0].handledAt = '2026-11-20T10:00:00Z';
     assert.ok(query('.admin-toast').textContent.includes('Đã từ chối hồ sơ.'));
     const checkRegistrationDetails = async () => {
       await click('[aria-label="Xem chi tiết Vườn rau An Nhiên"]');
+      assert.match(query('dialog .ui-detail-primary').textContent, /Tên trang trại/);
+      assert.match(query('dialog .ui-detail-primary').textContent, /Vườn rau An Nhiên/);
+      assert.equal(document.querySelector('dialog .admin-detail-title'), null);
       const detail = label => [...document.querySelectorAll('dialog .admin-details > div')]
         .find(node => node.querySelector('dt')?.textContent === label)?.querySelector('dd')?.textContent;
       assert.equal(detail('Mô tả trang trại'), fixtures[0].description, 'Original description must remain after rejection');
       assert.equal(detail('Lý do từ chối'), 'Cần bổ sung mô tả khu sản xuất.', 'Rejection reason must use its own response field');
+      assert.equal(detail('Người xét duyệt'), 'Quản trị kiểm thử');
+      assert.ok(detail('Thời điểm xét duyệt')?.includes('2026'));
       await button('Đóng');
     };
     await checkRegistrationDetails();
@@ -147,6 +162,7 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.equal(document.querySelector('.admin-toast'), null, 'Notification dismisses after five seconds');
 
     await navigate('/admin/articles');
+    assert.ok(!query('.admin-table thead').textContent.includes('Nguồn tham khảo'));
     for (const button of document.querySelectorAll('.admin-row-actions .detail-button, .admin-row-actions .edit-button')) {
       assert.equal(button.textContent.trim(), '', 'Row action must show only its icon');
       assert.ok(button.querySelector('svg'));
@@ -158,6 +174,21 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('dialog [role="alert"]').textContent.includes('nguồn tham khảo'));
     await click('dialog [aria-label="Đóng cửa sổ"]');
     await click('[aria-label="Sửa Ghi nhận vật tư sử dụng trong mùa vụ"]');
+    assert.ok(query('dialog .structured-field-badge').textContent.includes('Bắt buộc'));
+    assert.ok(query('dialog .admin-modal-footer .admin-required-note').textContent.includes('Thông tin bắt buộc'));
+    for (const label of document.querySelectorAll('dialog .admin-field label')) {
+      assert.ok(document.getElementById(label.htmlFor), 'Each field label identifies its control');
+    }
+    const articleBody = query('dialog textarea');
+    const originalTitle = query('dialog .admin-field input').value;
+    const longBody = 'Nội dung kỹ thuật được giữ nguyên sau khi lưu lỗi.\n'.repeat(80);
+    await set('dialog textarea', longBody);
+    await set('dialog .admin-field input', '');
+    await submit();
+    assert.equal(query('dialog textarea'), articleBody);
+    assert.equal(articleBody.value, longBody);
+    assert.ok(query('dialog .admin-modal-footer [role="alert"]'));
+    await set('dialog .admin-field input', originalTitle);
     await set('dialog .admin-field:nth-child(3) input', 'Nguồn tài liệu kiểm thử');
     await submit();
     await click('[aria-label="Xem chi tiết Ghi nhận vật tư sử dụng trong mùa vụ"]');
@@ -170,12 +201,19 @@ test('admin uses registration APIs while other modules keep their existing behav
     userFixtures[0].phone = '0987654321';
     await click('[aria-label="Xem chi tiết Nguyễn Minh An"]');
     assert.ok(query('dialog').textContent.includes('0987654321'), 'User detail must use fresh server data');
+    await button('Chỉnh sửa');
+    assert.match(query('dialog .admin-user-email').textContent, /minhan@example.com/);
+    assert.equal(document.querySelector('dialog input[type="email"]'), null, 'Login email is context rather than an editable field');
+    await button('Hủy');
+    await click('[aria-label="Xem chi tiết Nguyễn Minh An"]');
     await button('Khóa tài khoản');
     await submit();
     assert.ok(query('tbody tr').textContent.includes('Đã khóa'));
 
     await navigate('/admin/crops');
     await button('Thêm danh mục', '.ui-page-heading');
+    const cropCode = query('dialog .admin-field input');
+    assert.ok(document.getElementById(cropCode.getAttribute('aria-describedby')).textContent.includes('RAU_DEN'));
     await set('dialog .admin-field:nth-child(1) input', 'RAU_DEN');
     await set('dialog .admin-field:nth-child(2) input', 'Rau dền');
     await set('dialog select', 'LEAFY');
@@ -183,24 +221,99 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('tbody tr').textContent.includes('Rau dền'));
 
     await navigate('/admin/feedback');
+    assert.ok(!query('.admin-table thead').textContent.includes('Câu hỏi của người dùng'));
     await click('[aria-label="Xem chi tiết Câu trả lời thiếu nguồn tham khảo"]');
     await set('dialog select', 'RESOLVED');
+    assert.equal(query('dialog textarea').required, true, 'Resolved feedback requires a response');
     await submit();
     assert.ok(query('dialog [role="alert"]').textContent.includes('nội dung trả lời'));
+    assert.ok(query('dialog .admin-modal-footer [role="alert"]'));
+    assert.equal(document.querySelector('dialog .admin-feedback-form [role="alert"]'), null);
     await set('dialog textarea', 'Đã ghi nhận góp ý và kiểm tra nguồn.');
     await submit();
     assert.ok(query('tbody tr').textContent.includes('Đã giải quyết'));
 
+    await navigate('/admin/rules');
+    await button('Thêm quy tắc', '.ui-page-heading');
+    assert.ok(query('dialog .admin-inline-note').textContent.includes('lần kiểm tra tiếp theo'));
+    const ruleGuidance = 'Hướng dẫn kỹ thuật giữ nguyên khi có lỗi.\n'.repeat(10);
+    await set('dialog .admin-field input', 'Quy tắc kiểm thử');
+    await set('dialog textarea', ruleGuidance);
+    await submit();
+    assert.ok(query('dialog .admin-modal-footer [role="alert"]'));
+    assert.equal(query('dialog textarea').value, ruleGuidance);
+    await button('Hủy');
     await navigate('/admin/audit');
     assert.ok(query('.admin-table').textContent.includes('Quản trị kiểm thử'));
     assert.ok(query('.admin-table').textContent.includes('Xử lý phản hồi AI'));
+    assert.equal(query('.admin-table thead th').textContent, 'Thời điểm thao tác');
+    assert.equal(document.querySelector('.admin-status-cards'), null);
+    assert.ok(!query('.admin-table thead').textContent.includes('Trạng thái'));
+    assert.ok(!query('.admin-table thead').textContent.includes('Nội dung thay đổi'));
+    const auditAction = query('.admin-record-link').textContent;
+    await click('.admin-record-link');
+    assert.ok(query('dialog .ui-detail-primary').textContent.includes(auditAction));
+    assert.ok([...document.querySelectorAll('dialog .admin-details dt')].some(node => node.textContent === 'Thời điểm thao tác'));
+    assert.ok([...document.querySelectorAll('dialog .admin-details dt')].some(node => node.textContent === 'Nội dung thay đổi'));
+    assert.equal(document.querySelector('dialog .ui-edit-action'), null);
+    await button('Đóng');
     await navigate('/admin/statistics');
+    assert.equal(document.querySelector('.admin-stat-filters'), null, 'System totals are not presented as monthly filtered values');
     await button('Chi phí', '.admin-stat-tabs');
     assert.ok(document.body.textContent.includes('Tổng chi phí'));
     await set('.admin-stat-filters label:first-of-type input', '2027-01');
     assert.ok(document.body.textContent.includes('Tháng bắt đầu không được sau tháng kết thúc'));
     await set('.admin-stat-filters label:last-of-type input', '2027-02');
     assert.ok(document.body.textContent.includes('Chưa có số liệu trong khoảng thời gian này'));
+    assert.equal(query('.ui-page-heading button').disabled, true, 'No cost data must not export a misleading zero report');
+    await click('.admin-stat-filters [aria-label="Đặt lại bộ lọc"]');
+    const now = new Date();
+    assert.equal(query('.admin-stat-filters input').value, `${now.getFullYear()}-01`);
+    assert.equal(document.querySelector('[role="alert"]'), null);
+    await button('Tài khoản', '.admin-stat-tabs');
+    assert.equal(document.querySelector('.admin-stat-filters'), null);
+    // Reduced spatial lists must retain their full record details and failed edits.
+    for (const [collection, expectedColumns, hiddenLabels] of [
+      ['farms', 5, ['Email chủ trang trại', 'Số điện thoại liên hệ', 'Địa chỉ canh tác']],
+      ['zones', 6, ['Nhân sự kỹ thuật phụ trách', 'Email chủ sở hữu', 'Mô tả phân khu']],
+      ['blocks', 6, ['Nhân sự kỹ thuật phụ trách', 'Email chủ sở hữu', 'Loại đất / Thổ nhưỡng']],
+    ]) {
+      await navigate('/admin/' + collection);
+      assert.equal(document.querySelectorAll('.admin-table thead th').length, expectedColumns);
+      const name = query('.admin-record-link').textContent;
+      await click('.admin-table tbody tr:first-child .table-icon-btn.primary');
+      assert.ok(query('dialog .ui-detail-primary').textContent.includes(name));
+      assert.ok(query('dialog .admin-modal-footer .ui-close-action'));
+      const detailFields = [...document.querySelectorAll('dialog .admin-details dt')].map(node => node.textContent);
+      for (const label of hiddenLabels) assert.ok(detailFields.includes(label), collection + ' retains ' + label);
+      assert.ok(query('dialog .admin-cross-links a.ui-navigation-action'));
+      await button('Đóng');
+      await click('.admin-table tbody tr:first-child .table-icon-btn.edit');
+      const field = query('dialog .admin-field input');
+      const fieldId = field.id;
+      assert.equal(query('dialog .admin-field label').htmlFor, fieldId);
+      await set('dialog .admin-field input', '');
+      await submit();
+      assert.ok(query('dialog .admin-modal-footer [role="alert"]').textContent.includes('Vui lòng nhập'));
+      assert.equal(document.getElementById(fieldId), field, 'Failed edit keeps the same input element');
+      assert.equal(field.value, '');
+      assert.equal(document.querySelector('dialog .admin-modal-body [role="alert"]'), null);
+      await button('Hủy');
+      assert.ok(query('.admin-record-link').textContent.includes(name));
+    }
+    assert.equal(query('.admin-page .ui-page-heading h1').textContent, 'Quản lý lô đất');
+    await click('.header-translate-btn');
+    assert.equal(query('.admin-page .ui-page-heading h1').textContent, 'Block management');
+    assert.doesNotMatch(query('.admin-table thead').textContent, /[À-ỹ]/u);
+    await click('.admin-table tbody tr:first-child .table-icon-btn.edit');
+    assert.match(query('dialog').textContent, /Edit block/);
+    assert.doesNotMatch([...document.querySelectorAll('dialog .admin-field label')].map(node => node.textContent).join(' '), /[À-ỹ]/u);
+    await set('dialog .admin-field input', '');
+    await submit();
+    assert.match(query('dialog [role="alert"]').textContent, /Please enter/);
+    await click('.header-translate-btn');
+    assert.match(query('dialog [role="alert"]').textContent, /Vui lòng nhập/);
+    await button('Hủy');
     assert.ok(detailRequests.includes('/admin/users/1'));
     assert.ok(detailRequests.includes('/admin/farm-registrations/1'));
     assert.equal(requestCount, 5 + detailRequests.length, 'Only registration and user requests should reach the backend.');

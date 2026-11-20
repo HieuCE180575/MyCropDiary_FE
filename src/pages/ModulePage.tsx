@@ -1,4 +1,3 @@
-import { PageHeading } from '../shared/components/PageHeading';
 import { Navigate } from 'react-router-dom';
 import { Icon } from '../shared/components/Icon';
 import { UserProfilePanel } from '../features/auth/UserProfilePanel';
@@ -57,7 +56,6 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
 
   return (
     <section className="profile-page-section">
-      <PageHeading   title={`${lang === 'en' ? "Hello, " : "Xin chào, "}${displayName}!`}></PageHeading>
       <div className="profile-container">
         {/* Profile Hero Card */}
         <div className="profile-hero-card">
@@ -74,18 +72,13 @@ export function ModulePage({ module }: { module: ModuleDefinition }) {
                 <Icon name="user" />
               )}
             </span>
-            <span className="profile-hero-status-dot" title={(lang === 'en' ? "Account online" : "Tài khoản trực tuyến")}></span>
           </div>
           <div className="profile-hero-info">
             <div className="profile-hero-badges">
-              <span className="profile-tag-pill">
-                <Icon name="leaf" /> {(lang === 'en' ? " Personal profile" : " Hồ sơ cá nhân")}
-              </span>
+              <span className="profile-tag-pill">{lang === 'en' ? 'Personal profile' : 'Hồ sơ cá nhân'}</span>
             </div>
             <h2 className="profile-hero-name">{displayName}</h2>
-            <p className="profile-hero-email">
-              <Icon name="mail" /> {(lang === 'en' ? user?.email || "No email provided" : user?.email || 'Chưa cập nhật email')}
-            </p>
+            <p className="profile-hero-email"><Icon name="mail" />{user?.email || (lang === 'en' ? 'No email provided' : 'Chưa cập nhật email')}</p>
           </div>
         </div>
 

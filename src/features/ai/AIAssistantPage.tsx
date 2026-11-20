@@ -360,7 +360,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       <TabList idPrefix="ai" label={lang === 'en' ? 'AI assistant sections' : 'Các mục trợ lý AI'}
         value={activeTab} onChange={setActiveTab} items={[
           { value: 'ai', label: <>{lang === 'en' ? '🤖 AI Assistant Chat' : '🤖 Trò chuyện cùng AI'}</> },
-          { value: 'ai-history', label: <>{lang === 'en' ? '📜 Chat History' : '📜 Lịch sử & Tìm kiếm hội thoại'} (</> },
+          { value: 'ai-history', label: <>{lang === 'en' ? '📜 Chat History' : '📜 Lịch sử & Tìm kiếm hội thoại'}</> },
           { value: 'ai-feedback', label: <>{lang === 'en' ? '💬 User Feedback & Reports' : '💬 Phản hồi & Lịch sử báo cáo'}</> },
           { value: 'ai-drafts', label: <>{lang === 'en' ? '📝 AI Farming Drafts' : '📝 Dự thảo nhật ký AI'} ({drafts.filter((d) => d.status === 'PENDING').length})</> },
         ]} />
@@ -603,11 +603,12 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                     </Button>
                     <button
                       type="button"
-                      className="outline-button"
-                      style={{ fontSize: '13px', padding: '6px 12px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+                      className="table-icon-btn danger"
+                      title={lang === 'en' ? 'Delete conversation' : 'Xóa hội thoại'}
+                      aria-label={lang === 'en' ? 'Delete conversation' : 'Xóa hội thoại'}
                       onClick={() => setDeleteConversationId(c.conversationId)}
                     >
-                      {(lang === 'en' ? "Delete" : "Xóa")}
+                      <Icon name="trash" size={16} />
                     </button>
                   </div>
                 </div>
@@ -656,15 +657,16 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                         <small style={{ color: 'var(--color-muted)' }}>
                           {displayDate(fb.createdAt, lang)}
                         </small>
-                        <button
+                        <Button
                           type="button"
-                          className={"outline-button" + ' ' + 'ui-edit-action'}
-                          style={{ fontSize: '11.5px', padding: '3px 8px' }}
+                          variant="secondary"
+                          size="compact"
+                          className="ui-edit-action"
                           onClick={() => handleStartEditFeedback(fb)}
                         >
                           <Icon name="edit" size={14} />
                           {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
-                        </button>
+                        </Button>
                       </div>
                     </div>
 
@@ -739,9 +741,9 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
           {drafts.map((d) => (
             <div key={d.id} className="panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
               <div className="ai-record-content">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <span className="profile-tag-pill">{translate(d.activityType)}</span>
-                  <span style={{ fontSize: '12.5px', color: 'var(--color-muted)' }}>{(lang === 'en' ? "📅 Suggested date: " : "📅 Đề xuất thực hiện: ")} {d.recommendedDate}</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  {d.activityType?.trim() && <span className="knowledge-tag">{translate(d.activityType)}</span>}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--color-muted)' }}><Icon name="calendar" size={14} />{lang === 'en' ? 'Suggested date:' : 'Đề xuất thực hiện:'} {displayDate(d.recommendedDate, lang)}</span>
                   <StatusBadge tone={d.status === 'APPROVED' ? 'success' : 'neutral'} label={<>
                     {d.status === 'PENDING' ? (lang === 'en' ? 'Pending Review' : 'Chờ duyệt') : d.status === 'APPROVED' ? (lang === 'en' ? 'Approved' : 'Đã duyệt') : (lang === 'en' ? 'Cancelled' : 'Đã hủy')}
                   </>} />
@@ -751,17 +753,18 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                   {(lang === 'en' ? "Recommended materials: " : "Vật tư khuyến cáo: ")} {translate(d.suggestedMaterial)}
                 </p>
                 <p style={{ margin: 0, color: 'var(--color-body)', fontSize: '13px', background: 'var(--color-page)', padding: '10px 12px', borderRadius: '8px' }}>
-                  💡 <strong>{(lang === 'en' ? "Reason for the AI suggestion:" : "Lý do AI đề xuất:")}</strong> {translate(d.reason)}
+                  <strong>{(lang === 'en' ? "Reason for the AI suggestion:" : "Lý do AI đề xuất:")}</strong> {translate(d.reason)}
                 </p>
               </div>
 
               {d.status === 'PENDING' && (
                 <div className="ai-record-actions">
-                  <Button type="button" variant="secondary"  onClick={() => handleRejectDraft(d.id)}>
+                  <Button type="button" variant="secondary" className="ui-cancel-button" onClick={() => handleRejectDraft(d.id)}>
                     {(lang === 'en' ? "Discard" : "Hủy bỏ")}
                   </Button>
                   <Button type="button" variant="primary" onClick={() => handleApproveDraft(d.id)}>
-                    {(lang === 'en' ? "✓ Confirm diary entry" : "✓ Xác nhận ghi nhật ký")}
+                    <Icon name="check" size={16} />
+                    {lang === 'en' ? 'Confirm diary entry' : 'Xác nhận ghi nhật ký'}
                   </Button>
                 </div>
               )}

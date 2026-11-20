@@ -130,26 +130,19 @@ export function UserProfilePanel() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
             {!isEditing && (
               <>
+                <Button type="button" variant="secondary" onClick={() => setIsChangePasswordOpen(true)}><Icon name="lock" size={17} />{translate("Change Password")}</Button>
                 <Button
                   type="button"
-                  variant="secondary" size="compact" className="ui-icon-button"
-                  onClick={() => setIsChangePasswordOpen(true)}
-                  title={translate("Change Password")}
-                  aria-label={translate("Change Password")}
-                >
-                  <Icon name="lock" size={17} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="primary" size="compact" className={"ui-icon-button" + ' ' + 'ui-edit-action'}
+                  variant="secondary" className="ui-edit-action"
                   onClick={() => { setIsEditing(true); setMessage(null); }}
                   title={translate("Edit Profile")}
                   aria-label={translate("Edit Profile")}
                 >
                   <Icon name="edit" size={17} />
+                  {translate("Edit Profile")}
                 </Button>
               </>
             )}
@@ -314,49 +307,17 @@ export function UserProfilePanel() {
             </div>
           </form>
         ) : (
-          <dl>
-            <dt>{translate("Profile Avatar")}</dt>
-            <dd>
-              {currentAvatar ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <img
-                    src={currentAvatar}
-                    alt={profile?.fullName || translate("Avatar")}
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: "1.5px solid var(--color-input-border)",
-                    }}
-                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                  />
-                  <span style={{ fontSize: '13px', color: "var(--color-muted)", wordBreak: 'break-all' }}>
-                    {currentAvatar.startsWith('data:') ? translate("Custom profile photo (Uploaded)") : currentAvatar}
-                  </span>
-                </div>
-              ) : (
-                <span style={{ color: "var(--color-muted)", fontStyle: 'italic', fontSize: '13px' }}>{translate("No avatar uploaded")}</span>
-              )}
-            </dd>
-
-            <dt>{translate("Full Name")}</dt>
-            <dd style={{ fontWeight: 600, color: "var(--color-text)" }}>{profile?.fullName || user?.fullName || translate("Not specified")}</dd>
-
-            <dt>Email</dt>
-            <dd>{profile?.email || user?.email || translate("Not specified")}</dd>
-
-            <dt>{translate("Phone Number")}</dt>
-            <dd>{profile?.phone || translate("Not specified")}</dd>
-
-            <dt>{translate("Status")}</dt>
-            <dd><StatusBadge   tone="success" label={<>{translate("Active")}</>} /></dd>
+          <dl className="profile-info-grid">
+            <div><dt>{translate('Full Name')}</dt><dd>{profile?.fullName || user?.fullName || translate('Not specified')}</dd></div>
+            <div><dt>Email</dt><dd>{profile?.email || user?.email || translate('Not specified')}</dd></div>
+            <div><dt>{translate('Phone Number')}</dt><dd>{profile?.phone || user?.phone || translate('Not specified')}</dd></div>
+            <div><dt>{translate('Status')}</dt><dd><StatusBadge tone={profile?.accountStatus && profile.accountStatus !== 'ACTIVE' ? 'neutral' : 'success'} label={profile?.accountStatus && profile.accountStatus !== 'ACTIVE' ? translate(profile.accountStatus) : translate('Active')} /></dd></div>
           </dl>
         )}
       </section>
 
       {/* Change Password Modal */}
-      <Modal
+      <Modal structured className="modal-form-layout"
         open={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
         title={translate("Change Password")}
@@ -364,6 +325,7 @@ export function UserProfilePanel() {
       >
         <ChangePasswordPanel
           embedded
+          onCancel={() => setIsChangePasswordOpen(false)}
           onSuccess={() => setIsChangePasswordOpen(false)}
         />
       </Modal>

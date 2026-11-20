@@ -1431,11 +1431,11 @@ p {
   background: linear-gradient(135deg, #064e3b 0%, #065f46 55%, #047857 100%);
   color: #ffffff;
   border-radius: 20px;
-  padding: 32px 38px;
+  padding: 20px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 28px;
+  gap: 20px;
   box-shadow: 0 10px 30px rgba(6, 78, 59, 0.16);
   position: relative;
   overflow: hidden;
@@ -1614,8 +1614,8 @@ p {
 
 .profile-layout {
   display: grid;
-  max-width: 860px;
-  margin: 0 auto;
+  width: 100%;
+  margin: 0;
   gap: 28px;
   align-items: start;
 }

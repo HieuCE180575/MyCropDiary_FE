@@ -14,12 +14,14 @@ test('environment and training entry dialogs use shared fields and preserve fail
   globalThis.__environmentFormTest = {
     empty: async () => [],
     risks: async () => [{ riskId: 201, zoneId: 2, zoneName: 'Fixture zone', riskType: 'Fixture zone risk', riskLevel: 'MEDIUM', assessedAt: '2026-01-22', description: 'Risk description', mitigationPlan: 'Risk controls', assessedByName: 'Fixture assessor' }],
+    soils: async () => [{ assessmentId: 301, blockId: 3, zoneId: 2, blockName: 'Fixture block', soilPh: 5.9, moisturePercent: 65, assessedAt: '2026-02-20' }],
+    soilDetails: async () => ({ assessmentId: 301, blockId: 3, zoneId: 2, blockName: 'Fixture block', soilPh: 5.9, moisturePercent: 65, assessedAt: '2026-02-20' }),
     blocks: async () => [{ blockId: 3, zoneId: 2, blockName: 'Fixture block', zoneName: 'Fixture zone' }],
     training: async () => ({ items: [], totalElements: 0, totalPages: 0 }),
     save: async (...args) => { calls.push(args); throw new Error('Fixture server rejected save'); },
   };
   const services = {
-    zoneBlockService: { fetchFarmRiskHistoryApi: 'risks', fetchFarmSoilAssessmentHistoryApi: 'empty', fetchFarmWaterAssessmentHistoryApi: 'empty', fetchSoilAssessmentDetailsApi: 'empty', fetchWaterAssessmentDetailsApi: 'empty', createSoilAssessmentApi: 'save', createWaterAssessmentApi: 'save', fetchBlocks: 'blocks' },
+    zoneBlockService: { fetchFarmRiskHistoryApi: 'risks', fetchFarmSoilAssessmentHistoryApi: 'soils', fetchFarmWaterAssessmentHistoryApi: 'empty', fetchSoilAssessmentDetailsApi: 'soilDetails', fetchWaterAssessmentDetailsApi: 'empty', createSoilAssessmentApi: 'save', createWaterAssessmentApi: 'save', fetchBlocks: 'blocks' },
     trainingService: { fetchTrainingHistoryApi: 'training', fetchTrainingDetailsApi: 'empty', createTrainingRecordApi: 'save', deleteTrainingRecordApi: 'empty' },
   };
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom', plugins: [{
@@ -66,12 +68,29 @@ test('environment and training entry dialogs use shared fields and preserve fail
     const riskDialog = document.querySelector('dialog');
     assert.ok(riskDialog?.open, 'risk details open in a native modal, not below the list');
     assert.match(riskDialog.textContent, /Fixture zone risk/);
+    assert.match(riskDialog.querySelector('.modal-header h2').textContent, /Chi tiết rủi ro vùng sản xuất|Production area risk details/);
+    assert.doesNotMatch(riskDialog.querySelector('.modal-header').textContent, /Fixture zone risk/);
+    const riskName = riskDialog.querySelector('.modal-body .ui-detail-primary');
+    assert.match(riskName.textContent, /Tên loại rủi ro|Risk type/);
+    assert.match(riskName.textContent, /Fixture zone risk/);
     assert.match(riskDialog.textContent, /Risk controls/);
     assert.equal(document.body.style.overflow, 'hidden');
     await act(async () => window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', cancelable: true })));
     assert.equal(document.querySelector('dialog'), null);
     assert.equal(document.activeElement, viewRisk);
     await act(async () => document.querySelector('#vietgap-environment-tab-soils').click());
+    const viewSoil = document.querySelector('button[title="View soil assessment details"], button[title="Xem chi tiết đánh giá đất"]');
+    assert.ok(viewSoil);
+    viewSoil.focus();
+    await act(async () => viewSoil.click());
+    const soilDialog = document.querySelector('dialog');
+    assert.ok(soilDialog?.open);
+    assert.match(soilDialog.textContent, /Fixture block/);
+    assert.ok(soilDialog.querySelector('.modal-footer'));
+    assert.equal(document.body.style.overflow, 'hidden');
+    await act(async () => window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', cancelable: true })));
+    assert.equal(document.querySelector('dialog'), null);
+    assert.equal(document.activeElement, viewSoil);
     await click(/Ghi nhận mẫu đất|Record Soil Sample/);
     let dialog = verifyDialog();
     const ph = dialog.querySelector('input[type="number"]');
