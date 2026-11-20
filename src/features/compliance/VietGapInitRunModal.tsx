@@ -17,6 +17,8 @@ export function VietGapInitRunModal({ farmId, onClose, onSuccess }: VietGapInitR
   const { lang } = useLanguage();
   const [cropSeasons, setCropSeasons] = useState<CropSeasonResp[]>([]);
   const [loadingSeasons, setLoadingSeasons] = useState(false);
+  const [seasonsError, setSeasonsError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const [form, setForm] = useState<InitVietGapAuditRunPayload>({
     cropSeasonId: 0,
@@ -29,25 +31,32 @@ export function VietGapInitRunModal({ farmId, onClose, onSuccess }: VietGapInitR
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     const load = async () => {
       setLoadingSeasons(true);
+      setSeasonsError(null);
+      setCropSeasons([]);
+      setForm(f => ({ ...f, cropSeasonId: 0 }));
       try {
         const seasons = await fetchCropSeasonsByFarm(farmId, { size: 100 });
+        if (cancelled) return;
         setCropSeasons(seasons);
         if (seasons.length > 0) {
           setForm((f) => ({ ...f, cropSeasonId: seasons[0].cropSeasonId }));
         }
-      } catch {
-        // Ignore load error; user will select manually
+      } catch (err) {
+        if (!cancelled) setSeasonsError(err instanceof Error ? err.message : (lang === 'en' ? 'Unable to load crop seasons.' : 'Không tải được danh sách mùa vụ.'));
       } finally {
-        setLoadingSeasons(false);
+        if (!cancelled) setLoadingSeasons(false);
       }
     };
     void load();
-  }, [farmId]);
+    return () => { cancelled = true; };
+  }, [farmId, loadAttempt]);
 
   const handleSubmit = async () => {
-    if (!form.cropSeasonId) {
+    if (submitting || loadingSeasons || seasonsError) return;
+    if (!cropSeasons.some(season => season.cropSeasonId === form.cropSeasonId)) {
       setError(lang === 'en' ? 'Please select a crop season.' : 'Vui lòng chọn vụ mùa.');
       return;
     }
@@ -89,7 +98,7 @@ export function VietGapInitRunModal({ farmId, onClose, onSuccess }: VietGapInitR
             </label>
           </div>
           <select id="audit-season" className="ui-select" required value={form.cropSeasonId}
-            disabled={loadingSeasons || submitting}
+            disabled={loadingSeasons || submitting || Boolean(seasonsError)}
             onChange={(event) => setForm((f) => ({ ...f, cropSeasonId: Number(event.target.value) }))}>
             <option value={0}>{loadingSeasons ? (lang === 'en' ? 'Loading seasons...' : 'Đang tải danh sách mùa vụ...') : (lang === 'en' ? '-- Select crop season --' : '-- Chọn mùa vụ --')}</option>
             {cropSeasons.map((season) => (
@@ -98,6 +107,11 @@ export function VietGapInitRunModal({ farmId, onClose, onSuccess }: VietGapInitR
               </option>
             ))}
           </select>
+          {seasonsError && <div role="alert" className="form-error-banner" style={{ marginTop: 12 }}>
+            <p>{seasonsError}</p>
+            <Button type="button" variant="secondary" onClick={() => setLoadAttempt(value => value + 1)}>{lang === 'en' ? 'Retry' : 'Thử lại'}</Button>
+          </div>}
+          {!loadingSeasons && !seasonsError && cropSeasons.length === 0 && <p role="status">{lang === 'en' ? 'Create a crop season before starting an audit.' : 'Hãy tạo mùa vụ trước khi khởi tạo đợt đánh giá.'}</p>}
         </div>
         <div className="structured-field-card">
           <div className="structured-field-header">
@@ -118,11 +132,11 @@ export function VietGapInitRunModal({ farmId, onClose, onSuccess }: VietGapInitR
             onChange={(event) => setForm((f) => ({ ...f, notes: event.target.value || null }))}
             placeholder={lang === 'en' ? 'Enter notes about this audit run...' : 'Nhập ghi chú về đợt tự đánh giá này...'} />
         </div>
-        {error && <p role="alert" style={{ margin: 0, color: 'var(--color-danger)' }}>{error}</p>}
-        <div style={{ background: 'var(--color-success-bg)', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: 'var(--color-success)', lineHeight: 1.5 }}>
+        {error && <p role="alert" className="form-error-banner">{error}</p>}
+        <div style={{ background: 'var(--color-page)', borderRadius: 12, padding: '12px 16px', fontSize: 13, color: 'var(--color-muted)', lineHeight: 1.5 }}>
           {lang === 'en'
-            ? 'The system will create 33 checklist criteria based on VietGAP standards. The auto-check engine will evaluate criteria that can be verified automatically (PHI compliance, soil/water lab tests, training records).'
-            : 'Hệ thống sẽ tạo 33 tiêu chí kiểm tra theo chuẩn VietGAP. Bộ máy tự đánh giá sẽ kiểm tra trước các tiêu chí có thể xác minh (thời gian cách ly thuốc BVTV, hồ sơ đất/nước, tập huấn nhân sự).'}
+            ? 'Some criteria are checked automatically using the farm’s existing records.'
+            : 'Một số tiêu chí sẽ được kiểm tra tự động từ hồ sơ hiện có của trang trại.'}
         </div>
         <div className="confirm-actions" style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
           <Button className={'ui-cancel-button'} variant="secondary" onClick={onClose} disabled={submitting}>{lang === 'en' ? 'Cancel' : 'Hủy'}</Button>

@@ -21,7 +21,7 @@ export function PublicHeader() {
 
   useEffect(() => { setMobileMenuOpen(false); }, [location.key]);
   useEffect(() => {
-    const desktop = window.matchMedia?.('(min-width: 769px)');
+    const desktop = window.matchMedia?.('(min-width: 1101px)');
     if (!desktop) return;
     const closeOnDesktop = () => { if (desktop.matches) setMobileMenuOpen(false); };
     desktop.addEventListener('change', closeOnDesktop);
@@ -94,6 +94,7 @@ export function PublicHeader() {
                 type="button"
                 onClick={signOut}
                 title={t("Sign out of system")}
+                aria-label={t('nav.signOut', 'Sign Out')}
               >
                 <Icon name="logout" />
                 <span>{t('nav.signOut', 'Sign Out')}</span>

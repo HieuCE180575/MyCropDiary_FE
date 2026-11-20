@@ -101,7 +101,7 @@ export function GoogleAuthModal({ isOpen, mode, onClose, onSuccess }: GoogleAuth
   };
 
   return (
-    <Modal open={isOpen} customLayout onClose={onClose} style={{ width: 'min(490px, 100%)' }}>
+    <Modal structured open={isOpen} customLayout onClose={onClose} style={{ width: 'min(490px, 100%)' }}>
       <div className="modal-body" style={{ padding: '24px' }}>
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>

@@ -27,19 +27,31 @@ export function AdminStatistics() {
   const { state } = useAdmin();
   const { user } = useAuth();
   const [type, setType] = useState<StatisticType>('overview');
-  const [fromMonth, setFromMonth] = useState('2026-04');
-  const [toMonth, setToMonth] = useState('2026-09');
+  const today = new Date();
+  const defaultFromMonth = `${today.getFullYear()}-01`;
+  const defaultToMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const [fromMonth, setFromMonth] = useState(defaultFromMonth);
+  const [toMonth, setToMonth] = useState(defaultToMonth);
   const [statsData, setStatsData] = useState<AdminStatisticsData | null>(null);
-  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingStats, setLoadingStats] = useState(user?.userId !== 900);
+  const [statsError, setStatsError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (user?.userId === 900) return;
+    if (user?.userId === 900) { setLoadingStats(false); return; }
+    const controller = new AbortController();
     setLoadingStats(true);
-    fetchAdminStatistics()
-      .then((data) => setStatsData(data))
-      .catch(() => setStatsData(null))
-      .finally(() => setLoadingStats(false));
-  }, [user?.userId]);
+    setStatsError('');
+    setStatsData(null);
+    fetchAdminStatistics(controller.signal)
+      .then(data => {
+        if (!data) throw new Error('No statistics returned.');
+        if (!controller.signal.aborted) setStatsData(data);
+      })
+      .catch(error => { if (!controller.signal.aborted) setStatsError(error instanceof Error ? error.message : 'Unable to load statistics.'); })
+      .finally(() => { if (!controller.signal.aborted) setLoadingStats(false); });
+    return () => controller.abort();
+  }, [user?.userId, attempt]);
 
   const invalidMonthRange = Boolean(fromMonth && toMonth && fromMonth > toMonth);
   const filteredSeasons = invalidMonthRange
@@ -71,16 +83,17 @@ export function AdminStatistics() {
   const avgRating = statsData?.aiFeedback?.averageRating ?? 4.6;
 
   const exportStatsCsv = () => {
+    const text = (vi: string, en: string) => lang === 'en' ? en : vi;
     const rows = [
-      ['Chỉ tiêu thống kê', 'Giá trị', 'Ghi chú'],
-      ['Tổng tài khoản người dùng', String(totalUsers), `${activeUsers} hoạt động, ${lockedUsers} đã khóa`],
-      ['Hồ sơ đăng ký trang trại', String(totalReg), `${pendingReg} chờ duyệt, ${approvedReg} đã duyệt, ${rejectedReg} từ chối`],
-      ['Trang trại vận hành', String(totalFarms), `${activeFarms} đang hoạt động`],
-      ['Phân khu sản xuất (Zone)', String(totalZones), 'Toàn hệ thống'],
-      ['Lô đất canh tác (Block)', String(totalBlocks), 'Toàn hệ thống'],
-      ['Mùa vụ canh tác', String(totalSeasons), `${activeSeasons} đang trồng, ${completedSeasons} đã thu hoạch`],
-      ['Tổng chi phí mùa vụ (kỳ lọc)', `${totalSeasonCost} VND`, `${filteredSeasons.length} tháng`],
-      ['Phản hồi trợ lý AI', String(totalFeedbacks), `${openFeedbacks} đang mở, ${resolvedFeedbacks} đã giải quyết, Điểm TB: ${avgRating}/5`],
+      [text('Chỉ tiêu thống kê', 'Metric'), text('Giá trị', 'Value'), text('Ghi chú', 'Notes')],
+      [text('Tổng tài khoản người dùng', 'Total user accounts'), String(totalUsers), text(`${activeUsers} hoạt động, ${lockedUsers} đã khóa`, `${activeUsers} active, ${lockedUsers} locked`)],
+      [text('Hồ sơ đăng ký trang trại', 'Farm registrations'), String(totalReg), text(`${pendingReg} chờ duyệt, ${approvedReg} đã duyệt, ${rejectedReg} từ chối`, `${pendingReg} pending, ${approvedReg} approved, ${rejectedReg} rejected`)],
+      [text('Trang trại vận hành', 'Farms'), String(totalFarms), text(`${activeFarms} đang hoạt động`, `${activeFarms} active`)],
+      [text('Phân khu sản xuất', 'Production zones'), String(totalZones), text('Toàn hệ thống', 'System-wide')],
+      [text('Lô đất canh tác', 'Cultivation blocks'), String(totalBlocks), text('Toàn hệ thống', 'System-wide')],
+      [text('Mùa vụ canh tác', 'Seasons'), String(totalSeasons), text(`${activeSeasons} đang trồng, ${completedSeasons} đã thu hoạch`, `${activeSeasons} growing, ${completedSeasons} harvested`)],
+      ...(!invalidMonthRange && filteredSeasons.length ? [[text('Tổng chi phí mùa vụ (kỳ lọc)', 'Season costs (selected period)'), `${totalSeasonCost} VND`, text(`${filteredSeasons.length} tháng`, `${filteredSeasons.length} months`)]] : []),
+      [text('Phản hồi trợ lý AI', 'AI assistant feedback'), String(totalFeedbacks), text(`${openFeedbacks} đang mở, ${resolvedFeedbacks} đã giải quyết, Điểm TB: ${avgRating}/5`, `${openFeedbacks} open, ${resolvedFeedbacks} resolved, Average rating: ${avgRating}/5`)],
     ];
     const escapeCell = (val: string) => `"${(val || '').replace(/"/g, '""')}"`;
     const csv = rows.map(r => r.map(escapeCell).join(',')).join('\n');
@@ -99,7 +112,7 @@ export function AdminStatistics() {
         title={(lang === 'en' ? "System statistics" : "Thống kê hệ thống")}
         description={(lang === 'en' ? "Monitor users, farm registrations, farms, zones, blocks, crop seasons, and AI feedback quality." : "Theo dõi toàn diện số liệu về người dùng, hồ sơ đăng ký, trang trại, phân khu, lô đất, mùa vụ canh tác và chất lượng phản hồi AI.")}
       >
-        <Button variant="secondary" onClick={exportStatsCsv}>
+        <Button variant="secondary" onClick={exportStatsCsv} disabled={loadingStats || Boolean(statsError) || (type === 'costs' && (invalidMonthRange || filteredSeasons.length === 0))}>
           <Icon name="report" />
           {lang === 'en' ? 'Export CSV' : 'Xuất báo cáo CSV'}
         </Button>
@@ -119,7 +132,7 @@ export function AdminStatistics() {
         ))}
       </div>
 
-      <div className="admin-stat-filters admin-filters">
+      {type === 'costs' ? <div className="admin-stat-filters admin-filters">
         <label>
           <span>{(lang === 'en' ? "From month" : "Từ tháng")}</span>
           <input className="ui-input" type="month" value={fromMonth} onChange={(e) => setFromMonth(e.target.value)} />
@@ -128,26 +141,33 @@ export function AdminStatistics() {
           <span>{(lang === 'en' ? "To month" : "Đến tháng")}</span>
           <input className="ui-input" type="month" value={toMonth} onChange={(e) => setToMonth(e.target.value)} />
         </label>
-      </div>
+        <Button type="button" variant="secondary" className="admin-reset-icon" aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'} title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'} onClick={() => { setFromMonth(defaultFromMonth); setToMonth(defaultToMonth); }}><Icon name="refresh" size={18} /></Button>
+      </div> : <p className="admin-subtle">{lang === 'en' ? 'System totals for all time.' : 'Số liệu tổng hợp toàn hệ thống, không giới hạn theo tháng.'}</p>}
 
-      {invalidMonthRange && (
+
+      {type === 'costs' && invalidMonthRange && (
         <p className="admin-form-error" role="alert">
           {(lang === 'en' ? "Start month must not be after end month." : "Tháng bắt đầu không được sau tháng kết thúc.")}
         </p>
       )}
 
-      {!invalidMonthRange && filteredSeasons.length === 0 && (
+      {type === 'costs' && !invalidMonthRange && !loadingStats && !statsError && filteredSeasons.length === 0 && (
         <p role="status" className="admin-subtle">
           {(lang === 'en' ? "No data available for this period." : "Chưa có số liệu trong khoảng thời gian này.")}
         </p>
       )}
 
       {loadingStats && (
-        <div style={{ padding: '16px', color: '#64748b' }}>
+        <div role="status" style={{ padding: '16px', color: 'var(--color-muted)' }}>
           {(lang === 'en' ? "Loading statistics from the server..." : "Đang tải dữ liệu thống kê từ máy chủ...")}
         </div>
       )}
 
+      {statsError && <div className="admin-form-error" role="alert">
+        <p>{lang === 'en' ? 'Unable to load statistics.' : 'Không tải được số liệu thống kê.'} {translate(statsError)}</p>
+        <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>{lang === 'en' ? 'Retry' : 'Thử lại'}</Button>
+      </div>}
+      {!loadingStats && !statsError && <>
       {/* Overview Tab */}
       {type === 'overview' && (
         <div className="admin-summary-grid">
@@ -202,14 +222,14 @@ export function AdminStatistics() {
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Active" : "Đang hoạt động")}</span>
-              <strong className="admin-stat-value" style={{ color: '#059669' }}>{number(activeUsers)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-success)' }}>{number(activeUsers)}</strong>
               <p>{(lang === 'en' ? "Accounts with sign-in access" : "Tài khoản có quyền đăng nhập")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Access locked" : "Đã khóa truy cập")}</span>
-              <strong className="admin-stat-value" style={{ color: '#dc2626' }}>{number(lockedUsers)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-danger)' }}>{number(lockedUsers)}</strong>
               <p>{(lang === 'en' ? "Accounts temporarily locked for security" : "Tài khoản bị tạm khóa bảo mật")}</p>
             </div>
           </article>
@@ -222,21 +242,21 @@ export function AdminStatistics() {
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Total Farms" : "Tổng số trang trại")}</span>
-              <strong className="admin-stat-value" style={{ color: '#059669' }}>{number(totalFarms)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-success)' }}>{number(totalFarms)}</strong>
               <p>{number(activeFarms)} {(lang === 'en' ? " active member farms" : " trang trại đang hoạt động")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
-              <span>{(lang === 'en' ? "Production Zones" : "Phân khu sản xuất (Zone)")}</span>
+              <span>{(lang === 'en' ? "Production Zones" : "Phân khu sản xuất")}</span>
               <strong className="admin-stat-value">{number(totalZones)}</strong>
               <p>{(lang === 'en' ? "Managed zones across farms" : "Phân khu đã gán chủ sở hữu & nhân sự")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
-              <span>{(lang === 'en' ? "Cultivation Blocks" : "Lô đất canh tác (Block)")}</span>
-              <strong className="admin-stat-value" style={{ color: '#2563eb' }}>{number(totalBlocks)}</strong>
+              <span>{(lang === 'en' ? "Cultivation Blocks" : "Lô đất canh tác")}</span>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-info)' }}>{number(totalBlocks)}</strong>
               <p>{(lang === 'en' ? "Standardized VietGAP plots" : "Lô đất chuẩn hóa thổ nhưỡng & diện tích")}</p>
             </div>
           </article>
@@ -251,7 +271,7 @@ export function AdminStatistics() {
       )}
 
       {/* Costs Statistics */}
-      {type === 'costs' && (
+      {type === 'costs' && !invalidMonthRange && filteredSeasons.length > 0 && (
         <div className="admin-summary-grid">
           <article className="admin-summary-card">
             <div>
@@ -276,21 +296,21 @@ export function AdminStatistics() {
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Pending review" : "Chờ xét duyệt")}</span>
-              <strong className="admin-stat-value" style={{ color: '#d97706' }}>{number(pendingReg)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-warning)' }}>{number(pendingReg)}</strong>
               <p>{(lang === 'en' ? "Awaiting administrator review" : "Cần ban quản trị thẩm định")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Approved" : "Đã phê duyệt")}</span>
-              <strong className="admin-stat-value" style={{ color: '#059669' }}>{number(approvedReg)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-success)' }}>{number(approvedReg)}</strong>
               <p>{(lang === 'en' ? "Farm owner access granted" : "Đã cấp quyền chủ trang trại")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Rejected" : "Bị từ chối")}</span>
-              <strong className="admin-stat-value" style={{ color: '#dc2626' }}>{number(rejectedReg)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-danger)' }}>{number(rejectedReg)}</strong>
               <p>{(lang === 'en' ? "Applications that do not meet requirements" : "Hồ sơ không đạt tiêu chuẩn")}</p>
             </div>
           </article>
@@ -310,14 +330,14 @@ export function AdminStatistics() {
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Growing" : "Đang canh tác")}</span>
-              <strong className="admin-stat-value" style={{ color: '#059669' }}>{number(activeSeasons)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-success)' }}>{number(activeSeasons)}</strong>
               <p>{(lang === 'en' ? "Seasons currently in the growing cycle" : "Vụ mùa đang trong chu kỳ chăm sóc")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Harvested" : "Đã thu hoạch")}</span>
-              <strong className="admin-stat-value" style={{ color: '#2563eb' }}>{number(completedSeasons)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-info)' }}>{number(completedSeasons)}</strong>
               <p>{(lang === 'en' ? "Completed with final yield recorded" : "Đã kết thúc và chốt sản lượng")}</p>
             </div>
           </article>
@@ -337,26 +357,27 @@ export function AdminStatistics() {
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "New (unreviewed)" : "Mới tiếp nhận (Chưa xử lý)")}</span>
-              <strong className="admin-stat-value" style={{ color: '#d97706' }}>{number(openFeedbacks)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-warning)' }}>{number(openFeedbacks)}</strong>
               <p>{(lang === 'en' ? "Awaiting review and reply" : "Cần xem xét và trả lời")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Resolved" : "Đã giải quyết")}</span>
-              <strong className="admin-stat-value" style={{ color: '#059669' }}>{number(resolvedFeedbacks)}</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-success)' }}>{number(resolvedFeedbacks)}</strong>
               <p>{(lang === 'en' ? "Explanation sent" : "Đã gửi phản hồi giải thích")}</p>
             </div>
           </article>
           <article className="admin-summary-card">
             <div>
               <span>{(lang === 'en' ? "Average rating" : "Điểm đánh giá trung bình")}</span>
-              <strong className="admin-stat-value" style={{ color: '#f59e0b' }}>⭐ {avgRating} / 5</strong>
+              <strong className="admin-stat-value" style={{ color: 'var(--color-warning)' }}>⭐ {avgRating} / 5</strong>
               <p>{(lang === 'en' ? "Helpfulness of AI advice" : "Mức độ hữu ích của tư vấn AI")}</p>
             </div>
           </article>
         </div>
       )}
+      </>}
     </section>
   );
 }

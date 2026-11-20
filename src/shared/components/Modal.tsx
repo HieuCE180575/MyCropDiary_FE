@@ -1,4 +1,5 @@
 import { Icon } from './Icon';
+import { normalizeModalForms } from './modalFormLayout';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useEffect, useId, useRef } from 'react';
 
@@ -68,9 +69,10 @@ export function Modal({ open, onClose, title, children, className, headerIcon, v
   }, [open]);
 
   if (!open) return null;
+  const formLayout = structured ? normalizeModalForms(children) : { content: children, hasForm: false };
 
   return (
-      <dialog ref={ref} tabIndex={-1} style={{ ...style, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100dvh - 32px)' }} className={[variant === 'admin' ? 'admin-modal' : 'modal-card', 'ui-modal', structured && 'form-standard-modal', className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined} aria-label={title || customLayout ? undefined : (lang === 'en' ? 'Dialog' : 'Hộp thoại')}
+      <dialog ref={ref} tabIndex={-1} style={{ ...style, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100dvh - 32px)' }} className={[variant === 'admin' ? 'admin-modal' : 'modal-card', 'ui-modal', structured && 'form-standard-modal', formLayout.hasForm && 'modal-form-layout', className].filter(Boolean).join(' ')} role="dialog" aria-modal="true" aria-labelledby={title ? titleId : undefined} aria-label={title || customLayout ? undefined : (lang === 'en' ? 'Dialog' : 'Hộp thoại')}
         onCancel={event => { event.preventDefault(); onClose(); }}
         onClick={event => {
           if (event.target !== event.currentTarget) return;
@@ -90,7 +92,7 @@ export function Modal({ open, onClose, title, children, className, headerIcon, v
             <Icon name="close" />
           </button>
         </div>}
-        {customLayout || variant === 'admin' ? children : <div className="modal-body">{children}</div>}
+        {customLayout || variant === 'admin' || formLayout.hasForm ? formLayout.content : <div className="modal-body">{children}</div>}
       </dialog>
   );
 }

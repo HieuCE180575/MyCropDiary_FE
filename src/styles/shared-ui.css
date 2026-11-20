@@ -493,7 +493,8 @@ button, input, select, textarea { font-family: inherit; }
   overflow: hidden;
 }
 .ui-modal.modal-form-layout > .modal-body,
-.ui-modal.modal-form-layout > form > .modal-body {
+.ui-modal.modal-form-layout > form > .modal-body,
+.ui-modal .modal-form-wrapper > form > .modal-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -503,6 +504,33 @@ button, input, select, textarea { font-family: inherit; }
 }
 .ui-modal.modal-form-layout .modal-footer {
   flex-shrink: 0;
+  padding: 16px 24px;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+.ui-modal.modal-form-layout .modal-footer:has(> .form-error-banner, > .admin-form-error) {
+  flex-wrap: wrap;
+}
+.ui-modal.modal-form-layout .modal-footer > :is(.form-error-banner, .admin-form-error) {
+  flex: 0 0 100%;
+  margin: 0 0 12px;
+}
+.ui-modal .modal-form-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.ui-modal .modal-form-wrapper > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.ui-modal.modal-form-layout > .modal-body:has(> .modal-form-wrapper) {
+  display: contents;
 }
 .form-error-banner, .field-error, .mu-field-error, .admin-form-error, [data-form-error] {
   scroll-margin-block: 96px 24px;
@@ -1297,4 +1325,110 @@ body {
   order: -1;
   margin-inline-end: 0;
 }
+
+.profile-details .profile-card-header h2 { margin: 0 0 4px; }
+.profile-details dl.profile-info-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 0;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  gap: 16px;
+}
+.profile-info-grid > div {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-page);
+}
+.profile-info-grid dt {
+  color: var(--color-text);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed var(--color-input-border);
+}
+.profile-details .profile-info-grid dd { font-weight: 400; }
+
+/* Admin dialogs share the same field and footer hierarchy as farm dialogs. */
+.ui-modal.admin-modal > .admin-modal-body { flex: 1; min-height: 0; }
+.ui-modal.admin-modal > .admin-modal-footer { flex-shrink: 0; }
+.ui-modal .admin-required-note {
+  order: -2;
+  margin-inline-end: auto;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.admin-required-note > span { color: var(--color-danger); }
+.ui-modal .admin-modal-footer > .form-error-banner { flex: 0 0 100%; margin: 0; }
+.ui-modal .admin-detail-heading { display: grid; gap: 12px; margin-bottom: 16px; }
+.ui-modal .admin-detail-heading > .status-badge { justify-self: start; }
+.ui-modal .admin-details { padding-top: 0; border-top: 0; }
+.ui-modal .admin-details > div { background: var(--color-page); border-color: var(--color-border); }
+.ui-modal .admin-details dt {
+  color: var(--color-text);
+  font-size: 13.5px;
+  text-transform: none;
+  letter-spacing: normal;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed var(--color-input-border);
+}
+.ui-modal .admin-details dd { color: var(--color-body); font-weight: 400; }
+.ui-modal.admin-modal .admin-close { flex-shrink: 0; }
+.ui-modal.admin-modal .admin-form-grid > *,
+.ui-modal.admin-modal .admin-details > * { min-width: 0; overflow-wrap: anywhere; }
+.ui-modal.admin-modal .admin-user-email { margin-bottom: 16px; }
+.ui-modal.admin-modal .admin-modal-body > p { overflow-wrap: anywhere; }
+.ui-modal.admin-modal .admin-feedback-form { border-color: var(--color-border); }
+.ui-modal.admin-modal .admin-field textarea { line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ui-modal.admin-modal .admin-field .structured-field-header { flex-wrap: wrap; }
+.ui-modal.admin-modal .admin-field-help { color: var(--color-muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
+.ui-modal.admin-modal .admin-inline-note {
+  color: var(--color-body);
+  background: var(--color-page);
+  border-color: var(--color-border);
+}
+.ui-modal.admin-modal .admin-form-error {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+.ui-modal.admin-modal .admin-modal-footer { gap: 10px; }
+.ui-modal.admin-modal .admin-modal-footer .ui-button { white-space: normal; }
+.admin-page .admin-table { min-width: 680px; }
+.admin-page .admin-table td:last-child { white-space: nowrap; }
+.admin-filters .admin-reset-icon { width: 44px; height: 44px; padding: 0; flex-shrink: 0; }
+.admin-page .admin-form-error { color: var(--color-danger); background: var(--color-danger-bg); }
+.admin-table .admin-list-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 640px) {
+  .ui-modal.admin-modal .admin-form-grid,
+  .ui-modal.admin-modal .admin-details { grid-template-columns: minmax(0, 1fr); }
+  .ui-modal.admin-modal .admin-modal-body { padding: 20px 16px; }
+  .ui-modal.admin-modal .admin-modal-footer { padding: 16px; }
+  .ui-modal.admin-modal .admin-required-note { flex: 0 0 100%; }
+  .admin-page .admin-filters > label { min-width: 0; max-width: 100%; }
+  .admin-page .admin-search input { min-width: 0; }
+  .admin-page .admin-pagination { padding: 16px; gap: 12px; }
+  .admin-page .admin-pagination > label { margin-left: 0; }
+  .profile-details dl.profile-info-grid { grid-template-columns: minmax(0, 1fr); }
+  .profile-layout .profile-details { padding: 20px; }
+  .profile-hero-name { font-size: 20px; overflow-wrap: anywhere; }
+  .profile-hero-avatar { width: 56px; height: 56px; }
+}
+
+.ui-modal .admin-evidence-list .status-evidence-item {
+  flex-wrap: wrap;
+  background: var(--color-page);
+  border-color: var(--color-border);
+}
+.ui-modal .admin-evidence-description { min-width: 0; overflow-wrap: anywhere; }
+.ui-modal .admin-evidence-description strong { font-size: 13.5px; color: var(--color-body); }
+.ui-modal .admin-evidence-meta { font-size: 12px; color: var(--color-muted); }
+.ui-modal .admin-evidence-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ui-modal .admin-evidence-actions .ui-button { white-space: nowrap; }
 
