@@ -2584,6 +2584,26 @@ body.dark-theme .admin-shell {
 
 .admin-action-col {
   text-align: right;
+  width: 120px;
+  white-space: nowrap;
+}
+
+.admin-action-col .table-action-btns {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-table .table-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.admin-table .table-icon-btn:hover {
+  transform: translateY(-1px);
 }
 
 /* ==========================================================================
