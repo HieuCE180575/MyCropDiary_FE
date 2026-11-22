@@ -20,6 +20,7 @@ import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { NotificationPopover } from './NotificationPopover';
+import { FloatingAIChatbox } from '../../features/ai/FloatingAIChatbox';
 import {
   fetchMyNotifications,
   markNotificationAsRead,
@@ -607,6 +608,7 @@ function WorkspaceLayout() {
           <Outlet />
         </main>
         {!isAdmin && <PublicFooter />}
+        <FloatingAIChatbox />
       </div>
     </div>
   );
