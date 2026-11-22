@@ -213,9 +213,9 @@ export const adminConfigs: Record<Collection, CollectionConfig> = {
       { key: 'zonesSummary', label: 'Phân khu phụ trách' },
     ],
     fields: [
-      { key: 'name', label: 'Họ và tên', required: true, maxLength: 150 },
-      { key: 'email', label: 'Email', required: true, maxLength: 255 },
-      { key: 'phone', label: 'Số điện thoại', maxLength: 30 },
+      { key: 'name', label: 'Họ và tên', required: true, maxLength: 150, placeholder: { vi: 'Ví dụ: Nguyễn Văn An', en: 'e.g. John Doe' } },
+      { key: 'email', label: 'Email', required: true, maxLength: 255, placeholder: { vi: 'Ví dụ: nguyenvanan@gmail.com', en: 'e.g. john.doe@example.com' } },
+      { key: 'phone', label: 'Số điện thoại', maxLength: 30, placeholder: { vi: 'Ví dụ: 0912345678', en: 'e.g. 0912345678' } },
       { key: 'role', label: 'Vai trò hệ thống', type: 'select', options: roleLabels, required: true },
     ],
     details: [

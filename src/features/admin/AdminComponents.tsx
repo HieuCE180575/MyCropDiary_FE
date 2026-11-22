@@ -33,8 +33,8 @@ export function AdminField({ field, value, onChange, disabled = false }: { field
       <span className="structured-field-badge">{field.maxLength && `${value.length}/${field.maxLength} · `}{lang === 'en' ? (field.required ? 'Required' : 'Optional') : (field.required ? 'Bắt buộc' : 'Tùy chọn')}</span>
     </div>
     {field.type === 'select' ? <select id={id} aria-describedby={helpId} disabled={disabled} className="ui-select" value={value} required={field.required} onChange={(event) => onChange(event.target.value)}><option value="">{(lang === 'en' ? "Select " : "Chọn ")} {translate(field.label).toLocaleLowerCase('vi-VN')}</option>{Object.entries(field.options ?? {}).map(([key, label]) => <option value={key} key={key}>{translate(label)}</option>)}</select>
-      : field.type === 'textarea' ? <textarea id={id} aria-describedby={helpId} disabled={disabled} className="ui-textarea" rows={field.key === 'content' ? 10 : 4} value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />
-        : <input id={id} aria-describedby={helpId} disabled={disabled} className="ui-input" value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />}
+      : field.type === 'textarea' ? <textarea id={id} aria-describedby={helpId} disabled={disabled} className="ui-textarea" placeholder={field.placeholder?.[lang]} rows={field.key === 'content' ? 10 : 4} value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />
+        : <input id={id} aria-describedby={helpId} disabled={disabled} className="ui-input" placeholder={field.placeholder?.[lang]} value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />}
     {field.help && <small id={helpId} className="admin-field-help">{field.help[lang]}</small>}
   </div>;
 }

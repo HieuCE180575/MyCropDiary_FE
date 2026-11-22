@@ -2804,6 +2804,11 @@ body.dark-theme .admin-shell {
   gap: 20px;
 }
 
+.admin-form-grid.admin-form-grid--single-col {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
 .admin-field {
   display: grid;
   gap: 8px;

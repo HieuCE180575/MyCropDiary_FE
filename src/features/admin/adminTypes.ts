@@ -43,6 +43,7 @@ export interface Field {
   required?: boolean;
   maxLength?: number;
   full?: boolean;
+  placeholder?: { vi: string; en: string };
   help?: { vi: string; en: string };
 }
 
