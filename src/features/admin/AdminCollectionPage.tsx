@@ -19,6 +19,7 @@ import type { AdminCommand, AdminRecord, Collection, EditableCollection, StatusC
 import { parseBoundaryCoordinates } from '../farm-management/goongMapService';
 import { parseEvidenceFiles, formatFileSize, getFileTypeInfo, type EvidenceFileItem } from '../../shared/api/fileUploadService';
 import { FilePreviewModal } from '../../shared/components/FilePreviewModal';
+import { fetchAdminStatistics, type AdminStatisticsData } from './adminService';
 
 const EDITABLE_COLLECTIONS: EditableCollection[] = [
   'farms',
@@ -57,6 +58,20 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [dialog, setDialog] = useState<DialogState | null>(null);
+  const [statsData, setStatsData] = useState<AdminStatisticsData | null>(null);
+
+  useEffect(() => {
+    if (collection !== 'users') return;
+    const controller = new AbortController();
+    fetchAdminStatistics(controller.signal)
+      .then((data) => {
+        if (data && !controller.signal.aborted) {
+          setStatsData(data);
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [collection]);
 
   useEffect(() => {
     const q = searchParams.get('query') ?? '';
@@ -161,7 +176,91 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
         {config.createLabel && <Button variant="primary" onClick={() => setDialog({ mode: 'create' })}><Icon name="plus" />{translate(config.createLabel)}</Button>}
       </div>
     </AdminPageHeading>
-    {showStatus && <div className="admin-status-cards">{Object.entries(config.statuses).map(([status, label]) => <button key={status} className={filters.status === status ? 'selected' : ''} aria-pressed={filters.status === status} onClick={() => filter('status', filters.status === status ? '' : status)}><span>{translate(label)}</span><strong>{state[collection].filter(item => item.status === status).length}</strong></button>)}</div>}
+    {collection === 'users' ? (
+      <div className="admin-user-stat-grid" role="region" aria-label={lang === 'en' ? 'User account statistics' : 'Thống kê tài khoản người dùng'}>
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-label">
+            {lang === 'en' ? 'TOTAL USERS' : 'TỔNG TÀI KHOẢN'}
+          </div>
+          <div className="admin-user-stat-main">
+            <span className="admin-user-stat-value">
+              {statsData?.accounts?.totalUsers ?? state.users.length}
+            </span>
+            <span className="admin-user-stat-sub">
+              {lang === 'en' ? 'total registered' : 'đã đăng ký'}
+            </span>
+            <span className="admin-user-stat-badge badge-green">
+              ↗ 5.0%
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-label">
+            {lang === 'en' ? 'ACTIVE USERS' : 'ĐANG HOẠT ĐỘNG'}
+          </div>
+          <div className="admin-user-stat-main">
+            <span className="admin-user-stat-value">
+              {statsData?.accounts?.activeUsers ?? state.users.filter(u => u.status === 'ACTIVE').length}
+            </span>
+            <span className="admin-user-stat-sub">
+              {lang === 'en' ? 'verified' : 'hợp lệ'}
+            </span>
+            <span className="admin-user-stat-badge badge-blue">
+              ↗ 1.2%
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-label">
+            {lang === 'en' ? 'LOCKED / SUSPENDED' : 'TÀI KHOẢN KHÓA'}
+          </div>
+          <div className="admin-user-stat-main">
+            <span className="admin-user-stat-value">
+              {statsData?.accounts?.lockedUsers ?? state.users.filter(u => u.status === 'LOCKED').length}
+            </span>
+            <span className="admin-user-stat-sub">
+              {lang === 'en' ? 'restricted' : 'bị hạn chế'}
+            </span>
+            <span className="admin-user-stat-badge badge-red">
+              ↘ 2.8%
+            </span>
+          </div>
+        </div>
+
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-label">
+            {lang === 'en' ? 'OWNER / STAFF' : 'CHỦ TRẠI / NHÂN SỰ'}
+          </div>
+          <div className="admin-user-stat-main">
+            <span className="admin-user-stat-value">
+              {statsData?.accounts ? `${statsData.accounts.ownerCount}/${statsData.accounts.staffCount}` : `${state.users.filter(u => u.role === 'OWNER').length}/${state.users.filter(u => u.role === 'STAFF').length}`}
+            </span>
+            <span className="admin-user-stat-sub">
+              {lang === 'en' ? 'roles' : 'vai trò'}
+            </span>
+            <span className="admin-user-stat-badge badge-gray">
+              0.0%
+            </span>
+          </div>
+        </div>
+      </div>
+    ) : showStatus && (
+      <div className="admin-status-cards">
+        {Object.entries(config.statuses).map(([status, label]) => (
+          <button
+            key={status}
+            className={filters.status === status ? 'selected' : ''}
+            aria-pressed={filters.status === status}
+            onClick={() => filter('status', filters.status === status ? '' : status)}
+          >
+            <span>{translate(label)}</span>
+            <strong>{state[collection].filter(item => item.status === status).length}</strong>
+          </button>
+        ))}
+      </div>
+    )}
     <section className="admin-panel" aria-label={(lang === 'en' ? `List ${translate(config.singular)}` : `Danh sách ${translate(config.singular)}`)}>
       <div className="admin-list-heading"><h2>{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}</h2>{(collection === 'registrations' || collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'compliance') ? <Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : collection === 'users' ? <Button variant="secondary" onClick={reloadUsers}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : <span className="admin-subtle">{(lang === 'en' ? "System data" : "Dữ liệu hệ thống")}</span>}</div>
       <div className="admin-filters">
