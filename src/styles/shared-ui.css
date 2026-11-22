@@ -1353,13 +1353,6 @@ body {
 /* Admin dialogs share the same field and footer hierarchy as farm dialogs. */
 .ui-modal.admin-modal > .admin-modal-body { flex: 1; min-height: 0; }
 .ui-modal.admin-modal > .admin-modal-footer { flex-shrink: 0; }
-.ui-modal .admin-required-note {
-  order: -2;
-  margin-inline-end: auto;
-  color: var(--color-muted);
-  font-size: 12px;
-}
-.admin-required-note > span { color: var(--color-danger); }
 .ui-modal .admin-modal-footer > .form-error-banner { flex: 0 0 100%; margin: 0; }
 .ui-modal .admin-detail-heading { display: grid; gap: 12px; margin-bottom: 16px; }
 .ui-modal .admin-detail-heading > .status-badge { justify-self: start; }
@@ -1400,6 +1393,13 @@ body {
 .admin-page .admin-table { min-width: 680px; }
 .admin-page .admin-table td:last-child { white-space: nowrap; }
 .admin-filters .admin-reset-icon { width: 44px; height: 44px; padding: 0; flex-shrink: 0; }
+@media (min-width: 769px) {
+  .admin-page .admin-filters--hero { flex-wrap: nowrap; }
+  .admin-page .admin-filters--hero > label { min-width: 0; }
+  .admin-page .admin-filters--hero .admin-search { flex: 1 1 0; }
+  .admin-page .admin-filters--hero > label:not(.admin-search) { flex: 0 1 200px; }
+  .admin-page .admin-filters--hero .ui-select { width: 100%; min-width: 0; }
+}
 .admin-page .admin-form-error { color: var(--color-danger); background: var(--color-danger-bg); }
 .admin-table .admin-list-title {
   display: -webkit-box;
@@ -1412,7 +1412,6 @@ body {
   .ui-modal.admin-modal .admin-details { grid-template-columns: minmax(0, 1fr); }
   .ui-modal.admin-modal .admin-modal-body { padding: 20px 16px; }
   .ui-modal.admin-modal .admin-modal-footer { padding: 16px; }
-  .ui-modal.admin-modal .admin-required-note { flex: 0 0 100%; }
   .admin-page .admin-filters > label { min-width: 0; max-width: 100%; }
   .admin-page .admin-search input { min-width: 0; }
   .admin-page .admin-pagination { padding: 16px; gap: 12px; }
@@ -1440,4 +1439,109 @@ body {
 .admin-page .admin-users-table th:first-child { width: 34%; }
 .admin-page .admin-users-table .admin-record-link { width: 100%; }
 .admin-page .admin-users-table td:nth-child(2) { white-space: nowrap; }
+
+.admin-registration-stat-grid .admin-user-stat-card {
+  font: inherit;
+  text-align: start;
+  cursor: default;
+  color: var(--color-body);
+}
+.admin-registration-stat-grid .admin-user-stat-label { text-transform: uppercase; }
+
+.admin-spatial-page > .ui-page-heading { flex-direction: column; align-items: stretch; }
+.admin-spatial-page > .ui-page-heading .ui-page-heading-actions { width: 100%; }
+.admin-compliance-page > .ui-page-heading { flex-direction: column; align-items: stretch; }
+.admin-compliance-page > .ui-page-heading .ui-page-heading-actions { width: 100%; }
+.admin-spatial-page .admin-registration-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 640px) {
+  .admin-spatial-page .admin-registration-stat-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.admin-content-page > .ui-page-heading { flex-direction: column; align-items: stretch; }
+.admin-content-page > .ui-page-heading .ui-page-heading-actions { width: 100%; }
+.admin-content-page .admin-registration-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 640px) {
+  .admin-content-page .admin-registration-stat-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.admin-statistics-page > .ui-page-heading { flex-direction: column; align-items: stretch; }
+.admin-statistics-page > .ui-page-heading .ui-page-heading-actions { width: 100%; }
+.admin-statistics-page .admin-stat-tabs {
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+  box-sizing: border-box;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  margin-bottom: 24px;
+}
+.admin-statistics-page .admin-stat-tabs button {
+  flex: 1 0 auto;
+  white-space: nowrap;
+  padding: 10px 16px;
+  color: var(--color-muted);
+}
+.admin-statistics-page .admin-stat-tabs button.active {
+  background: var(--color-success-bg);
+  color: var(--color-primary-text);
+  box-shadow: none;
+}
+.admin-statistics-page .admin-summary-card {
+  min-height: 140px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--color-surface);
+  border-color: var(--color-border);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 4%);
+}
+.admin-statistics-page .admin-summary-card > div { min-width: 0; width: 100%; }
+.admin-statistics-page .admin-summary-card > div > span { display: block; font-size: 12px; font-weight: 700; color: var(--color-muted); text-transform: uppercase; }
+.admin-statistics-page .admin-summary-card .admin-stat-value { display: block; margin-block: 12px 8px; font-size: 28px; line-height: 1.15; }
+.admin-statistics-page .admin-summary-card p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-muted); }
+.admin-statistics-page .admin-stat-filters { background: var(--color-surface); border-color: var(--color-border); }
+
+.admin-registration-stat-grid .admin-share-badge { white-space: nowrap; }
+.admin-registration-stat-grid .admin-share-badge--success { background: var(--color-success-bg); color: var(--color-success); }
+.admin-registration-stat-grid .admin-share-badge--danger { background: var(--color-danger-bg); color: var(--color-danger); }
+.admin-registration-stat-grid .admin-share-badge--info { background: var(--color-info-bg); color: var(--color-info); }
+.admin-registration-stat-grid .admin-share-badge--neutral { background: var(--color-page); color: var(--color-muted); }
+
+
+.admin-registration-stat-grid .admin-user-stat-card:hover { transform: none; border-color: var(--color-border); box-shadow: 0 1px 3px rgb(0 0 0 / 4%); }
+.admin-page .admin-application-stat-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.admin-application-stat-grid .admin-user-stat-card { min-height: 90px; padding: 14px 16px; }
+.admin-application-stat-grid .admin-user-stat-label { font-size: 11px; }
+.admin-application-stat-grid .admin-user-stat-value { font-size: 25px; }
+.admin-application-stat-grid .admin-user-stat-sub { font-size: 12px; }
+.admin-application-stat-grid .admin-user-stat-badge { font-size: 11px; padding: 2px 5px; }
+@media (max-width: 1100px) {
+  .admin-page .admin-application-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .admin-page .admin-application-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 400px) {
+  .admin-page .admin-application-stat-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.admin-application-stat-grid .admin-application-tone--warning { --application-bg: var(--color-warning-bg); --application-color: var(--color-warning); }
+.admin-application-stat-grid .admin-application-tone--success { --application-bg: var(--color-success-bg); --application-color: var(--color-success); }
+.admin-application-stat-grid .admin-application-tone--danger { --application-bg: var(--color-danger-bg); --application-color: var(--color-danger); }
+.admin-application-stat-grid .admin-application-tone--neutral { --application-bg: var(--color-subtle); --application-color: var(--color-muted); }
+.admin-application-stat-grid .admin-user-stat-card[class*="admin-application-tone--"] { background: var(--application-bg); }
+.admin-application-stat-grid [class*="admin-application-tone--"] :is(.admin-user-stat-label, .admin-user-stat-value, .admin-user-stat-sub) { color: var(--application-color); }
+.admin-application-stat-grid .admin-share-badge--warning { background: var(--color-warning-bg); color: var(--color-warning); }
+
+.admin-page .admin-application-stat-grid.admin-summary-count-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.admin-page .admin-application-stat-grid.admin-summary-count-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.admin-application-stat-grid .admin-application-tone--info { --application-bg: var(--color-info-bg); --application-color: var(--color-info); }
+@media (max-width: 1100px) {
+  .admin-page .admin-application-stat-grid.admin-summary-count-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .admin-page .admin-application-stat-grid.admin-summary-count-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 400px) {
+  .admin-page .admin-application-stat-grid:is(.admin-summary-count-3, .admin-summary-count-4) { grid-template-columns: minmax(0, 1fr); }
+}
 

@@ -345,7 +345,7 @@ function WorkspaceLayout() {
             <button type="button" className="mobile-sidebar-toggle" aria-controls="workspace-sidebar" aria-expanded={sidebarOpen}
               aria-label={lang === 'en' ? 'Open navigation' : 'Mở menu'} onClick={() => setSidebarOpen(open => !open)}><Icon name="menu" /></button>
             {isAdmin && pathname.startsWith('/admin') ? (
-              pathname === '/admin/users' ? null : (
+              ['/admin/users', '/admin/registrations', '/admin/farms', '/admin/zones', '/admin/blocks', '/admin/compliance', '/admin/crops', '/admin/rules', '/admin/articles', '/admin/feedback', '/admin/audit', '/admin/statistics'].includes(pathname) ? null : (
                 <div className="admin-header-titles">
                   <h1 className="admin-header-title">{translate(currentAdminMeta.title)}</h1>
                   <p className="admin-header-subtitle">{translate(currentAdminMeta.subtitle)}</p>

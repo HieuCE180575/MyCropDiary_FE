@@ -2,6 +2,7 @@ export type Language = 'en' | 'vi';
 
 export const translations = {
   en: {
+    'Tổng hồ sơ': 'Total applications',
     'Thêm tài khoản': 'Add user',
     'Phone number can only contain digits.': 'Phone number can only contain digits.',
     'Phone number must start with 0.': 'Phone number must start with 0.',

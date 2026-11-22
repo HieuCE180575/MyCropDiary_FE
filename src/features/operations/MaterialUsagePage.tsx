@@ -665,7 +665,7 @@ function MaterialUsageContent() {
           </div>
           <div className="modal-footer mu-entry-footer">
           {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner mu-entry-error">{translate(notification.text)}</p>}
-          <span>{!showRemainingSections ? (lang === 'en' ? 'Complete the fields above to add application and safety details.' : 'Nhập đủ thông tin bên trên để bổ sung cách sử dụng và thông tin an toàn.') : <><span className="mu-required">*</span> {(lang === 'en' ? " Required information" : " Thông tin bắt buộc")}</>}</span><div>
+          {!showRemainingSections && <span>{(lang === 'en' ? 'Complete the fields above to add application and safety details.' : 'Nhập đủ thông tin bên trên để bổ sung cách sử dụng và thông tin an toàn.')}</span>}<div>
             <Button className="ui-cancel-button" type="button" variant="secondary" disabled={saving} onClick={() => setIsCreateModalOpen(false)}>{lang === 'en' ? 'Cancel' : 'Hủy'}</Button>
             {showRemainingSections && <Button type="submit" variant="primary" loading={saving}>{saving ? (lang === 'en' ? 'Saving...' : 'Đang lưu...') : editingUsage ? (lang === 'en' ? 'Save Changes' : 'Lưu thay đổi') : (lang === 'en' ? 'Save Record' : 'Lưu ghi nhận')}</Button>}
           </div></div>

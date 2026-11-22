@@ -15,6 +15,7 @@ test('admin uses registration APIs while other modules keep their existing behav
   dom.window.HTMLDialogElement.prototype.close = function () { this.open = false; };
   const oldAdapter = axios.defaults.adapter;
   let requestCount = 0;
+  let analyticsRequestCount = 0;
   let fixtures = [];
   let rejectWrite = true;
   let failRead = false;
@@ -30,6 +31,13 @@ test('admin uses registration APIs while other modules keep their existing behav
   axios.defaults.adapter = async config => {
     requestCount += 1;
     assert.equal(config.headers.get('Authorization'), 'Bearer preview-test-session');
+    if (config.url === '/admin/farms') {
+      analyticsRequestCount += 1;
+      return { config, status: 200, headers: {}, data: JSON.stringify({ success: true, data: [] }) };
+    }
+    if (config.url === '/admin/statistics/overview') {
+      return { config, status: 200, headers: {}, data: JSON.stringify({ success: true, data: {} }) };
+    }
     const detail = config.url.match(/^\/admin\/(users|farm-registrations)\/(\d+)$/);
     if (detail) {
       detailRequests.push(config.url);
@@ -79,7 +87,7 @@ test('admin uses registration APIs while other modules keep their existing behav
     const query = selector => { const node = document.querySelector(selector); assert.ok(node, `Missing ${selector}`); return node; };
     const click = async selector => { await act(async () => query(selector).click()); };
     const button = async (text, scope = 'dialog') => {
-      const node = [...query(scope).querySelectorAll('button')].find(item => item.textContent.trim() === text);
+      const node = [...query(scope).querySelectorAll('button')].find(item => item.textContent.trim() === text || item.getAttribute('aria-label') === `${text} danh sách`);
       assert.ok(node, `Missing button ${text}`);
       await act(async () => node.click());
     };
@@ -90,8 +98,18 @@ test('admin uses registration APIs while other modules keep their existing behav
     };
     const submit = async () => { await act(async () => query('dialog form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }))); };
     const navigate = async path => click(`.sidebar a[href="${path}"]`);
-    assert.ok(document.body.textContent.includes('Tải lại'));
-    assert.ok(!document.querySelector('.admin-list-heading').textContent.includes('Dữ liệu minh họa'));
+    assert.equal(query('.admin-filters [aria-label="Tải lại danh sách"]').textContent.trim(), '');
+    assert.equal(document.querySelector('.admin-list-heading'), null);
+    assert.equal(document.querySelector('.admin-header-titles'), null);
+    assert.equal(document.querySelector('.admin-page .eyebrow'), null);
+    assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 5);
+    for (const [index, status] of ['', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].entries()) {
+      const card = document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card')[index];
+      const count = status === '' ? fixtures.length : fixtures.filter(item => item.status === status).length;
+      assert.equal(card.querySelector('.admin-user-stat-sub').textContent, 'hồ sơ');
+      assert.equal(card.querySelector('.admin-share-badge').textContent, new Intl.NumberFormat('vi-VN', { style: 'percent', maximumFractionDigits: 1 }).format(count / fixtures.length));
+    }
+    assert.ok(query('.admin-filters--hero'));
     assert.equal(query('[aria-label="Trang 1"]').getAttribute('aria-current'), 'page');
     await click('[aria-label="Trang 2"]');
     assert.equal(query('[aria-label="Trang 2"]').getAttribute('aria-current'), 'page');
@@ -105,8 +123,19 @@ test('admin uses registration APIs while other modules keep their existing behav
     await set('.admin-search input', 'binh minh');
     assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 1);
     assert.ok(query('.admin-table').textContent.includes('Trang trại Bình Minh'));
-    assert.equal(query('.admin-reset-icon').textContent.trim(), '');
-    await click('.admin-filters [aria-label="Đặt lại bộ lọc"]');
+    assert.match(query('.admin-registration-stat-grid .admin-user-stat-card').textContent, /Tổng hồ sơ/);
+    assert.ok(query('.admin-filters select option[value="CANCELLED"]'));
+    await click('.admin-registration-stat-grid .admin-user-stat-card:nth-child(2)');
+    assert.equal(query('.admin-filters select').value, '');
+    assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 1);
+    await set('.admin-filters select', 'PENDING');
+    assert.equal(query('.admin-filters select').value, 'PENDING');
+    assert.equal(document.querySelectorAll('.admin-filters .admin-reset-icon').length, 1);
+    await button('Tải lại', '.admin-filters');
+    assert.equal(query('.admin-search input').value, '');
+    assert.equal(query('.admin-filters select').value, '');
+    assert.equal(document.querySelector('.admin-registration-stat-grid [aria-pressed]'), null);
+    assert.equal(document.querySelector('.admin-registration-stat-grid button'), null);
     holdDetail = true;
     await click('[aria-label="Xem chi tiết Vườn rau An Nhiên"]');
     assert.match(query('dialog [role="status"]').textContent, /Đang tải chi tiết/);
@@ -162,6 +191,10 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.equal(document.querySelector('.admin-toast'), null, 'Notification dismisses after five seconds');
 
     await navigate('/admin/articles');
+    assert.equal(document.querySelector('.admin-header-titles'), null);
+    assert.equal(document.querySelector('.admin-list-heading'), null);
+    assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 4);
+    assert.ok(query('.admin-filters--hero .admin-reset-icon'));
     assert.ok(!query('.admin-table thead').textContent.includes('Nguồn tham khảo'));
     for (const button of document.querySelectorAll('.admin-row-actions .detail-button, .admin-row-actions .edit-button')) {
       assert.equal(button.textContent.trim(), '', 'Row action must show only its icon');
@@ -175,7 +208,7 @@ test('admin uses registration APIs while other modules keep their existing behav
     await click('dialog [aria-label="Đóng cửa sổ"]');
     await click('[aria-label="Sửa Ghi nhận vật tư sử dụng trong mùa vụ"]');
     assert.ok(query('dialog .structured-field-badge').textContent.includes('Bắt buộc'));
-    assert.ok(query('dialog .admin-modal-footer .admin-required-note').textContent.includes('Thông tin bắt buộc'));
+    assert.equal(document.querySelector('dialog .admin-modal-footer .admin-required-note'), null);
     for (const label of document.querySelectorAll('dialog .admin-field label')) {
       assert.ok(document.getElementById(label.htmlFor), 'Each field label identifies its control');
     }
@@ -198,6 +231,10 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(articleRow.textContent.includes('Đã duyệt'));
 
     await navigate('/admin/users');
+    assert.equal(document.querySelectorAll('.admin-application-stat-grid .admin-user-stat-card').length, 4);
+    assert.equal(query('.admin-application-stat-grid .admin-user-stat-card:nth-child(2) .admin-share-badge').textContent, '100%');
+    assert.ok(query('.admin-application-stat-grid .admin-application-tone--success'));
+    assert.equal(document.querySelector('.admin-application-stat-grid button'), null);
     assert.equal(document.querySelectorAll('.admin-table thead th').length, 5);
     assert.match(query('.admin-table thead').textContent, /Số điện thoại/);
     assert.doesNotMatch(query('.admin-table thead').textContent, /Email|Trang trại tham gia|Phân khu phụ trách/);
@@ -217,6 +254,11 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('tbody tr').textContent.includes('Đã khóa'));
 
     await navigate('/admin/crops');
+    assert.equal(document.querySelector('.admin-header-titles'), null);
+    assert.equal(document.querySelector('.admin-list-heading'), null);
+    assert.equal(document.querySelector('.admin-page .eyebrow'), null);
+    assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 3);
+    assert.ok(query('.admin-filters--hero .admin-reset-icon'));
     await button('Thêm cây trồng', '.ui-page-heading');
     const cropCode = query('dialog .admin-field input');
     assert.ok(document.getElementById(cropCode.getAttribute('aria-describedby')).textContent.includes('RAU_DEN'));
@@ -227,6 +269,10 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('tbody tr').textContent.includes('Rau dền'));
 
     await navigate('/admin/feedback');
+    assert.equal(document.querySelector('.admin-header-titles'), null);
+    assert.equal(document.querySelector('.admin-list-heading'), null);
+    assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 4);
+    assert.ok(query('.admin-filters--hero .admin-reset-icon'));
     assert.ok(!query('.admin-table thead').textContent.includes('Câu hỏi của người dùng'));
     await click('[aria-label="Xem chi tiết Câu trả lời thiếu nguồn tham khảo"]');
     await set('dialog select', 'RESOLVED');
@@ -240,6 +286,10 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('tbody tr').textContent.includes('Đã giải quyết'));
 
     await navigate('/admin/rules');
+    assert.equal(document.querySelector('.admin-header-titles'), null);
+    assert.equal(document.querySelector('.admin-list-heading'), null);
+    assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 3);
+    assert.ok(query('.admin-filters--hero .admin-reset-icon'));
     await button('Thêm quy tắc', '.ui-page-heading');
     assert.ok(query('dialog .admin-inline-note').textContent.includes('lần kiểm tra tiếp theo'));
     const ruleGuidance = 'Hướng dẫn kỹ thuật giữ nguyên khi có lỗi.\n'.repeat(10);
@@ -250,6 +300,14 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.equal(query('dialog textarea').value, ruleGuidance);
     await button('Hủy');
     await navigate('/admin/audit');
+    assert.equal(document.querySelector('.admin-header-titles'), null);
+    assert.equal(document.querySelector('.admin-list-heading'), null);
+    assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 3);
+    assert.match(query('.admin-registration-stat-grid').textContent, /Tổng nhật ký/);
+    assert.match(query('.admin-registration-stat-grid').textContent, /Hôm nay/);
+    assert.match(query('.admin-registration-stat-grid').textContent, /7 ngày qua/);
+    assert.equal(document.querySelector('.admin-registration-stat-grid .admin-share-badge'), null);
+    assert.equal(query('.admin-filters--hero .admin-reset-icon').getAttribute('aria-label'), 'Đặt lại bộ lọc');
     assert.ok(query('.admin-table').textContent.includes('Quản trị kiểm thử'));
     assert.ok(query('.admin-table').textContent.includes('Xử lý phản hồi AI'));
     assert.equal(query('.admin-table thead th').textContent, 'Thời điểm thao tác');
@@ -267,6 +325,7 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.equal(document.querySelector('.admin-stat-filters'), null, 'System totals are not presented as monthly filtered values');
     await button('Chi phí', '.admin-stat-tabs');
     assert.ok(document.body.textContent.includes('Tổng chi phí'));
+    await button('Thay đổi khoảng thời gian', '.analytics-cost-guide');
     await set('.admin-stat-filters label:first-of-type input', '2027-01');
     assert.ok(document.body.textContent.includes('Tháng bắt đầu không được sau tháng kết thúc'));
     await set('.admin-stat-filters label:last-of-type input', '2027-02');
@@ -274,7 +333,8 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.equal(query('.ui-page-heading button').disabled, true, 'No cost data must not export a misleading zero report');
     await click('.admin-stat-filters [aria-label="Đặt lại bộ lọc"]');
     const now = new Date();
-    assert.equal(query('.admin-stat-filters input').value, `${now.getFullYear()}-01`);
+    const defaultStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    assert.equal(query('.admin-stat-filters input').value, `${defaultStart.getFullYear()}-${String(defaultStart.getMonth() + 1).padStart(2, '0')}`);
     assert.equal(document.querySelector('[role="alert"]'), null);
     await button('Tài khoản', '.admin-stat-tabs');
     assert.equal(document.querySelector('.admin-stat-filters'), null);
@@ -285,6 +345,13 @@ test('admin uses registration APIs while other modules keep their existing behav
       ['blocks', 6, ['Nhân sự kỹ thuật phụ trách', 'Email chủ sở hữu', 'Loại đất / Thổ nhưỡng']],
     ]) {
       await navigate('/admin/' + collection);
+      if (['farms', 'zones', 'blocks'].includes(collection)) {
+        assert.ok(query('.admin-spatial-page'));
+        assert.equal(document.querySelector('.admin-header-titles'), null);
+        assert.equal(document.querySelector('.admin-list-heading'), null);
+        assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 3);
+        assert.ok(query('.admin-filters--hero .admin-reset-icon'));
+      }
       assert.equal(document.querySelectorAll('.admin-table thead th').length, expectedColumns);
       const name = query('.admin-record-link').textContent;
       await click('.admin-table tbody tr:first-child .table-icon-btn.primary');
@@ -321,6 +388,11 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.match(query('dialog [role="alert"]').textContent, /Vui lòng nhập/);
     await button('Hủy');
     await navigate('/admin/compliance');
+    assert.equal(document.querySelector('.admin-header-titles'), null);
+    assert.equal(document.querySelector('.admin-list-heading'), null);
+    assert.equal(document.querySelector('.admin-page .eyebrow'), null);
+    assert.equal(document.querySelectorAll('.admin-registration-stat-grid .admin-user-stat-card').length, 5);
+    assert.ok(query('.admin-filters--hero .admin-reset-icon'));
     assert.equal(document.querySelectorAll('.admin-table thead th').length, 5);
     assert.match(query('.admin-table thead').textContent, /Tuân thủ VietGAP/);
     assert.doesNotMatch(query('.admin-table thead').textContent, /Cây trồng|PHI/);
@@ -334,16 +406,17 @@ test('admin uses registration APIs while other modules keep their existing behav
     await button('Đóng');
     assert.ok(detailRequests.includes('/admin/users/1'));
     assert.ok(detailRequests.includes('/admin/farm-registrations/1'));
-    assert.equal(requestCount, 5 + detailRequests.length, 'Only registration and user requests should reach the backend.');
+    assert.equal(requestCount, 8 + detailRequests.length + analyticsRequestCount, 'Reload refreshes registrations and users; statistics load their own sources.');
     await navigate('/admin/registrations');
-    await button('Tải lại', '.admin-list-heading');
+    await button('Tải lại', '.admin-filters');
     await checkRegistrationDetails();
     fixtures = [];
-    await button('Tải lại', '.admin-list-heading');
+    await button('Tải lại', '.admin-filters');
     assert.equal(document.querySelectorAll('.admin-table tbody tr').length, 0);
     assert.ok(document.body.textContent.includes('Không tìm thấy kết quả'));
+    assert.ok([...document.querySelectorAll('.admin-application-stat-grid .admin-share-badge')].every(node => node.textContent === '0%'));
     failRead = true;
-    await button('Tải lại', '.admin-list-heading');
+    await button('Tải lại', '.admin-filters');
     assert.ok(query('[role="alert"]').textContent.includes('Không tải được hồ sơ từ backend'));
     assert.equal(document.querySelector('.admin-table'), null);
     assert.ok(!document.body.textContent.includes('Vườn rau An Nhiên'));

@@ -14,8 +14,15 @@ import { getUserProfile, updateUserProfile, type UserProfile } from './authApi';
 
 
 export function UserProfilePanel() {
-  const { t: translate } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { user, updateUser } = useAuth();
+  const isAdmin = user?.systemRole?.toUpperCase() === 'ADMIN';
+  const fieldHeader = (label: string, id?: string, required = false, fixed = false) => isAdmin ? (
+    <div className="structured-field-header">
+      <label className="structured-field-label" htmlFor={id}>{translate(label)}</label>
+      <span className="structured-field-badge">{fixed ? (lang === 'en' ? 'Fixed' : 'Cố định') : required ? (lang === 'en' ? 'Required' : 'Bắt buộc') : (lang === 'en' ? 'Optional' : 'Tùy chọn')}</span>
+    </div>
+  ) : <label htmlFor={id}>{translate(label)}</label>;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -177,7 +184,7 @@ export function UserProfilePanel() {
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
             {/* Avatar */}
             <div className="structured-field-card">
-              <label>{translate("Profile Avatar")}</label>
+              {fieldHeader('Profile Avatar')}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px' }}>
                 <div
                   style={{
@@ -252,7 +259,7 @@ export function UserProfilePanel() {
             </div>
 
             <div className="structured-field-card">
-              <label htmlFor="user-profile-panel-field-1">{translate("Full Name *")}</label>
+              {fieldHeader('Full Name *', 'user-profile-panel-field-1', true)}
               <input id="user-profile-panel-field-1" className="ui-input"
                 type="text"
                 required
@@ -265,7 +272,7 @@ export function UserProfilePanel() {
             </div>
 
             <div className="structured-field-card ui-form-context">
-              <label htmlFor="user-profile-panel-field-2">{translate("Login Email (Cannot be changed)")}</label>
+              {fieldHeader('Login Email (Cannot be changed)', 'user-profile-panel-field-2', false, true)}
               <input id="user-profile-panel-field-2" className="ui-input"
                 type="email"
                 readOnly
@@ -276,7 +283,7 @@ export function UserProfilePanel() {
             </div>
 
             <div className="structured-field-card">
-              <label htmlFor="user-profile-panel-field-3">{translate("Phone Number")}</label>
+              {fieldHeader('Phone Number', 'user-profile-panel-field-3')}
               <input id="user-profile-panel-field-3" className="ui-input"
                 type="tel"
                 value={phone}

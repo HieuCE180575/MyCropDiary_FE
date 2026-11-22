@@ -726,7 +726,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
           </div>
 
           <div className="confirm-dialog-actions" style={{ flexWrap: 'wrap' }}>
-            <small style={{ order: -2, marginRight: 'auto', color: 'var(--color-muted)' }}><span style={{ color: 'var(--color-danger)' }}>*</span> {lang === 'en' ? 'Required information' : 'Thông tin bắt buộc'}</small>
+
             <Button className="ui-cancel-button" variant="secondary"
               type="button"
               disabled={submittingRecord}
@@ -847,7 +847,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
 
             <div className="confirm-dialog-actions" style={{ flexWrap: 'wrap' }}>
-            <small style={{ order: -2, marginRight: 'auto', color: 'var(--color-muted)' }}><span style={{ color: 'var(--color-danger)' }}>*</span> {lang === 'en' ? 'Required information' : 'Thông tin bắt buộc'}</small>
+
               <Button className="ui-cancel-button" variant="secondary"
                 type="button"
                 disabled={submittingUpdate}

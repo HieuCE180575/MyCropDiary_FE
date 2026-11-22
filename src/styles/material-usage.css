@@ -254,7 +254,7 @@
 .mu-calculated-date > .ui-icon { position: absolute; right: 12px; top: 10px; color: var(--mu-text); pointer-events: none; }
 .mu-entry-footer { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 28px; border-top: 1px solid var(--mu-border); background: var(--mu-surface); }
 .mu-entry-footer > span { color: var(--mu-muted); font-size: 12px; }
-.mu-entry-footer > div { display: flex; gap: 10px; }
+.mu-entry-footer > div { display: flex; gap: 10px; margin-inline-start: auto; }
 .mu-entry-dialog .mu-entry-footer > .mu-entry-error { flex: 0 0 100%; margin: 0; }
 .mu-icon-field { position: relative; min-width: 0; }
 .mu-icon-field > .ui-icon { position: absolute; left: 12px; top: 10px; color: var(--mu-text); pointer-events: none; width: 18px; height: 18px; z-index: 1; }

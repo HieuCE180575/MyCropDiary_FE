@@ -1,0 +1,60 @@
+.account-dashboard { display: grid; gap: 20px; }
+.account-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+.account-kpi, .account-chart-panel { background: var(--color-surface, #fff); border: 1px solid var(--color-border, #e2e8f0); border-radius: 14px; box-shadow: 0 2px 5px #0f172a06; }
+.account-kpi { padding: 22px; display: flex; align-items: flex-start; gap: 20px; }
+.account-kpi-icon { display: grid; place-items: center; width: 54px; height: 54px; flex-shrink: 0; border-radius: 14px; color: var(--color-success); background: var(--color-success-bg); }
+.account-kpi--danger .account-kpi-icon { color: var(--color-danger); background: var(--color-danger-bg); }
+.account-kpi h3 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+.account-kpi strong { display: block; font-size: 34px; line-height: 1.2; color: var(--color-success); }
+.account-kpi--danger strong { color: var(--color-danger); }
+.account-kpi strong.account-total { color: var(--color-text, #0f172a); }
+.account-kpi p { margin: 4px 0 0; font-size: 13px; color: var(--color-muted); }
+.account-chart-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; }
+.account-growth-panel { grid-column: 1; grid-row: 1; }
+.account-status-panel { grid-column: 2; grid-row: 1; }
+.account-page-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.account-period { display: flex; align-items: center; position: relative; }
+.account-period > .ui-icon { position: absolute; left: 14px; pointer-events: none; }
+.account-period select { padding-left: 42px; min-height: 44px; min-width: 200px; }
+.account-series-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; }
+.account-series-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.account-series-legend i { width: 12px; height: 12px; border-radius: 3px; background: var(--color-success); }
+.account-series-legend span:last-child i { background: #56c98d; }
+.account-recent-panel h2, .account-recent-panel a { display: inline-flex; align-items: center; gap: 10px; }
+.account-recent-panel h2 > .ui-icon, .account-recent-panel a { color: var(--color-success); }
+.account-recent-panel a { text-decoration: none; font-size: 14px; font-weight: 600; }
+.account-recent-table { border-collapse: collapse; width: 100%; min-width: 700px; font-size: 13px; }
+.account-recent-table th { text-align: left; background: var(--color-bg, #f8fafc); font-size: 12px; }
+.account-recent-table th, .account-recent-table td { padding: 10px 16px; border-bottom: 1px solid var(--color-border, #e2e8f0); }
+.account-recent-table tr:last-child td { border-bottom: none; }
+.account-recent-user { display: inline-flex; align-items: center; gap: 12px; }
+.account-avatar { display: inline-grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: var(--color-success-bg); color: var(--color-success); font-weight: 600; }
+.account-chart-panel { padding: 20px; min-width: 0; }
+.account-chart-panel h2 { margin: 0 0 14px; font-size: 18px; line-height: 1.4; }
+.account-chart-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.account-chart-heading select { max-width: 100%; font-size: 12px; padding: 7px 10px; }
+.account-donut-layout { display: flex; align-items: center; justify-content: center; gap: 20px; }
+.account-donut { width: 210px; max-width: 45%; flex-shrink: 0; }
+.account-donut svg { display: block; width: 100%; }
+.account-dashboard svg text { fill: var(--color-text, #0f172a); font-family: inherit; font-size: 12px; }
+.account-dashboard svg .account-donut-number { font-size: 34px; font-weight: 700; }
+.account-legend { list-style: none; margin: 0; padding: 0; flex: 1; display: grid; gap: 18px; font-size: 12px; }
+.account-legend li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.account-legend strong { margin-left: auto; white-space: nowrap; }
+.account-legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.account-plot { width: 100%; display: block; }
+.account-gridline { stroke: var(--color-border, #e2e8f0); stroke-width: 1; }
+@media (max-width: 1100px) {
+  .account-kpi { padding: 18px; gap: 12px; }
+  .account-kpi-icon { width: 42px; height: 42px; }
+  .account-chart-grid { grid-template-columns: minmax(0, 1fr); }
+  .account-growth-panel, .account-status-panel { grid-column: auto; grid-row: auto; }
+  .account-growth-panel { order: -1; }
+}
+@media (max-width: 640px) {
+  .account-kpis { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .account-chart-panel { padding: 16px; }
+  .account-donut-layout { flex-direction: column; }
+  .account-donut { max-width: 100%; width: 190px; }
+  .account-legend { width: 100%; }
+}
