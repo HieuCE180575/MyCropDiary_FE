@@ -373,7 +373,13 @@ export function displayValue(key: string, value: string | undefined, lang: Langu
     if (lang === 'en' && key === 'scaleSummary') return value.replace(/^(\d+) phân khu · (\d+) lô đất$/, '$1 zones · $2 blocks');
   }
   const dictionaries: Record<string, Record<string, string>> = {
-    role: roleLabels,
+    role: {
+      user: 'Người dùng',
+      owner: 'Chủ trang trại',
+      staff: 'Nhân viên kỹ thuật',
+      admin: 'Quản trị viên',
+      ...roleLabels,
+    },
     group: { ALL: 'Tất cả nhóm cây', ...cropGroups },
     areaUnit: areaUnits,
     requirement: requirementLabels,
