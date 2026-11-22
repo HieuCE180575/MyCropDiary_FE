@@ -198,9 +198,15 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(articleRow.textContent.includes('Đã duyệt'));
 
     await navigate('/admin/users');
+    assert.equal(document.querySelectorAll('.admin-table thead th').length, 5);
+    assert.match(query('.admin-table thead').textContent, /Số điện thoại/);
+    assert.doesNotMatch(query('.admin-table thead').textContent, /Email|Trang trại tham gia|Phân khu phụ trách/);
+    assert.match(query('.admin-table tbody').textContent, /0912345678/);
     userFixtures[0].phone = '0987654321';
     await click('[aria-label="Xem chi tiết Nguyễn Minh An"]');
     assert.ok(query('dialog').textContent.includes('0987654321'), 'User detail must use fresh server data');
+    assert.match(query('dialog .admin-details').textContent, /minhan@example.com/);
+    assert.match(query('dialog .admin-details').textContent, /Trang trại sở hữu \/ tham gia|Phân khu đang phụ trách/);
     await button('Chỉnh sửa');
     assert.match(query('dialog .admin-user-email').textContent, /minhan@example.com/);
     assert.equal(document.querySelector('dialog input[type="email"]'), null, 'Login email is context rather than an editable field');
@@ -211,7 +217,7 @@ test('admin uses registration APIs while other modules keep their existing behav
     assert.ok(query('tbody tr').textContent.includes('Đã khóa'));
 
     await navigate('/admin/crops');
-    await button('Thêm danh mục', '.ui-page-heading');
+    await button('Thêm cây trồng', '.ui-page-heading');
     const cropCode = query('dialog .admin-field input');
     assert.ok(document.getElementById(cropCode.getAttribute('aria-describedby')).textContent.includes('RAU_DEN'));
     await set('dialog .admin-field:nth-child(1) input', 'RAU_DEN');
@@ -314,6 +320,18 @@ test('admin uses registration APIs while other modules keep their existing behav
     await click('.header-translate-btn');
     assert.match(query('dialog [role="alert"]').textContent, /Vui lòng nhập/);
     await button('Hủy');
+    await navigate('/admin/compliance');
+    assert.equal(document.querySelectorAll('.admin-table thead th').length, 5);
+    assert.match(query('.admin-table thead').textContent, /Tuân thủ VietGAP/);
+    assert.doesNotMatch(query('.admin-table thead').textContent, /Cây trồng|PHI/);
+    const progress = query('.admin-table tbody tr td:nth-child(3)').textContent;
+    assert.match(progress, /^\d+(?:[.,]\d+)?\s*%$/);
+    await click('.admin-table tbody tr:first-child .table-icon-btn.primary');
+    const complianceDetail = query('dialog .admin-details').textContent;
+    assert.match(complianceDetail, /Giống cây trồng/);
+    assert.match(complianceDetail, /Tình trạng cách ly an toàn \(PHI\)/);
+    assert.match(complianceDetail, /\d+\/\d+/);
+    await button('Đóng');
     assert.ok(detailRequests.includes('/admin/users/1'));
     assert.ok(detailRequests.includes('/admin/farm-registrations/1'));
     assert.equal(requestCount, 5 + detailRequests.length, 'Only registration and user requests should reach the backend.');

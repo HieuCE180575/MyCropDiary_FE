@@ -1363,6 +1363,8 @@ body {
 .ui-modal .admin-modal-footer > .form-error-banner { flex: 0 0 100%; margin: 0; }
 .ui-modal .admin-detail-heading { display: grid; gap: 12px; margin-bottom: 16px; }
 .ui-modal .admin-detail-heading > .status-badge { justify-self: start; }
+.ui-modal .admin-crop-name-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ui-modal .admin-crop-name-row > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .ui-modal .admin-details { padding-top: 0; border-top: 0; }
 .ui-modal .admin-details > div { background: var(--color-page); border-color: var(--color-border); }
 .ui-modal .admin-details dt {
@@ -1431,4 +1433,11 @@ body {
 .ui-modal .admin-evidence-meta { font-size: 12px; color: var(--color-muted); }
 .ui-modal .admin-evidence-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .ui-modal .admin-evidence-actions .ui-button { white-space: nowrap; }
+
+.admin-page .admin-compliance-table th:first-child { width: 32%; }
+.admin-page .admin-compliance-table th:nth-child(2) { width: 26%; }
+.admin-page .admin-compliance-table .admin-record-link { width: 100%; }
+.admin-page .admin-users-table th:first-child { width: 34%; }
+.admin-page .admin-users-table .admin-record-link { width: 100%; }
+.admin-page .admin-users-table td:nth-child(2) { white-space: nowrap; }
 

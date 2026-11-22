@@ -9,8 +9,8 @@ function validateRecord(state: AdminState, collection: EditableCollection, recor
     if (field.options && !Object.hasOwn(field.options, value)) throw new Error(`${field.label} không hợp lệ.`);
   }
   if (collection === 'crops') {
-    if (!/^[A-Z0-9_]+$/.test(record.code)) throw new Error('Mã danh mục chỉ gồm chữ in hoa không dấu, chữ số và dấu gạch dưới.');
-    if (state.crops.some(item => item.id !== record.id && item.code === record.code)) throw new Error('Mã danh mục đã tồn tại. Vui lòng chọn mã khác.');
+    if (!/^[A-Z0-9_]+$/.test(record.code)) throw new Error('Mã cây trồng chỉ gồm chữ in hoa không dấu, chữ số và dấu gạch dưới.');
+    if (state.crops.some(item => item.id !== record.id && item.code === record.code)) throw new Error('Mã cây trồng đã tồn tại. Vui lòng chọn mã khác.');
   }
   if (collection === 'rules' && record.status === 'ACTIVE' && state.rules.some(item => item.id !== record.id && item.status === 'ACTIVE' && item.field === record.field && item.activity === record.activity && item.group === record.group)) {
     throw new Error('Đã có quy tắc đang áp dụng cho trường và phạm vi này. Hãy sửa quy tắc hiện có hoặc ngừng áp dụng trước.');

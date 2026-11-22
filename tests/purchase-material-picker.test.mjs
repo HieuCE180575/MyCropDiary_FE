@@ -11,10 +11,11 @@ test('purchases select materials by name while sending the internal identifier o
   for (const [key, value] of Object.entries(globals)) Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
   const calls = [];
   globalThis.__purchasePickerTest = {
+    search: async (farmId, filters) => { calls.push(['search', farmId, filters]); return [{ purchaseId: 77, referenceNo: 'REMOTE-77', purchaseDate: '2026-11-19', supplierName: 'Remote supplier', totalAmount: 50000 }]; },
     catalog: async url => { calls.push(['catalog', url]); return { success: true, data: [{ id: 87, materialName: 'Organic fertilizer' }] }; },
     save: async (farmId, payload) => { calls.push(['save', farmId, payload]); return { purchaseId: 99, purchaseDate: '2026-11-19', ...payload }; },
   };
-  const names = ['fetchInputPurchases', 'fetchInputPurchaseDetails', 'recordInputPurchase', 'deleteInputPurchase', 'linkWarehouseReceipt', 'fetchSuppliers'];
+  const names = ['fetchInputPurchases', 'searchInputPurchases', 'fetchInputPurchaseDetails', 'recordInputPurchase', 'deleteInputPurchase', 'linkWarehouseReceipt', 'fetchSuppliers'];
   const server = await createServer({ configFile: false, optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, watch: null, ws: false }, appType: 'custom', plugins: [{
     name: 'purchase-picker-test', enforce: 'pre',
     resolveId(source, importer) {
@@ -24,7 +25,7 @@ test('purchases select materials by name while sending the internal identifier o
       if (source.endsWith('/FarmWorkspace')) return '\0purchase-test-farm';
     },
     load(id) {
-      if (id === '\0purchase-test-api') return names.map(name => `export const ${name} = ${name === 'recordInputPurchase' ? '(...args) => globalThis.__purchasePickerTest.save(...args)' : 'async () => []'};`).join('\n');
+      if (id === '\0purchase-test-api') return names.map(name => `export const ${name} = ${name === 'recordInputPurchase' ? '(...args) => globalThis.__purchasePickerTest.save(...args)' : name === 'searchInputPurchases' ? '(...args) => globalThis.__purchasePickerTest.search(...args)' : 'async () => []'};`).join('\n');
       if (id === '\0purchase-test-http') return 'export const apiRequest = url => globalThis.__purchasePickerTest.catalog(url);';
       if (id === '\0purchase-test-farm') return 'export const useFarmWorkspace = () => ({selectedFarm: {id: 1}});';
     },
@@ -36,6 +37,14 @@ test('purchases select materials by name while sending the internal identifier o
     const { createRoot } = await import('react-dom/client');
     root = createRoot(document.getElementById('root'));
     await act(async () => root.render(createElement(LanguageProvider, null, createElement(InputPurchasesPage))));
+    const search = document.querySelector('input[type="search"]');
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(search, 'REMOTE-77');
+      search.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    });
+    await act(async () => search.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+    assert.equal(calls.find(call => call[0] === 'search')[2].keyword, 'REMOTE-77');
+    assert.match(document.querySelector('tbody').textContent, /REMOTE-77/);
     const open = [...document.querySelectorAll('button')].find(button => /Record Purchase|Ghi nhận phiếu mua/.test(button.textContent));
     await act(async () => open.click());
     const picker = document.querySelector('.purchase-item-row select');

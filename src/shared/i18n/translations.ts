@@ -2,6 +2,14 @@ export type Language = 'en' | 'vi';
 
 export const translations = {
   en: {
+    'Lý do khóa tài khoản': 'Lock reason',
+    'Mã cây trồng chỉ gồm chữ in hoa không dấu, chữ số và dấu gạch dưới.': 'Crop codes may contain only uppercase ASCII letters, digits, and underscores.',
+    'Mã cây trồng đã tồn tại. Vui lòng chọn mã khác.': 'This crop code already exists. Choose another code.',
+    'cây trồng': 'crop',
+    'Tên cây trồng': 'Crop name',
+    'Mã cây trồng': 'Crop code',
+    'Thêm cây trồng': 'Add crop',
+    'Tuân thủ VietGAP': 'VietGAP compliance',
     'Trang trại & Vùng trồng': 'Farms and growing areas',
     'Hecta (ha)': 'Hectares (ha)',
     'Chưa tham gia trang trại': 'No associated farms',
