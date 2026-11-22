@@ -3,7 +3,7 @@ import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { getAdminRegistrations, getAdminRegistrationById, handleFarmRegistration, type RegistrationResponse } from '../farm-management/registrationService';
-import { getAdminUsers, getAdminUserById, updateAdminUserStatus, updateAdminUserProfile, type AdminUserResponse } from './adminUserService';
+import { getAdminUsers, getAdminUserById, updateAdminUserStatus, updateAdminUserProfile, createAdminUser, type AdminUserResponse } from './adminUserService';
 import {
   fetchAdminAIFeedbacks,
   replyAdminAIFeedback,
@@ -530,6 +530,28 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           }
         } catch {
           // Fallback to local
+        }
+      }
+
+      if (command.type === 'save' && command.collection === 'users' && !command.id) {
+        try {
+          const created = userToRecord(
+            await createAdminUser({
+              fullName: command.values.name,
+              email: command.values.email,
+              phone: command.values.phone,
+              systemRole: command.values.role,
+            }),
+          );
+          setState((previous) => ({
+            ...previous,
+            users: [created, ...previous.users],
+          }));
+          showNotice('Đã tạo tài khoản và gửi email kích hoạt thành công.');
+          return;
+        } catch (error) {
+          showNotice(error instanceof Error ? error.message : 'Không thể tạo tài khoản người dùng.');
+          throw error;
         }
       }
 

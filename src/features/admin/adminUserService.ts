@@ -59,3 +59,12 @@ export function updateAdminUserProfile(
     data: payload,
   });
 }
+
+export function createAdminUser(
+  payload: { fullName: string; email: string; phone?: string; systemRole?: string; password?: string }
+): Promise<AdminUserResponse> {
+  return request<AdminUserResponse>(`/admin/users`, {
+    method: 'POST',
+    data: payload,
+  });
+}

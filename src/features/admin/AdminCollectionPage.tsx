@@ -262,11 +262,26 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
       </div>
     )}
     <section className="admin-panel" aria-label={(lang === 'en' ? `List ${translate(config.singular)}` : `Danh sách ${translate(config.singular)}`)}>
-      <div className="admin-list-heading"><h2>{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}</h2>{(collection === 'registrations' || collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'compliance') ? <Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : collection === 'users' ? <Button variant="secondary" onClick={reloadUsers}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button> : <span className="admin-subtle">{(lang === 'en' ? "System data" : "Dữ liệu hệ thống")}</span>}</div>
-      <div className="admin-filters">
+      {collection !== 'users' && (
+        <div className="admin-list-heading">
+          <h2>{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}</h2>
+          {(collection === 'registrations' || collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'compliance') ? (
+            <Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button>
+          ) : (
+            <span className="admin-subtle">{(lang === 'en' ? "System data" : "Dữ liệu hệ thống")}</span>
+          )}
+        </div>
+      )}
+      <div className={`admin-filters${collection === 'users' ? ' admin-filters--hero' : ''}`}>
         <label className="admin-search"><Icon name="search" /><input className="ui-input" aria-label={(lang === 'en' ? `Search ${translate(config.singular)}` : `Tìm kiếm ${translate(config.singular)}`)} placeholder={lang === 'en' ? 'Search by name, owner, farm, staff, or code...' : 'Tìm theo tên, chủ sở hữu, trang trại, nhân sự hoặc mã…'} value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
         {showStatus && <label><span>{lang === 'en' ? 'Status' : 'Trạng thái'}</span><select className="ui-select" value={filters.status} onChange={(event) => filter('status', event.target.value)}><option value="">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>{Object.entries(config.statuses).map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}</select></label>}
         {extra && <label><span>{translate(extra.label)}</span><select className="ui-select" value={filters.extra} onChange={(event) => filter('extra', event.target.value)}><option value="">{lang === 'en' ? 'All' : 'Tất cả'}</option>{Object.entries(extra.options).map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}</select></label>}
+        {collection === 'users' && (
+          <Button variant="secondary" className="admin-reload-btn" onClick={reloadUsers} title={lang === 'en' ? 'Reload accounts' : 'Tải lại danh sách'}>
+            <Icon name="refresh" size={16} />
+            {lang === 'en' ? 'Reload' : 'Tải lại'}
+          </Button>
+        )}
         <Button type="button" variant="secondary" className="admin-reset-icon" onClick={reset} title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'} aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}><Icon name="refresh" size={18} /></Button>
       </div>
       {invalidDate && <p className="admin-form-error" role="alert">{(lang === 'en' ? "The start date must not be after the end date." : "Ngày bắt đầu không được sau ngày kết thúc.")}</p>}

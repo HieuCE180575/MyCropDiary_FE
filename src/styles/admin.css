@@ -3470,6 +3470,108 @@ body.dark-theme .admin-shell {
   }
 }
 
+/* Prominent search & filter bar for Users management */
+.admin-filters--hero {
+  padding: 18px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  gap: 16px;
+  align-items: center;
+}
+
+.admin-filters--hero .admin-search {
+  flex: 1 1 360px;
+}
+
+.admin-filters--hero .admin-search .ui-input {
+  height: 44px;
+  font-size: 14.5px;
+  padding: 10px 16px 10px 42px;
+  border-radius: 10px;
+  border-color: #cbd5e1;
+}
+
+.admin-filters--hero .admin-search .ui-icon {
+  width: 20px;
+  height: 20px;
+  left: 14px;
+  color: #64748b;
+}
+
+.admin-filters--hero label span {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.admin-filters--hero .ui-select {
+  height: 44px;
+  min-width: 140px;
+  font-size: 14px;
+  border-radius: 10px;
+  border-color: #cbd5e1;
+}
+
+.admin-filters--hero .admin-reload-btn {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-filters--hero .admin-reset-icon {
+  height: 44px;
+  width: 44px;
+  border-radius: 10px;
+  display: inline-grid;
+  place-items: center;
+}
+
+/* Well-balanced table columns for admin users table */
+.admin-page .admin-users-table {
+  width: 100%;
+  table-layout: auto;
+}
+
+.admin-page .admin-users-table th:first-child,
+.admin-page .admin-users-table td:first-child {
+  width: 32%;
+  min-width: 240px;
+}
+
+.admin-page .admin-users-table th:nth-child(2),
+.admin-page .admin-users-table td:nth-child(2) {
+  width: 20%;
+  min-width: 140px;
+}
+
+.admin-page .admin-users-table th:nth-child(3),
+.admin-page .admin-users-table td:nth-child(3) {
+  width: 18%;
+  min-width: 120px;
+}
+
+.admin-page .admin-users-table th:nth-child(4),
+.admin-page .admin-users-table td:nth-child(4) {
+  width: 15%;
+  min-width: 120px;
+  text-align: left;
+}
+
+.admin-page .admin-users-table th:last-child,
+.admin-page .admin-users-table td.admin-action-col {
+  width: 15%;
+  min-width: 110px;
+  text-align: right;
+  white-space: nowrap;
+}
+
 /* Responsive Grid Adjustments for New Dashboard */
 @media (max-width: 1200px) {
   .admin-stat-row,

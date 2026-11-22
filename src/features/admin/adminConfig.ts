@@ -200,6 +200,7 @@ export const adminConfigs: Record<Collection, CollectionConfig> = {
     description: 'Tra cứu thông tin tài khoản, trang trại sở hữu, phân khu phụ trách và kiểm soát trạng thái truy cập hệ thống.',
     icon: 'user',
     singular: 'tài khoản',
+    createLabel: 'Thêm tài khoản',
     allowEdit: true,
     statuses: { ACTIVE: 'Đang hoạt động', LOCKED: 'Đã khóa' },
     listKeys: ['name', 'phone', 'role'],
@@ -213,6 +214,7 @@ export const adminConfigs: Record<Collection, CollectionConfig> = {
     ],
     fields: [
       { key: 'name', label: 'Họ và tên', required: true, maxLength: 150 },
+      { key: 'email', label: 'Email', required: true, maxLength: 255 },
       { key: 'phone', label: 'Số điện thoại', maxLength: 30 },
       { key: 'role', label: 'Vai trò hệ thống', type: 'select', options: roleLabels, required: true },
     ],
