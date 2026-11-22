@@ -84,9 +84,10 @@ function toRecord(data: RegistrationResponse): AdminRecord {
 }
 
 function userToRecord(data: AdminUserResponse): AdminRecord {
+  const cleanName = data.fullName ? data.fullName.replace(/\s*\([^)]*\)\s*$/, '').trim() : '';
   return {
     id: String(data.userId),
-    name: data.fullName,
+    name: cleanName || data.fullName,
     email: data.email,
     phone: data.phone ?? '',
     role: data.systemRole.toUpperCase(),
