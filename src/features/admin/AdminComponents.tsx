@@ -23,18 +23,24 @@ export function AdminModal({ title, close, children, wide = false }: { title: st
   return <Modal structured open onClose={close} title={title} variant="admin" className={wide ? 'wide' : undefined}>{children}</Modal>;
 }
 
-export function AdminField({ field, value, onChange, disabled = false }: { field: Field; value: string; onChange: (value: string) => void; disabled?: boolean }) {
+export function AdminField({ field, value, onChange, disabled = false, hideBadge = false, error }: { field: Field; value: string; onChange: (value: string) => void; disabled?: boolean; hideBadge?: boolean; error?: string }) {
   const { lang, t: translate } = useLanguage();
   const id = useId();
   const helpId = field.help ? `${id}-help` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [errorId, helpId].filter(Boolean).join(' ') || undefined;
+
   return <div className={`structured-field-card admin-field${field.type === 'textarea' || field.full ? ' full' : ''}`}>
     <div className="structured-field-header">
       <label className="structured-field-label" htmlFor={id}>{translate(field.label)}{field.required && <b aria-hidden="true"> *</b>}</label>
-      <span className="structured-field-badge">{field.maxLength && `${value.length}/${field.maxLength} · `}{lang === 'en' ? (field.required ? 'Required' : 'Optional') : (field.required ? 'Bắt buộc' : 'Tùy chọn')}</span>
+      {!hideBadge && (
+        <span className="structured-field-badge">{field.maxLength && `${value.length}/${field.maxLength} · `}{lang === 'en' ? (field.required ? 'Required' : 'Optional') : (field.required ? 'Bắt buộc' : 'Tùy chọn')}</span>
+      )}
     </div>
-    {field.type === 'select' ? <select id={id} aria-describedby={helpId} disabled={disabled} className="ui-select" value={value} required={field.required} onChange={(event) => onChange(event.target.value)}><option value="">{(lang === 'en' ? "Select " : "Chọn ")} {translate(field.label).toLocaleLowerCase('vi-VN')}</option>{Object.entries(field.options ?? {}).map(([key, label]) => <option value={key} key={key}>{translate(label)}</option>)}</select>
-      : field.type === 'textarea' ? <textarea id={id} aria-describedby={helpId} disabled={disabled} className="ui-textarea" placeholder={field.placeholder?.[lang]} rows={field.key === 'content' ? 10 : 4} value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />
-        : <input id={id} aria-describedby={helpId} disabled={disabled} className="ui-input" placeholder={field.placeholder?.[lang]} value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />}
+    {field.type === 'select' ? <select id={id} aria-describedby={describedBy} aria-invalid={Boolean(error)} disabled={disabled} className="ui-select" value={value} required={field.required} onChange={(event) => onChange(event.target.value)}><option value="">{(lang === 'en' ? "Select " : "Chọn ")} {translate(field.label).toLocaleLowerCase('vi-VN')}</option>{Object.entries(field.options ?? {}).map(([key, label]) => <option value={key} key={key}>{translate(label)}</option>)}</select>
+      : field.type === 'textarea' ? <textarea id={id} aria-describedby={describedBy} aria-invalid={Boolean(error)} disabled={disabled} className="ui-textarea" placeholder={field.placeholder?.[lang]} rows={field.key === 'content' ? 10 : 4} value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />
+        : <input id={id} aria-describedby={describedBy} aria-invalid={Boolean(error)} disabled={disabled} className="ui-input" placeholder={field.placeholder?.[lang]} value={value} required={field.required} maxLength={field.maxLength} onChange={(event) => onChange(event.target.value)} />}
+    {error && <span id={errorId} className="admin-field-error" role="alert">{translate(error)}</span>}
     {field.help && <small id={helpId} className="admin-field-help">{field.help[lang]}</small>}
   </div>;
 }

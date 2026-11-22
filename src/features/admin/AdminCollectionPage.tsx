@@ -310,6 +310,7 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
   const record = needsDetail ? data : state[collection].find(item => item.id === dialog.id);
   const initialFormValues = dialog.mode !== 'action' && dialog.prefill ? { ...record, ...dialog.prefill } : (record ?? {});
   const [values, setValues] = useState<Record<string, string>>(initialFormValues);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [reason, setReason] = useState('');
   const [reply, setReply] = useState(record?.reply ?? '');
   const [feedbackStatus, setFeedbackStatus] = useState(record?.status ?? 'OPEN');
@@ -317,8 +318,62 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
   const [submitting, setSubmitting] = useState(false);
   const [previewFiles, setPreviewFiles] = useState<EvidenceFileItem[] | null>(null);
   const [previewIndex, setPreviewIndex] = useState(0);
+
+  const validateUserField = (fieldKey: string, val: string): string => {
+    const trimmed = (val ?? '').trim();
+    if (fieldKey === 'phone' && trimmed) {
+      if (!/^\d+$/.test(trimmed)) {
+        return 'Phone number can only contain digits.';
+      }
+      if (!trimmed.startsWith('0')) {
+        return 'Phone number must start with 0.';
+      }
+      if (trimmed.length < 10 || trimmed.length > 11) {
+        return 'Phone number must be 10 or 11 digits.';
+      }
+    }
+    if (fieldKey === 'email') {
+      if (!trimmed) {
+        return 'Email is required.';
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        return 'Please enter a valid email address.';
+      }
+    }
+    if (fieldKey === 'name') {
+      if (!trimmed) {
+        return 'Full name is required.';
+      }
+    }
+    if (fieldKey === 'role') {
+      if (!trimmed) {
+        return 'System role is required.';
+      }
+    }
+    return '';
+  };
+
+  const handleFieldValueChange = (fieldKey: string, val: string) => {
+    setValues(prev => ({ ...prev, [fieldKey]: val }));
+    if (collection === 'users') {
+      const err = validateUserField(fieldKey, val);
+      setFieldErrors(prev => ({ ...prev, [fieldKey]: err }));
+    }
+  };
+
   const submit = async (command: AdminCommand) => {
     if (submitting) return;
+    if (command.type === 'save' && collection === 'users') {
+      const errors: Record<string, string> = {};
+      config.fields.forEach(f => {
+        const err = validateUserField(f.key, values[f.key] ?? '');
+        if (err) errors[f.key] = err;
+      });
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        return;
+      }
+    }
     setSubmitting(true);
     setError('');
     try { await execute(command); close(); }
@@ -327,7 +382,10 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
   };
 
   if (needsDetail && (loading || detailError)) {
-    return <AdminModal title={(lang === 'en' ? `Details: ${translate(config.singular)}` : `Chi tiết ${translate(config.singular)}`)} close={close} wide><div className="admin-modal-body">
+    const detailTitle = collection === 'users' && record?.name
+      ? (lang === 'en' ? `Details: ${record.name}` : `Chi tiết: ${record.name}`)
+      : (lang === 'en' ? `Details: ${translate(config.singular)}` : `Chi tiết ${translate(config.singular)}`);
+    return <AdminModal title={detailTitle} close={close} wide><div className="admin-modal-body">
       {loading ? <p role="status">{(lang === 'en' ? "Loading details..." : "Đang tải chi tiết...")}</p> : <><p role="alert" className="admin-form-error">{translate(detailError ?? '')}</p><Button variant="secondary" onClick={retry}>{(lang === 'en' ? "Retry" : "Thử lại")}</Button></>}
     </div></AdminModal>;
   }
@@ -342,7 +400,7 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
         <div className="structured-field-header"><span className="structured-field-label">Email</span><span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span></div>
         <div>{record.email || '—'}</div>
       </div>}
-      <div className={`admin-form-grid${isUserModal ? ' admin-form-grid--single-col' : ''}`}>{config.fields.map(field => <AdminField key={field.key} field={field} disabled={submitting} value={values[field.key] ?? ''} onChange={(value) => setValues(previous => ({ ...previous, [field.key]: value }))} />)}</div>
+      <div className={`admin-form-grid${isUserModal ? ' admin-form-grid--single-col' : ''}`}>{config.fields.map(field => <AdminField key={field.key} field={field} disabled={submitting} hideBadge={isUserModal} error={fieldErrors[field.key]} value={values[field.key] ?? ''} onChange={(value) => handleFieldValueChange(field.key, value)} />)}</div>
       {collection === 'rules' && <p className="admin-inline-note">{lang === 'en' ? 'Rule changes apply to the next inspection. Saved assessment results are preserved.' : 'Thay đổi quy tắc áp dụng cho lần kiểm tra tiếp theo; kết quả đánh giá đã lưu được giữ nguyên.'}</p>}
       {collection === 'articles' && <p className="admin-inline-note">{(lang === 'en' ? "Articles are saved as drafts for review. A reference source is required for approval." : "Bài viết được lưu dưới dạng bản nháp để kiểm tra lại trước khi duyệt. Nguồn tham khảo là bắt buộc khi duyệt.")}</p>}
       {error && <p role="alert" className="admin-form-error">{translateAdminError(error, lang)}</p>}
@@ -568,7 +626,11 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
   const regLng = record.longitude && !Number.isNaN(Number(record.longitude)) ? Number(record.longitude) : null;
   const regBoundary = parseBoundaryCoordinates(record.boundaryCoordinates);
 
-  return <AdminModal title={(lang === 'en' ? `Details: ${translate(config.singular)}` : `Chi tiết ${translate(config.singular)}`)} close={() => { if (!submitting) close(); }} wide><div className="admin-modal-body">
+  const detailTitle = collection === 'users' && record.name
+    ? (lang === 'en' ? `Details: ${record.name}` : `Chi tiết: ${record.name}`)
+    : (lang === 'en' ? `Details: ${translate(config.singular)}` : `Chi tiết ${translate(config.singular)}`);
+
+  return <AdminModal title={detailTitle} close={() => { if (!submitting) close(); }} wide><div className="admin-modal-body">
     <div className="admin-detail-heading">
       <div className="structured-field-card supplier-detail-field ui-detail-primary">
         <div className="structured-field-header"><span className="structured-field-label">{translate(config.fields.find(field => field.key === 'name')?.label || config.columns.find(column => column.key === 'name')?.label || (lang === 'en' ? 'Name' : 'Tên'))}</span></div>

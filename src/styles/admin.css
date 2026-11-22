@@ -2837,6 +2837,15 @@ body.dark-theme .admin-shell {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
+.admin-field-error {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
 .admin-field textarea {
   resize: vertical;
 }
