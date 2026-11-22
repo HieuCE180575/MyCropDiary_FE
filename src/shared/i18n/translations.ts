@@ -2,6 +2,7 @@ export type Language = 'en' | 'vi';
 
 export const translations = {
   en: {
+    'Thêm tài khoản': 'Add user',
     'Lý do khóa tài khoản': 'Lock reason',
     'Mã cây trồng chỉ gồm chữ in hoa không dấu, chữ số và dấu gạch dưới.': 'Crop codes may contain only uppercase ASCII letters, digits, and underscores.',
     'Mã cây trồng đã tồn tại. Vui lòng chọn mã khác.': 'This crop code already exists. Choose another code.',

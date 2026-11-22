@@ -44,7 +44,7 @@ export function AdminEmpty({ title = 'Không tìm thấy kết quả', text = 'H
   return <EmptyState icon="search" title={translate(title)} description={translate(text)} />;
 }
 
-export function AdminPageHeading({ title, description, children }: { title: string; description: string; children?: ReactNode }) {
+export function AdminPageHeading({ title, description, children, hideEyebrow }: { title: string; description: string; children?: ReactNode; hideEyebrow?: boolean }) {
   const { lang, t: translate } = useLanguage();
-  return <PageHeading title={translate(title)} description={translate(description)} leading={<p className="eyebrow">{lang === 'en' ? "ADMIN WORKSPACE" : "KHÔNG GIAN QUẢN TRỊ"}</p>}>{children}</PageHeading>;
+  return <PageHeading title={translate(title)} description={translate(description)} leading={hideEyebrow ? undefined : <p className="eyebrow">{lang === 'en' ? "ADMIN WORKSPACE" : "KHÔNG GIAN QUẢN TRỊ"}</p>}>{children}</PageHeading>;
 }

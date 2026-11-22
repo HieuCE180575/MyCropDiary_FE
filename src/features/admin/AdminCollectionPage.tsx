@@ -160,14 +160,14 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
     {registrationsLoading ? <p role="status">{(lang === 'en' ? "Loading registrations..." : "Đang tải hồ sơ...")}</p> : <div className="admin-panel"><p role="alert">{translate(registrationsError)}</p><Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Retry" : "Thử lại")}</Button></div>}
   </section>;
   if (collection === 'users' && (usersLoading || usersError)) return <section className="admin-page">
-    <AdminPageHeading title={translate(config.title)} description={translate(config.description)} />
+    <AdminPageHeading hideEyebrow={true} title={translate(config.title)} description={translate(config.description)} />
     {usersLoading ? <p role="status">{(lang === 'en' ? "Loading accounts..." : "Đang tải danh sách tài khoản...")}</p> : <div className="admin-panel"><p role="alert">{translate(usersError)}</p><Button variant="secondary" onClick={reloadUsers}>{(lang === 'en' ? "Retry" : "Thử lại")}</Button></div>}
   </section>;
 
   const canRowEdit = Boolean(config.createLabel || config.allowEdit);
 
   return <section className="admin-page">
-    <AdminPageHeading title={translate(config.title)} description={translate(config.description)}>
+    <AdminPageHeading hideEyebrow={collection === 'users'} title={translate(config.title)} description={translate(config.description)}>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <Button variant="secondary" onClick={exportCsv}>
           <Icon name="report" />
@@ -276,13 +276,14 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
         <label className="admin-search"><Icon name="search" /><input className="ui-input" aria-label={(lang === 'en' ? `Search ${translate(config.singular)}` : `Tìm kiếm ${translate(config.singular)}`)} placeholder={lang === 'en' ? 'Search by name, owner, farm, staff, or code...' : 'Tìm theo tên, chủ sở hữu, trang trại, nhân sự hoặc mã…'} value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
         {showStatus && <label><span>{lang === 'en' ? 'Status' : 'Trạng thái'}</span><select className="ui-select" value={filters.status} onChange={(event) => filter('status', event.target.value)}><option value="">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>{Object.entries(config.statuses).map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}</select></label>}
         {extra && <label><span>{translate(extra.label)}</span><select className="ui-select" value={filters.extra} onChange={(event) => filter('extra', event.target.value)}><option value="">{lang === 'en' ? 'All' : 'Tất cả'}</option>{Object.entries(extra.options).map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}</select></label>}
-        {collection === 'users' && (
-          <Button variant="secondary" className="admin-reload-btn" onClick={reloadUsers} title={lang === 'en' ? 'Reload accounts' : 'Tải lại danh sách'}>
+        {collection === 'users' ? (
+          <Button variant="secondary" className="admin-reload-btn" onClick={() => { reset(); reloadUsers(); }} title={lang === 'en' ? 'Reload accounts' : 'Tải lại danh sách'}>
             <Icon name="refresh" size={16} />
             {lang === 'en' ? 'Reload' : 'Tải lại'}
           </Button>
+        ) : (
+          <Button type="button" variant="secondary" className="admin-reset-icon" onClick={reset} title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'} aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}><Icon name="refresh" size={18} /></Button>
         )}
-        <Button type="button" variant="secondary" className="admin-reset-icon" onClick={reset} title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'} aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}><Icon name="refresh" size={18} /></Button>
       </div>
       {invalidDate && <p className="admin-form-error" role="alert">{(lang === 'en' ? "The start date must not be after the end date." : "Ngày bắt đầu không được sau ngày kết thúc.")}</p>}
       {rows.length ? <div className="admin-table-scroll ui-table-scroll" tabIndex={0}><table className={`ui-data-table admin-table${collection === 'compliance' ? ' admin-compliance-table' : collection === 'users' ? ' admin-users-table' : ''}`}><caption className="sr-only">{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}</caption><thead><tr>{listColumns.map(column => <th scope="col" key={column.key}>{translate(column.label)}</th>)}{showStatus && <th scope="col">{lang === 'en' ? 'Status' : 'Trạng thái'}</th>}<th scope="col" className="admin-action-col">{lang === 'en' ? 'Actions' : 'Thao tác'}</th></tr></thead><tbody>{rows.map(record => <tr key={record.id}>{listColumns.map((column) => <td key={column.key} style={column.key.endsWith('At') ? { whiteSpace: 'nowrap' } : undefined}>{column.key === 'name' ? <button className="admin-record-link" onClick={() => setDialog({ mode: 'detail', id: record.id })}><strong className="admin-list-title">{displayValue(column.key, record[column.key], lang)}</strong></button> : <span>{displayValue(column.key, collection === 'compliance' && column.key === 'checklistProgress' ? record[column.key]?.match(/^\s*(\d+(?:[.,]\d+)?\s*%)/)?.[1] ?? record[column.key] : record[column.key], lang)}</span>}</td>)}{showStatus && <td><AdminBadge collection={collection} status={record.status} /></td>}<td className="admin-action-col"><div className="table-action-btns"><button type="button" className="table-icon-btn primary" onClick={() => setDialog({ mode: 'detail', id: record.id })} aria-label={(lang === 'en' ? `View details ${record.name}` : `Xem chi tiết ${record.name}`)} title={(lang === 'en' ? `View details ${record.name}` : `Xem chi tiết ${record.name}`)}><Icon name="eye" size={16} /></button>{canRowEdit && <button type="button" className="table-icon-btn edit" onClick={() => setDialog({ mode: 'edit', id: record.id })} aria-label={(lang === 'en' ? `Edit ${record.name}` : `Sửa ${record.name}`)} title={(lang === 'en' ? `Edit ${record.name}` : `Sửa ${record.name}`)}><Icon name="edit" size={16} /></button>}</div></td></tr>)}</tbody></table></div> : <AdminEmpty />}
