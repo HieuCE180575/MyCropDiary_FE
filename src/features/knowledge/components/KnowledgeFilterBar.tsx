@@ -1,5 +1,6 @@
 import { KNOWLEDGE_CATEGORY_OPTIONS, getKnowledgeCategoryLabel } from '../constants';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
+import { Icon } from '../../../shared/components/Icon';
 import type { KnowledgeCategory, KnowledgeSort } from '../types';
 
 interface KnowledgeFilterBarProps {
@@ -7,9 +8,16 @@ interface KnowledgeFilterBarProps {
   onCategoryChange: (category: KnowledgeCategory | 'all') => void;
   sort: KnowledgeSort;
   onSortChange: (sort: KnowledgeSort) => void;
+  onReset?: () => void;
 }
 
-export function KnowledgeFilterBar({ category, onCategoryChange, sort, onSortChange }: KnowledgeFilterBarProps) {
+export function KnowledgeFilterBar({
+  category,
+  onCategoryChange,
+  sort,
+  onSortChange,
+  onReset,
+}: KnowledgeFilterBarProps) {
   const { lang } = useLanguage();
   return (
     <div className="knowledge-filter-bar">
@@ -20,7 +28,7 @@ export function KnowledgeFilterBar({ category, onCategoryChange, sort, onSortCha
           aria-pressed={category === 'all'}
           onClick={() => onCategoryChange('all')}
         >
-          {lang === 'en' ? 'All' : 'Tất cả'}
+          {lang === 'en' ? 'All Topics' : 'Tất cả chủ đề'}
         </button>
         {KNOWLEDGE_CATEGORY_OPTIONS.map((option) => (
           <button
@@ -35,13 +43,32 @@ export function KnowledgeFilterBar({ category, onCategoryChange, sort, onSortCha
         ))}
       </div>
 
-      <label className="sort-select">
-        <span>{lang === 'en' ? 'Sort' : 'Sắp xếp'}</span>
-        <select className="ui-select" value={sort} onChange={(event) => onSortChange(event.target.value as KnowledgeSort)}>
-          <option value="newest">{lang === 'en' ? 'Newest' : 'Mới nhất'}</option>
-          <option value="popular">{lang === 'en' ? 'Most Popular' : 'Xem nhiều nhất'}</option>
-        </select>
-      </label>
+      <div className="knowledge-filter-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="zone-clean-select-wrap">
+          <select
+            className="ui-select"
+            value={sort}
+            onChange={(event) => onSortChange(event.target.value as KnowledgeSort)}
+            aria-label={lang === 'en' ? 'Sort articles' : 'Sắp xếp bài viết'}
+          >
+            <option value="newest">{lang === 'en' ? 'Newest First' : 'Mới nhất'}</option>
+            <option value="popular">{lang === 'en' ? 'Most Viewed' : 'Xem nhiều nhất'}</option>
+          </select>
+          <span className="select-arrow"><Icon name="chevron" size={16} /></span>
+        </div>
+
+        {onReset && (
+          <button
+            type="button"
+            className="zone-clean-reload-btn"
+            title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+            aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+            onClick={onReset}
+          >
+            <Icon name="refresh" size={16} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

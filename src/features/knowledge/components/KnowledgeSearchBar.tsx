@@ -5,6 +5,7 @@ interface KnowledgeSearchBarProps {
   value: string;
   onChange: (value: string) => void;
   onSelectSuggestion?: (tag: string) => void;
+  onReset?: () => void;
 }
 
 const POPULAR_SUGGESTIONS = [
@@ -15,15 +16,15 @@ const POPULAR_SUGGESTIONS = [
   'Bọ phấn trắng',
 ];
 
-export function KnowledgeSearchBar({ value, onChange, onSelectSuggestion }: KnowledgeSearchBarProps) {
+export function KnowledgeSearchBar({ value, onChange, onSelectSuggestion, onReset }: KnowledgeSearchBarProps) {
   const { lang } = useLanguage();
 
   return (
-    <div className="knowledge-search-container">
-      <div className="search-input">
-        <label htmlFor="knowledge-search-bar-control-1" className="search-icon" aria-hidden="true">
-          <Icon name="search" size={16} />
-        </label>
+    <div className="knowledge-search-wrapper" style={{ width: '100%' }}>
+      <div className="zone-clean-search" style={{ width: '100%' }}>
+        <span className="search-icon" aria-hidden="true">
+          <Icon name="search" size={17} />
+        </span>
         <input
           id="knowledge-search-bar-control-1"
           className="ui-input"
@@ -42,7 +43,10 @@ export function KnowledgeSearchBar({ value, onChange, onSelectSuggestion }: Know
             type="button"
             className="search-clear"
             aria-label={lang === 'en' ? 'Clear search' : 'Xoá tìm kiếm'}
-            onClick={() => onChange('')}
+            onClick={() => {
+              onChange('');
+              if (onReset) onReset();
+            }}
           >
             ✕
           </button>
