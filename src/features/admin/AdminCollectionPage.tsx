@@ -1,7 +1,7 @@
 import { Button } from '../../shared/components/Button';
 import { Pagination } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/Icon';
-import { AdminBadge, AdminEmpty, AdminField, AdminModal, AdminPageHeading } from './AdminComponents';
+import { AdminBadge, AdminEmpty, AdminField, AdminModal, AdminPageHeading, adminStatusTone } from './AdminComponents';
 import { FarmGoongMap } from '../farm-management/components/FarmGoongMap';
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
@@ -13,6 +13,7 @@ import { useApiData } from '../../shared/hooks/useApiData';
 import { useAdmin } from './AdminProvider';
 import { adminConfigs, articleCategories, cropGroups, displayValue, feedbackStatuses, ratingLabels, roleLabels, translateAdminError } from './adminConfig';
 import { filterRecords } from './adminModel';
+import { adminFieldPlaceholder } from './adminFormPlaceholders';
 
 import type { AdminCommand, AdminRecord, Collection, EditableCollection, StatusCollection } from './adminTypes';
 
@@ -47,6 +48,7 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
   const { state, registrationsLoading, registrationsError, reloadRegistrations, usersLoading, usersError, reloadUsers } = useAdmin();
   const config = adminConfigs[collection];
   const showStatus = collection !== 'audit';
+  const useCompactLayout = ['users', 'registrations', 'farms', 'zones', 'blocks', 'compliance', 'crops', 'rules', 'articles', 'feedback', 'audit'].includes(collection);
   const listColumns = config.columns.filter(column => !config.listKeys || config.listKeys.includes(column.key));
   const [searchParams, setSearchParams] = useSearchParams();
   const [filters, setFilters] = useState(() => ({
@@ -156,7 +158,7 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
   };
 
   if (collection === 'registrations' && (registrationsLoading || registrationsError)) return <section className="admin-page">
-    <AdminPageHeading title={translate(config.title)} description={translate(config.description)} />
+    <AdminPageHeading hideEyebrow title={translate(config.title)} description={translate(config.description)} />
     {registrationsLoading ? <p role="status">{(lang === 'en' ? "Loading registrations..." : "Đang tải hồ sơ...")}</p> : <div className="admin-panel"><p role="alert">{translate(registrationsError)}</p><Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Retry" : "Thử lại")}</Button></div>}
   </section>;
   if (collection === 'users' && (usersLoading || usersError)) return <section className="admin-page">
@@ -164,10 +166,58 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
     {usersLoading ? <p role="status">{(lang === 'en' ? "Loading accounts..." : "Đang tải danh sách tài khoản...")}</p> : <div className="admin-panel"><p role="alert">{translate(usersError)}</p><Button variant="secondary" onClick={reloadUsers}>{(lang === 'en' ? "Retry" : "Thử lại")}</Button></div>}
   </section>;
 
+  const summaryCopy: Record<Collection, [string, string, string, string]> = {
+    registrations: ['Tổng hồ sơ', 'Total applications', 'hồ sơ', 'applications'],
+    farms: ['Tổng trang trại', 'Total farms', 'trang trại', 'farms'],
+    zones: ['Tổng phân khu', 'Total zones', 'phân khu', 'zones'],
+    blocks: ['Tổng lô đất', 'Total blocks', 'lô đất', 'blocks'],
+    compliance: ['Tổng mùa vụ', 'Total seasons', 'mùa vụ', 'seasons'],
+    users: ['Tổng tài khoản', 'Total accounts', 'tài khoản', 'accounts'],
+    crops: ['Tổng cây trồng', 'Total crops', 'cây trồng', 'crops'],
+    rules: ['Tổng quy tắc', 'Total rules', 'quy tắc', 'rules'],
+    articles: ['Tổng bài viết', 'Total articles', 'bài viết', 'articles'],
+    feedback: ['Tổng phản hồi', 'Total feedback', 'phản hồi', 'responses'],
+    audit: ['Tổng nhật ký', 'Total logs', 'bản ghi', 'records'],
+  };
+  const [totalVi, totalEn, unitVi, unitEn] = summaryCopy[collection];
+  const summaryTotal = collection === 'users' ? statsData?.accounts?.totalUsers ?? state.users.length : state[collection].length;
+  const summaryItems = [
+    { key: '', label: lang === 'en' ? totalEn : totalVi, count: summaryTotal, display: String(summaryTotal) },
+    ...Object.entries(config.statuses).map(([key, label]) => {
+      const count = collection === 'users' && key === 'ACTIVE' ? statsData?.accounts?.activeUsers ?? state.users.filter(item => item.status === key).length
+        : collection === 'users' && key === 'LOCKED' ? statsData?.accounts?.lockedUsers ?? state.users.filter(item => item.status === key).length
+        : state[collection].filter(item => item.status === key).length;
+      return { key, label: translate(label), count, display: String(count) };
+    }),
+  ];
+  if (collection === 'users') {
+    const owners = statsData?.accounts?.ownerCount ?? state.users.filter(item => item.role === 'OWNER').length;
+    const staff = statsData?.accounts?.staffCount ?? state.users.filter(item => item.role === 'STAFF').length;
+    summaryItems.push({ key: 'ROLES', label: lang === 'en' ? 'Owner / staff' : 'Chủ trại / Nhân sự', count: owners + staff, display: owners + '/' + staff });
+  }
+  if (collection === 'audit') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const weekStart = new Date(today);
+    weekStart.setDate(weekStart.getDate() - 6);
+    const now = Date.now();
+    const countSince = (start: Date) => state.audit.filter(record => {
+      const time = new Date(/^\d{4}-\d{2}-\d{2}$/.test(record.createdAt) ? `${record.createdAt}T00:00:00` : record.createdAt).getTime();
+      return time >= start.getTime() && time <= now;
+    }).length;
+    summaryItems.splice(0, summaryItems.length,
+      ...[
+        { key: '', label: lang === 'en' ? 'Total logs' : 'Tổng nhật ký', count: state.audit.length },
+        { key: 'TODAY', label: lang === 'en' ? 'Today' : 'Hôm nay', count: countSince(today) },
+        { key: 'WEEK', label: lang === 'en' ? 'Last 7 days' : '7 ngày qua', count: countSince(weekStart) },
+      ].map(item => ({ ...item, display: String(item.count) })),
+    );
+  }
+
   const canRowEdit = Boolean(config.createLabel || config.allowEdit);
 
-  return <section className="admin-page">
-    <AdminPageHeading hideEyebrow={collection === 'users'} title={translate(config.title)} description={translate(config.description)}>
+  return <section className={`admin-page${collection === 'farms' ? ' admin-spatial-page admin-farm-page' : collection === 'zones' ? ' admin-spatial-page admin-zone-page' : collection === 'blocks' ? ' admin-spatial-page admin-block-page' : collection === 'compliance' ? ' admin-compliance-page' : ['crops', 'rules'].includes(collection) ? ' admin-spatial-page admin-catalog-page' : ['articles', 'feedback', 'audit'].includes(collection) ? ' admin-content-page' : ''}`}>
+    <AdminPageHeading hideEyebrow={useCompactLayout} title={translate(config.title)} description={translate(config.description)}>
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
         <Button variant="secondary" onClick={exportCsv}>
           <Icon name="report" />
@@ -176,110 +226,36 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
         {config.createLabel && <Button variant="primary" onClick={() => setDialog({ mode: 'create' })}><Icon name="plus" />{translate(config.createLabel)}</Button>}
       </div>
     </AdminPageHeading>
-    {collection === 'users' ? (
-      <div className="admin-user-stat-grid" role="region" aria-label={lang === 'en' ? 'User account statistics' : 'Thống kê tài khoản người dùng'}>
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-label">
-            {lang === 'en' ? 'TOTAL USERS' : 'TỔNG TÀI KHOẢN'}
-          </div>
-          <div className="admin-user-stat-main">
-            <span className="admin-user-stat-value">
-              {statsData?.accounts?.totalUsers ?? state.users.length}
-            </span>
-            <span className="admin-user-stat-sub">
-              {lang === 'en' ? 'total registered' : 'đã đăng ký'}
-            </span>
-            <span className="admin-user-stat-badge badge-green">
-              ↗ 5.0%
-            </span>
-          </div>
-        </div>
-
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-label">
-            {lang === 'en' ? 'ACTIVE USERS' : 'ĐANG HOẠT ĐỘNG'}
-          </div>
-          <div className="admin-user-stat-main">
-            <span className="admin-user-stat-value">
-              {statsData?.accounts?.activeUsers ?? state.users.filter(u => u.status === 'ACTIVE').length}
-            </span>
-            <span className="admin-user-stat-sub">
-              {lang === 'en' ? 'verified' : 'hợp lệ'}
-            </span>
-            <span className="admin-user-stat-badge badge-blue">
-              ↗ 1.2%
-            </span>
-          </div>
-        </div>
-
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-label">
-            {lang === 'en' ? 'LOCKED / SUSPENDED' : 'TÀI KHOẢN KHÓA'}
-          </div>
-          <div className="admin-user-stat-main">
-            <span className="admin-user-stat-value">
-              {statsData?.accounts?.lockedUsers ?? state.users.filter(u => u.status === 'LOCKED').length}
-            </span>
-            <span className="admin-user-stat-sub">
-              {lang === 'en' ? 'restricted' : 'bị hạn chế'}
-            </span>
-            <span className="admin-user-stat-badge badge-red">
-              ↘ 2.8%
-            </span>
-          </div>
-        </div>
-
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-label">
-            {lang === 'en' ? 'OWNER / STAFF' : 'CHỦ TRẠI / NHÂN SỰ'}
-          </div>
-          <div className="admin-user-stat-main">
-            <span className="admin-user-stat-value">
-              {statsData?.accounts ? `${statsData.accounts.ownerCount}/${statsData.accounts.staffCount}` : `${state.users.filter(u => u.role === 'OWNER').length}/${state.users.filter(u => u.role === 'STAFF').length}`}
-            </span>
-            <span className="admin-user-stat-sub">
-              {lang === 'en' ? 'roles' : 'vai trò'}
-            </span>
-            <span className="admin-user-stat-badge badge-gray">
-              0.0%
-            </span>
-          </div>
-        </div>
-      </div>
-    ) : showStatus && (
-      <div className="admin-status-cards">
-        {Object.entries(config.statuses).map(([status, label]) => (
-          <button
-            key={status}
-            className={filters.status === status ? 'selected' : ''}
-            aria-pressed={filters.status === status}
-            onClick={() => filter('status', filters.status === status ? '' : status)}
-          >
-            <span>{translate(label)}</span>
-            <strong>{state[collection].filter(item => item.status === status).length}</strong>
-          </button>
-        ))}
-      </div>
-    )}
+    <div className={'admin-user-stat-grid admin-registration-stat-grid admin-application-stat-grid admin-summary-count-' + summaryItems.length} role="region" aria-label={lang === 'en' ? 'Statistics' : 'Thống kê'}>
+      {summaryItems.map(item => {
+        const tone = collection === 'audit' && item.key === 'TODAY' ? 'success'
+          : collection === 'audit' && item.key === 'WEEK' ? 'info'
+          : adminStatusTone(item.key);
+        const share = new Intl.NumberFormat(lang === 'en' ? 'en-US' : 'vi-VN', { style: 'percent', maximumFractionDigits: 1 }).format(summaryTotal ? item.count / summaryTotal : 0);
+        return <div key={item.key} className={'admin-user-stat-card' + (item.key ? ' admin-application-tone--' + tone : '')}>
+          <span className="admin-user-stat-label">{item.label}</span>
+          <span className="admin-user-stat-main">
+            <span className="admin-user-stat-value">{item.display}</span>
+            <span className="admin-user-stat-sub">{lang === 'en' ? unitEn : unitVi}</span>
+            {collection !== 'audit' && <span className={'admin-user-stat-badge admin-share-badge admin-share-badge--' + tone} title={lang === 'en' ? item.count + ' of ' + summaryTotal + ' ' + unitEn : item.count + ' trên ' + summaryTotal + ' ' + unitVi}>{share}</span>}
+          </span>
+        </div>;
+      })}
+    </div>
     <section className="admin-panel" aria-label={(lang === 'en' ? `List ${translate(config.singular)}` : `Danh sách ${translate(config.singular)}`)}>
-      {collection !== 'users' && (
+      {!useCompactLayout && (
         <div className="admin-list-heading">
           <h2>{(lang === 'en' ? "List " : "Danh sách ")} {translate(config.singular)}</h2>
-          {(collection === 'registrations' || collection === 'farms' || collection === 'zones' || collection === 'blocks' || collection === 'compliance') ? (
-            <Button variant="secondary" onClick={reloadRegistrations}>{(lang === 'en' ? "Reload" : "Tải lại")}</Button>
-          ) : (
-            <span className="admin-subtle">{(lang === 'en' ? "System data" : "Dữ liệu hệ thống")}</span>
-          )}
+          <span className="admin-subtle">{lang === 'en' ? 'System data' : 'Dữ liệu hệ thống'}</span>
         </div>
       )}
-      <div className={`admin-filters${collection === 'users' ? ' admin-filters--hero' : ''}`}>
-        <label className="admin-search"><Icon name="search" /><input className="ui-input" aria-label={(lang === 'en' ? `Search ${translate(config.singular)}` : `Tìm kiếm ${translate(config.singular)}`)} placeholder={lang === 'en' ? 'Search by name, owner, farm, staff, or code...' : 'Tìm theo tên, chủ sở hữu, trang trại, nhân sự hoặc mã…'} value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
+      <div className={`admin-filters${useCompactLayout ? ' admin-filters--hero' : ''}`}>
+        <label className="admin-search"><Icon name="search" /><input className="ui-input" aria-label={(lang === 'en' ? `Search ${translate(config.singular)}` : `Tìm kiếm ${translate(config.singular)}`)} placeholder={collection === 'articles' ? (lang === 'en' ? 'Search by title, author or content...' : 'Tìm theo tiêu đề, người biên soạn hoặc nội dung…') : collection === 'feedback' ? (lang === 'en' ? 'Search by feedback, sender or question...' : 'Tìm theo nội dung phản hồi, người gửi hoặc câu hỏi…') : collection === 'audit' ? (lang === 'en' ? 'Search by action, operator or target...' : 'Tìm theo thao tác, người thực hiện hoặc đối tượng…') : collection === 'crops' ? (lang === 'en' ? 'Search by crop name, code or group...' : 'Tìm theo tên cây trồng, mã hoặc nhóm cây…') : collection === 'rules' ? (lang === 'en' ? 'Search by rule name, clause or guidance...' : 'Tìm theo tên quy tắc, điều khoản hoặc hướng dẫn…') : collection === 'compliance' ? (lang === 'en' ? 'Search by season, farm or code...' : 'Tìm theo tên mùa vụ, trang trại hoặc mã…') : collection === 'blocks' ? (lang === 'en' ? 'Search by block name, zone, farm or code...' : 'Tìm theo tên lô đất, phân khu, trang trại hoặc mã…') : collection === 'zones' ? (lang === 'en' ? 'Search by zone name, farm or code...' : 'Tìm theo tên phân khu, trang trại hoặc mã…') : collection === 'farms' ? (lang === 'en' ? 'Search by farm name, owner or code...' : 'Tìm theo tên trang trại, chủ sở hữu hoặc mã…') : collection === 'registrations' ? (lang === 'en' ? 'Search by farm name or applicant...' : 'Tìm theo tên trang trại, người đăng ký…') : lang === 'en' ? 'Search by name, owner, farm, staff, or code...' : 'Tìm theo tên, chủ sở hữu, trang trại, nhân sự hoặc mã…'} value={filters.query} onChange={(event) => filter('query', event.target.value)} /></label>
         {showStatus && <label><span>{lang === 'en' ? 'Status' : 'Trạng thái'}</span><select className="ui-select" value={filters.status} onChange={(event) => filter('status', event.target.value)}><option value="">{lang === 'en' ? 'All Statuses' : 'Tất cả trạng thái'}</option>{Object.entries(config.statuses).map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}</select></label>}
         {extra && <label><span>{translate(extra.label)}</span><select className="ui-select" value={filters.extra} onChange={(event) => filter('extra', event.target.value)}><option value="">{lang === 'en' ? 'All' : 'Tất cả'}</option>{Object.entries(extra.options).map(([value, label]) => <option key={value} value={value}>{translate(label)}</option>)}</select></label>}
-        {collection === 'users' ? (
-          <Button variant="secondary" className="admin-reload-btn" onClick={() => { reset(); reloadUsers(); }} title={lang === 'en' ? 'Reload accounts' : 'Tải lại danh sách'}>
-            <Icon name="refresh" size={16} />
-            {lang === 'en' ? 'Reload' : 'Tải lại'}
+        {useCompactLayout && collection !== 'audit' ? (
+          <Button type="button" variant="secondary" className="admin-reset-icon" onClick={() => { reset(); if (collection === 'users') reloadUsers(); else reloadRegistrations(); }} title={lang === 'en' ? 'Reload list' : 'Tải lại danh sách'} aria-label={lang === 'en' ? 'Reload list' : 'Tải lại danh sách'}>
+            <Icon name="refresh" size={18} />
           </Button>
         ) : (
           <Button type="button" variant="secondary" className="admin-reset-icon" onClick={reset} title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'} aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}><Icon name="refresh" size={18} /></Button>
@@ -400,11 +376,11 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
         <div className="structured-field-header"><span className="structured-field-label">Email</span><span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span></div>
         <div>{record.email || '—'}</div>
       </div>}
-      <div className={`admin-form-grid${isUserModal ? ' admin-form-grid--single-col' : ''}`}>{config.fields.map(field => <AdminField key={field.key} field={field} disabled={submitting} hideBadge={isUserModal} error={fieldErrors[field.key]} value={values[field.key] ?? ''} onChange={(value) => handleFieldValueChange(field.key, value)} />)}</div>
+      <div className={`admin-form-grid${isUserModal ? ' admin-form-grid--single-col' : ''}`}>{config.fields.map(field => <AdminField key={field.key} field={{ ...field, placeholder: adminFieldPlaceholder(collection, field) }} disabled={submitting} error={fieldErrors[field.key]} value={values[field.key] ?? ''} onChange={(value) => handleFieldValueChange(field.key, value)} />)}</div>
       {collection === 'rules' && <p className="admin-inline-note">{lang === 'en' ? 'Rule changes apply to the next inspection. Saved assessment results are preserved.' : 'Thay đổi quy tắc áp dụng cho lần kiểm tra tiếp theo; kết quả đánh giá đã lưu được giữ nguyên.'}</p>}
       {collection === 'articles' && <p className="admin-inline-note">{(lang === 'en' ? "Articles are saved as drafts for review. A reference source is required for approval." : "Bài viết được lưu dưới dạng bản nháp để kiểm tra lại trước khi duyệt. Nguồn tham khảo là bắt buộc khi duyệt.")}</p>}
       {error && <p role="alert" className="admin-form-error">{translateAdminError(error, lang)}</p>}
-    </div><div className="admin-modal-footer"><small className="admin-required-note"><span aria-hidden="true">*</span> {lang === 'en' ? 'Required information' : 'Thông tin bắt buộc'}</small><Button className="ui-cancel-button" variant="secondary" type="button" onClick={close} disabled={submitting}>{(lang === 'en' ? "Cancel" : "Hủy")}</Button>{dialog.mode === 'edit' && record && <RecordActions collection={collection} record={record} change={change} hideEdit />}<Button variant="primary" type="submit" loading={submitting}>{(lang === 'en' ? collection === 'articles' ? "Save draft" : "Save changes" : collection === 'articles' ? 'Lưu bản nháp' : 'Lưu thay đổi')}</Button></div></form></AdminModal>;
+    </div><div className="admin-modal-footer"><Button className="ui-cancel-button" variant="secondary" type="button" onClick={close} disabled={submitting}>{(lang === 'en' ? "Cancel" : "Hủy")}</Button>{dialog.mode === 'edit' && record && <RecordActions collection={collection} record={record} change={change} hideEdit />}<Button variant="primary" type="submit" loading={submitting}>{(lang === 'en' ? collection === 'articles' ? "Save draft" : "Save changes" : collection === 'articles' ? 'Lưu bản nháp' : 'Lưu thay đổi')}</Button></div></form></AdminModal>;
   }
 
   if (!record) return null;
