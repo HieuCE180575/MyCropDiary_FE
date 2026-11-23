@@ -1,5 +1,6 @@
 import { Button } from '../../../shared/components/Button';
 import { Modal } from '../../../shared/components/Modal';
+import { Link } from 'react-router-dom';
 import { formatDate as uiFormatDate, formatNumber as uiFormatNumber } from '../../../shared/format/formatters';
 import { useCallback } from 'react';
 import { useApiData } from '../../../shared/hooks/useApiData';
@@ -76,6 +77,17 @@ export function KnowledgeDetailModal({ article, onClose }: KnowledgeDetailModalP
               ))}
             </div>
           ) : null}
+
+          <div className="modal-open-full-wrap" style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+            <Link
+              to={`/knowledge/${detail.id}`}
+              className="primary-button"
+              style={{ padding: '8px 16px', fontSize: '13px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={onClose}
+            >
+              {lang === 'en' ? 'Open Full Page ↗' : 'Xem trên trang riêng ↗'}
+            </Link>
+          </div>
         </div>
       ) : null}
     </Modal>

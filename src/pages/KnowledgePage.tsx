@@ -6,7 +6,6 @@ import { KnowledgeSearchBar } from '../features/knowledge/components/KnowledgeSe
 import { KnowledgeFilterBar } from '../features/knowledge/components/KnowledgeFilterBar';
 import { KnowledgeList } from '../features/knowledge/components/KnowledgeList';
 import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
-import { KnowledgeFeaturedArticle } from '../features/knowledge/components/KnowledgeFeaturedArticle';
 import { useDebounce } from '../shared/hooks/useDebounce';
 import { useApiData } from '../shared/hooks/useApiData';
 import { fetchKnowledgeArticles } from '../features/knowledge/knowledgeService';
@@ -74,61 +73,66 @@ export function KnowledgePage() {
     setPage(1);
   }
 
-  // Bài viết tiêu biểu hiển thị ở đầu trang khi ở trang 1 và không có bộ lọc tìm kiếm
-  const featuredArticle = useMemo(() => {
-    if (!loading && !error && !hasActiveFilters && page === 1 && result.items.length > 0) {
-      return result.items[0];
-    }
-    return null;
-  }, [loading, error, hasActiveFilters, page, result.items]);
-
   return (
     <div className="public-knowledge-view">
       <div className="public-container">
         <section className="knowledge-page-content">
-          {/* Header trung tâm tri thức nông nghiệp chuẩn mực */}
+          {/* Header trung tâm tri thức nông nghiệp chuẩn mực có ảnh Banner */}
           <header className="knowledge-hero-header">
-            <div className="knowledge-hero-inner">
-              <span className="knowledge-eyebrow">
-                {lang === 'en' ? 'VIETGAP TECHNICAL REPOSITORY' : 'HỆ THỐNG TRI THỨC CANH TÁC VIETGAP'}
-              </span>
-              <h1 className="knowledge-hero-title">
-                {lang === 'en'
-                  ? 'Farming Technical Guides & Standards'
-                  : 'Cẩm nang Kỹ thuật & Tiêu chuẩn Canh tác'}
-              </h1>
-              <p className="knowledge-hero-desc">
-                {lang === 'en'
-                  ? 'Official guides on high-tech greenhouse crop cultivation, irrigation testing, agrochemical management, and internal audit compliance under TCVN 11892-1:2017.'
-                  : 'Tài liệu hướng dẫn quy trình kỹ thuật canh tác nhà màng, kiểm soát mẫu đất nước, sử dụng phân bón thuốc BVTV và đánh giá nội bộ theo chuẩn TCVN 11892-1:2017.'}
-              </p>
+            <div className="knowledge-hero-grid">
+              <div className="knowledge-hero-left">
+                <span className="knowledge-eyebrow">
+                  {lang === 'en' ? 'VIETGAP TECHNICAL REPOSITORY' : 'HỆ THỐNG TRI THỨC CANH TÁC VIETGAP'}
+                </span>
+                <h1 className="knowledge-hero-title">
+                  {lang === 'en'
+                    ? 'Farming Technical Guides & Standards'
+                    : 'Cẩm nang Kỹ thuật & Tiêu chuẩn Canh tác'}
+                </h1>
+                <p className="knowledge-hero-desc">
+                  {lang === 'en'
+                    ? 'Official guides on high-tech greenhouse crop cultivation, irrigation testing, agrochemical management, and internal audit compliance under TCVN 11892-1:2017.'
+                    : 'Tài liệu hướng dẫn quy trình kỹ thuật canh tác nhà màng, kiểm soát mẫu đất nước, sử dụng phân bón thuốc BVTV và đánh giá nội bộ theo chuẩn TCVN 11892-1:2017.'}
+                </p>
 
-              <KnowledgeSearchBar
-                value={searchInput}
-                onChange={setSearchInput}
-                onSelectSuggestion={(tag) => {
-                  setSearchInput(tag);
-                  setPage(1);
-                }}
-              />
+                <KnowledgeSearchBar
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  onSelectSuggestion={(tag) => {
+                    setSearchInput(tag);
+                    setPage(1);
+                  }}
+                />
+              </div>
+
+              <div className="knowledge-hero-right">
+                <div className="knowledge-hero-media">
+                  <img
+                    src="https://images.unsplash.com/photo-1586771107445-d3ca888129ff?auto=format&fit=crop&w=1200&q=85"
+                    alt={lang === 'en' ? 'VietGAP high-tech agriculture' : 'Nông trại công nghệ cao VietGAP'}
+                    className="hero-banner-image"
+                    loading="eager"
+                  />
+                  <div className="hero-media-badge">
+                    <span className="badge-standard-text">TCVN 11892-1:2017</span>
+                    <span className="badge-subtitle">{lang === 'en' ? 'National Standard' : 'Quy chuẩn Quốc gia'}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </header>
 
-          {/* Thanh lọc chuyên mục và sắp xếp */}
+          {/* Thanh lọc chuyên mục và sắp xếp tách biệt */}
           <div className="knowledge-toolbar-wrap">
             <KnowledgeFilterBar
               category={category}
               onCategoryChange={handleCategoryChange}
               sort={sort}
               onSortChange={handleSortChange}
+              summary={resultSummary && !loading ? resultSummary : null}
               onReset={handleResetFilters}
             />
           </div>
-
-          {/* Bài viết nổi bật (Featured Spotlight Article) */}
-          {featuredArticle ? (
-            <KnowledgeFeaturedArticle article={featuredArticle} onOpen={setSelectedArticle} />
-          ) : null}
 
           {/* Kết quả danh sách bài viết */}
           {error ? (
@@ -145,10 +149,6 @@ export function KnowledgePage() {
             />
           ) : (
             <>
-              {resultSummary && !loading ? (
-                <p className="knowledge-result-summary">{translate(resultSummary)}</p>
-              ) : null}
-
               <KnowledgeList
                 articles={result.items}
                 loading={loading}

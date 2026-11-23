@@ -1,6 +1,6 @@
 import type { KnowledgeCategory } from './types';
 
-export const KNOWLEDGE_PAGE_SIZE = 6;
+export const KNOWLEDGE_PAGE_SIZE = 8;
 
 export const KNOWLEDGE_CATEGORY_OPTIONS: { value: KnowledgeCategory; label: string }[] = [
   { value: 'regulation', label: 'Quy định chung' },

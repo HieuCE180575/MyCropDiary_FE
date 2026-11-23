@@ -10,6 +10,10 @@ type ArticleResponse = Omit<KnowledgeArticle, 'image' | 'category' | 'summary' |
   summary: string | null;
   publishedAt: string | null;
   createdAt: string;
+  authorName?: string | null;
+  authorAvatar?: string | null;
+  sourceUrl?: string | null;
+  slug?: string | null;
 };
 
 function toArticle(article: ArticleResponse): KnowledgeArticle {
@@ -22,6 +26,10 @@ function toArticle(article: ArticleResponse): KnowledgeArticle {
     tags: article.tags ?? [],
     viewCount: article.viewCount ?? 0,
     readTimeMinutes: article.readTimeMinutes ?? 1,
+    authorName: article.authorName ?? undefined,
+    authorAvatar: article.authorAvatar ?? undefined,
+    sourceUrl: article.sourceUrl ?? undefined,
+    slug: article.slug ?? undefined,
   };
 }
 
@@ -44,4 +52,17 @@ export async function fetchKnowledgeArticleById(id: number, signal?: AbortSignal
   const result = await apiRequest<ApiResponse<ArticleResponse>>(`/knowledge/articles/${id}`, { signal, anonymous: true });
   if (!result.success || !result.data) throw new Error(result.message || 'Không tải được chi tiết bài viết.');
   return toArticle(result.data);
+}
+
+export async function fetchKnowledgeArticleBySlug(slug: string, signal?: AbortSignal): Promise<KnowledgeArticle> {
+  const result = await apiRequest<ApiResponse<ArticleResponse>>(`/knowledge/articles/slug/${encodeURIComponent(slug)}`, { signal, anonymous: true });
+  if (!result.success || !result.data) throw new Error(result.message || 'Không tải được chi tiết bài viết.');
+  return toArticle(result.data);
+}
+
+export async function fetchKnowledgeArticle(idOrSlug: string | number, signal?: AbortSignal): Promise<KnowledgeArticle> {
+  if (typeof idOrSlug === 'number' || /^\d+$/.test(String(idOrSlug).trim())) {
+    return fetchKnowledgeArticleById(Number(idOrSlug), signal);
+  }
+  return fetchKnowledgeArticleBySlug(String(idOrSlug), signal);
 }

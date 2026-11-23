@@ -58,7 +58,7 @@ test('public knowledge uses server filters, pagination and detail on both knowle
     const { HomePage } = await server.ssrLoadModule('/src/pages/HomePage.tsx');
     root = createRoot(document.getElementById('root'));
     await act(async () => root.render(createElement(MemoryRouter, null, createElement(KnowledgePage))));
-    assert.match(calls[0], /page=0&size=6&sort=newest/);
+    assert.match(calls[0], /page=0&size=8&sort=newest/);
     assert.match(document.querySelector('.knowledge-result-summary').textContent, /trên 20 bài viết/);
     assert.equal(document.querySelector('.knowledge-card-image').getAttribute('src'), article.coverImageUrl);
     await act(async () => document.querySelector('[aria-label="Trang 2"]').click());

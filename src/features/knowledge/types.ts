@@ -10,6 +10,7 @@ export type KnowledgeCategory =
 export interface KnowledgeArticle {
   id: number;
   title: string;
+  slug?: string;
   image?: string;
   summary: string;
   content: string;
@@ -18,6 +19,9 @@ export interface KnowledgeArticle {
   readTimeMinutes: number;
   publishedAt: string; // ISO date string
   viewCount: number;
+  authorName?: string;
+  authorAvatar?: string;
+  sourceUrl?: string;
 }
 
 export type KnowledgeSort = 'newest' | 'popular';
