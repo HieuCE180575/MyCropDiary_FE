@@ -6,6 +6,7 @@ import { PageHeading } from '../../shared/components/PageHeading';
 import { Button } from '../../shared/components/Button';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
+import { QRCodeSVG } from 'qrcode.react';
 
 import { formatDate as displayDate, formatNumber as displayNumber } from '../../shared/format/formatters';
 import { useEffect, useRef, useState } from 'react';
@@ -89,6 +90,20 @@ function HarvestContent() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Pre-Harvest Interval (PHI) Material Usages cache
+  interface PhiMaterialUsage {
+    materialUsageId: number;
+    farmingActivityId?: number;
+    activityName?: string;
+    cropSeasonId?: number;
+    blockId?: number | null;
+    materialName: string;
+    materialType?: string;
+    usedAt: string;
+    safetyIntervalDays?: number | null;
+  }
+  const [seasonMaterials, setSeasonMaterials] = useState<PhiMaterialUsage[]>([]);
+
   useEffect(() => {
     return () => {
       detailRequest.current?.abort();
@@ -171,6 +186,32 @@ function HarvestContent() {
           }
         })
         .catch(() => {});
+
+      // Load activities and material usages to verify Pre-Harvest Interval (PHI)
+      Promise.all([
+        apiRequest<ApiResponse<{ items?: Array<{ id: number; farmingActivityId?: number; blockId?: number | null }> }>>(
+          `/farming-activities?cropSeasonId=${id}&size=200`,
+          { signal: controller.signal }
+        ).catch(() => null),
+        apiRequest<ApiResponse<{ items?: PhiMaterialUsage[] }>>(
+          `/material-usages?cropSeasonId=${id}&size=200`,
+          { signal: controller.signal }
+        ).catch(() => null),
+      ]).then(([actRes, matRes]) => {
+        if (controller.signal.aborted) return;
+        const actMap = new Map<number, number | null>();
+        (actRes?.data?.items || []).forEach((a) => {
+          const aId = a.id || a.farmingActivityId;
+          if (aId) actMap.set(aId, a.blockId ?? null);
+        });
+
+        const rawMats = matRes?.data?.items || [];
+        const enrichedMats: PhiMaterialUsage[] = rawMats.map((m) => ({
+          ...m,
+          blockId: m.farmingActivityId ? (actMap.get(m.farmingActivityId) ?? null) : null,
+        }));
+        setSeasonMaterials(enrichedMats);
+      }).catch(() => {});
     } catch (error) {
       if (!controller.signal.aborted) {
         setLoadError((lang === 'en' ? error instanceof Error ? translate(error.message) : "Unable to load harvest history." : error instanceof Error ? error.message : 'Lỗi tải lịch sử thu hoạch.'));
@@ -358,6 +399,53 @@ function HarvestContent() {
       (seasonBlocks.length === 1 ? seasonBlocks[0] : null)
     : null;
 
+  // Real-time Pre-Harvest Interval (PHI) check for selected block and harvest date
+  const checkPhiViolation = (targetBlockId: number | '' | null | undefined, targetHarvestDate: string) => {
+    if (!targetBlockId || !targetHarvestDate) return null;
+    const hDate = new Date(targetHarvestDate);
+    if (isNaN(hDate.getTime())) return null;
+
+    // Filter relevant materials applied to this block or farm-wide (null blockId)
+    const relevantMaterials = seasonMaterials.filter((m) => {
+      const hasSafety = typeof m.safetyIntervalDays === 'number' && m.safetyIntervalDays > 0;
+      const isBlockMatch = !m.blockId || m.blockId === targetBlockId;
+      return hasSafety && isBlockMatch;
+    });
+
+    let worstViolation: {
+      materialName: string;
+      usedAt: string;
+      safetyIntervalDays: number;
+      safeDate: Date;
+      daysRemaining: number;
+    } | null = null;
+
+    for (const mat of relevantMaterials) {
+      const uDate = new Date(mat.usedAt);
+      if (isNaN(uDate.getTime())) continue;
+      // Calculate earliest safe harvest date = usedAt + safetyIntervalDays
+      const safeDate = new Date(uDate.getTime() + (mat.safetyIntervalDays || 0) * 86400000);
+      
+      if (hDate < safeDate) {
+        const diffMs = safeDate.getTime() - hDate.getTime();
+        const daysRemaining = Math.ceil(diffMs / 86400000);
+        if (!worstViolation || daysRemaining > worstViolation.daysRemaining) {
+          worstViolation = {
+            materialName: mat.materialName,
+            usedAt: mat.usedAt,
+            safetyIntervalDays: mat.safetyIntervalDays || 0,
+            safeDate,
+            daysRemaining,
+          };
+        }
+      }
+    }
+
+    return worstViolation;
+  };
+
+  const currentFormPhiViolation = checkPhiViolation(selectedBlockId, harvestedAt);
+
   return (
     <div className="farm-registration-page harvest-page">
       <PageHeading className="harvest-page-heading" title={<>{lang === 'en' ? 'Harvest & Produce Traceability' : 'Thu hoạch & Truy xuất nguồn gốc nông sản'}</>}><div className="dashboard-actions">
@@ -448,18 +536,18 @@ function HarvestContent() {
       </div>
 
       {/* Filter / Season Lookup Bar */}
-      <div className="production-filter-panel harvest-season-filters">
+      <div className="production-filter-panel harvest-season-filters" style={{ alignItems: 'center' }}>
         {availableSeasons !== null && (
-          <div className="filter-group">
-            <div className="harvest-season-label-row">
-            <label htmlFor="harvest-season-select-quick" className="filter-label">
-              {lang === 'en' ? 'Select crop season' : 'Chọn mùa vụ'}
-            </label>
-            {cropSeasonId !== null && (
-              <StatusBadge role="status" tone="success" label={<>
-                {currentSeason?.seasonName || (lang === 'en' ? 'Season selected' : 'Đã chọn mùa vụ')}
-              </>} />
-            )}
+          <div className="filter-group" style={{ flex: '1 1 auto', minWidth: '240px' }}>
+            <div className="harvest-season-label-row" style={{ marginBottom: '4px' }}>
+              <label htmlFor="harvest-season-select-quick" className="filter-label" style={{ margin: 0 }}>
+                {lang === 'en' ? 'Select crop season' : 'Chọn mùa vụ'}
+              </label>
+              {cropSeasonId !== null && (
+                <StatusBadge role="status" tone="success" label={<>
+                  {currentSeason?.seasonName || (lang === 'en' ? 'Season selected' : 'Đã chọn mùa vụ')}
+                </>} />
+              )}
             </div>
             <select className="ui-select"
               id="harvest-season-select-quick"
@@ -489,7 +577,6 @@ function HarvestContent() {
           <Button
             type="button"
             variant="secondary"
-
             disabled={!selectedFarm || loadingSeasons || loading}
             onClick={handleLoadSeasonList}
           >
@@ -497,27 +584,27 @@ function HarvestContent() {
           </Button>
         )}
 
-          <button
-            type="button"
-            className="zone-clean-reload-btn"
-            title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
-            aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
-            onClick={() => {
-              listRequest.current?.abort();
-              setLoading(false);
-              setSeasonInput('');
-              setCropSeasonId(null);
-              setRecords([]);
-              setSeasonBlocks([]);
-              setLoadError(null);
-              setKeywordFilter('');
-              setGradeFilter('');
-              setBlockFilter('ALL');
-            }}
-          >
-            <Icon name="refresh" size={16} />
-          </button>
-
+        <button
+          type="button"
+          className="zone-clean-reload-btn"
+          style={{ alignSelf: 'flex-end', marginBottom: '1px' }}
+          title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+          aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+          onClick={() => {
+            listRequest.current?.abort();
+            setLoading(false);
+            setSeasonInput('');
+            setCropSeasonId(null);
+            setRecords([]);
+            setSeasonBlocks([]);
+            setLoadError(null);
+            setKeywordFilter('');
+            setGradeFilter('');
+            setBlockFilter('ALL');
+          }}
+        >
+          <Icon name="refresh" size={16} />
+        </button>
       </div>
 
       {/* Assigned Season Blocks Filter Pills */}
@@ -525,54 +612,63 @@ function HarvestContent() {
         <div
           className="panel"
           style={{
-            padding: '12px 18px',
+            padding: '10px 16px',
             marginBottom: '18px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
             flexWrap: 'wrap',
+            background: 'var(--color-surface)',
+            borderRadius: '12px',
+            border: '1px solid var(--color-border)',
           }}
         >
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-primary-text)' }}>
-            {lang === 'en' ? 'Blocks in selected season:' : 'Lô trồng thuộc mùa vụ:'}
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#047857', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+            <Icon name="plots" size={15} />
+            {lang === 'en' ? 'Blocks in season:' : 'Lô trồng thuộc vụ:'}
           </span>
           <button
             type="button"
             onClick={() => setBlockFilter('ALL')}
             style={{
-              padding: '4px 12px',
+              padding: '4px 14px',
               borderRadius: '999px',
               border: '1px solid',
               fontSize: '12.5px',
               fontWeight: 700,
               cursor: 'pointer',
-              background: blockFilter === 'ALL' ? 'var(--color-primary-text)' : 'var(--color-page)',
-              borderColor: blockFilter === 'ALL' ? 'var(--color-primary-text)' : 'var(--color-input-border)',
-              color: blockFilter === 'ALL' ? 'var(--color-surface)' : 'var(--color-body)',
+              background: blockFilter === 'ALL' ? '#10b981' : '#f8fafc',
+              borderColor: blockFilter === 'ALL' ? '#10b981' : '#e2e8f0',
+              color: blockFilter === 'ALL' ? '#ffffff' : '#334155',
+              transition: 'all 0.15s ease',
             }}
           >
             {(lang === 'en' ? "All blocks (" : "Tất cả lô (")}{seasonBlocks.length})
           </button>
-          {seasonBlocks.map((sb) => (
-            <button
-              key={sb.blockId}
-              type="button"
-              onClick={() => setBlockFilter(sb.blockId)}
-              style={{
-                padding: '4px 12px',
-                borderRadius: '999px',
-                border: '1px solid',
-                fontSize: '12.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                background: blockFilter === sb.blockId ? 'var(--color-primary-text)' : 'var(--color-success-bg)',
-                borderColor: blockFilter === sb.blockId ? 'var(--color-primary-text)' : 'var(--color-border)',
-                color: blockFilter === sb.blockId ? 'var(--color-surface)' : 'var(--color-primary-text)',
-              }}
-            >
-              {localizeBlockName(sb.blockName)}
-            </button>
-          ))}
+          {seasonBlocks.map((sb) => {
+            const isSelected = blockFilter === sb.blockId;
+            return (
+              <button
+                key={sb.blockId}
+                type="button"
+                onClick={() => setBlockFilter(sb.blockId)}
+                style={{
+                  padding: '4px 14px',
+                  borderRadius: '999px',
+                  border: '1px solid',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: isSelected ? '#10b981' : '#ecfdf5',
+                  borderColor: isSelected ? '#10b981' : '#a7f3d0',
+                  color: isSelected ? '#ffffff' : '#047857',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {localizeBlockName(sb.blockName)}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -629,37 +725,34 @@ function HarvestContent() {
         <div className="panel" style={{ padding: '24px' }}>
           <div className="panel-title" style={{ marginBottom: '18px' }}>
             <div>
-              <span className="eyebrow">{(lang === 'en' ? "Yield Records & Traceability" : "Hồ sơ sản lượng & Truy xuất nguồn gốc")}</span>
-              <h2 style={{ margin: '4px 0 0' }}>{(lang === 'en' ? "Harvest batches" : "Danh sách lô thu hoạch")}</h2>
+              <h2 style={{ margin: 0 }}>{(lang === 'en' ? "Harvest batches" : "Danh sách lô thu hoạch")}</h2>
             </div>
           </div>
 
           {records.length > 0 && (
-            <div className="production-filter-panel" style={{ marginBottom: '20px', background: 'var(--color-page)' }}>
-              <div className="filter-group" style={{ flex: '1.5 1 260px' }}>
-                <label htmlFor="harvest-sub-search" className="filter-label">
-                  {(lang === 'en' ? "Search harvest batches" : "Tìm kiếm lô thu hoạch")}
-                </label>
-                <div className="filter-input-wrap">
-                  <label htmlFor="harvest-sub-search" className="filter-icon">🔍</label>
-                  <input className="ui-input"
-                    id="harvest-sub-search"
-                    type="search"
-                    placeholder={lang === 'en' ? 'Search by lot code, traceability code, block name, warehouse...' : 'Tìm theo mã lô, mã truy xuất, tên lô đất, nơi lưu kho...'}
-                    value={keywordFilter}
-                    onChange={(e) => setKeywordFilter(e.target.value)}
-                  />
-                </div>
+            <div className="zone-clean-filter-bar" style={{ marginBottom: '20px' }}>
+              <div className="zone-clean-search" style={{ flex: '1 1 280px' }}>
+                <span className="search-icon" aria-hidden="true">
+                  <Icon name="search" size={17} />
+                </span>
+                <input
+                  className="ui-input"
+                  id="harvest-sub-search"
+                  type="search"
+                  placeholder={lang === 'en' ? 'Search by lot code, traceability code, block name, warehouse...' : 'Tìm theo mã lô, mã truy xuất, tên lô đất, nơi lưu kho...'}
+                  value={keywordFilter}
+                  onChange={(e) => setKeywordFilter(e.target.value)}
+                  aria-label={lang === 'en' ? 'Search harvest batches' : 'Tìm kiếm lô thu hoạch'}
+                />
               </div>
 
-              <div className="filter-group" style={{ flex: '1 1 200px' }}>
-                <label htmlFor="harvest-sub-grade" className="filter-label">
-                  {(lang === 'en' ? "Filter by quality" : "Lọc theo phẩm chất")}
-                </label>
-                <select className="ui-select"
+              <div className="zone-clean-select-wrap">
+                <select
+                  className="ui-select"
                   id="harvest-sub-grade"
                   value={gradeFilter}
                   onChange={(e) => setGradeFilter(e.target.value)}
+                  aria-label={lang === 'en' ? 'Filter by quality' : 'Lọc theo phẩm chất'}
                 >
                   <option value="">{(lang === 'en' ? "All qualities" : "Tất cả phẩm chất")}</option>
                   {uniqueGrades.map((g) => (
@@ -668,20 +761,22 @@ function HarvestContent() {
                     </option>
                   ))}
                 </select>
+                <span className="select-arrow"><Icon name="chevron" size={16} /></span>
               </div>
 
-                <button
-                  type="button"
-                  className="zone-clean-reload-btn"
-                  title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
-                  aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
-                  onClick={() => {
-                    setKeywordFilter('');
-                    setGradeFilter('');
-                  }}
-                >
-                  <Icon name="refresh" size={16} />
-                </button>
+              <button
+                type="button"
+                className="zone-clean-reload-btn"
+                title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+                aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+                onClick={() => {
+                  setKeywordFilter('');
+                  setGradeFilter('');
+                  setBlockFilter('ALL');
+                }}
+              >
+                <Icon name="refresh" size={16} />
+              </button>
             </div>
           )}
 
@@ -699,24 +794,67 @@ function HarvestContent() {
             <table className="ui-data-table harvest-list-table">
               <caption className="sr-only">{lang === 'en' ? 'Harvest batches' : 'Danh sách lô thu hoạch'}</caption>
               <thead><tr>
-                <th>{lang === 'en' ? 'Harvest batch' : 'Mã lô thu hoạch'}</th>
-                <th>{lang === 'en' ? 'Growing block' : 'Lô trồng'}</th>
-                <th>{lang === 'en' ? 'Harvest date' : 'Ngày thu hoạch'}</th>
-                <th>{lang === 'en' ? 'Yield' : 'Sản lượng'}</th>
-                <th>{lang === 'en' ? 'Quality grade' : 'Phẩm chất'}</th>
-                <th>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
+                <th style={{ width: '16%' }}>{lang === 'en' ? 'Harvest batch' : 'Mã lô thu hoạch'}</th>
+                <th style={{ width: '13%' }}>{lang === 'en' ? 'Growing block' : 'Lô trồng'}</th>
+                <th style={{ width: '13%' }}>{lang === 'en' ? 'Harvest date' : 'Ngày thu hoạch'}</th>
+                <th style={{ width: '14%' }}>{lang === 'en' ? 'Yield' : 'Sản lượng'}</th>
+                <th style={{ width: '13%' }}>{lang === 'en' ? 'Quality grade' : 'Phẩm chất'}</th>
+                <th style={{ width: '18%', whiteSpace: 'nowrap' }}>{lang === 'en' ? 'PHI Compliance' : 'Chuẩn cách ly (PHI)'}</th>
+                <th style={{ width: '13%', textAlign: 'center', whiteSpace: 'nowrap' }}>{lang === 'en' ? 'Actions' : 'Thao tác'}</th>
               </tr></thead>
               <tbody>{filteredRecords.map(r => {
                 const matchedBlk = seasonBlocks.find(sb => sb.blockId === r.blockId) ?? (seasonBlocks.length === 1 ? seasonBlocks[0] : null);
                 const blockName = localizeBlockName(r.blockName || matchedBlk?.blockName);
                 const compactGrade = r.qualityGrade?.replace(/\s*\([^()]*\)\s*$/, '').trim()
                   .replace(/^(?:Grade|Loại)\s*(\d+)$/i, `${lang === 'en' ? 'Grade' : 'Loại'} $1`);
+                const recordPhiViolation = checkPhiViolation(r.blockId, r.harvestedAt);
                 return <tr key={r.harvestRecordId} data-harvest-id={r.harvestRecordId}>
                   <td><strong>{r.harvestLotCode || '#' + r.harvestRecordId}</strong></td>
                   <td><strong>{blockName || '—'}</strong></td>
                   <td>{displayDate(r.harvestedAt, lang)}</td>
                   <td><strong style={{ color: 'var(--color-primary-text)' }}>{displayNumber(r.quantity, lang)} {translate(r.unit)}</strong></td>
                   <td><StatusBadge tone="neutral" label={compactGrade || (lang === 'en' ? 'Standard' : 'Tiêu chuẩn')} /></td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
+                    {recordPhiViolation ? (
+                      <span
+                        title={lang === 'en' ? `PHI Violation: ${recordPhiViolation.materialName} (${recordPhiViolation.daysRemaining} days remaining)` : `Vi phạm PHI: ${recordPhiViolation.materialName} (còn thiếu ${recordPhiViolation.daysRemaining} ngày)`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          backgroundColor: '#fee2e2',
+                          color: '#dc2626',
+                          border: '1px solid #fca5a5',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        ⚠️ {lang === 'en' ? 'PHI Warning' : 'Cảnh báo PHI'}
+                      </span>
+                    ) : (
+                      <span
+                        title={lang === 'en' ? 'Safe from Pre-Harvest Interval violation' : 'Đảm bảo thời gian cách ly an toàn VietGAP'}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          backgroundColor: '#dcfce7',
+                          color: '#15803d',
+                          border: '1px solid #86efac',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        ✓ {lang === 'en' ? 'PHI Safe' : 'Đạt chuẩn PHI'}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     <div className="table-action-btns" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       <button
@@ -863,6 +1001,58 @@ function HarvestContent() {
             </div>
           </div>
 
+          {/* Pre-Harvest Interval (PHI) Real-time Warning or Compliance Badge */}
+          {selectedBlockId && harvestedAt && (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderRadius: '10px',
+                border: currentFormPhiViolation ? '1.5px solid #ef4444' : '1px solid #10b981',
+                backgroundColor: currentFormPhiViolation ? '#fef2f2' : '#f0fdf4',
+                color: currentFormPhiViolation ? '#991b1b' : '#166534',
+                fontSize: '13px',
+                lineHeight: 1.5,
+              }}
+            >
+              {currentFormPhiViolation ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '16px' }}>⚠️</span>
+                    {(lang === 'en' ? "WARNING: PRE-HARVEST INTERVAL (PHI) VIOLATION!" : "CẢNH BÁO VI PHẠM THỜI GIAN CÁCH LY VIETGAP (PHI)!")}
+                  </div>
+                  <div>
+                    {lang === 'en' ? (
+                      <>
+                        This block applied <strong>{currentFormPhiViolation.materialName}</strong> on{' '}
+                        {displayDate(currentFormPhiViolation.usedAt, lang)} with a mandatory isolation period of{' '}
+                        <strong>{currentFormPhiViolation.safetyIntervalDays} days</strong>. Earliest safe harvest date is{' '}
+                        <strong>{displayDate(currentFormPhiViolation.safeDate.toISOString(), lang)}</strong> (
+                        <span style={{ fontWeight: 700 }}>{currentFormPhiViolation.daysRemaining} days remaining</span>).
+                      </>
+                    ) : (
+                      <>
+                        Lô này vừa xử lý thuốc/phân bón <strong>{currentFormPhiViolation.materialName}</strong> vào ngày{' '}
+                        {displayDate(currentFormPhiViolation.usedAt, lang)}, yêu cầu thời gian cách ly tối thiểu{' '}
+                        <strong>{currentFormPhiViolation.safetyIntervalDays} ngày</strong>. Ngày an toàn sớm nhất để thu hoạch là{' '}
+                        <strong>{displayDate(currentFormPhiViolation.safeDate.toISOString(), lang)}</strong> (
+                        <span style={{ fontWeight: 700 }}>còn thiếu {currentFormPhiViolation.daysRemaining} ngày</span> mới hết tồn dư hóa chất).
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '15px' }}>✓</span>
+                  <span>
+                    {(lang === 'en'
+                      ? "Complies with VietGAP isolation period: No active chemical Pre-Harvest Interval (PHI) on this block."
+                      : "Đạt chuẩn cách ly VietGAP: Lô này không có hóa chất nào trong thời gian cách ly (PHI) tại ngày thu hoạch đã chọn.")}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
               <div className="structured-field-header">
@@ -1007,32 +1197,37 @@ function HarvestContent() {
               {(lang === 'en' ? "Harvest batch information is transparently sourced from season diaries and production blocks" : "Thông tin lô thu hoạch được trích xuất minh bạch từ nhật ký mùa vụ và lô đất sản xuất")}
             </p>
 
-            {/* Simulated QR Box */}
+            {/* Real QR Code Box */}
             <div
               style={{
-                width: '164px',
-                height: '164px',
+                width: '180px',
+                height: '180px',
                 margin: '0 auto 14px',
-                padding: '14px',
-                background: 'var(--color-surface)',
-                border: '2px solid var(--color-primary-text)',
-                borderRadius: '14px',
+                padding: '16px',
+                background: '#ffffff',
+                border: '2px solid #10b981',
+                borderRadius: '16px',
                 display: 'grid',
                 placeItems: 'center',
-                boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)',
+                boxShadow: '0 8px 24px rgba(16, 185, 129, 0.18)',
               }}
             >
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  background: 'repeating-conic-gradient(var(--color-text) 0% 25%, var(--color-surface) 0% 50%) 50% / 20px 20px',
-                  borderRadius: '6px',
-                }}
+              <QRCodeSVG
+                value={
+                  selectedTraceRecord.traceabilityCode
+                    ? `${window.location.origin}/knowledge?code=${encodeURIComponent(selectedTraceRecord.traceabilityCode)}`
+                    : `${window.location.origin}/harvest`
+                }
+                size={148}
+                level="M"
+                includeMargin={false}
               />
             </div>
-            <p className="muted" style={{ fontSize: '12.5px', marginBottom: '14px' }}>
-              {(lang === 'en' ? "ID: " : "Mã định danh: ")} <strong style={{ color: 'var(--color-primary-text)' }}>{selectedTraceRecord.traceabilityCode}</strong>
+            <p className="muted" style={{ fontSize: '13px', marginBottom: '16px' }}>
+              {(lang === 'en' ? "ID: " : "Mã định danh: ")}{' '}
+              <strong style={{ color: '#059669', fontFamily: 'monospace', fontSize: '14px', letterSpacing: '0.5px' }}>
+                {selectedTraceRecord.traceabilityCode}
+              </strong>
             </p>
 
             {/* VietGAP Origin Highlight Banner */}

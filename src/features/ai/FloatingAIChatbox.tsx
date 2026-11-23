@@ -3,6 +3,8 @@ import { useAuth } from '../auth';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Icon } from '../../shared/components/Icon';
+import { FormattedAIMessage } from './FormattedAIMessage';
+import { useVoiceRecognition } from '../../shared/hooks/useVoiceRecognition';
 import {
   askAIQuick,
   askAIInConversation,
@@ -24,8 +26,17 @@ export function FloatingAIChatbox() {
   const [isTyping, setIsTyping] = useState(false);
   const [conversationId, setConversationId] = useState<number | null>(null);
 
+  const { isListening, transcript, startListening, stopListening, isSupported } = useVoiceRecognition();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Khi có kết quả giọng nói, cập nhật vào ô input
+  useEffect(() => {
+    if (transcript) {
+      setInputQuestion(transcript);
+    }
+  }, [transcript]);
 
   // Chỉ hiển thị cho các role: USER, OWNER, STAFF (tức người dùng trong hệ thống nông trại, không hiển thị khi chưa đăng nhập)
   // Nếu là ADMIN hệ thống thì trang /admin đã có trang riêng hoặc theo mong muốn của user là: staff, owner, user
@@ -214,7 +225,11 @@ export function FloatingAIChatbox() {
                 key={msg.messageId}
                 className={`ai-bubble ${msg.senderType === 'user' ? 'ai-bubble--user' : 'ai-bubble--assistant'}`}
               >
-                <div>{msg.messageText}</div>
+                {msg.senderType === 'assistant' ? (
+                  <FormattedAIMessage content={msg.messageText} />
+                ) : (
+                  <div>{msg.messageText}</div>
+                )}
                 {msg.sources && msg.sources.length > 0 && (
                   <div className="ai-bubble-sources">
                     <span>{lang === 'en' ? 'Source: ' : 'Nguồn: '}</span>
@@ -246,13 +261,34 @@ export function FloatingAIChatbox() {
                 type="text"
                 className="ai-chatbox-input"
                 placeholder={
-                  lang === 'en'
+                  isListening
+                    ? (lang === 'en' ? 'Listening... Speak your question' : 'Đang lắng nghe... Hãy nói câu hỏi')
+                    : lang === 'en'
                     ? 'Ask about crops, pests, VietGAP...'
                     : 'Hỏi về cây trồng, sâu bệnh, VietGAP...'
                 }
                 value={inputQuestion}
                 onChange={(e) => setInputQuestion(e.target.value)}
               />
+
+              {isSupported && (
+                <button
+                  type="button"
+                  className={`ai-chatbox-voice-btn ${isListening ? 'ai-chatbox-voice-btn--listening' : ''}`}
+                  onClick={() => {
+                    if (isListening) stopListening();
+                    else startListening();
+                  }}
+                  title={
+                    isListening
+                      ? (lang === 'en' ? 'Stop listening' : 'Dừng nghe')
+                      : (lang === 'en' ? 'Ask by voice' : 'Hỏi bằng giọng nói')
+                  }
+                >
+                  <Icon name="mic" size={17} />
+                </button>
+              )}
+
               <button
                 type="submit"
                 className="ai-chatbox-send-btn"

@@ -1,0 +1,296 @@
+/* Styles for VietGAP A4 Print & PDF Export */
+
+.vietgap-print-document {
+  font-family: 'Times New Roman', Times, serif;
+  color: #111;
+  background: #fff;
+  line-height: 1.45;
+  padding: 10px;
+}
+
+.vietgap-doc-header {
+  margin-bottom: 24px;
+}
+
+.vietgap-national-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.vietgap-motto-top {
+  font-size: 13pt;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.vietgap-motto-bottom {
+  font-size: 13pt;
+  font-weight: bold;
+  margin: 4px 0 6px;
+}
+
+.vietgap-divider-line {
+  width: 160px;
+  height: 1.5px;
+  background-color: #000;
+  margin: 0 auto;
+}
+
+.vietgap-doc-title-block {
+  text-align: center;
+  margin-top: 18px;
+}
+
+.vietgap-main-title {
+  font-size: 17pt;
+  font-weight: bold;
+  color: #000;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.vietgap-sub-title {
+  font-size: 11pt;
+  font-style: italic;
+  margin: 0;
+  color: #333;
+}
+
+.vietgap-section {
+  margin-bottom: 24px;
+}
+
+.vietgap-section-title {
+  font-size: 12.5pt;
+  font-weight: bold;
+  color: #047857;
+  border-bottom: 1.5px solid #047857;
+  padding-bottom: 4px;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+.vietgap-section-note {
+  font-size: 9.5pt;
+  font-style: italic;
+  color: #555;
+  margin: 0 0 10px;
+}
+
+/* Info Table (Section 1) */
+.vietgap-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11pt;
+  margin-bottom: 8px;
+}
+
+.vietgap-info-table td {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  vertical-align: top;
+}
+
+.vietgap-info-table .info-label {
+  background-color: #f8fafc;
+  font-weight: bold;
+  color: #334155;
+}
+
+.vietgap-info-table .info-value {
+  color: #0f172a;
+}
+
+.vietgap-blocks-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vietgap-block-badge {
+  display: inline-block;
+  color: #047857;
+  font-weight: 600;
+}
+
+/* Data Tables (Sections 2, 3, 4) */
+.vietgap-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10pt;
+  margin-bottom: 10px;
+}
+
+.vietgap-data-table th,
+.vietgap-data-table td {
+  border: 1px solid #475569;
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.vietgap-data-table th {
+  background-color: #f1f5f9;
+  font-weight: bold;
+  text-align: center;
+  color: #0f172a;
+}
+
+/* Traceability code pill */
+.vietgap-trace-code {
+  display: inline-block;
+  font-family: monospace;
+  font-weight: bold;
+  color: #047857;
+  background-color: #ecfdf5;
+  border: 1px dashed #059669;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Reconciliation Box */
+.vietgap-reconciliation-box {
+  display: flex;
+  justify-content: flex-end;
+  gap: 24px;
+  margin-top: 10px;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 10.5pt;
+}
+
+.reconciliation-item {
+  display: flex;
+  gap: 8px;
+}
+
+/* Signatures Section */
+.vietgap-signatures-section {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.vietgap-sig-block {
+  width: 30%;
+  text-align: center;
+  font-size: 10.5pt;
+}
+
+.sig-date {
+  font-style: italic;
+  font-size: 9.5pt;
+  margin-bottom: 4px;
+}
+
+.sig-title {
+  font-weight: bold;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.sig-subtitle {
+  font-style: italic;
+  font-size: 9pt;
+  color: #444;
+  margin: 2px 0 0;
+}
+
+.sig-space {
+  height: 70px;
+}
+
+.sig-name {
+  font-weight: bold;
+  color: #111;
+  margin: 0;
+}
+
+/* Print Media Rules for A4 layout and header repeating */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm 12mm 15mm 15mm;
+  }
+
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 10pt;
+  }
+
+  /* Hide everything except print document */
+  body * {
+    visibility: hidden;
+  }
+
+  #vietgap-print-area,
+  #vietgap-print-area * {
+    visibility: visible;
+  }
+
+  #vietgap-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .modal-dialog,
+  .modal-overlay,
+  .panel {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+
+  /* Table repeating header on page breaks */
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .vietgap-section {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  .vietgap-section-title {
+    color: #000 !important;
+    border-bottom: 1.5px solid #000 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .vietgap-signatures-section {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: 30px;
+  }
+
+  .vietgap-trace-code {
+    background: transparent !important;
+    border: 1px solid #000 !important;
+    color: #000 !important;
+  }
+}

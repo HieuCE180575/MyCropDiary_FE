@@ -146,16 +146,17 @@ export function ChecklistItemCard({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: isHovered ? '#f8fafc' : 'transparent',
-        border: 'none',
-        borderBottom: '1px solid #f1f5f9',
-        borderRadius: 0,
-        boxShadow: 'none',
-        padding: '12px 8px',
+        background: isHovered ? '#f8fafc' : '#ffffff',
+        border: '1px solid',
+        borderColor: localItem.resultStatus === 'fail' ? '#fecaca' : isHovered ? '#cbd5e1' : '#e2e8f0',
+        borderRadius: '12px',
+        boxShadow: isHovered ? '0 4px 12px rgba(0, 0, 0, 0.04)' : '0 1px 2px rgba(0, 0, 0, 0.02)',
+        padding: '14px 16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
-        transition: 'background 0.15s ease',
+        gap: '10px',
+        marginBottom: '10px',
+        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
       {/* ─── TẦNG 1: PRIMARY IDENTITY & CONTROLS ─────────── */}
@@ -169,18 +170,20 @@ export function ChecklistItemCard({
         }}
       >
         {/* Left: Metadata badges & Criterion Title */}
-        <div style={{ flex: '1 1 400px', display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', minWidth: 0 }}>
+        <div style={{ flex: '1 1 380px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', minWidth: 0 }}>
           {/* Level: MUST, MAJOR, MINOR, RECOMMENDED */}
           {localItem.ruleLevel && (
             <span
               style={{
-                fontSize: '10px',
+                fontSize: '10.5px',
                 fontWeight: 700,
                 letterSpacing: '0.04em',
-                padding: '1.5px 5px',
-                borderRadius: '4px',
+                padding: '2px 6px',
+                borderRadius: '6px',
                 background: level.bg,
                 color: level.color,
+                border: '1px solid currentColor',
+                opacity: 0.9,
                 flexShrink: 0,
               }}
             >
@@ -191,9 +194,9 @@ export function ChecklistItemCard({
           {/* Rule Code */}
           <span
             style={{
-              fontSize: '12px',
-              fontWeight: 700,
-              color: '#334155',
+              fontSize: '12.5px',
+              fontWeight: 800,
+              color: '#1e293b',
               fontFamily: 'ui-monospace, monospace',
               flexShrink: 0,
             }}
@@ -207,11 +210,11 @@ export function ChecklistItemCard({
               style={{
                 fontSize: '11px',
                 fontWeight: 600,
-                color: '#047857',
+                color: '#059669',
                 background: '#ecfdf5',
                 border: '1px solid #a7f3d0',
-                padding: '1.5px 6px',
-                borderRadius: '4px',
+                padding: '2px 7px',
+                borderRadius: '6px',
                 flexShrink: 0,
               }}
               title={knowledge?.tcvnClause ?? shortClause}
@@ -226,13 +229,14 @@ export function ChecklistItemCard({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
                 fontSize: '11px',
                 fontWeight: 650,
-                padding: '1.5px 6px',
-                borderRadius: '4px',
+                padding: '2px 7px',
+                borderRadius: '6px',
                 background: '#ecfdf5',
                 color: '#047857',
+                border: '1px solid #d1fae5',
                 flexShrink: 0,
               }}
               title={
@@ -241,7 +245,7 @@ export function ChecklistItemCard({
                   : 'Hệ thống tự động đối soát từ nhật ký phân thuốc, cách ly PHI, kho bãi, đất nước, thu hoạch và đào tạo'
               }
             >
-              <Icon name="zap" size={10} style={{ color: '#10b981' }} />
+              <Icon name="zap" size={11} style={{ color: '#10b981' }} />
               <span>{lang === 'en' ? 'Auto' : 'Tự đối soát'}</span>
             </span>
           ) : (
@@ -249,13 +253,14 @@ export function ChecklistItemCard({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
+                gap: '4px',
                 fontSize: '11px',
                 fontWeight: 650,
-                padding: '1.5px 6px',
-                borderRadius: '4px',
+                padding: '2px 7px',
+                borderRadius: '6px',
                 background: '#fffbeb',
                 color: '#b45309',
+                border: '1px solid #fef3c7',
                 flexShrink: 0,
               }}
               title={
@@ -264,7 +269,7 @@ export function ChecklistItemCard({
                   : 'Thẩm định hiện trường: Yêu cầu quan sát thực tế tại nông trại và đính kèm ảnh chụp'
               }
             >
-              <Icon name="camera" size={10} style={{ color: '#f59e0b' }} />
+              <Icon name="camera" size={11} style={{ color: '#f59e0b' }} />
               <span>{lang === 'en' ? 'Field' : 'Hiện trường'}</span>
             </span>
           )}
@@ -275,39 +280,38 @@ export function ChecklistItemCard({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '3px',
-                fontSize: '10.5px',
+                gap: '4px',
+                fontSize: '11px',
                 fontWeight: 650,
-                padding: '1.5px 5px',
-                borderRadius: '4px',
+                padding: '2px 6px',
+                borderRadius: '6px',
                 background: '#fef2f2',
                 color: '#b91c1c',
+                border: '1px solid #fecaca',
                 flexShrink: 0,
               }}
               title={lang === 'en' ? 'Missing photographic evidence' : 'Thiếu ảnh minh chứng bắt buộc'}
             >
-              <Icon name="warning" size={10} />
+              <Icon name="warning" size={11} />
               <span>{lang === 'en' ? 'Need photo' : 'Thiếu ảnh'}</span>
             </span>
           )}
 
           {showCategoryLabel && (
-            <>
-              <span style={{ color: '#cbd5e1', fontSize: '11px' }}>·</span>
-              <span style={{ fontSize: '11.5px', color: '#64748b', flexShrink: 0 }}>
-                {getCategoryDisplayName(localItem.category, lang)}
-              </span>
-            </>
+            <span style={{ fontSize: '11.5px', color: '#64748b', flexShrink: 0, fontWeight: 500 }}>
+              · {getCategoryDisplayName(localItem.category, lang)}
+            </span>
           )}
 
           {/* Tên tiêu chí */}
           <span
             style={{
-              fontSize: '13px',
-              fontWeight: 650,
+              fontSize: '13.5px',
+              fontWeight: 700,
               color: '#0f172a',
-              lineHeight: 1.35,
-              marginLeft: '2px',
+              lineHeight: 1.4,
+              width: '100%',
+              marginTop: '2px',
             }}
           >
             {localItem.ruleName ?? (lang === 'en' ? `Criterion` : `Tiêu chí`)}
@@ -315,32 +319,33 @@ export function ChecklistItemCard({
         </div>
 
         {/* Right: Saving indicator, Segmented Control & Details trigger */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, alignSelf: 'flex-start' }}>
           {savingStatus === 'saving' && (
-            <span style={{ color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px' }}>
-              <Icon name="loader" size={11} className="spin" />
+            <span style={{ color: '#3b82f6', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: 600 }}>
+              <Icon name="loader" size={12} className="spin" />
               <span>{lang === 'en' ? 'Saving' : 'Lưu...'}</span>
             </span>
           )}
           {savingStatus === 'saved' && (
-            <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px' }}>
-              <Icon name="check" size={11} />
+            <span style={{ color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: 700 }}>
+              <Icon name="check" size={13} />
             </span>
           )}
           {savingStatus === 'error' && (
-            <span style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11px' }} title={errorMessage ?? undefined}>
-              <Icon name="warning" size={11} />
+            <span style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '11.5px', fontWeight: 600 }} title={errorMessage ?? undefined}>
+              <Icon name="warning" size={12} />
               <span>{lang === 'en' ? 'Error' : 'Lỗi'}</span>
             </span>
           )}
 
-          {/* Segmented Control 4 Buttons (Compact) */}
+          {/* Segmented Control 4 Buttons (Compact & Pill Style) */}
           <div
             style={{
               display: 'inline-flex',
               background: '#f1f5f9',
-              padding: '2px',
-              borderRadius: '6px',
+              padding: '3px',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
             }}
             role="group"
           >
@@ -358,16 +363,16 @@ export function ChecklistItemCard({
                   disabled={isLocked || savingStatus === 'saving'}
                   onClick={() => handleStatusChange(btn.status as any)}
                   style={{
-                    height: '26px',
-                    padding: '0 9px',
-                    borderRadius: '4px',
+                    height: '28px',
+                    padding: '0 11px',
+                    borderRadius: '6px',
                     border: 'none',
                     background: isActive ? btn.activeBg : 'transparent',
                     color: isActive ? btn.activeColor : '#64748b',
-                    fontSize: '11.5px',
-                    fontWeight: isActive ? 600 : 500,
+                    fontSize: '12px',
+                    fontWeight: isActive ? 700 : 500,
                     cursor: isLocked || savingStatus === 'saving' ? 'not-allowed' : 'pointer',
-                    boxShadow: isActive ? '0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
+                    boxShadow: isActive ? '0 1px 3px rgba(0, 0, 0, 0.12)' : 'none',
                     transition: 'all 0.15s ease',
                   }}
                 >
@@ -382,25 +387,25 @@ export function ChecklistItemCard({
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
             style={{
-              height: '26px',
-              padding: '0 8px',
-              borderRadius: '4px',
-              border: (localItem.notes || localItem.evidenceImageUrl) ? '1px solid #a7f3d0' : '1px solid #e2e8f0',
+              height: '32px',
+              padding: '0 10px',
+              borderRadius: '8px',
+              border: (localItem.notes || localItem.evidenceImageUrl) ? '1px solid #10b981' : '1px solid #cbd5e1',
               background: (localItem.notes || localItem.evidenceImageUrl) ? '#ecfdf5' : '#ffffff',
-              color: (localItem.notes || localItem.evidenceImageUrl) ? '#047857' : '#64748b',
-              fontSize: '11.5px',
+              color: (localItem.notes || localItem.evidenceImageUrl) ? '#047857' : '#475569',
+              fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '5px',
               transition: 'all 0.15s ease',
             }}
             title={lang === 'en' ? 'Open details, notes & photo evidence' : 'Mở rộng ghi chú & ảnh minh chứng'}
           >
-            <Icon name={localItem.evidenceImageUrl ? 'camera' : 'file-text'} size={11} />
+            <Icon name={localItem.evidenceImageUrl ? 'camera' : 'file-text'} size={13} />
             <span>{lang === 'en' ? 'Evidence' : 'Minh chứng'}</span>
-            <Icon name={isExpanded ? 'chevron' : 'chevron-right'} size={10} />
+            <Icon name={isExpanded ? 'chevron' : 'chevron-right'} size={12} />
           </button>
         </div>
       </div>

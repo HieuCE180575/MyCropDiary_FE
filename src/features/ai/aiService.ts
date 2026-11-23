@@ -108,3 +108,22 @@ export async function updateAIFeedback(feedbackId: number, rating: number, reaso
   return res.data;
 }
 
+export interface VoiceParsedActivity {
+  activityType: string;
+  activityName: string;
+  matchedBlockName?: string | null;
+  description: string;
+  weatherNotes: string;
+  resultNotes: string;
+}
+
+export async function parseVoiceFarmingActivity(text: string, availableBlocks: string[]): Promise<VoiceParsedActivity> {
+  const res = await apiRequest<ApiResponse<VoiceParsedActivity>>('/ai/parse-voice-activity', {
+    method: 'POST',
+    data: { text, availableBlocks },
+  });
+  if (!res.data) throw new Error(res.message || 'Không thể bóc tách thông tin hoạt động.');
+  return res.data;
+}
+
+

@@ -1264,14 +1264,15 @@ body {
 
 
 
-.harvest-list-table { min-width: 760px; table-layout: fixed; }
-.harvest-list-table th { white-space: normal; }
-.harvest-list-table th:nth-child(1) { width: 20%; }
-.harvest-list-table th:nth-child(2) { width: 18%; }
-.harvest-list-table th:nth-child(3) { width: 18%; }
-.harvest-list-table th:nth-child(4) { width: 16%; }
-.harvest-list-table th:nth-child(5) { width: 16%; }
-.harvest-list-table th:last-child { width: 12%; text-align: center; }
+.harvest-list-table { min-width: 860px; table-layout: auto; }
+.harvest-list-table th { white-space: nowrap; }
+.harvest-list-table th:nth-child(1) { width: 16%; }
+.harvest-list-table th:nth-child(2) { width: 14%; }
+.harvest-list-table th:nth-child(3) { width: 13%; }
+.harvest-list-table th:nth-child(4) { width: 14%; }
+.harvest-list-table th:nth-child(5) { width: 14%; }
+.harvest-list-table th:nth-child(6) { width: 16%; white-space: nowrap; }
+.harvest-list-table th:last-child { width: 13%; text-align: center; }
 .harvest-list-table .table-action-btns { justify-content: center; }
 .material-usage-page .material-usage-detail-modal {
   font-size: 14px;

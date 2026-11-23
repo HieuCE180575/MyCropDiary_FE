@@ -20,7 +20,8 @@ import {
   FarmReportResp,
   CropSeasonReportResp,
 } from './reportService';
-import { BanknoteArrowDown, ChartNoAxesCombined, Download, ReceiptText, Warehouse, Houses } from 'lucide-react';
+import { BanknoteArrowDown, ChartNoAxesCombined, Download, ReceiptText, Warehouse, Houses, FileCheck } from 'lucide-react';
+import { VietGapReportExportModal } from './VietGapReportExportModal';
 
 interface ReportsPageProps {
   initialTab?: 'reports' | 'expenses' | 'purchases' | 'suppliers' | 'warehouses';
@@ -36,6 +37,7 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
   const [selectedSeasonId, setSelectedSeasonId] = useState<number | 'ALL'>('ALL');
   const [seasonReport, setSeasonReport] = useState<CropSeasonReportResp | null>(null);
   const [loadingSeasonReport, setLoadingSeasonReport] = useState(false);
+  const [isVietGapModalOpen, setIsVietGapModalOpen] = useState(false);
 
   useEffect(() => {
     if (selectedFarm?.id) {
@@ -84,6 +86,15 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
       <PageHeading title={<>{(lang === 'en' ? "Production Reports & Financial Management" : "Báo cáo sản xuất & Quản trị tài chính")}</>} description={<>
         {(lang === 'en' ? "Summarize farming data, input costs, inventory, and material suppliers for farm " : "Tổng hợp dữ liệu canh tác, hạch toán chi phí đầu vào, quản trị kho và theo dõi nhà cung cấp vật tư trang trại ")} {selectedFarm?.farmName || ''}
       </>}><div style={{ display: 'flex', gap: '10px' }}>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => setIsVietGapModalOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <FileCheck size={18} strokeWidth={2} />
+            {(lang === 'en' ? "VietGAP Compliance Dossier (PDF)" : "Xuất hồ sơ VietGAP (TCVN 11892)")}
+          </Button>
           <Button type="button" variant="secondary" onClick={() => window.print()}>
             <Download size={18} strokeWidth={1.5} />
             {(lang === 'en' ? "Export PDF / Print" : "Xuất báo cáo PDF / In ấn")}
@@ -269,6 +280,26 @@ export function ReportsPage({ initialTab = 'reports' }: ReportsPageProps) {
       {activeTab === 'purchases' && <div {...tabPanelProps('reports', 'purchases')}><InputPurchasesPage embedded /></div>}
 
       {activeTab === 'suppliers' && <div {...tabPanelProps('reports', 'suppliers')}><SuppliersPage embedded /></div>}
+
+      {selectedFarm && (
+        <VietGapReportExportModal
+          isOpen={isVietGapModalOpen}
+          onClose={() => setIsVietGapModalOpen(false)}
+          farmId={selectedFarm.id}
+          farmName={selectedFarm.farmName}
+          farmAddress={selectedFarm.address}
+          cropSeasonId={
+            selectedSeasonId !== 'ALL'
+              ? Number(selectedSeasonId)
+              : farmReport?.seasonSummaries?.[0]?.cropSeasonId ?? 1
+          }
+          seasonName={
+            selectedSeasonId !== 'ALL' && seasonReport
+              ? seasonReport.seasonName
+              : farmReport?.seasonSummaries?.[0]?.seasonName ?? 'Vụ mùa canh tác VietGAP'
+          }
+        />
+      )}
     </section>
   );
 }

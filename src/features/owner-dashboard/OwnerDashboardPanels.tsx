@@ -16,11 +16,14 @@ export function DemoTag() {
 export function DashboardPanel({ title, to, demo, children, className = '', linkLabel }: {
   title: string; to?: string; demo?: boolean; children: ReactNode; className?: string; linkLabel?: string;
 }) {
-  const { t: translate } = useLanguage();
-  const resolvedLinkLabel = linkLabel || 'View all';
+  const { lang, t: translate } = useLanguage();
+  const defaultLabel = lang === 'en' ? 'View all' : 'Xem tất cả';
+  const resolvedLinkLabel = linkLabel 
+    ? (linkLabel === 'View Details' ? (lang === 'en' ? 'View Details' : 'Xem chi tiết') : translate(linkLabel))
+    : defaultLabel;
   return <section className={'owner-panel ' + className}>
     <div className="owner-panel-heading"><div><h2>{translate(title)}</h2>{demo && <DemoTag />}</div>
-      {to && <Link to={to}>{translate(resolvedLinkLabel)} <Icon name="arrow" size={14} /></Link>}
+      {to && <Link to={to}>{resolvedLinkLabel} <Icon name="arrow" size={14} /></Link>}
     </div>{children}
   </section>;
 }

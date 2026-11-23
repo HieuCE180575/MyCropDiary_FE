@@ -28,6 +28,8 @@ import {
   type CropSeasonResp,
   type CropSeasonBlockResp,
 } from './cropSeasonService';
+import { VoiceActivityButton } from './VoiceActivityButton';
+import type { VoiceParsedActivity } from '../ai/aiService';
 
 interface FarmingActivity {
   id: number;
@@ -78,6 +80,38 @@ export function FarmingActivitiesPage() {
   const [description, setDescription] = useState('');
   const [resultNotes, setResultNotes] = useState('');
   const [weatherNotes, setWeatherNotes] = useState('Trời nắng nhẹ, độ ẩm 75%');
+
+  const handleVoiceParsed = (parsed: VoiceParsedActivity) => {
+    if (parsed.activityName) {
+      setActName(parsed.activityName);
+    }
+    if (parsed.description) {
+      setDescription(parsed.description);
+    }
+    if (parsed.weatherNotes) {
+      setWeatherNotes(parsed.weatherNotes);
+    }
+    if (parsed.resultNotes) {
+      setResultNotes(parsed.resultNotes);
+    }
+    if (parsed.activityType) {
+      // Map về các options trong select
+      const t = parsed.activityType.toLowerCase();
+      if (t.includes('fertiliz')) setActType('Fertilizing');
+      else if (t.includes('spray')) setActType('Spraying');
+      else if (t.includes('water') || t.includes('irrigat')) setActType('Irrigation');
+      else if (t.includes('harvest')) setActType('Harvest');
+      else if (t.includes('plant') || t.includes('seed')) setActType('Gieo cấy');
+      else if (t.includes('soil')) setActType('Soil Preparation');
+      else if (t.includes('weed') || t.includes('prun')) setActType('Làm cỏ');
+    }
+    if (parsed.matchedBlockName) {
+      const matched = seasonBlocks.find(b => b.blockName && b.blockName.toLowerCase().includes(parsed.matchedBlockName!.toLowerCase()));
+      if (matched) {
+        setSelectedBlockId(matched.blockId);
+      }
+    }
+  };
   const [saving, setSaving] = useState(false);
   const [activityModalError, setActivityModalError] = useState<string | null>(null);
 
@@ -794,9 +828,15 @@ export function FarmingActivitiesPage() {
       >
         <div className="modal-header">
           <h2>{editingActivity ? (lang === 'en' ? 'Update Farming Log' : 'Cập nhật nhật ký canh tác') : (lang === 'en' ? 'Record Farming Activity' : 'Ghi nhận hoạt động canh tác')}</h2>
-          <button type="button" className="modal-close" disabled={saving} aria-label={lang === 'en' ? 'Close' : 'Đóng'} onClick={() => { setIsModalOpen(false); setEditingActivity(null); }}>
-            <Icon name="close" size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <VoiceActivityButton
+              availableBlocks={seasonBlocks.map(b => b.blockName || '').filter(Boolean)}
+              onParsed={handleVoiceParsed}
+            />
+            <button type="button" className="modal-close" disabled={saving} aria-label={lang === 'en' ? 'Close' : 'Đóng'} onClick={() => { setIsModalOpen(false); setEditingActivity(null); }}>
+              <Icon name="close" size={18} />
+            </button>
+          </div>
         </div>
         <form onSubmit={handleCreateActivity}>
           <div className="modal-body">

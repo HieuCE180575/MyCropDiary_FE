@@ -20,6 +20,8 @@ import '../../styles/ai.css';
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { apiRequest } from '../../shared/api/httpClient';
+import { FormattedAIMessage } from './FormattedAIMessage';
+import { useVoiceRecognition } from '../../shared/hooks/useVoiceRecognition';
 import {
   fetchMyAIConversations,
   fetchAIConversationDetail,
@@ -70,6 +72,14 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [deleteConversationId, setDeleteConversationId] = useState<number | null>(null);
   const [deletingConversation, setDeletingConversation] = useState(false);
+
+  const { isListening, transcript, startListening, stopListening, isSupported } = useVoiceRecognition();
+
+  useEffect(() => {
+    if (transcript) {
+      setInputQuestion(transcript);
+    }
+  }, [transcript]);
 
   // Reporting / Feedback state
   const [feedbackHistory, setFeedbackHistory] = useState<AIFeedbackItem[]>([]);
@@ -401,10 +411,13 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                         boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
                         fontSize: '14px',
                         lineHeight: 1.6,
-                        whiteSpace: 'pre-wrap',
                       }}
                     >
-                      {m.uiMessageKey ? translate(m.uiMessageKey) : m.messageText}
+                      {m.senderType === 'assistant' ? (
+                        <FormattedAIMessage content={m.uiMessageKey ? translate(m.uiMessageKey) : m.messageText} />
+                      ) : (
+                        <div style={{ whiteSpace: 'pre-wrap' }}>{m.uiMessageKey ? translate(m.uiMessageKey) : m.messageText}</div>
+                      )}
                       {m.sources && m.sources.length > 0 && (
                         <div className="ai-message-sources" style={{ marginTop: '10px', paddingTop: '8px', fontSize: '11.5px' }}>
                           📚 <strong>{(lang === 'en' ? "Standards sources:" : "Nguồn quy chuẩn:")}</strong> {m.sources.join(', ')}
@@ -462,6 +475,26 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                 disabled={isTyping}
                 style={{ padding: '12px 16px' }}
               />
+              {isSupported && (
+                <button
+                  type="button"
+                  className={`button button-outline ${isListening ? 'ai-chatbox-voice-btn--listening' : ''}`}
+                  onClick={isListening ? stopListening : startListening}
+                  title={isListening ? (lang === 'en' ? 'Stop listening' : 'Dừng nghe') : (lang === 'en' ? 'Ask by voice' : 'Hỏi bằng giọng nói')}
+                  disabled={isTyping}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 14px',
+                    borderColor: isListening ? '#ef4444' : undefined,
+                    color: isListening ? '#ef4444' : 'var(--color-primary)',
+                    backgroundColor: isListening ? '#fef2f2' : undefined,
+                  }}
+                >
+                  <Icon name="mic" size={18} />
+                </button>
+              )}
               <Button type="submit" variant="primary" disabled={isTyping || !inputQuestion.trim()} >
                 {(lang === 'en' ? "Send question" : "Gửi câu hỏi")}
               </Button>

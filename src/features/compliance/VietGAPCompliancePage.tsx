@@ -40,9 +40,12 @@ import {
 import { VietGapInitRunModal } from './VietGapInitRunModal';
 import { VietGapAuditWorkspaceModal } from './VietGapAuditWorkspaceModal';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { HazardousWasteManager } from './HazardousWasteManager';
+import { EquipmentMaintenanceManager } from './EquipmentMaintenanceManager';
+import { CustomerComplaintManager } from './CustomerComplaintManager';
 
 interface VietGAPComplianceProps {
-  initialTab?: 'checklists' | 'assessments' | 'environment' | 'training';
+  initialTab?: 'checklists' | 'assessments' | 'environment' | 'training' | 'waste' | 'equipment' | 'complaints';
 }
 
 export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComplianceProps) {
@@ -52,7 +55,7 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
   const waterDetailLoader = useDetailRequest(selectedFarm?.id);
   const soilDetailLoader = useDetailRequest(selectedFarm?.id);
   useEffect(() => { setSelectedEnvWater(null); setSelectedEnvSoil(null); }, [selectedFarm?.id]);
-  const [activeTab, setActiveTab] = useState<'checklists' | 'assessments' | 'environment' | 'training'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'checklists' | 'assessments' | 'environment' | 'training' | 'waste' | 'equipment' | 'complaints'>(initialTab);
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
@@ -375,6 +378,72 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
         <p>{lang === 'en' ? 'Are you sure you want to delete training record ' : 'Bạn có chắc chắn muốn xóa hồ sơ đào tạo '}
           <strong>{trainingToDelete?.trainingTitle}</strong>?</p>
       </ConfirmDialog>
+
+      {/* VietGAP Main Compliance Navigation Tabs */}
+      <div style={{ marginBottom: '20px' }}>
+        <TabList
+          idPrefix="vietgap-main-tabs"
+          label={lang === 'en' ? 'VietGAP Compliance Sections' : 'Các phân hệ Tuân thủ VietGAP'}
+          value={activeTab === 'checklists' ? 'assessments' : activeTab}
+          onChange={(val) => setActiveTab(val as typeof activeTab)}
+          items={[
+            {
+              value: 'assessments',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="check" size={16} />
+                  {lang === 'en' ? '33 VietGAP Audits' : 'Đánh giá nội bộ 33 Tiêu chí'}
+                </span>
+              ),
+            },
+            {
+              value: 'environment',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="plots" size={16} />
+                  {lang === 'en' ? 'Soil, Water & Risks (4.1)' : 'Đất, Nước & Rủi ro (4.1)'}
+                </span>
+              ),
+            },
+            {
+              value: 'training',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="users" size={16} />
+                  {lang === 'en' ? 'Worker Training (4.2)' : 'Tập huấn & Đào tạo (4.2)'}
+                </span>
+              ),
+            },
+            {
+              value: 'waste',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="trash" size={16} />
+                  {lang === 'en' ? 'Waste & Packaging (4.8)' : 'Vỏ thuốc & Rác thải (4.8)'}
+                </span>
+              ),
+            },
+            {
+              value: 'equipment',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="wrench" size={16} />
+                  {lang === 'en' ? 'Equipment Maintenance (4.9)' : 'Bảo dưỡng & Rửa bình (4.9)'}
+                </span>
+              ),
+            },
+            {
+              value: 'complaints',
+              label: (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Icon name="message" size={16} />
+                  {lang === 'en' ? 'Complaints & Recall (4.10)' : 'Khiếu nại & Thu hồi (4.10)'}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </div>
 
       {/* 1. Màn hình: Đánh giá nội bộ VietGAP (Tích hợp Checklist & Đánh giá nội bộ 33 tiêu chí TCVN 11892-1:2017) */}
       {(activeTab === 'checklists' || activeTab === 'assessments') && (
@@ -1917,6 +1986,27 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
               </div>
             </form>
           </Modal>
+      )}
+
+      {/* Tab 5: Quản lý Rác thải nguy hại & Vỏ bao bì thuốc BVTV (Mục 4.8 VietGAP) */}
+      {activeTab === 'waste' && selectedFarm?.id && (
+        <div style={{ marginTop: '10px' }}>
+          <HazardousWasteManager farmId={selectedFarm.id} farmName={selectedFarm.farmName} />
+        </div>
+      )}
+
+      {/* Tab 6: Súc rửa bình phun & Bảo dưỡng thiết bị (Mục 4.9 VietGAP) */}
+      {activeTab === 'equipment' && selectedFarm?.id && (
+        <div style={{ marginTop: '10px' }}>
+          <EquipmentMaintenanceManager farmId={selectedFarm.id} farmName={selectedFarm.farmName} />
+        </div>
+      )}
+
+      {/* Tab 7: Tiếp nhận khiếu nại khách hàng & Thu hồi sản phẩm (Mục 4.10 VietGAP) */}
+      {activeTab === 'complaints' && selectedFarm?.id && (
+        <div style={{ marginTop: '10px' }}>
+          <CustomerComplaintManager farmId={selectedFarm.id} farmName={selectedFarm.farmName} />
+        </div>
       )}
 
       {/* VietGAP 33-criteria Init Run Modal */}
