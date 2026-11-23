@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { formatDate as uiFormatDate, formatNumber as uiFormatNumber } from '../../../shared/format/formatters';
 import { getKnowledgeCategoryLabel } from '../constants';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
@@ -17,9 +18,9 @@ export function KnowledgeCard({ article, onOpen }: KnowledgeCardProps) {
   return (
     <article className="knowledge-card">
       {article.image ? (
-        <div className="knowledge-card-image-wrap">
+        <Link to={`/knowledge/${article.id}`} className="knowledge-card-image-wrap" aria-label={article.title}>
           <img src={article.image} alt={article.title} className="knowledge-card-image" loading="lazy" />
-        </div>
+        </Link>
       ) : null}
       <div className="knowledge-card-body">
         <span className="module-code">
@@ -27,7 +28,11 @@ export function KnowledgeCard({ article, onOpen }: KnowledgeCardProps) {
             ? getKnowledgeCategoryLabel(article.category, lang)
             : (lang === 'en' ? 'Agricultural Knowledge' : 'Kiến thức nông nghiệp')}
         </span>
-        <h3>{article.title}</h3>
+        <h3>
+          <Link to={`/knowledge/${article.id}`} className="knowledge-card-title-link">
+            {article.title}
+          </Link>
+        </h3>
         <p>{article.summary}</p>
         <div className="knowledge-card-meta">
           <span>{formatDate(article.publishedAt, lang)}</span>
@@ -36,9 +41,14 @@ export function KnowledgeCard({ article, onOpen }: KnowledgeCardProps) {
           <span className="meta-dot">·</span>
           <span>{uiFormatNumber(article.viewCount, lang)} {lang === 'en' ? 'views' : 'lượt xem'}</span>
         </div>
-        <button type="button" className="knowledge-card-link" onClick={() => onOpen(article)}>
-          {lang === 'en' ? 'Read more ›' : 'Đọc thêm ›'}
-        </button>
+        <div className="knowledge-card-actions">
+          <Link to={`/knowledge/${article.id}`} className="knowledge-read-full-btn">
+            {lang === 'en' ? 'View full guide ›' : 'Xem toàn bài viết ›'}
+          </Link>
+          <button type="button" className="knowledge-card-link" onClick={() => onOpen(article)}>
+            {lang === 'en' ? 'Read more ›' : 'Đọc thêm ›'}
+          </button>
+        </div>
       </div>
     </article>
   );

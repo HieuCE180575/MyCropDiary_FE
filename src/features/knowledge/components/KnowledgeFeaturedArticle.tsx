@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { formatDate as uiFormatDate, formatNumber as uiFormatNumber } from '../../../shared/format/formatters';
 import { getKnowledgeCategoryLabel } from '../constants';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
@@ -19,9 +20,9 @@ export function KnowledgeFeaturedArticle({ article, onOpen }: KnowledgeFeaturedA
     <section className="knowledge-featured-card" aria-label={lang === 'en' ? 'Featured Guide' : 'Bài viết tiêu biểu'}>
       <div className="featured-card-grid">
         {article.image ? (
-          <div className="featured-card-media" onClick={() => onOpen(article)}>
+          <Link to={`/knowledge/${article.id}`} className="featured-card-media" aria-label={article.title}>
             <img src={article.image} alt={article.title} className="featured-cover-img" loading="lazy" />
-          </div>
+          </Link>
         ) : null}
 
         <div className="featured-card-content">
@@ -37,9 +38,9 @@ export function KnowledgeFeaturedArticle({ article, onOpen }: KnowledgeFeaturedA
           </div>
 
           <h2 className="featured-card-title">
-            <button type="button" className="featured-title-btn" onClick={() => onOpen(article)}>
+            <Link to={`/knowledge/${article.id}`} className="featured-title-link">
               {article.title}
-            </button>
+            </Link>
           </h2>
 
           <p className="featured-card-summary">{article.summary}</p>
@@ -53,13 +54,20 @@ export function KnowledgeFeaturedArticle({ article, onOpen }: KnowledgeFeaturedA
           </div>
 
           <div className="featured-card-actions">
-            <button
-              type="button"
+            <Link
+              to={`/knowledge/${article.id}`}
               className="primary-button"
-              style={{ padding: '8px 18px', fontSize: '13.5px' }}
-              onClick={() => onOpen(article)}
+              style={{ padding: '9px 20px', fontSize: '13.5px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
               {lang === 'en' ? 'Read full guide ›' : 'Đọc bài viết đầy đủ ›'}
+            </Link>
+            <button
+              type="button"
+              className="secondary-button"
+              style={{ padding: '9px 16px', fontSize: '13.5px' }}
+              onClick={() => onOpen(article)}
+            >
+              {lang === 'en' ? 'Quick view' : 'Xem nhanh'}
             </button>
           </div>
         </div>

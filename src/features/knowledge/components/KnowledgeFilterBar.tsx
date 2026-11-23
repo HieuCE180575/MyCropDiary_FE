@@ -8,6 +8,7 @@ interface KnowledgeFilterBarProps {
   onCategoryChange: (category: KnowledgeCategory | 'all') => void;
   sort: KnowledgeSort;
   onSortChange: (sort: KnowledgeSort) => void;
+  summary?: string | null;
   onReset?: () => void;
 }
 
@@ -16,11 +17,19 @@ export function KnowledgeFilterBar({
   onCategoryChange,
   sort,
   onSortChange,
+  summary,
   onReset,
 }: KnowledgeFilterBarProps) {
-  const { lang } = useLanguage();
+  const { lang, t: translate } = useLanguage();
+
   return (
-    <div className="knowledge-filter-bar">
+    <div className="knowledge-filter-bar-card">
+      <div className="filter-header-row">
+        <span className="filter-heading-label">
+          {lang === 'en' ? 'Browse by Topic:' : 'Chuyên mục kỹ thuật:'}
+        </span>
+      </div>
+
       <div className="filter-chip-row" role="group" aria-label={lang === 'en' ? 'Filter by topic' : 'Lọc theo chủ đề'}>
         <button
           type="button"
@@ -28,7 +37,7 @@ export function KnowledgeFilterBar({
           aria-pressed={category === 'all'}
           onClick={() => onCategoryChange('all')}
         >
-          {lang === 'en' ? 'All Topics' : 'Tất cả chủ đề'}
+          {lang === 'en' ? 'All' : 'Tất cả'}
         </button>
         {KNOWLEDGE_CATEGORY_OPTIONS.map((option) => (
           <button
@@ -43,31 +52,41 @@ export function KnowledgeFilterBar({
         ))}
       </div>
 
-      <div className="knowledge-filter-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div className="zone-clean-select-wrap">
-          <select
-            className="ui-select"
-            value={sort}
-            onChange={(event) => onSortChange(event.target.value as KnowledgeSort)}
-            aria-label={lang === 'en' ? 'Sort articles' : 'Sắp xếp bài viết'}
-          >
-            <option value="newest">{lang === 'en' ? 'Newest First' : 'Mới nhất'}</option>
-            <option value="popular">{lang === 'en' ? 'Most Viewed' : 'Xem nhiều nhất'}</option>
-          </select>
-          <span className="select-arrow"><Icon name="chevron" size={16} /></span>
+      <div className="filter-sub-row">
+        <div className="filter-summary-col">
+          {summary ? (
+            <p className="knowledge-result-summary">{translate(summary)}</p>
+          ) : (
+            <p className="knowledge-result-summary-placeholder" />
+          )}
         </div>
 
-        {onReset && (
-          <button
-            type="button"
-            className="zone-clean-reload-btn"
-            title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
-            aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
-            onClick={onReset}
-          >
-            <Icon name="refresh" size={16} />
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label className="sort-select">
+            <span>{lang === 'en' ? 'Sort by' : 'Sắp xếp:'}</span>
+            <select
+              className="ui-select"
+              value={sort}
+              onChange={(event) => onSortChange(event.target.value as KnowledgeSort)}
+              aria-label={lang === 'en' ? 'Sort articles' : 'Sắp xếp bài viết'}
+            >
+              <option value="newest">{lang === 'en' ? 'Newest' : 'Mới nhất'}</option>
+              <option value="popular">{lang === 'en' ? 'Most Popular' : 'Xem nhiều nhất'}</option>
+            </select>
+          </label>
+
+          {onReset && (
+            <button
+              type="button"
+              className="zone-clean-reload-btn"
+              title={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+              aria-label={lang === 'en' ? 'Reset filters' : 'Đặt lại bộ lọc'}
+              onClick={onReset}
+            >
+              <Icon name="refresh" size={16} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

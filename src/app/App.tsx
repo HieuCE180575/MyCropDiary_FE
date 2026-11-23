@@ -6,6 +6,7 @@ import { FarmRegistrationNewPage } from '../pages/FarmRegistrationNewPage';
 import { FarmRegistrationDetailPage } from '../pages/FarmRegistrationDetailPage';
 import { FarmDetailRoute, LegacyFarmRoute } from '../pages/FarmRoutes';
 import { KnowledgePage } from '../pages/KnowledgePage';
+import { KnowledgeDetailPage } from '../pages/KnowledgeDetailPage';
 import { LoginPage } from '../pages/LoginPage';
 import { HomePage } from '../pages/HomePage';
 import { AboutPage } from '../pages/AboutPage';
@@ -41,6 +42,7 @@ export function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/knowledge" element={<KnowledgePage />} />
+          <Route path="/knowledge/:id" element={<KnowledgeDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/features" element={<FeaturesPage />} />
         </Route>
