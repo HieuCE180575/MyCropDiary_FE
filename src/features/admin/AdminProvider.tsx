@@ -836,16 +836,29 @@ export function AdminProvider({ children }: { children: ReactNode }) {
         try {
           const payload = {
             title: command.values.name,
-            category: command.values.category,
-            sourceUrl: command.values.source,
+            category: (command.values.category || 'regulation').toLowerCase(),
+            sourceUrl: command.values.source || undefined,
             summary: (command.values.content || '').slice(0, 220),
             body: command.values.content,
             status: 'draft',
           };
           if (command.id && /^\d+$/.test(command.id)) {
-            await updateAdminArticle(command.id, payload);
-          } else if (!command.id) {
-            await createAdminArticle(payload);
+            const updated = articleToRecord(await updateAdminArticle(command.id, payload));
+            setState((previous) => ({
+              ...previous,
+              articles: previous.articles.map((record) => (record.id === updated.id ? updated : record)),
+            }));
+            showNotice('Đã cập nhật bài viết kiến thức thành công.');
+            return;
+          }
+          if (!command.id) {
+            const created = articleToRecord(await createAdminArticle(payload));
+            setState((previous) => ({
+              ...previous,
+              articles: [created, ...previous.articles],
+            }));
+            showNotice('Đã thêm bài viết kiến thức thành công.');
+            return;
           }
         } catch {
           // Fallback to local

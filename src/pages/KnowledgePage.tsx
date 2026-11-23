@@ -4,7 +4,6 @@ import { Button } from '../shared/components/Button';
 import { Pagination } from '../shared/components/Pagination';
 import { KnowledgeSearchBar } from '../features/knowledge/components/KnowledgeSearchBar';
 import { KnowledgeFilterBar } from '../features/knowledge/components/KnowledgeFilterBar';
-import { KnowledgeDynamicBanner } from '../features/knowledge/components/KnowledgeDynamicBanner';
 import { KnowledgeList } from '../features/knowledge/components/KnowledgeList';
 import { KnowledgeDetailModal } from '../features/knowledge/components/KnowledgeDetailModal';
 import { KnowledgeFeaturedArticle } from '../features/knowledge/components/KnowledgeFeaturedArticle';
@@ -87,23 +86,36 @@ export function KnowledgePage() {
     <div className="public-knowledge-view">
       <div className="public-container">
         <section className="knowledge-page-content">
-          {/* 1. Header Banner động VietGAP cao cấp đồng bộ */}
-          <KnowledgeDynamicBanner onSelectCategory={handleCategoryChange} />
+          {/* Header trung tâm tri thức nông nghiệp chuẩn mực */}
+          <header className="knowledge-hero-header">
+            <div className="knowledge-hero-inner">
+              <span className="knowledge-eyebrow">
+                {lang === 'en' ? 'VIETGAP TECHNICAL REPOSITORY' : 'HỆ THỐNG TRI THỨC CANH TÁC VIETGAP'}
+              </span>
+              <h1 className="knowledge-hero-title">
+                {lang === 'en'
+                  ? 'Farming Technical Guides & Standards'
+                  : 'Cẩm nang Kỹ thuật & Tiêu chuẩn Canh tác'}
+              </h1>
+              <p className="knowledge-hero-desc">
+                {lang === 'en'
+                  ? 'Official guides on high-tech greenhouse crop cultivation, irrigation testing, agrochemical management, and internal audit compliance under TCVN 11892-1:2017.'
+                  : 'Tài liệu hướng dẫn quy trình kỹ thuật canh tác nhà màng, kiểm soát mẫu đất nước, sử dụng phân bón thuốc BVTV và đánh giá nội bộ theo chuẩn TCVN 11892-1:2017.'}
+              </p>
 
-          {/* 2. Thanh tìm kiếm & Lọc đồng bộ với toàn hệ thống */}
-          <div className="zone-clean-card" style={{ marginBottom: '28px', padding: '20px 24px' }}>
-            <div style={{ marginBottom: '16px' }}>
               <KnowledgeSearchBar
                 value={searchInput}
                 onChange={setSearchInput}
-                onReset={handleResetFilters}
                 onSelectSuggestion={(tag) => {
                   setSearchInput(tag);
                   setPage(1);
                 }}
               />
             </div>
+          </header>
 
+          {/* Thanh lọc chuyên mục và sắp xếp */}
+          <div className="knowledge-toolbar-wrap">
             <KnowledgeFilterBar
               category={category}
               onCategoryChange={handleCategoryChange}
@@ -113,12 +125,12 @@ export function KnowledgePage() {
             />
           </div>
 
-          {/* 3. Bài viết nổi bật (Featured Spotlight Article khi ở trang 1 không lọc) */}
+          {/* Bài viết nổi bật (Featured Spotlight Article) */}
           {featuredArticle ? (
             <KnowledgeFeaturedArticle article={featuredArticle} onOpen={setSelectedArticle} />
           ) : null}
 
-          {/* 4. Kết quả danh sách bài viết */}
+          {/* Kết quả danh sách bài viết */}
           {error ? (
             <EmptyState
               role="alert"

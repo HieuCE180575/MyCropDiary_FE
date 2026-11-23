@@ -538,8 +538,9 @@ export function HomePage() {
 
                   <div className="card-body">
                     <div className="card-meta-line">
-                      <span>⏱ {article.readTimeMinutes} {lang === 'en' ? 'min read' : 'phút đọc'}</span>
-                      <span>👁 {uiFormatNumber(article.viewCount, lang)} {lang === 'en' ? 'views' : 'lượt xem'}</span>
+                      <span>{article.readTimeMinutes} {lang === 'en' ? 'min read' : 'phút đọc'}</span>
+                      <span className="meta-dot">·</span>
+                      <span>{uiFormatNumber(article.viewCount, lang)} {lang === 'en' ? 'views' : 'lượt xem'}</span>
                     </div>
 
                     <h3 className="card-article-title">

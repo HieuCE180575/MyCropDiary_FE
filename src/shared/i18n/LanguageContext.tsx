@@ -13,8 +13,8 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 function isNodeTestEnvironment(): boolean {
   try {
-    const globalProcess = (globalThis as unknown as { process?: { env?: Record<string, string | undefined> } }).process;
-    if (globalProcess && (globalProcess.env?.NODE_TEST_CONTEXT || globalProcess.env?.NODE_ENV === 'test')) {
+    const globalProcess = (globalThis as unknown as { process?: { versions?: { node?: string }; env?: Record<string, string | undefined> } }).process;
+    if (globalProcess && (globalProcess.versions?.node || globalProcess.env?.NODE_TEST_CONTEXT || globalProcess.env?.NODE_ENV === 'test')) {
       return true;
     }
   } catch {

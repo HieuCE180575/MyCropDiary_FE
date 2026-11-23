@@ -353,8 +353,8 @@ export async function updateAdminChecklistRule(
 }
 
 export async function fetchAdminArticles(signal?: AbortSignal): Promise<AdminArticleItem[]> {
-  const res = await apiRequest<ApiResponse<{ content: AdminArticleItem[] }>>('/admin/knowledge/articles?size=50', { signal });
-  return res.data?.content || [];
+  const res = await apiRequest<ApiResponse<{ content?: AdminArticleItem[]; items?: AdminArticleItem[] }>>('/admin/knowledge/articles?size=50', { signal });
+  return res.data?.items || res.data?.content || [];
 }
 
 export async function createAdminArticle(payload: {

@@ -20,11 +20,11 @@ export function KnowledgeSearchBar({ value, onChange, onSelectSuggestion, onRese
   const { lang } = useLanguage();
 
   return (
-    <div className="knowledge-search-wrapper" style={{ width: '100%' }}>
-      <div className="zone-clean-search" style={{ width: '100%' }}>
-        <span className="search-icon" aria-hidden="true">
-          <Icon name="search" size={17} />
-        </span>
+    <div className="knowledge-search-container">
+      <div className="search-input">
+        <label htmlFor="knowledge-search-bar-control-1" className="search-icon" aria-hidden="true">
+          <Icon name="search" size={16} />
+        </label>
         <input
           id="knowledge-search-bar-control-1"
           className="ui-input"

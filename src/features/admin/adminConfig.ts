@@ -10,7 +10,19 @@ export const requirementLabels = { REQUIRED: 'Bắt buộc', RECOMMENDED: 'Khuy�
 export const activityLabels = { ALL: 'Tất cả hoạt động', PLANTING: 'Gieo trồng', FERTILIZING: 'Bón phân', SPRAYING: 'Phun thuốc', WATERING: 'Tưới nước', CARE: 'Chăm sóc', HARVESTING: 'Thu hoạch', OTHER: 'Hoạt động khác' };
 export const fieldLabels = { ACTIVITY_DATE: 'Ngày thực hiện', RESPONSIBLE_PERSON: 'Người thực hiện', MATERIAL_NAME: 'Tên vật tư', MATERIAL_QUANTITY: 'Lượng vật tư sử dụng', WITHHOLDING_DAYS: 'Thời gian cách ly', HARVEST_QUANTITY: 'Sản lượng thu hoạch' };
 export const ratingLabels = { HELPFUL: 'Hữu ích', NOT_HELPFUL: 'Chưa hữu ích' };
-export const articleCategories = { VIETGAP: 'Tiêu chuẩn VietGAP', DIARY: 'Ghi chép canh tác', SOIL_WATER: 'Đất và nước', MATERIALS: 'Vật tư nông nghiệp' };
+export const articleCategories = {
+  regulation: 'Quy định chung',
+  'soil-water': 'Đất & nguồn nước',
+  'seed-cultivation': 'Giống & gieo trồng',
+  'fertilizer-pesticide': 'Phân bón & thuốc BVTV',
+  'harvest-post-harvest': 'Thu hoạch & sau thu hoạch',
+  'record-traceability': 'Ghi chép & truy xuất nguồn gốc',
+  'training-certification': 'Đào tạo & chứng nhận',
+  VIETGAP: 'Tiêu chuẩn VietGAP',
+  DIARY: 'Ghi chép canh tác',
+  SOIL_WATER: 'Đất và nước',
+  MATERIALS: 'Vật tư nông nghiệp',
+};
 export const feedbackStatuses = { OPEN: 'Mới tiếp nhận', IN_REVIEW: 'Đang xử lý', RESOLVED: 'Đã giải quyết' };
 
 export const adminConfigs: Record<Collection, CollectionConfig> = {
