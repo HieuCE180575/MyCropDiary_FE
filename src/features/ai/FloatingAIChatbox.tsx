@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../auth';
-import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
+import { useOptionalFarmWorkspace } from '../farm-management/FarmWorkspace';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Icon } from '../../shared/components/Icon';
 import { FormattedAIMessage } from './FormattedAIMessage';
@@ -17,7 +17,8 @@ import '../../styles/ai-widget.css';
 
 export function FloatingAIChatbox() {
   const { user } = useAuth();
-  const { selectedFarm } = useFarmWorkspace();
+  const workspace = useOptionalFarmWorkspace();
+  const selectedFarm = workspace?.selectedFarm ?? null;
   const { lang } = useLanguage();
 
   const [isOpen, setIsOpen] = useState(false);

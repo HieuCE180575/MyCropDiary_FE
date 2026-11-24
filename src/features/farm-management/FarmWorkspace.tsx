@@ -63,3 +63,7 @@ export function useFarmWorkspace() {
   if (!context) throw new Error('Farm workspace is unavailable.');
   return context;
 }
+
+export function useOptionalFarmWorkspace() {
+  return useContext(WorkspaceContext);
+}

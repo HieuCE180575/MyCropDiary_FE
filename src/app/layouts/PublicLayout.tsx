@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { useLayoutEffect } from 'react';
 import { PublicHeader } from '../../shared/components/PublicHeader';
 import { PublicFooter } from '../../shared/components/PublicFooter';
+import { FloatingAIChatbox } from '../../features/ai/FloatingAIChatbox';
 
 export function PublicLayout() {
   useLayoutEffect(() => {
@@ -17,6 +18,7 @@ export function PublicLayout() {
         <Outlet />
       </div>
       <PublicFooter />
+      <FloatingAIChatbox />
     </div>
   );
 }
