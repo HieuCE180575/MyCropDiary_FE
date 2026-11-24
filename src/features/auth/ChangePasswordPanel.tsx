@@ -56,6 +56,16 @@ function PasswordField({ name, label, value, onChange, current = false, disabled
   );
 }
 
+function validateNewPassword(value: string): string {
+  if (!value || !value.trim()) return 'Password cannot contain only whitespace.';
+  if (value.length < 8) return 'Password must have at least 8 characters.';
+  if (value.length > 100) return 'Password cannot exceed 100 characters.';
+  if (!/[A-Z]/.test(value)) return 'Password must contain at least 1 uppercase letter.';
+  if (!/[a-z]/.test(value)) return 'Password must contain at least 1 lowercase letter.';
+  if (!/[^a-zA-Z0-9]/.test(value)) return 'Password must contain at least 1 special character.';
+  return '';
+}
+
 export function ChangePasswordPanel({
   embedded = false,
   onSuccess,
@@ -72,6 +82,11 @@ export function ChangePasswordPanel({
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  const hasMinLength = newPassword.length >= 8 && newPassword.length <= 100;
+  const hasUpperCase = /[A-Z]/.test(newPassword);
+  const hasLowerCase = /[a-z]/.test(newPassword);
+  const hasSpecialChar = /[^a-zA-Z0-9]/.test(newPassword);
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setStatus(null);
@@ -80,8 +95,9 @@ export function ChangePasswordPanel({
       setStatus({ type: 'error', message: 'Please enter your current password.' });
       return;
     }
-    if (newPassword.length < 8) {
-      setStatus({ type: 'error', message: 'New password must be at least 8 characters long.' });
+    const passwordRuleError = validateNewPassword(newPassword);
+    if (passwordRuleError) {
+      setStatus({ type: 'error', message: passwordRuleError });
       return;
     }
     if (newPassword === currentPassword) {
@@ -151,8 +167,26 @@ export function ChangePasswordPanel({
             value={newPassword}
             onChange={setNewPassword}
             disabled={loading}
-            help={lang === 'en' ? 'Use at least 8 characters and a password different from your current password.' : 'Mật khẩu mới có ít nhất 8 ký tự và khác mật khẩu hiện tại.'}
+            help={lang === 'en'
+              ? '8-100 characters, including at least 1 uppercase letter, 1 lowercase letter, and 1 special character.'
+              : 'Từ 8–100 ký tự, gồm ít nhất 1 chữ in hoa, 1 chữ in thường, 1 ký tự đặc biệt và khác mật khẩu hiện tại.'}
           />
+          {newPassword.length > 0 && (
+            <ul style={{ listStyle: 'none', margin: '-6px 0 4px', padding: '8px 12px', borderRadius: '8px', background: 'var(--color-page)', border: '1px solid var(--color-border)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '4px 12px', fontSize: '12px' }}>
+              <li style={{ color: hasMinLength ? '#059669' : '#dc2626', fontWeight: 500 }}>
+                {hasMinLength ? '✓' : '•'} {lang === 'en' ? '8–100 characters' : 'Từ 8–100 ký tự'}
+              </li>
+              <li style={{ color: hasUpperCase ? '#059669' : '#dc2626', fontWeight: 500 }}>
+                {hasUpperCase ? '✓' : '•'} {lang === 'en' ? 'At least 1 uppercase (A-Z)' : 'Ít nhất 1 chữ in hoa (A-Z)'}
+              </li>
+              <li style={{ color: hasLowerCase ? '#059669' : '#dc2626', fontWeight: 500 }}>
+                {hasLowerCase ? '✓' : '•'} {lang === 'en' ? 'At least 1 lowercase (a-z)' : 'Ít nhất 1 chữ in thường (a-z)'}
+              </li>
+              <li style={{ color: hasSpecialChar ? '#059669' : '#dc2626', fontWeight: 500 }}>
+                {hasSpecialChar ? '✓' : '•'} {lang === 'en' ? 'At least 1 special character' : 'Ít nhất 1 ký tự đặc biệt'}
+              </li>
+            </ul>
+          )}
         <PasswordField
           name="confirmPassword"
           label="Confirm New Password"

@@ -1,7 +1,7 @@
 import { useLanguage } from '../shared/i18n/LanguageContext';
 import { type FormEvent, useState, useEffect } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { useAuth, GoogleAuthModal } from '../features/auth';
+import { useAuth } from '../features/auth';
 import { authenticate } from '../features/auth/authApi';
 import { signInWithGoogleDirect, initializeGoogleOneTap } from '../features/auth/googleAuthService';
 import { Icon } from '../shared/components/Icon';
@@ -40,7 +40,6 @@ export function LoginPage() {
   const [password, setPassword] = useState('');
   const initialNotice = (location.state as { notice?: string } | null)?.notice ?? '';
   const [notice, setNotice] = useState(initialNotice);
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   useEffect(() => {
@@ -61,9 +60,13 @@ export function LoginPage() {
       setSession(session);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('hủy') && !msg.includes('cancelled') && !msg.includes('access_denied')) {
+      const isCancelled =
+        msg.includes('hủy') ||
+        msg.toLowerCase().includes('cancel') ||
+        msg.includes('access_denied') ||
+        msg.includes('popup_closed');
+      if (!isCancelled) {
         setError(msg);
-        setIsGoogleModalOpen(true);
       }
     } finally {
       setGoogleLoading(false);
@@ -282,12 +285,6 @@ export function LoginPage() {
           </form>
         </div>
       </section>
-      <GoogleAuthModal
-        isOpen={isGoogleModalOpen}
-        mode="login"
-        onClose={() => setIsGoogleModalOpen(false)}
-        onSuccess={(session) => setSession(session)}
-      />
     </main>
   );
 }

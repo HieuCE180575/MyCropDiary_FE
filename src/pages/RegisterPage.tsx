@@ -1,7 +1,7 @@
 import { useLanguage } from '../shared/i18n/LanguageContext';
 import { type FormEvent, useRef, useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { useAuth, GoogleAuthModal } from '../features/auth';
+import { useAuth } from '../features/auth';
 import { registerAccount, resendOtp, verifyOtp } from '../features/auth/authApi';
 import { signInWithGoogleDirect, initializeGoogleOneTap } from '../features/auth/googleAuthService';
 import { Icon } from '../shared/components/Icon';
@@ -113,7 +113,6 @@ export function RegisterPage() {
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
   const [touched, setTouched] = useState<Partial<Record<keyof FormValues, boolean>>>({});
   const [pending, setPending] = useState(false);
-  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const busy = useRef(false);
 
@@ -135,9 +134,13 @@ export function RegisterPage() {
       setSession(session);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      if (!msg.includes('hủy') && !msg.includes('cancelled') && !msg.includes('access_denied')) {
+      const isCancelled =
+        msg.includes('hủy') ||
+        msg.toLowerCase().includes('cancel') ||
+        msg.includes('access_denied') ||
+        msg.includes('popup_closed');
+      if (!isCancelled) {
         setError(msg);
-        setIsGoogleModalOpen(true);
       }
     } finally {
       setGoogleLoading(false);
@@ -684,12 +687,6 @@ export function RegisterPage() {
           </p>
         </div>
       </section>
-      <GoogleAuthModal
-        isOpen={isGoogleModalOpen}
-        mode="register"
-        onClose={() => setIsGoogleModalOpen(false)}
-        onSuccess={(session) => setSession(session)}
-      />
     </main>
   );
 }

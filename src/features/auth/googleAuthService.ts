@@ -154,17 +154,23 @@ export async function promptGoogleAccountChooser(): Promise<GoogleAuthRequest> {
         },
         error_callback: (err) => {
           resolved = true;
-          reject(new Error(`Không thể khởi tạo phiên Google: ${String(err)}`));
+          const errObj = err as { type?: string; message?: string } | null;
+          if (errObj?.type === 'popup_closed' || errObj?.type === 'popup_failed_to_open') {
+            reject(new Error('Bạn đã hủy đăng nhập với Google.'));
+            return;
+          }
+          reject(new Error(errObj?.message || 'Không thể khởi tạo phiên Google.'));
         },
       });
 
       // Bắt buộc Google Account Chooser hiện danh sách tất cả tài khoản
       tokenClient.requestAccessToken({ prompt: 'select_account' });
 
-      // Timeout an toàn phòng trường hợp người dùng đóng popup mà không chọn
+      // Timeout an toàn phòng trường hợp trình duyệt không bắn sự kiện popup_closed
       setTimeout(() => {
         if (!resolved) {
-          // Chỉ reset trạng thái, không ném exception làm crash UI
+          resolved = true;
+          reject(new Error('Bạn đã hủy đăng nhập với Google.'));
         }
       }, 60000);
     } catch (err) {
