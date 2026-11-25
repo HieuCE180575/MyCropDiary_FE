@@ -12,12 +12,12 @@ import { useAuth } from '../auth';
 import { fetchAdminStatistics, type AdminStatisticsData } from './adminService';
 
 const types = {
-  users: 'Tài khoản',
-  farms: 'Trang trại & Vùng trồng',
-  seasons: 'Mùa vụ',
-  costs: 'Chi phí',
-  registrations: 'Hồ sơ trang trại',
-  feedback: 'Phản hồi AI',
+  users: { vi: 'Tài khoản', en: 'Accounts' },
+  farms: { vi: 'Trang trại & Vùng trồng', en: 'Farms & Zones' },
+  seasons: { vi: 'Mùa vụ', en: 'Seasons' },
+  costs: { vi: 'Chi phí', en: 'Costs' },
+  registrations: { vi: 'Hồ sơ trang trại', en: 'Farm Applications' },
+  feedback: { vi: 'Phản hồi AI', en: 'AI Feedback' },
 };
 type StatisticType = keyof typeof types;
 
@@ -109,7 +109,7 @@ export function AdminStatistics() {
             className={type === key ? 'active' : ''}
             onClick={() => { if (type !== key) { setAnalyticsReport(null); setType(key as StatisticType); } }}
           >
-            {translate(label)}
+            {lang === 'en' ? label.en : label.vi}
           </button>
         ))}
       </div>

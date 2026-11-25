@@ -72,6 +72,9 @@ export function FarmingActivitiesPage() {
   const [notification, setNotification] = useState<{ text: TranslationMessage; type: 'success' | 'error' } | null>(null);
 
   // Form states
+  const [formSeasonId, setFormSeasonId] = useState<number | ''>('');
+  const [formSeasonBlocks, setFormSeasonBlocks] = useState<CropSeasonBlockResp[]>([]);
+  const [loadingFormBlocks, setLoadingFormBlocks] = useState(false);
   const [selectedBlockId, setSelectedBlockId] = useState<number | ''>('');
   const [actType, setActType] = useState('Fertilizing');
   const [actName, setActName] = useState('');
@@ -106,7 +109,7 @@ export function FarmingActivitiesPage() {
       else if (t.includes('weed') || t.includes('prun')) setActType('Làm cỏ');
     }
     if (parsed.matchedBlockName) {
-      const matched = seasonBlocks.find(b => b.blockName && b.blockName.toLowerCase().includes(parsed.matchedBlockName!.toLowerCase()));
+      const matched = formSeasonBlocks.find(b => b.blockName && b.blockName.toLowerCase().includes(parsed.matchedBlockName!.toLowerCase()));
       if (matched) {
         setSelectedBlockId(matched.blockId);
       }
@@ -134,6 +137,36 @@ export function FarmingActivitiesPage() {
       }
     } catch {
       setSeasons([]);
+    }
+  };
+
+  const loadFormBlocksForSeason = async (targetSeasonId: number, preferredBlockId?: number | '') => {
+    if (seasonBlocksMemoryCache.has(targetSeasonId)) {
+      const cached = seasonBlocksMemoryCache.get(targetSeasonId)!;
+      setFormSeasonBlocks(cached);
+      setSelectedBlockId(() => {
+        if (preferredBlockId && cached.some((b) => b.blockId === preferredBlockId)) return preferredBlockId;
+        return cached[0]?.blockId ?? '';
+      });
+    } else {
+      setLoadingFormBlocks(true);
+    }
+    try {
+      const blocks = await fetchBlocksInSeason(targetSeasonId);
+      seasonBlocksMemoryCache.set(targetSeasonId, blocks);
+      setFormSeasonBlocks(blocks);
+      setSelectedBlockId((prev) => {
+        const candidate = preferredBlockId !== undefined ? preferredBlockId : prev;
+        if (candidate && blocks.some((b) => b.blockId === candidate)) return candidate;
+        return blocks[0]?.blockId ?? '';
+      });
+    } catch {
+      if (!seasonBlocksMemoryCache.has(targetSeasonId)) {
+        setFormSeasonBlocks([]);
+        setSelectedBlockId('');
+      }
+    } finally {
+      setLoadingFormBlocks(false);
     }
   };
 
@@ -234,11 +267,11 @@ export function FarmingActivitiesPage() {
       setActivityModalError((lang === 'en' ? "Enter a farming activity name." : 'Vui lòng nhập tên hoạt động canh tác.'));
       return;
     }
-    if (!seasonId) {
+    if (!formSeasonId) {
       setActivityModalError((lang === 'en' ? "Select a crop season." : 'Vui lòng chọn mùa vụ canh tác mục tiêu.'));
       return;
     }
-    if (seasonBlocks.length > 0 && !selectedBlockId) {
+    if (formSeasonBlocks.length > 0 && !selectedBlockId) {
       setActivityModalError((lang === 'en' ? "Select a block assigned to this season." : 'Vui lòng chọn lô đất thực hiện (đã được phân bổ vào mùa vụ này).'));
       return;
     }
@@ -249,12 +282,13 @@ export function FarmingActivitiesPage() {
     setSaving(true);
     setActivityModalError(null);
     setNotification(null);
+    const targetSeasonId = Number(formSeasonId);
     const normalizedStart = startedAt.length === 16 ? `${startedAt}:00` : startedAt;
     const normalizedEnd = endedAt ? (endedAt.length === 16 ? `${endedAt}:00` : endedAt) : undefined;
-    const chosenBlock = seasonBlocks.find((b) => b.blockId === Number(selectedBlockId));
+    const chosenBlock = formSeasonBlocks.find((b) => b.blockId === Number(selectedBlockId));
 
     const newActPayload = {
-      cropSeasonId: Number(seasonId),
+      cropSeasonId: targetSeasonId,
       ...(selectedBlockId ? { blockId: Number(selectedBlockId) } : {}),
       ...(chosenBlock?.zoneId ? { zoneId: chosenBlock.zoneId } : {}),
       activityType: actType,
@@ -272,6 +306,10 @@ export function FarmingActivitiesPage() {
           method: 'PUT',
           data: newActPayload,
         });
+        activitiesMemoryCache.delete(targetSeasonId);
+        if (editingActivity.cropSeasonId && editingActivity.cropSeasonId !== targetSeasonId) {
+          activitiesMemoryCache.delete(editingActivity.cropSeasonId);
+        }
         if (res?.data) {
           const updated = normalizeActivity(
             {
@@ -279,9 +317,13 @@ export function FarmingActivitiesPage() {
               blockId: res.data.blockId ?? (selectedBlockId ? Number(selectedBlockId) : null),
               blockName: res.data.blockName ?? chosenBlock?.blockName ?? null,
             },
-            Number(seasonId)
+            targetSeasonId
           );
-          setActivities((prev) => prev.map((item) => (item.id === editingActivity.id ? updated : item)));
+          if (targetSeasonId === Number(seasonId)) {
+            setActivities((prev) => prev.map((item) => (item.id === editingActivity.id ? updated : item)));
+          } else {
+            setSeasonId(targetSeasonId);
+          }
         }
         setNotification({
           text: ("Farming diary updated successfully!"),
@@ -292,6 +334,7 @@ export function FarmingActivitiesPage() {
           method: 'POST',
           data: newActPayload,
         });
+        activitiesMemoryCache.delete(targetSeasonId);
         if (res?.data) {
           const created = normalizeActivity(
             {
@@ -299,9 +342,13 @@ export function FarmingActivitiesPage() {
               blockId: res.data.blockId ?? (selectedBlockId ? Number(selectedBlockId) : null),
               blockName: res.data.blockName ?? chosenBlock?.blockName ?? null,
             },
-            Number(seasonId)
+            targetSeasonId
           );
-          setActivities((prev) => [created, ...prev]);
+          if (targetSeasonId === Number(seasonId)) {
+            setActivities((prev) => [created, ...prev]);
+          } else {
+            setSeasonId(targetSeasonId);
+          }
         } else {
           throw new Error(res?.message || 'Không thể lưu nhật ký canh tác.');
         }
@@ -454,8 +501,15 @@ export function FarmingActivitiesPage() {
           <Button
             type="button"
             variant="primary"
-            disabled={!seasonId}
+            disabled={seasons.length === 0}
             onClick={() => {
+              const initialSeason = seasonId || seasons[0]?.cropSeasonId || '';
+              setFormSeasonId(initialSeason);
+              setFormSeasonBlocks(seasonBlocks);
+              setSelectedBlockId(seasonBlocks[0]?.blockId ?? '');
+              if (initialSeason && Number(initialSeason) !== Number(seasonId)) {
+                void loadFormBlocksForSeason(Number(initialSeason));
+              }
               resetForm();
               setEditingActivity(null);
               setIsModalOpen(true);
@@ -655,6 +709,13 @@ export function FarmingActivitiesPage() {
                 type="button"
                 variant="primary"
                 onClick={() => {
+                  const initialSeason = seasonId || seasons[0]?.cropSeasonId || '';
+                  setFormSeasonId(initialSeason);
+                  setFormSeasonBlocks(seasonBlocks);
+                  setSelectedBlockId(seasonBlocks[0]?.blockId ?? '');
+                  if (initialSeason && Number(initialSeason) !== Number(seasonId)) {
+                    void loadFormBlocksForSeason(Number(initialSeason));
+                  }
                   resetForm();
                   setEditingActivity(null);
                   setIsModalOpen(true);
@@ -786,15 +847,23 @@ export function FarmingActivitiesPage() {
                               title={(lang === 'en' ? "Edit diary entry" : "Chỉnh sửa nhật ký")}
                               aria-label={(lang === 'en' ? `Edit ${act.activityName}` : `Chỉnh sửa ${act.activityName}`)}
                               onClick={() => {
+                                const actSeasonId = act.cropSeasonId ?? seasonId;
                                 setEditingActivity(act);
+                                setFormSeasonId(actSeasonId);
+                                if (Number(actSeasonId) === Number(seasonId)) {
+                                  setFormSeasonBlocks(seasonBlocks);
+                                  setSelectedBlockId(act.blockId ?? (seasonBlocks[0]?.blockId ?? ''));
+                                } else if (actSeasonId) {
+                                  void loadFormBlocksForSeason(Number(actSeasonId), act.blockId ?? '');
+                                }
                                 setActName(act.activityName);
                                 setActType(act.activityType);
-                                setSelectedBlockId(act.blockId ?? (seasonBlocks[0]?.blockId ?? ''));
                                 setStartedAt(act.startedAt ? act.startedAt.slice(0, 16) : new Date().toISOString().slice(0, 16));
                                 setEndedAt(act.endedAt ? act.endedAt.slice(0, 16) : '');
                                 setDescription(act.description || '');
                                 setResultNotes(act.resultNotes || '');
                                 setWeatherNotes(act.weatherNotes || 'Trời nắng nhẹ, độ ẩm 75%');
+                                setActivityModalError(null);
                                 setIsModalOpen(true);
                               }}
                             >
@@ -830,7 +899,7 @@ export function FarmingActivitiesPage() {
           <h2>{editingActivity ? (lang === 'en' ? 'Update Farming Log' : 'Cập nhật nhật ký canh tác') : (lang === 'en' ? 'Record Farming Activity' : 'Ghi nhận hoạt động canh tác')}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <VoiceActivityButton
-              availableBlocks={seasonBlocks.map(b => b.blockName || '').filter(Boolean)}
+              availableBlocks={formSeasonBlocks.map(b => b.blockName || '').filter(Boolean)}
               onParsed={handleVoiceParsed}
             />
             <button type="button" className="modal-close" disabled={saving} aria-label={lang === 'en' ? 'Close' : 'Đóng'} onClick={() => { setIsModalOpen(false); setEditingActivity(null); }}>
@@ -840,12 +909,49 @@ export function FarmingActivitiesPage() {
         </div>
         <form onSubmit={handleCreateActivity}>
           <div className="modal-body">
-          <div className="structured-field-card ui-form-context">
+          {/* Mùa vụ canh tác */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
             <div className="structured-field-header">
-              <span className="structured-field-label">{lang === 'en' ? 'Selected season' : 'Mùa vụ đang chọn'}</span>
-              <span className="structured-field-badge">{lang === 'en' ? 'Fixed' : 'Cố định'}</span>
+              <label htmlFor="act-season-select" className="structured-field-label">
+                {lang === 'en' ? 'Crop Season' : 'Mùa vụ canh tác'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+              </label>
+              <span className="structured-field-badge">{seasons.length} {lang === 'en' ? 'season(s)' : 'mùa vụ'}</span>
             </div>
-            <strong>{currentSeason?.seasonName || '—'}</strong>
+            <div className="form-field" style={{ marginBottom: 0 }}>
+              <select
+                className="ui-select"
+                id="act-season-select"
+                required
+                value={formSeasonId}
+                onChange={(e) => {
+                  const nextId = e.target.value ? Number(e.target.value) : '';
+                  setFormSeasonId(nextId);
+                  setActivityModalError(null);
+                  if (nextId) {
+                    void loadFormBlocksForSeason(nextId);
+                  } else {
+                    setFormSeasonBlocks([]);
+                    setSelectedBlockId('');
+                  }
+                }}
+              >
+                {seasons.length === 0 ? (
+                  <option value="">{lang === 'en' ? 'No crop seasons yet' : 'Chưa có mùa vụ canh tác'}</option>
+                ) : (
+                  seasons.map((s) => (
+                    <option key={s.cropSeasonId} value={s.cropSeasonId}>
+                      {s.seasonName} (
+                      {s.seasonStatus === 'active'
+                        ? (lang === 'en' ? 'Active' : 'Đang canh tác')
+                        : s.seasonStatus === 'planned'
+                        ? (lang === 'en' ? 'Planned' : 'Chuẩn bị vụ')
+                        : (lang === 'en' && s.seasonStatus === 'completed' ? 'Completed' : s.seasonStatus)}
+                      )
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
           </div>
           {/* Lô đất thực hiện */}
           <div className="structured-field-card" style={{ marginBottom: 0 }}>
@@ -853,12 +959,20 @@ export function FarmingActivitiesPage() {
               <label htmlFor="act-block-select" className="structured-field-label">
                 {lang === 'en' ? 'Target Block' : 'Lô đất thực hiện'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label>
-              <span className="structured-field-badge">{seasonBlocks.length} {lang === 'en' ? 'block(s)' : 'lô đất'}</span>
+              <span className="structured-field-badge">
+                {loadingFormBlocks
+                  ? (lang === 'en' ? 'Loading...' : 'Đang tải...')
+                  : `${formSeasonBlocks.length} ${lang === 'en' ? 'block(s)' : 'lô đất'}`}
+              </span>
             </div>
-            {seasonBlocks.length === 0 ? (
+            {loadingFormBlocks ? (
+              <p style={{ color: 'var(--color-muted)', fontSize: '13px', margin: 0 }}>
+                {lang === 'en' ? 'Loading blocks for the selected season...' : 'Đang tải danh sách lô đất của mùa vụ...'}
+              </p>
+            ) : formSeasonBlocks.length === 0 ? (
               <p style={{ color: 'var(--color-warning)', fontSize: '13px', margin: 0 }}>
                 {(lang === 'en' ? "⚠️ This season has no assigned blocks. You can" : "⚠️ Mùa vụ này chưa được gán lô đất nào. Bạn có thể")}{' '}
-                <Link to={`/crop-seasons/${seasonId}`} style={{ color: 'var(--color-primary-text)', fontWeight: 700 }}>
+                <Link to={`/crop-seasons/${formSeasonId}`} style={{ color: 'var(--color-primary-text)', fontWeight: 700 }}>
                   {(lang === 'en' ? "assign blocks to this season here" : "gán lô đất vào mùa vụ tại đây")}
                 </Link>.
               </p>
@@ -870,7 +984,7 @@ export function FarmingActivitiesPage() {
                   value={selectedBlockId}
                   onChange={(e) => setSelectedBlockId(e.target.value ? Number(e.target.value) : '')}
                 >
-                  {seasonBlocks.map((sb) => (
+                  {formSeasonBlocks.map((sb) => (
                     <option key={sb.blockId} value={sb.blockId}>
                       {sb.blockName} ({sb.zoneName || `Khu`} · {sb.plantedArea ?? sb.blockArea}{' '}
                       {translate(sb.areaUnit || 'm²')})
