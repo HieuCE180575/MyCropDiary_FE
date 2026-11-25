@@ -6,4 +6,3 @@ export * from './validation';
 export * from './goongMapService';
 export { FarmGoongMap } from './components/FarmGoongMap';
 export { fetchMyLatestRegistration, submitFarmRegistration, cancelFarmRegistration } from './registrationService';
-export { fetchMyFarm } from './farmService';

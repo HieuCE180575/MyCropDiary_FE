@@ -62,9 +62,12 @@ export interface AdminCropCategoryItem {
 
 export interface AdminChecklistRuleItem {
   ruleId: number;
+  ruleCode?: string | null;
   ruleName: string;
   description: string;
   category: string;
+  ruleLevel?: string | null;
+  targetCropType?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -183,6 +186,29 @@ export async function fetchAdminStatistics(signal?: AbortSignal): Promise<AdminS
 
 export async function fetchAdminFarms(signal?: AbortSignal): Promise<AdminFarmDirectoryItem[]> {
   const res = await apiRequest<ApiResponse<AdminFarmDirectoryItem[]>>('/admin/farms', { signal });
+  return res.data || [];
+}
+
+export async function createAdminFarm(payload: Record<string, unknown>): Promise<AdminFarmDirectoryItem> {
+  const res = await apiRequest<ApiResponse<AdminFarmDirectoryItem>>('/admin/farms', {
+    method: 'POST',
+    data: payload,
+  });
+  return res.data;
+}
+
+export interface AdminAuditLogItem {
+  id: string;
+  name: string;
+  actor: string;
+  resource: string;
+  description: string;
+  status: string;
+  createdAt: string;
+}
+
+export async function fetchAdminAuditLogs(signal?: AbortSignal): Promise<AdminAuditLogItem[]> {
+  const res = await apiRequest<ApiResponse<AdminAuditLogItem[]>>('/admin/audit-logs', { signal });
   return res.data || [];
 }
 
@@ -329,9 +355,12 @@ export async function fetchAdminChecklistRules(signal?: AbortSignal): Promise<Ad
 }
 
 export async function createAdminChecklistRule(payload: {
+  ruleCode?: string;
   ruleName: string;
   description: string;
   category: string;
+  ruleLevel?: string;
+  targetCropType?: string;
   isActive?: boolean;
 }): Promise<AdminChecklistRuleItem> {
   const res = await apiRequest<ApiResponse<AdminChecklistRuleItem>>('/admin/checklist-rules', {
@@ -343,7 +372,15 @@ export async function createAdminChecklistRule(payload: {
 
 export async function updateAdminChecklistRule(
   id: number | string,
-  payload: { ruleName?: string; description?: string; category?: string; isActive?: boolean },
+  payload: {
+    ruleCode?: string;
+    ruleName?: string;
+    description?: string;
+    category?: string;
+    ruleLevel?: string;
+    targetCropType?: string;
+    isActive?: boolean;
+  },
 ): Promise<AdminChecklistRuleItem> {
   const res = await apiRequest<ApiResponse<AdminChecklistRuleItem>>(`/admin/checklist-rules/${id}`, {
     method: 'PUT',

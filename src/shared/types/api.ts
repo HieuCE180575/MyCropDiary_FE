@@ -5,5 +5,5 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
-export type SystemRole = 'USER' | 'ADMIN';
+export type SystemRole = 'USER' | 'OWNER' | 'STAFF' | 'ADMIN';
 export type FarmRole = 'OWNER' | 'STAFF';

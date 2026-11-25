@@ -13,13 +13,14 @@ export function farmRole(farm: FarmSummary | null | undefined): 'OWNER' | 'STAFF
 
 export function canAccessModule(module: ModuleDefinition, systemRole: string | undefined, farm: FarmSummary | null): boolean {
   const role = systemRole?.toUpperCase();
-  if (role !== 'USER' && role !== 'ADMIN') return false;
+  const isNonAdminUser = role === 'USER' || role === 'OWNER' || role === 'STAFF';
+  if (!isNonAdminUser && role !== 'ADMIN') return false;
   switch (module.access) {
     case 'account': return true;
-    case 'user': return role === 'USER';
+    case 'user': return isNonAdminUser;
     case 'admin': return role === 'ADMIN';
     // Administrative access alone never grants operational farm permissions.
-    case 'farm': return farmRole(farm) !== null;
-    case 'owner': return farmRole(farm) === 'OWNER';
+    case 'farm': return isNonAdminUser && farmRole(farm) !== null;
+    case 'owner': return isNonAdminUser && farmRole(farm) === 'OWNER';
   }
 }

@@ -180,19 +180,24 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
     audit: ['Tổng nhật ký', 'Total logs', 'bản ghi', 'records'],
   };
   const [totalVi, totalEn, unitVi, unitEn] = summaryCopy[collection];
-  const summaryTotal = collection === 'users' ? statsData?.accounts?.totalUsers ?? state.users.length : state[collection].length;
+  const hasLoadedUsers = collection === 'users' && state.users.length > 0;
+  const summaryTotal = collection === 'users'
+    ? (hasLoadedUsers ? state.users.length : (statsData?.accounts?.totalUsers ?? 0))
+    : state[collection].length;
   const summaryItems = [
     { key: '', label: lang === 'en' ? totalEn : totalVi, count: summaryTotal, display: String(summaryTotal) },
     ...Object.entries(config.statuses).map(([key, label]) => {
-      const count = collection === 'users' && key === 'ACTIVE' ? statsData?.accounts?.activeUsers ?? state.users.filter(item => item.status === key).length
-        : collection === 'users' && key === 'LOCKED' ? statsData?.accounts?.lockedUsers ?? state.users.filter(item => item.status === key).length
+      const count = collection === 'users'
+        ? (hasLoadedUsers
+            ? state.users.filter(item => item.status === key).length
+            : (key === 'ACTIVE' ? (statsData?.accounts?.activeUsers ?? 0) : key === 'LOCKED' ? (statsData?.accounts?.lockedUsers ?? 0) : 0))
         : state[collection].filter(item => item.status === key).length;
       return { key, label: translate(label), count, display: String(count) };
     }),
   ];
   if (collection === 'users') {
-    const owners = statsData?.accounts?.ownerCount ?? state.users.filter(item => item.role === 'OWNER').length;
-    const staff = statsData?.accounts?.staffCount ?? state.users.filter(item => item.role === 'STAFF').length;
+    const owners = hasLoadedUsers ? state.users.filter(item => item.role === 'OWNER').length : (statsData?.accounts?.ownerCount ?? 0);
+    const staff = hasLoadedUsers ? state.users.filter(item => item.role === 'STAFF').length : (statsData?.accounts?.staffCount ?? 0);
     summaryItems.push({ key: 'ROLES', label: lang === 'en' ? 'Owner / staff' : 'Chủ trại / Nhân sự', count: owners + staff, display: owners + '/' + staff });
   }
   if (collection === 'audit') {
@@ -228,11 +233,13 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
     </AdminPageHeading>
     <div className={'admin-user-stat-grid admin-registration-stat-grid admin-application-stat-grid admin-summary-count-' + summaryItems.length} role="region" aria-label={lang === 'en' ? 'Statistics' : 'Thống kê'}>
       {summaryItems.map(item => {
-        const tone = collection === 'audit' && item.key === 'TODAY' ? 'success'
+        const tone = !item.key ? 'total'
+          : item.key === 'ROLES' ? 'info'
+          : collection === 'audit' && item.key === 'TODAY' ? 'success'
           : collection === 'audit' && item.key === 'WEEK' ? 'info'
           : adminStatusTone(item.key);
         const share = new Intl.NumberFormat(lang === 'en' ? 'en-US' : 'vi-VN', { style: 'percent', maximumFractionDigits: 1 }).format(summaryTotal ? item.count / summaryTotal : 0);
-        return <div key={item.key} className={'admin-user-stat-card' + (item.key ? ' admin-application-tone--' + tone : '')}>
+        return <div key={item.key} className={'admin-user-stat-card admin-application-tone--' + tone}>
           <span className="admin-user-stat-label">{item.label}</span>
           <span className="admin-user-stat-main">
             <span className="admin-user-stat-value">{item.display}</span>

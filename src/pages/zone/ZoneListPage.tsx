@@ -19,6 +19,8 @@ import { usePagination } from '../../shared/hooks/usePagination';
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
+import { getFarmById } from '../../features/farm-management/api';
+import { calculatePolygonAreaM2, parseBoundaryCoordinates } from '../../features/farm-management/goongMapService';
 import { farmRole } from '../../features/auth/accessPolicy';
 
 import {
@@ -61,6 +63,7 @@ export function ZoneListPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [assignedZones, setAssignedZones] = useState<AssignedZoneResp[]>([]);
   const [blocks, setBlocks] = useState<Block[]>([]);
+  const [farmPolygonAreaM2, setFarmPolygonAreaM2] = useState<number>(0);
   const [assignments, setAssignments] = useState<StaffZoneAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -111,12 +114,18 @@ export function ZoneListPage() {
       setError(null);
     }
     try {
-      const [zonesData, blocksData] = await Promise.all([
+      const [zonesData, blocksData, farmDetailRes] = await Promise.all([
         fetchZonesByFarm(farmId),
         fetchBlocks(farmId),
+        getFarmById(farmId).catch(() => null),
       ]);
       setZones(zonesData);
       setBlocks(blocksData);
+      if (farmDetailRes?.boundaryCoordinates) {
+        setFarmPolygonAreaM2(calculatePolygonAreaM2(parseBoundaryCoordinates(farmDetailRes.boundaryCoordinates)));
+      } else {
+        setFarmPolygonAreaM2(0);
+      }
 
       const [assignedRes, assignListRes] = await Promise.allSettled([
         fetchAssignedZones(farmId),
@@ -817,7 +826,8 @@ export function ZoneListPage() {
         mode={zoneToEdit ? 'edit' : 'create'}
         farmId={farmId}
         farmName={farmName}
-        initialZone={zoneToEdit}
+        farmTotalAreaM2={selectedFarm?.totalAreaM2 || farmPolygonAreaM2 || null}
+        initialZone={zoneToEdit ? { ...zoneToEdit, blocks: blocks.filter((b) => b.zoneId === zoneToEdit.zoneId) } : null}
         existingZones={zones}
         onClose={() => setIsZoneModalOpen(false)}
         onSuccess={(saved) => {
@@ -836,7 +846,10 @@ export function ZoneListPage() {
         mode={blockToEdit ? 'edit' : 'create'}
         zoneId={targetZoneForNewBlock.id}
         zoneName={targetZoneForNewBlock.name}
-        availableZones={visibleZones}
+        availableZones={visibleZones.map((z) => ({
+          ...z,
+          blocks: blocks.filter((b) => b.zoneId === z.zoneId),
+        }))}
         lockZone={Boolean(blockToEdit)}
         initialBlock={blockToEdit}
         onClose={() => setIsBlockModalOpen(false)}

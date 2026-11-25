@@ -30,9 +30,10 @@ export async function loadOwnerDashboard(farmId: number, signal: AbortSignal) {
     getFarmById(farmId, signal), fetchBlocks(farmId), fetchZonesByFarm(farmId), getFarmStaffList(farmId, { status: 'ACTIVE' }),
     readPages<DashboardSeason>(`/farms/${farmId}/crop-seasons`, signal),
     read<{ items: { materialUsageId: number; materialName: string; quantity: number; unit: string; usedAt: string }[] }>(`/material-usages?farmId=${farmId}&page=0&size=5&sort=usedAt,desc`, signal),
+    read<{ items: { farmTaskId: number; taskName: string; dueDate?: string | null; startDate?: string | null; taskStatus?: string | null; blockName?: string | null; assigneeName?: string | null }[] }>(`/farm-tasks?farmId=${farmId}&page=0&size=10`, signal),
   ] as const);
   if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
-  const labels = ['thông tin trang trại', 'lô đất', 'khu sản xuất', 'nhân sự', 'mùa vụ', 'sử dụng vật tư'];
+  const labels = ['thông tin trang trại', 'lô đất', 'khu sản xuất', 'nhân sự', 'mùa vụ', 'sử dụng vật tư', 'công việc'];
   const issues = results.flatMap((result, index) => result.status === 'rejected' ? [labels[index]] : []);
   const farm = valueOrNull(results[0]);
   const blocks = valueOrNull(results[1])?.filter(block => block.farmId == null || block.farmId === farmId) ?? null;
@@ -46,6 +47,16 @@ export async function loadOwnerDashboard(farmId: number, signal: AbortSignal) {
   if (allocationFailed) issues.push('phân bổ diện tích mùa vụ');
   const crops = allocationFailed || seasons === null ? null : aggregateCropAreas(seasons, allocations.flatMap(result => result.status === 'fulfilled' ? result.value : []));
   const materialPage = valueOrNull(results[5]);
+  const taskPage = valueOrNull(results[6]);
+  const upcomingTasks = (Array.isArray(taskPage?.items) ? taskPage.items : [])
+    .filter((t) => !['completed', 'cancelled', 'done'].includes((t.taskStatus || '').toLowerCase()))
+    .slice(0, 4)
+    .map((t) => ({
+      date: (t.dueDate || t.startDate || new Date().toISOString().slice(0, 10)).slice(0, 10),
+      name: t.taskName,
+      detail: [t.blockName, t.assigneeName].filter(Boolean).join(' · ') || 'Công việc canh tác',
+      icon: 'check' as const,
+    }));
   const recent: RecentRecord[] = (Array.isArray(materialPage?.items) ? materialPage.items : []).map(usage => ({
     id: 'material-' + usage.materialUsageId, title: 'Ghi nhận sử dụng vật tư', detail: `${usage.materialName} · ${usage.quantity} ${usage.unit}`,
     at: usage.usedAt, icon: 'file-text', to: '/materials',
@@ -54,7 +65,7 @@ export async function loadOwnerDashboard(farmId: number, signal: AbortSignal) {
     if (season.createdAt) recent.push({ id: 'season-' + season.cropSeasonId, title: 'Thêm mùa vụ mới', detail: season.seasonName, at: season.createdAt, icon: 'sprout', to: '/crop-seasons' });
   }
   return {
-    farm, blocks, zones, seasons, crops, issues,
+    farm, blocks, zones, seasons, crops, issues, upcomingTasks,
     staffCount: staff === null ? null : new Set(staff.filter(member => member.status === 'ACTIVE' && member.farmRole === 'STAFF').map(member => member.userId)).size,
     recent: recent.filter(record => Number.isFinite(new Date(record.at).getTime())).sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 4),
   };

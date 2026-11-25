@@ -14,10 +14,16 @@ interface ZoneModalProps {
   mode: 'create' | 'edit';
   farmId: number;
   farmName?: string;
+  farmTotalAreaM2?: number | null;
   initialZone?: Zone | null;
   existingZones?: Zone[];
   onClose: () => void;
   onSuccess: (savedZone: Zone) => void;
+}
+
+function toAreaM2(value: number | null | undefined, unit?: string | null): number {
+  if (!value || !Number.isFinite(value)) return 0;
+  return unit?.toLowerCase() === 'ha' ? value * 10000 : value;
 }
 
 export function ZoneModal({
@@ -25,6 +31,7 @@ export function ZoneModal({
   mode,
   farmId,
   farmName,
+  farmTotalAreaM2,
   initialZone,
   existingZones = [],
   onClose,
@@ -106,11 +113,31 @@ export function ZoneModal({
       return;
     }
 
-    if (mode === 'edit' && initialZone?.blocks && initialZone.blocks.length > 0) {
-      const currentBlocksTotal = initialZone.blocks.reduce((sum, b) => sum + (b.areaValue || 0), 0);
-      if (areaNum < currentBlocksTotal) {
+    const newZoneAreaM2 = toAreaM2(areaNum, values.areaUnit);
+    if (farmTotalAreaM2 && farmTotalAreaM2 > 0) {
+      const otherZonesM2 = existingZones
+        .filter((z) => mode === 'create' || z.zoneId !== initialZone?.zoneId)
+        .reduce((sum, z) => sum + toAreaM2(z.areaValue, z.areaUnit), 0);
+      const totalZonesM2 = otherZonesM2 + newZoneAreaM2;
+      if (totalZonesM2 > farmTotalAreaM2) {
         setError(
-          (lang === 'en' ? `Zone area (${areaNum} ${values.areaUnit}) must not be smaller than the total area of existing blocks (${currentBlocksTotal} ${values.areaUnit}).` : `Area phân khu (${areaNum} ${values.areaUnit}) không được nhỏ hơn tổng diện tích các lô đất hiện có (${currentBlocksTotal} ${values.areaUnit}).`)
+          lang === 'en'
+            ? `Total area of all zones (${Math.round(totalZonesM2).toLocaleString()} m²) cannot exceed farm area (${Math.round(farmTotalAreaM2).toLocaleString()} m²).`
+            : `Tổng diện tích các phân khu (${Math.round(totalZonesM2).toLocaleString()} m²) không được vượt quá diện tích trang trại (${Math.round(farmTotalAreaM2).toLocaleString()} m²).`
+        );
+        areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        areaValueRef.current?.focus();
+        return;
+      }
+    }
+
+    if (mode === 'edit' && initialZone?.blocks && initialZone.blocks.length > 0) {
+      const currentBlocksTotalM2 = initialZone.blocks.reduce((sum, b) => sum + toAreaM2(b.areaValue, b.areaUnit), 0);
+      if (newZoneAreaM2 < currentBlocksTotalM2) {
+        setError(
+          (lang === 'en'
+            ? `Zone area (${Math.round(newZoneAreaM2).toLocaleString()} m²) must not be smaller than the total area of existing blocks (${Math.round(currentBlocksTotalM2).toLocaleString()} m²).`
+            : `Diện tích phân khu (${Math.round(newZoneAreaM2).toLocaleString()} m²) không được nhỏ hơn tổng diện tích các lô đất hiện có (${Math.round(currentBlocksTotalM2).toLocaleString()} m²).`)
         );
         areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         areaValueRef.current?.focus();

@@ -328,7 +328,7 @@ function WorkspaceLayout() {
           )}
           {sidebarOpen && <p className="sidebar-nav-caption">{translate('MENU')}</p>}
           <SidebarNavigation navigation={navigation} isAdmin={isAdmin} sidebarOpen={sidebarOpen} signOut={signOut} />
-          {sidebarOpen && user?.systemRole?.toUpperCase() === 'USER' && !selectedFarm && (
+          {sidebarOpen && user && user.systemRole?.toUpperCase() !== 'ADMIN' && !selectedFarm && (
             <div className="season-card">
               <strong><Icon name="leaf" />{translate('Your Farm')}</strong>
               <p>{translate('Submit farm registration request and track approval progress.')}</p>

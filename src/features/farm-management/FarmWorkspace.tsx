@@ -19,7 +19,8 @@ export function FarmWorkspaceProvider({ children }: { children: ReactNode }) {
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const load = useCallback(async (signal: AbortSignal) => {
-    if (user?.systemRole?.toUpperCase() !== 'USER') return [];
+    const role = user?.systemRole?.toUpperCase();
+    if (!role || role === 'ADMIN') return [];
     const farms: FarmSummary[] = [];
     // Roles are returned only for active memberships by the farms API.
     for (let page = 0; ; page++) {

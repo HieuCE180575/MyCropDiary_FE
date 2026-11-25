@@ -29,6 +29,8 @@ export function OwnerDashboard({ farm }: { farm: FarmSummary }) {
   const sampleZones = !data?.zones?.length;
   const sampleCrops = !data?.crops?.length;
   const crops = data?.crops?.length ? data.crops : demo.crops;
+  const tasksSample = !data?.upcomingTasks?.length;
+  const tasks = tasksSample ? demo.tasks : data.upcomingTasks;
   const recentSample = !data?.recent.length;
   const address = data?.farm?.address?.trim() || [farm.district, farm.province].filter(Boolean).join(', ');
   const metadata = [
@@ -59,7 +61,7 @@ export function OwnerDashboard({ farm }: { farm: FarmSummary }) {
     </Link>)}</div>
     {loading ? <div className="owner-dashboard-loading" role="status"><span className="owner-sr-only">{(lang === 'en' ? "Loading farm overview..." : "Đang tải tổng quan trang trại...")}</span><div className="owner-skeleton" /><div className="owner-skeleton" /></div> : <>
       <div className="owner-middle-grid"><SeasonProgressPanel seasons={seasons} demo={sampleSeasons} /><CropAreaChart crops={crops} demo={sampleCrops} /></div>
-      <div className="owner-bottom-grid"><UpcomingTasksPanel tasks={demo.tasks} /><EnvironmentPanel /><RecentActivityPanel records={recentSample ? demo.recent : data.recent} demo={recentSample} /></div>
+      <div className="owner-bottom-grid"><UpcomingTasksPanel tasks={tasks} demo={tasksSample} /><EnvironmentPanel /><RecentActivityPanel records={recentSample ? demo.recent : data.recent} demo={recentSample} /></div>
     </>}
   </section>;
 }

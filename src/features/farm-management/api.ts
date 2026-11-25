@@ -124,6 +124,15 @@ export async function updateFarm(farmId: number, payload: UpdateFarmPayload): Pr
   return result.data;
 }
 
+export async function deleteFarm(farmId: number): Promise<void> {
+  const result = await apiRequest<ApiResponse<void>>(`/farms/${farmId}`, {
+    method: 'DELETE',
+  });
+  if (result && result.success === false) {
+    throw new Error(result.message || 'Không thể xóa trang trại.');
+  }
+}
+
 export async function getFarmMembers(farmId: number): Promise<FarmMemberItem[]> {
   const result = await apiRequest<ApiResponse<FarmMemberItem[]>>(`/farms/${farmId}/members/staff?status=active`).catch(
     () => apiRequest<ApiResponse<FarmMemberItem[]>>(`/farms/${farmId}/members`)

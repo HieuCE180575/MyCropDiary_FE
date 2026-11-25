@@ -8,9 +8,14 @@ import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
 import { Printer } from 'lucide-react';
-import type { HazardousWasteLog } from '../compliance/HazardousWasteManager';
-import type { EquipmentMaintenanceLog } from '../compliance/EquipmentMaintenanceManager';
-import type { CustomerComplaintLog } from '../compliance/CustomerComplaintManager';
+import {
+  fetchHazardousWastesApi,
+  fetchEquipmentMaintenancesApi,
+  fetchCustomerComplaintsApi,
+  type HazardousWasteResp,
+  type EquipmentMaintenanceResp,
+  type CustomerComplaintResp,
+} from '../compliance/vietgapRecordsService';
 import '../../styles/vietgap-report-print.css';
 
 interface VietGapReportExportModalProps {
@@ -89,15 +94,15 @@ export function VietGapReportExportModal({
   const [materialUsages, setMaterialUsages] = useState<MaterialUsageItem[]>([]);
   const [purchases, setPurchases] = useState<InputPurchaseItem[]>([]);
   const [harvestRecords, setHarvestRecords] = useState<HarvestItem[]>([]);
-  const [wasteLogs, setWasteLogs] = useState<HazardousWasteLog[]>([]);
-  const [equipmentLogs, setEquipmentLogs] = useState<EquipmentMaintenanceLog[]>([]);
-  const [complaintLogs, setComplaintLogs] = useState<CustomerComplaintLog[]>([]);
+  const [wasteLogs, setWasteLogs] = useState<HazardousWasteResp[]>([]);
+  const [equipmentLogs, setEquipmentLogs] = useState<EquipmentMaintenanceResp[]>([]);
+  const [complaintLogs, setComplaintLogs] = useState<CustomerComplaintResp[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
 
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [seasonRes, blocksRes, actRes, matRes, purRes, harvRes] = await Promise.all([
+      const [seasonRes, blocksRes, actRes, matRes, purRes, harvRes, wasteRes, eqRes, cpRes] = await Promise.all([
         fetchCropSeasonDetail(cropSeasonId).catch(() => null),
         fetchBlocksInSeason(cropSeasonId).catch(() => []),
         apiRequest<ApiResponse<{ items?: FarmingActivity[]; content?: FarmingActivity[] }>>(
@@ -110,6 +115,9 @@ export function VietGapReportExportModal({
         apiRequest<ApiResponse<{ items?: HarvestItem[]; content?: HarvestItem[] }>>(
           `/harvest-records?cropSeasonId=${cropSeasonId}&size=200`
         ).catch(() => null),
+        fetchHazardousWastesApi(farmId).catch(() => []),
+        fetchEquipmentMaintenancesApi(farmId).catch(() => []),
+        fetchCustomerComplaintsApi(farmId).catch(() => []),
       ]);
 
       setSeasonDetail(seasonRes);
@@ -126,15 +134,9 @@ export function VietGapReportExportModal({
       const harvList = harvRes?.data?.items || harvRes?.data?.content || [];
       setHarvestRecords(harvList);
 
-      // Load VietGAP 4.8, 4.9, 4.10 compliance logs from storage
-      try {
-        const rawWaste = localStorage.getItem(`mycropdiary_hazardous_waste_logs_${farmId}`);
-        if (rawWaste) setWasteLogs(JSON.parse(rawWaste));
-        const rawEq = localStorage.getItem(`mycropdiary_equipment_logs_${farmId}`);
-        if (rawEq) setEquipmentLogs(JSON.parse(rawEq));
-        const rawCp = localStorage.getItem(`mycropdiary_complaint_logs_${farmId}`);
-        if (rawCp) setComplaintLogs(JSON.parse(rawCp));
-      } catch {}
+      setWasteLogs(wasteRes || []);
+      setEquipmentLogs(eqRes || []);
+      setComplaintLogs(cpRes || []);
 
       setDataLoaded(true);
     } catch {
@@ -517,13 +519,19 @@ export function VietGapReportExportModal({
                     </tr>
                   ) : (
                     wasteLogs.map((w, wIdx) => (
-                      <tr key={w.id || wIdx}>
+                      <tr key={w.wasteLogId || wIdx}>
                         <td style={{ textAlign: 'center' }}>{wIdx + 1}</td>
-                        <td style={{ textAlign: 'center' }}>{formatDdMmYyyy(w.date)}</td>
-                        <td>{w.sourceLocation}</td>
+                        <td style={{ textAlign: 'center' }}>{formatDdMmYyyy(w.collectionDate)}</td>
+                        <td>{w.notes || w.wasteType}</td>
                         <td><strong>{formatNumber(w.quantity, lang)} {w.unit}</strong></td>
-                        <td>{w.storageMethod === 'handed_over' ? `Đã bàn giao: ${w.disposalPartner || 'Đơn vị xử lý'}` : 'Bể bê tông kín có khóa nắp'}</td>
-                        <td>{w.recorderName}</td>
+                        <td>
+                          {w.disposalMethod === 'transfer_contractor'
+                            ? `Đã bàn giao: ${w.contractorName || 'Đơn vị xử lý'}${w.handoverReceiptNo ? ` (BB: ${w.handoverReceiptNo})` : ''}`
+                            : w.disposalMethod === 'incinerate_farm'
+                              ? 'Xử lý tại trang trại'
+                              : 'Bể bê tông kín có khóa nắp'}
+                        </td>
+                        <td>{w.collectorName}</td>
                       </tr>
                     ))
                   )}
@@ -553,12 +561,12 @@ export function VietGapReportExportModal({
                     </tr>
                   ) : (
                     equipmentLogs.map((eq, eqIdx) => (
-                      <tr key={eq.id || eqIdx}>
+                      <tr key={eq.maintenanceId || eqIdx}>
                         <td style={{ textAlign: 'center' }}>{eqIdx + 1}</td>
-                        <td style={{ textAlign: 'center' }}>{formatDdMmYyyy(eq.date)}</td>
-                        <td><strong>{eq.equipmentName}</strong></td>
-                        <td>{eq.details}</td>
-                        <td>{eq.technicianName}</td>
+                        <td style={{ textAlign: 'center' }}>{formatDdMmYyyy(eq.actionDate)}</td>
+                        <td><strong>{eq.equipmentName}</strong>{eq.equipmentCode ? ` (${eq.equipmentCode})` : ''}</td>
+                        <td>{eq.notes || eq.actionType}</td>
+                        <td>{eq.performerName}</td>
                       </tr>
                     ))
                   )}
@@ -589,13 +597,21 @@ export function VietGapReportExportModal({
                     </tr>
                   ) : (
                     complaintLogs.map((cp, cpIdx) => (
-                      <tr key={cp.id || cpIdx}>
+                      <tr key={cp.complaintId || cpIdx}>
                         <td style={{ textAlign: 'center' }}>{cpIdx + 1}</td>
-                        <td style={{ textAlign: 'center' }}>{formatDdMmYyyy(cp.date)}</td>
+                        <td style={{ textAlign: 'center' }}>{formatDdMmYyyy(cp.receivedDate)}</td>
                         <td>{cp.customerName}</td>
-                        <td><strong>{cp.harvestLotCode}</strong></td>
-                        <td>{cp.complaintReason} - {cp.correctiveAction}</td>
-                        <td>{cp.recallStatus === 'recalled' ? `Thu hồi ${cp.recalledQuantity || 0} ${cp.unit || 'kg'}` : 'Đã giải quyết, không thu hồi'}</td>
+                        <td><strong>{cp.lotCode || '-'}</strong></td>
+                        <td>{cp.issueDescription}{cp.resolutionNotes ? ` - ${cp.resolutionNotes}` : ''}</td>
+                        <td>
+                          {cp.status === 'recalled' || cp.isRecallRequired
+                            ? `Thu hồi ${cp.recalledQuantity || 0} ${cp.harvestedUnit || 'kg'}`
+                            : cp.status === 'resolved'
+                              ? 'Đã giải quyết, không thu hồi'
+                              : cp.status === 'investigating'
+                                ? 'Đang điều tra'
+                                : 'Mới tiếp nhận'}
+                        </td>
                       </tr>
                     ))
                   )}

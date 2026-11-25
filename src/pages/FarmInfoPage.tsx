@@ -25,6 +25,7 @@ import { farmRole } from '../features/auth/accessPolicy';
 import {
   getFarmById,
   updateFarm,
+  deleteFarm,
   getFarmMembers,
   addFarmMember,
   removeFarmMember,
@@ -119,6 +120,10 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const [addingMember, setAddingMember] = useState(false);
   const [removeMemberTarget, setRemoveMemberTarget] = useState<{ id: number; name: string; farmId: number } | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
+
+  // Delete Farm Confirm Modal state
+  const [deleteFarmTarget, setDeleteFarmTarget] = useState<{ id: number; name: string } | null>(null);
+  const [deletingFarm, setDeletingFarm] = useState(false);
 
   // VietGAP Registration State
   const [registration, setRegistration] = useState<FarmRegistration | null>(null);
@@ -269,6 +274,15 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const handleUpdateFarm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeFarmId) return;
+    if (editBoundary.length > 0 && (editBoundary.length < 3 || calculatePolygonAreaM2(editBoundary) <= 0)) {
+      showToast(
+        lang === 'en'
+          ? 'Farm boundary area on the map must be greater than 0 m² (at least 3 valid vertices).'
+          : 'Diện tích vùng ranh giới trang trại trên bản đồ phải lớn hơn 0 m² (cần ít nhất 3 điểm hợp lệ).',
+        'error'
+      );
+      return;
+    }
     setUpdating(true);
     try {
       const updated = await updateFarm(activeFarmId, {
@@ -289,6 +303,32 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       showToast(err instanceof Error ? err.message : 'Cập nhật thất bại', 'error');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleConfirmDeleteFarm = async () => {
+    if (!deleteFarmTarget || deletingFarm) return;
+    setDeletingFarm(true);
+    try {
+      await deleteFarm(deleteFarmTarget.id);
+      showToast(
+        lang === 'en'
+          ? `Deleted farm "${deleteFarmTarget.name}" successfully.`
+          : `Đã xóa trang trại "${deleteFarmTarget.name}" thành công.`
+      );
+      setDeleteFarmTarget(null);
+      retry();
+      if (viewMode === 'detail' && activeFarmId === deleteFarmTarget.id) {
+        navigate('/farms');
+      }
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : (lang === 'en' ? 'Cannot delete farm.' : 'Không thể xóa trang trại.'),
+        'error'
+      );
+      setDeleteFarmTarget(null);
+    } finally {
+      setDeletingFarm(false);
     }
   };
 
@@ -419,9 +459,19 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
           )}
 
           {viewMode === 'detail' && activeFarmId && isOwner && (
-            <Button className="ui-edit-action farm-edit-action" type="button" variant="primary" onClick={() => setIsEditOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-              <Icon name="edit" size={16} /> {lang === 'en' ? 'Edit Farm Information' : 'Chỉnh sửa thông tin trang trại'}
-            </Button>
+            <>
+              <Button className="ui-edit-action farm-edit-action" type="button" variant="primary" onClick={() => setIsEditOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                <Icon name="edit" size={16} /> {lang === 'en' ? 'Edit Farm Information' : 'Chỉnh sửa thông tin trang trại'}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setDeleteFarmTarget({ id: activeFarmId, name: farmDetail?.farmName || activeFarmSummary?.farmName || '' })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}
+              >
+                <Icon name="trash" size={15} /> {lang === 'en' ? 'Delete Farm' : 'Xóa trang trại'}
+              </Button>
+            </>
           )}
 
 
@@ -681,20 +731,32 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                                     <Icon name="eye" size={15} />
                                     <span className="sr-only">{lang === 'en' ? "View details" : "Xem chi tiết"}</span>
                                   </button>
-                                  {isOwner && (
-                                    <button
-                                      type="button"
-                                      className="table-icon-btn edit"
-                                      title={lang === 'en' ? "Edit farm details" : "Chỉnh sửa thông tin trang trại"}
-                                      aria-label={lang === 'en' ? `Edit ${f.farmName}` : `Chỉnh sửa ${f.farmName}`}
-                                      onClick={() => {
-                                        setActiveFarmId(f.id);
-                                        setIsEditOpen(true);
-                                      }}
-                                    >
-                                      <Icon name="edit" size={15} />
-                                      <span className="sr-only">{lang === 'en' ? "Edit" : "Chỉnh sửa"}</span>
-                                    </button>
+                                  {role === 'OWNER' && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="table-icon-btn edit"
+                                        title={lang === 'en' ? "Edit farm details" : "Chỉnh sửa thông tin trang trại"}
+                                        aria-label={lang === 'en' ? `Edit ${f.farmName}` : `Chỉnh sửa ${f.farmName}`}
+                                        onClick={() => {
+                                          setActiveFarmId(f.id);
+                                          setIsEditOpen(true);
+                                        }}
+                                      >
+                                        <Icon name="edit" size={15} />
+                                        <span className="sr-only">{lang === 'en' ? "Edit" : "Chỉnh sửa"}</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="table-icon-btn danger"
+                                        title={lang === 'en' ? "Delete farm" : "Xóa trang trại"}
+                                        aria-label={lang === 'en' ? `Delete ${f.farmName}` : `Xóa ${f.farmName}`}
+                                        onClick={() => setDeleteFarmTarget({ id: f.id, name: f.farmName })}
+                                      >
+                                        <Icon name="trash" size={15} />
+                                        <span className="sr-only">{lang === 'en' ? "Delete" : "Xóa"}</span>
+                                      </button>
+                                    </>
                                   )}
                                   {!isCurrentActive ? (
                                     <button
@@ -1134,6 +1196,24 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
           </div>
         </form>
       </Modal>
+
+      {/* Confirm delete farm modal */}
+      <ConfirmDialog
+        open={Boolean(deleteFarmTarget)}
+        title={lang === 'en' ? 'Confirm delete farm' : 'Xác nhận xóa trang trại'}
+        description={
+          lang === 'en'
+            ? <>Are you sure you want to delete farm &quot;<strong>{deleteFarmTarget?.name}</strong>&quot;? Farms with ongoing crop seasons cannot be deleted.</>
+            : <>Bạn có chắc muốn xóa trang trại &quot;<strong>{deleteFarmTarget?.name}</strong>&quot;? Trang trại đang có mùa vụ diễn ra sẽ không thể xóa.</>
+        }
+        confirmLabel={lang === 'en' ? 'Delete farm' : 'Xóa trang trại'}
+        tone="danger"
+        loading={deletingFarm}
+        onClose={() => setDeleteFarmTarget(null)}
+        onConfirm={() => {
+          void handleConfirmDeleteFarm();
+        }}
+      />
 
       {/* Confirm remove member modal */}
       <ConfirmDialog

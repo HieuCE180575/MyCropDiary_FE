@@ -19,7 +19,9 @@ import {
   updateAdminArticle,
   updateAdminArticleStatus,
   fetchAdminFarms,
+  createAdminFarm,
   updateAdminFarm,
+  fetchAdminAuditLogs,
   fetchAdminZones,
   createAdminZone,
   updateAdminZone,
@@ -230,13 +232,16 @@ function cropToRecord(item: AdminCropCategoryItem): AdminRecord {
 }
 
 function ruleToRecord(item: AdminChecklistRuleItem): AdminRecord {
+  const rawLevel = (item.ruleLevel || 'MUST').toUpperCase();
+  const requirement = rawLevel === 'RECOMMENDED' ? 'RECOMMENDED' : rawLevel === 'NOT_APPLICABLE' ? 'NOT_APPLICABLE' : 'REQUIRED';
   return {
     id: String(item.ruleId),
+    clause: item.ruleCode || `VG-${String(item.ruleId).padStart(2, '0')}`,
     name: item.ruleName,
     field: 'ACTIVITY_DATE',
-    activity: item.category || 'ALL',
-    group: 'ALL',
-    requirement: 'REQUIRED',
+    activity: item.category || 'RECORDS_AND_TRAINING',
+    group: item.targetCropType || 'ALL',
+    requirement,
     guidance: item.description || '',
     status: item.isActive ? 'ACTIVE' : 'INACTIVE',
     createdAt: item.createdAt || new Date().toISOString(),
@@ -393,6 +398,25 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {});
 
+    fetchAdminAuditLogs(controller.signal)
+      .then((logs) => {
+        if (!controller.signal.aborted && Array.isArray(logs)) {
+          setState((prev) => ({
+            ...prev,
+            audit: logs.map((l) => ({
+              id: String(l.id),
+              name: l.name,
+              actor: l.actor,
+              resource: l.resource,
+              description: l.description,
+              status: l.status || 'RECORDED',
+              createdAt: l.createdAt || new Date().toISOString(),
+            })),
+          }));
+        }
+      })
+      .catch(() => {});
+
     return () => controller.abort();
   }, [user?.userId, user?.systemRole, revision]);
 
@@ -512,25 +536,21 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
     if (user?.userId !== 900) {
       if (command.type === 'feedback' && command.collection === 'feedback' && command.reply.trim()) {
-        try {
-          let updatedItem: AdminAIFeedbackItem | null = null;
-          if (command.reply) {
-            updatedItem = await replyAdminAIFeedback(command.id, command.reply);
-          }
-          if (command.status) {
-            updatedItem = await updateAdminAIFeedbackStatus(command.id, command.status);
-          }
-          if (updatedItem) {
-            const updatedRecord = feedbackToRecord(updatedItem);
-            setState((previous) => ({
-              ...previous,
-              feedback: previous.feedback.map((record) => (record.id === updatedRecord.id ? updatedRecord : record)),
-            }));
-            showNotice('Đã gửi phản hồi và cập nhật trạng thái ý kiến thành công.');
-            return;
-          }
-        } catch {
-          // Fallback to local
+        let updatedItem: AdminAIFeedbackItem | null = null;
+        if (command.reply) {
+          updatedItem = await replyAdminAIFeedback(command.id, command.reply);
+        }
+        if (command.status) {
+          updatedItem = await updateAdminAIFeedbackStatus(command.id, command.status);
+        }
+        if (updatedItem) {
+          const updatedRecord = feedbackToRecord(updatedItem);
+          setState((previous) => ({
+            ...previous,
+            feedback: previous.feedback.map((record) => (record.id === updatedRecord.id ? updatedRecord : record)),
+          }));
+          showNotice('Đã gửi phản hồi và cập nhật trạng thái ý kiến thành công.');
+          return;
         }
       }
 
@@ -557,327 +577,294 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       }
 
       if (command.type === 'save' && command.collection === 'users' && command.id && /^\d+$/.test(command.id)) {
-        try {
-          const updated = userToRecord(
-            await updateAdminUserProfile(command.id, {
-              fullName: command.values.name,
-              phone: command.values.phone,
-              systemRole: command.values.role,
-            }),
-          );
-          setState((previous) => ({
-            ...previous,
-            users: previous.users.map((record) => (record.id === updated.id ? updated : record)),
-          }));
-          showNotice('Đã cập nhật thông tin tài khoản thành công.');
-          return;
-        } catch {
-          // Fallback to local
-        }
+        const updated = userToRecord(
+          await updateAdminUserProfile(command.id, {
+            fullName: command.values.name,
+            phone: command.values.phone,
+            systemRole: command.values.role,
+          }),
+        );
+        setState((previous) => ({
+          ...previous,
+          users: previous.users.map((record) => (record.id === updated.id ? updated : record)),
+        }));
+        showNotice('Đã cập nhật thông tin tài khoản thành công.');
+        return;
       }
 
-      if (command.type === 'save' && command.collection === 'farms' && command.id && /^\d+$/.test(command.id)) {
-        try {
-          const updated = farmToRecord(
-            await updateAdminFarm(command.id, {
-              farmName: command.values.name,
-              address: command.values.address,
-              description: command.values.description,
-            }),
-          );
+      if (command.type === 'save' && command.collection === 'farms') {
+        const payload = {
+          farmName: command.values.name,
+          address: command.values.address,
+          description: command.values.description,
+          ownerEmail: command.values.ownerEmail,
+        };
+        if (command.id && /^\d+$/.test(command.id)) {
+          const updated = farmToRecord(await updateAdminFarm(command.id, payload));
           setState((previous) => ({
             ...previous,
             farms: previous.farms.map((record) => (record.id === updated.id ? updated : record)),
           }));
           showNotice('Đã cập nhật thông tin trang trại thành công.');
           return;
-        } catch {
-          // Fallback to local
+        }
+        if (!command.id) {
+          const created = farmToRecord(await createAdminFarm(payload));
+          setState((previous) => ({
+            ...previous,
+            farms: [created, ...previous.farms],
+          }));
+          showNotice('Đã thêm trang trại mới thành công.');
+          return;
         }
       }
 
       if (command.type === 'status' && command.collection === 'farms' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = farmToRecord(
-            await updateAdminFarm(command.id, {
-              status: command.status.toLowerCase(),
-            }),
-          );
-          setState((previous) => ({
-            ...previous,
-            farms: previous.farms.map((record) => (record.id === updated.id ? updated : record)),
-          }));
-          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt trang trại thành công.' : 'Đã tạm ngưng trang trại thành công.');
-          return;
-        } catch {
-          // Fallback to local
-        }
+        const updated = farmToRecord(await updateAdminFarm(command.id, { status: command.status.toLowerCase() }));
+        setState((previous) => ({
+          ...previous,
+          farms: previous.farms.map((record) => (record.id === updated.id ? updated : record)),
+        }));
+        showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt trang trại thành công.' : 'Đã tạm ngưng trang trại thành công.');
+        return;
       }
 
       if (command.type === 'status' && command.collection === 'zones' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = zoneToRecord(
-            await updateAdminZone(command.id, {
-              status: command.status.toLowerCase(),
-            }),
-          );
+        const updated = zoneToRecord(await updateAdminZone(command.id, { status: command.status.toLowerCase() }));
+        setState((previous) => ({
+          ...previous,
+          zones: previous.zones.map((record) => (record.id === updated.id ? updated : record)),
+        }));
+        showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt phân khu thành công.' : 'Đã tạm ngưng phân khu thành công.');
+        return;
+      }
+
+      if (command.type === 'status' && command.collection === 'blocks' && /^\d+$/.test(command.id)) {
+        const updated = blockToRecord(await updateAdminBlock(command.id, { status: command.status.toLowerCase() }));
+        setState((previous) => ({
+          ...previous,
+          blocks: previous.blocks.map((record) => (record.id === updated.id ? updated : record)),
+        }));
+        showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt lô đất thành công.' : 'Đã tạm ngưng lô đất thành công.');
+        return;
+      }
+
+      if (command.type === 'status' && command.collection === 'crops' && /^\d+$/.test(command.id)) {
+        const updated = cropToRecord(await updateAdminCropCategory(command.id, { status: command.status }));
+        setState((previous) => ({
+          ...previous,
+          crops: previous.crops.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
+        }));
+        showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt danh mục cây trồng thành công.' : 'Đã ngừng sử dụng danh mục cây trồng thành công.');
+        return;
+      }
+
+      if (command.type === 'status' && command.collection === 'rules' && /^\d+$/.test(command.id)) {
+        const updated = ruleToRecord(await updateAdminChecklistRule(command.id, { isActive: command.status === 'ACTIVE' }));
+        setState((previous) => ({
+          ...previous,
+          rules: previous.rules.map((record) => (record.id === updated.id ? updated : record)),
+        }));
+        showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt áp dụng quy tắc thành công.' : 'Đã ngừng áp dụng quy tắc thành công.');
+        return;
+      }
+
+      if (command.type === 'status' && command.collection === 'compliance' && /^\d+$/.test(command.id)) {
+        const updated = complianceToRecord(await updateAdminCompliance(command.id, { status: command.status }));
+        setState((previous) => ({
+          ...previous,
+          compliance: previous.compliance.map((record) => (record.id === updated.id ? updated : record)),
+        }));
+        showNotice('Đã cập nhật trạng thái mùa vụ thành công.');
+        return;
+      }
+
+      if (command.type === 'save' && command.collection === 'zones') {
+        const payload = {
+          zoneName: command.values.name,
+          areaValue: command.values.areaValue,
+          areaUnit: command.values.areaUnit,
+          description: command.values.description,
+        };
+        if (command.id && /^\d+$/.test(command.id)) {
+          const updated = zoneToRecord(await updateAdminZone(command.id, payload));
           setState((previous) => ({
             ...previous,
             zones: previous.zones.map((record) => (record.id === updated.id ? updated : record)),
           }));
-          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt phân khu thành công.' : 'Đã tạm ngưng phân khu thành công.');
+          showNotice('Đã cập nhật thông tin phân khu thành công.');
           return;
-        } catch {
-          // Fallback to local
         }
-      }
-
-      if (command.type === 'status' && command.collection === 'blocks' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = blockToRecord(
-            await updateAdminBlock(command.id, {
-              status: command.status.toLowerCase(),
-            }),
-          );
+        if (!command.id) {
+          const created = zoneToRecord(await createAdminZone(payload));
           setState((previous) => ({
             ...previous,
-            blocks: previous.blocks.map((record) => (record.id === updated.id ? updated : record)),
+            zones: [created, ...previous.zones],
           }));
-          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt lô đất thành công.' : 'Đã tạm ngưng lô đất thành công.');
+          showNotice('Đã thêm phân khu mới thành công.');
           return;
-        } catch {
-          // Fallback to local
-        }
-      }
-
-      if (command.type === 'status' && command.collection === 'crops' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = cropToRecord(
-            await updateAdminCropCategory(command.id, {
-              status: command.status,
-            }),
-          );
-          setState((previous) => ({
-            ...previous,
-            crops: previous.crops.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
-          }));
-          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt danh mục cây trồng thành công.' : 'Đã ngừng sử dụng danh mục cây trồng thành công.');
-          return;
-        } catch {
-          // Fallback to local
-        }
-      }
-
-      if (command.type === 'status' && command.collection === 'rules' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = ruleToRecord(
-            await updateAdminChecklistRule(command.id, {
-              isActive: command.status === 'ACTIVE',
-            }),
-          );
-          setState((previous) => ({
-            ...previous,
-            rules: previous.rules.map((record) => (record.id === updated.id ? updated : record)),
-          }));
-          showNotice(command.status === 'ACTIVE' ? 'Đã kích hoạt áp dụng quy tắc thành công.' : 'Đã ngừng áp dụng quy tắc thành công.');
-          return;
-        } catch {
-          // Fallback to local
-        }
-      }
-
-      if (command.type === 'status' && command.collection === 'compliance' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = complianceToRecord(
-            await updateAdminCompliance(command.id, {
-              status: command.status,
-            }),
-          );
-          setState((previous) => ({
-            ...previous,
-            compliance: previous.compliance.map((record) => (record.id === updated.id ? updated : record)),
-          }));
-          showNotice('Đã cập nhật trạng thái mùa vụ thành công.');
-          return;
-        } catch {
-          // Fallback to local
-        }
-      }
-
-      if (command.type === 'save' && command.collection === 'zones') {
-        try {
-          const payload = {
-            zoneName: command.values.name,
-            areaValue: command.values.areaValue,
-            areaUnit: command.values.areaUnit,
-            description: command.values.description,
-          };
-          if (command.id && /^\d+$/.test(command.id)) {
-            const updated = zoneToRecord(await updateAdminZone(command.id, payload));
-            setState((previous) => ({
-              ...previous,
-              zones: previous.zones.map((record) => (record.id === updated.id ? updated : record)),
-            }));
-            showNotice('Đã cập nhật thông tin phân khu thành công.');
-            return;
-          }
-          if (!command.id) {
-            const created = zoneToRecord(await createAdminZone(payload));
-            setState((previous) => ({
-              ...previous,
-              zones: [created, ...previous.zones],
-            }));
-            showNotice('Đã thêm phân khu mới thành công.');
-            return;
-          }
-        } catch {
-          // Fallback to local
         }
       }
 
       if (command.type === 'save' && command.collection === 'blocks') {
-        try {
-          const payload = {
-            blockName: command.values.name,
-            areaValue: command.values.areaValue,
-            areaUnit: command.values.areaUnit,
-            soilType: command.values.soilType,
-            description: command.values.description,
-          };
-          if (command.id && /^\d+$/.test(command.id)) {
-            const updated = blockToRecord(await updateAdminBlock(command.id, payload));
-            setState((previous) => ({
-              ...previous,
-              blocks: previous.blocks.map((record) => (record.id === updated.id ? updated : record)),
-            }));
-            showNotice('Đã cập nhật thông tin lô đất thành công.');
-            return;
-          }
-          if (!command.id) {
-            const created = blockToRecord(await createAdminBlock(payload));
-            setState((previous) => ({
-              ...previous,
-              blocks: [created, ...previous.blocks],
-            }));
-            showNotice('Đã thêm lô đất mới thành công.');
-            return;
-          }
-        } catch {
-          // Fallback to local
+        const payload = {
+          blockName: command.values.name,
+          areaValue: command.values.areaValue,
+          areaUnit: command.values.areaUnit,
+          soilType: command.values.soilType,
+          description: command.values.description,
+        };
+        if (command.id && /^\d+$/.test(command.id)) {
+          const updated = blockToRecord(await updateAdminBlock(command.id, payload));
+          setState((previous) => ({
+            ...previous,
+            blocks: previous.blocks.map((record) => (record.id === updated.id ? updated : record)),
+          }));
+          showNotice('Đã cập nhật thông tin lô đất thành công.');
+          return;
+        }
+        if (!command.id) {
+          const created = blockToRecord(await createAdminBlock(payload));
+          setState((previous) => ({
+            ...previous,
+            blocks: [created, ...previous.blocks],
+          }));
+          showNotice('Đã thêm lô đất mới thành công.');
+          return;
         }
       }
 
       if (command.type === 'save' && command.collection === 'compliance') {
-        try {
-          const payload = {
-            seasonName: command.values.name,
-            cropName: command.values.cropName,
-            farmName: command.values.farmName,
-            assessmentNote: command.values.assessmentNote,
-          };
-          if (command.id && /^\d+$/.test(command.id)) {
-            const updated = complianceToRecord(await updateAdminCompliance(command.id, payload));
-            setState((previous) => ({
-              ...previous,
-              compliance: previous.compliance.map((record) => (record.id === updated.id ? updated : record)),
-            }));
-            showNotice('Đã cập nhật hồ sơ mùa vụ & VietGAP thành công.');
-            return;
-          }
-          if (!command.id) {
-            const created = complianceToRecord(await createAdminCompliance(payload));
-            setState((previous) => ({
-              ...previous,
-              compliance: [created, ...previous.compliance],
-            }));
-            showNotice('Đã thêm hồ sơ mùa vụ & VietGAP thành công.');
-            return;
-          }
-        } catch {
-          // Fallback to local
+        const payload = {
+          seasonName: command.values.name,
+          cropName: command.values.cropName,
+          farmName: command.values.farmName,
+          assessmentNote: command.values.assessmentNote,
+        };
+        if (command.id && /^\d+$/.test(command.id)) {
+          const updated = complianceToRecord(await updateAdminCompliance(command.id, payload));
+          setState((previous) => ({
+            ...previous,
+            compliance: previous.compliance.map((record) => (record.id === updated.id ? updated : record)),
+          }));
+          showNotice('Đã cập nhật hồ sơ mùa vụ & VietGAP thành công.');
+          return;
+        }
+        if (!command.id) {
+          const created = complianceToRecord(await createAdminCompliance(payload));
+          setState((previous) => ({
+            ...previous,
+            compliance: [created, ...previous.compliance],
+          }));
+          showNotice('Đã thêm hồ sơ mùa vụ & VietGAP thành công.');
+          return;
         }
       }
 
       if (command.type === 'save' && command.collection === 'crops') {
-        try {
-          const payload = {
-            categoryName: command.values.name,
-            description: command.values.description || '',
-          };
-          if (command.id && /^\d+$/.test(command.id)) {
-            await updateAdminCropCategory(command.id, payload);
-          } else if (!command.id) {
-            await createAdminCropCategory(payload);
-          }
-        } catch {
-          // Fallback to local
+        const payload = {
+          categoryName: command.values.name,
+          description: command.values.description || '',
+        };
+        if (command.id && /^\d+$/.test(command.id)) {
+          const updated = cropToRecord(await updateAdminCropCategory(command.id, payload));
+          setState((previous) => ({
+            ...previous,
+            crops: previous.crops.map((record) => (record.id === updated.id ? { ...record, ...updated } : record)),
+          }));
+          showNotice('Đã cập nhật danh mục cây trồng thành công.');
+          return;
+        }
+        if (!command.id) {
+          const created = cropToRecord(await createAdminCropCategory(payload));
+          setState((previous) => ({
+            ...previous,
+            crops: [created, ...previous.crops],
+          }));
+          showNotice('Đã thêm danh mục cây trồng mới thành công.');
+          return;
         }
       }
 
       if (command.type === 'save' && command.collection === 'rules') {
-        try {
-          const payload = {
-            ruleName: command.values.name,
-            description: command.values.guidance || '',
-            category: command.values.activity || 'ALL',
-            isActive: true,
-          };
-          if (command.id && /^\d+$/.test(command.id)) {
-            await updateAdminChecklistRule(command.id, payload);
-          } else if (!command.id) {
-            await createAdminChecklistRule(payload);
-          }
-        } catch {
-          // Fallback to local
+        const reqLevel = (command.values.requirement || 'REQUIRED').toUpperCase();
+        const ruleLevel = reqLevel === 'REQUIRED' ? 'MUST' : reqLevel;
+        const payload = {
+          ruleCode: command.values.clause?.trim() || undefined,
+          ruleName: command.values.name,
+          description: command.values.guidance || '',
+          category: command.values.activity || 'RECORDS_AND_TRAINING',
+          ruleLevel,
+          targetCropType: command.values.group || 'ALL',
+          isActive: true,
+        };
+        if (command.id && /^\d+$/.test(command.id)) {
+          const updated = ruleToRecord(await updateAdminChecklistRule(command.id, payload));
+          setState((previous) => ({
+            ...previous,
+            rules: previous.rules.map((record) => (record.id === updated.id ? updated : record)),
+          }));
+          showNotice('Đã cập nhật quy tắc bảng kiểm thành công.');
+          return;
+        }
+        if (!command.id) {
+          const created = ruleToRecord(await createAdminChecklistRule(payload));
+          setState((previous) => ({
+            ...previous,
+            rules: [created, ...previous.rules],
+          }));
+          showNotice('Đã thêm tiêu chí bảng kiểm VietGAP mới thành công.');
+          return;
         }
       }
 
       if (command.type === 'save' && command.collection === 'articles') {
-        try {
-          const payload = {
-            title: command.values.name,
-            category: command.values.category,
-            sourceUrl: command.values.source,
-            summary: (command.values.content || '').slice(0, 220),
-            body: command.values.content,
-            status: 'draft',
-          };
-          if (command.id && /^\d+$/.test(command.id)) {
-            await updateAdminArticle(command.id, payload);
-          } else if (!command.id) {
-            await createAdminArticle(payload);
-          }
-        } catch {
-          // Fallback to local
+        const payload = {
+          title: command.values.name,
+          category: command.values.category,
+          sourceUrl: command.values.source,
+          summary: (command.values.content || '').slice(0, 220),
+          body: command.values.content,
+          status: 'draft',
+        };
+        if (command.id && /^\d+$/.test(command.id)) {
+          const updated = articleToRecord(await updateAdminArticle(command.id, payload));
+          setState((previous) => ({
+            ...previous,
+            articles: previous.articles.map((record) => (record.id === updated.id ? { ...record, ...updated } : record)),
+          }));
+          showNotice('Đã cập nhật bài viết kiến thức thành công.');
+          return;
+        }
+        if (!command.id) {
+          const created = articleToRecord(await createAdminArticle(payload));
+          setState((previous) => ({
+            ...previous,
+            articles: [created, ...previous.articles],
+          }));
+          showNotice('Đã tạo bài viết kiến thức mới thành công.');
+          return;
         }
       }
 
       if (command.type === 'status' && command.collection === 'articles' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = articleToRecord(await updateAdminArticleStatus(command.id, command.status));
-          setState((previous) => ({
-            ...previous,
-            articles: previous.articles.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
-          }));
-          showNotice(command.status === 'APPROVED' ? 'Đã duyệt và công bố bài viết thành công.' : 'Đã lưu trữ bài viết thành công.');
-          return;
-        } catch {
-          // Fallback to local
-        }
+        const updated = articleToRecord(await updateAdminArticleStatus(command.id, command.status));
+        setState((previous) => ({
+          ...previous,
+          articles: previous.articles.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
+        }));
+        showNotice(command.status === 'APPROVED' ? 'Đã duyệt và công bố bài viết thành công.' : 'Đã lưu trữ bài viết thành công.');
+        return;
       }
 
       if (command.type === 'status' && command.collection === 'feedback' && /^\d+$/.test(command.id)) {
-        try {
-          const updated = feedbackToRecord(await updateAdminAIFeedbackStatus(command.id, command.status));
-          setState((previous) => ({
-            ...previous,
-            feedback: previous.feedback.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
-          }));
-          showNotice(command.status === 'RESOLVED' ? 'Đã đánh dấu giải quyết phản hồi thành công.' : 'Đã mở lại phản hồi thành công.');
-          return;
-        } catch {
-          // Fallback to local
-        }
+        const updated = feedbackToRecord(await updateAdminAIFeedbackStatus(command.id, command.status));
+        setState((previous) => ({
+          ...previous,
+          feedback: previous.feedback.map((record) => (record.id === updated.id ? { ...record, ...updated, status: command.status } : record)),
+        }));
+        showNotice(command.status === 'RESOLVED' ? 'Đã đánh dấu giải quyết phản hồi thành công.' : 'Đã mở lại phản hồi thành công.');
+        return;
       }
     }
 

@@ -10,6 +10,7 @@ import {
 import type { FarmRegistrationFormErrors, FarmRegistrationFormValues } from '../types';
 import {
   VIETNAM_PROVINCES,
+  calculatePolygonAreaM2,
   fetchDistrictsForProvince,
   fetchWardsForDistrict,
   findProvinceOption,
@@ -25,6 +26,7 @@ import {
 } from '../goongMapService';
 import { useLanguage } from '../../../shared/i18n/LanguageContext';
 import { FileUpload } from '../../../shared/components/FileUpload';
+import { parseEvidenceFiles, uploadFileToCloudinary, type EvidenceFileItem } from '../../../shared/api/fileUploadService';
 
 const INITIAL_VALUES: FarmRegistrationFormValues = {
   proposedFarmName: '',
@@ -53,6 +55,10 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
   const [values, setValues] = useState<FarmRegistrationFormValues>(INITIAL_VALUES);
   const [errors, setErrors] = useState<FarmRegistrationFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [localUploadError, setLocalUploadError] = useState<string | null>(null);
+  const [boundaryError, setBoundaryError] = useState<string | null>(null);
 
   // Cascading options state (Tỉnh/TP -> Quận/Huyện -> Phường/Xã)
   const [districtOptions, setDistrictOptions] = useState<DistrictOption[]>([]);
@@ -288,14 +294,18 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
   }
 
   function handleMapBoundaryChange(points: LatLngPoint[]) {
+    setBoundaryError(null);
     setValues((prev) => ({
       ...prev,
       boundaryCoordinates: stringifyBoundaryCoordinates(points),
     }));
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setLocalUploadError(null);
+    setBoundaryError(null);
+
     const nextErrors = validateFarmRegistrationForm(values);
     setErrors(nextErrors);
     setTouched({
@@ -307,8 +317,54 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
       ward: true,
       documentUrl: true,
     });
+
+    const pts = parseBoundaryCoordinates(values.boundaryCoordinates);
+    const polyArea = calculatePolygonAreaM2(pts);
+    if (pts.length > 0 && (pts.length < 3 || polyArea <= 0)) {
+      setBoundaryError(
+        lang === 'en'
+          ? 'Farm boundary area on the map must be greater than 0 m² (at least 3 valid vertices).'
+          : 'Diện tích vùng ranh giới trang trại trên bản đồ phải lớn hơn 0 m² (cần ít nhất 3 điểm hợp lệ).'
+      );
+      return;
+    }
+
     if (hasFormErrors(nextErrors)) return;
-    onSubmit(values);
+
+    let finalValues = values;
+    if (pendingFiles.length > 0) {
+      setUploadingFiles(true);
+      try {
+        const existingItems = parseEvidenceFiles(values.documentUrl);
+        const uploadedItems: EvidenceFileItem[] = [];
+        for (const file of pendingFiles) {
+          const res = await uploadFileToCloudinary(file, 'mycropdiary/evidence');
+          uploadedItems.push({
+            name: file.name,
+            url: res.url,
+            size: file.size,
+            type: file.type,
+            publicId: res.publicId,
+          });
+        }
+        const merged = [...existingItems, ...uploadedItems];
+        finalValues = { ...values, documentUrl: JSON.stringify(merged) };
+        setValues(finalValues);
+        setPendingFiles([]);
+      } catch (err) {
+        setLocalUploadError(
+          err instanceof Error
+            ? err.message
+            : (lang === 'en' ? 'Failed to upload supporting documents. Please try again.' : 'Tải tài liệu minh chứng lên thất bại. Vui lòng thử lại.')
+        );
+        setUploadingFiles(false);
+        return;
+      } finally {
+        setUploadingFiles(false);
+      }
+    }
+
+    onSubmit(finalValues);
   }
 
   const normFilter = normalizeVietnamese(filterKeyword);
@@ -728,6 +784,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
           onLocationChange={handleMapLocationChange}
           onBoundaryChange={handleMapBoundaryChange}
         />
+        {boundaryError ? <small className="field-error" style={{ display: 'block', marginTop: '6px' }}>{boundaryError}</small> : null}
       </div>
 
       <label className="form-field structured-field-card">
@@ -747,18 +804,25 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
         <FileUpload
           value={values.documentUrl}
           onChange={(url) => updateField('documentUrl', url)}
-          error={touched.documentUrl ? errors.documentUrl : undefined}
+          error={localUploadError || (touched.documentUrl ? errors.documentUrl : undefined)}
           label={lang === 'en' ? 'Supporting Farm Documents & Images' : 'Tài liệu & Hình ảnh minh chứng trang trại'}
-          hint={lang === 'en' ? 'Upload farm photos or PDF certificates (VietGAP, land use right documents). Files are stored securely on Cloudinary.' : 'Tải lên ảnh chụp thực tế nông trại hoặc file tài liệu PDF chứng nhận VietGAP, hồ sơ quyền sử dụng đất. Tệp sẽ được lưu an toàn lên Cloudinary.'}
+          hint={lang === 'en' ? 'Select farm photos or PDF certificates. Files will only be uploaded after you click Submit Registration.' : 'Chọn ảnh chụp thực tế nông trại hoặc file PDF chứng nhận VietGAP. Tệp sẽ chỉ được tải lên sau khi bạn bấm Gửi đăng ký.'}
           folder="mycropdiary/evidence"
-          disabled={submitting}
+          disabled={submitting || uploadingFiles}
+          deferred={true}
+          pendingFiles={pendingFiles}
+          onPendingFilesChange={setPendingFiles}
         />
       </div>
 
       <div className="farm-registration-actions" style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 12, width: '100%' }}>
-        {onCancel && <Button className="ui-cancel-button" type="button" variant="secondary" disabled={submitting} onClick={onCancel}>{translate("Cancel")}</Button>}
-        <Button type="submit" variant="primary" loading={submitting}>
-          {submitting ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...') : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
+        {onCancel && <Button className="ui-cancel-button" type="button" variant="secondary" disabled={submitting || uploadingFiles} onClick={onCancel}>{translate("Cancel")}</Button>}
+        <Button type="submit" variant="primary" loading={submitting || uploadingFiles}>
+          {uploadingFiles
+            ? (lang === 'en' ? 'Uploading documents...' : 'Đang tải tài liệu lên...')
+            : submitting
+              ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...')
+              : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
         </Button>
       </div>
     </form>

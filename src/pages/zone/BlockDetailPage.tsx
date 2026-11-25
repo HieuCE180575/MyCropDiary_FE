@@ -27,7 +27,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../../features/farm-management/FarmWorkspace';
 import { farmRole } from '../../features/auth/accessPolicy';
 
-import { fetchBlockById, fetchZoneById, fetchBlockConditions, deleteBlock, fetchBlockRiskRecords, saveRiskRecord, createSoilAssessmentApi, fetchSoilAssessmentHistoryApi, fetchSoilAssessmentDetailsApi, updateSoilAssessmentApi, deleteSoilAssessmentApi, fetchWaterAssessmentHistoryApi } from '../../features/production/zoneBlockService';
+import { fetchBlockById, fetchZoneById, fetchBlockConditions, deleteBlock, fetchZoneRiskHistoryApi, recordZoneRiskApi, updateRiskControlMeasuresApi, createSoilAssessmentApi, fetchSoilAssessmentHistoryApi, fetchSoilAssessmentDetailsApi, updateSoilAssessmentApi, deleteSoilAssessmentApi, fetchWaterAssessmentHistoryApi } from '../../features/production/zoneBlockService';
 import type { SoilAssessmentBackendResp, WaterAssessmentBackendResp } from '../../features/production/zoneBlockService';
 import {
   fetchCropCategories,
@@ -219,7 +219,27 @@ export function BlockDetailPage() {
       if (catRes.status === 'fulfilled') setCategories(catRes.value);
       if (seasonsRes.status === 'fulfilled') setBlockSeasons(seasonsRes.value);
 
-      setRiskRecords(fetchBlockRiskRecords(resolvedZoneId, blockId));
+      try {
+        const beRisks = await fetchZoneRiskHistoryApi(resolvedZoneId);
+        setRiskRecords((beRisks || []).map((r) => ({
+          riskId: r.riskId,
+          targetType: 'BLOCK',
+          zoneId: r.zoneId,
+          zoneName: r.zoneName || bData.zoneName,
+          blockId: bData.blockId,
+          blockName: bData.blockName,
+          assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+          riskType: r.riskType,
+          riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+          priorFindings: '',
+          description: r.description || '',
+          controlMeasures: r.mitigationPlan || '',
+          assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
+          status: 'CONTROLLED',
+        })));
+      } catch {
+        setRiskRecords([]);
+      }
       void reloadSoilHistory(blockId, resolvedZoneId, bData.blockName);
       void reloadWaterHistory(blockId);
       if (silent) setError(null);
@@ -368,28 +388,53 @@ export function BlockDetailPage() {
     }
   };
 
-  const handleSaveBlockRisk = (e: React.FormEvent) => {
+  const handleSaveBlockRisk = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!block) return;
-    const saved = saveRiskRecord({
-      riskId: selectedRisk?.riskId,
-      targetType: 'BLOCK',
-      zoneId: block.zoneId,
-      zoneName: zone?.zoneName || block.zoneName,
-      blockId: block.blockId,
-      blockName: block.blockName,
-      assessedAt: riskForm.assessedAt,
-      riskType: riskForm.riskType,
-      riskLevel: riskForm.riskLevel,
-      priorFindings: riskForm.priorFindings,
-      description: riskForm.description,
-      controlMeasures: riskForm.controlMeasures,
-      assessedByName: riskForm.assessedByName,
-      status: riskForm.status,
-    });
-    setRiskRecords(fetchBlockRiskRecords(block.zoneId, block.blockId));
-    setRiskModalMode(null);
-    showToast((message("Saved risk record for Block \"{value1}\"!", { value1: saved.riskType })));
+    try {
+      if (selectedRisk && riskModalMode === 'edit') {
+        await updateRiskControlMeasuresApi(selectedRisk.riskId, {
+          mitigationPlan: riskForm.controlMeasures,
+          riskLevel: riskForm.riskLevel.toLowerCase(),
+          description: riskForm.description,
+          riskType: riskForm.riskType,
+        });
+      } else {
+        await recordZoneRiskApi(block.zoneId, {
+          riskType: riskForm.riskType,
+          riskLevel: riskForm.riskLevel.toLowerCase(),
+          description: riskForm.description,
+          mitigationPlan: riskForm.controlMeasures,
+          assessedAt: riskForm.assessedAt ? new Date(riskForm.assessedAt).toISOString() : new Date().toISOString(),
+        });
+      }
+      const beRisks = await fetchZoneRiskHistoryApi(block.zoneId);
+      setRiskRecords((beRisks || []).map((r) => ({
+        riskId: r.riskId,
+        targetType: 'BLOCK',
+        zoneId: r.zoneId,
+        zoneName: r.zoneName || zone?.zoneName || block.zoneName,
+        blockId: block.blockId,
+        blockName: block.blockName,
+        assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        riskType: r.riskType,
+        riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+        priorFindings: '',
+        description: r.description || '',
+        controlMeasures: r.mitigationPlan || '',
+        assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
+        status: 'CONTROLLED',
+      })));
+      setRiskModalMode(null);
+      showToast((message("Saved risk record for Block \"{value1}\"!", { value1: riskForm.riskType })));
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : (lang === 'en' ? 'Failed to save risk assessment.' : 'Không thể lưu hồ sơ đánh giá rủi ro.'),
+        'error'
+      );
+    }
   };
 
   const reloadSoilHistory = async (bId: number, _zId: number, bName: string) => {

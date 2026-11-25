@@ -97,12 +97,12 @@ export function CropAreaChart({ crops, demo }: { crops: CropArea[]; demo: boolea
 }
 
 type Demo = ReturnType<typeof makeDashboardDemo>;
-export function UpcomingTasksPanel({ tasks }: { tasks: Demo['tasks'] }) {
+export function UpcomingTasksPanel({ tasks, demo = false }: { tasks: Demo['tasks']; demo?: boolean }) {
   const { lang, t: translate } = useLanguage();
-  return <DashboardPanel title={lang === 'en' ? 'Upcoming Tasks' : 'Công việc sắp tới'} to="/tasks" demo>
-    <div className="owner-task-list">{tasks.map(task => {
+  return <DashboardPanel title={lang === 'en' ? 'Upcoming Tasks' : 'Công việc sắp tới'} to="/tasks" demo={demo}>
+    <div className="owner-task-list">{tasks.map((task, idx) => {
       const date = new Date(task.date + 'T00:00:00');
-      return <Link to="/tasks" key={task.name} className="owner-task-row"><span className="owner-task-date"><strong>{date.getDate().toString().padStart(2, '0')}</strong><span>{lang === 'en' ? uiFormatDate(date, lang, { month: 'short' }) : 'Th' + (date.getMonth() + 1)}</span></span><span className={'owner-small-icon icon-' + task.icon}><Icon name={task.icon} /></span><span className="owner-task-info"><strong>{translate(task.name)}</strong><span>{translate(task.detail)}</span></span></Link>;
+      return <Link to="/tasks" key={`${task.name}-${idx}`} className="owner-task-row"><span className="owner-task-date"><strong>{date.getDate().toString().padStart(2, '0')}</strong><span>{lang === 'en' ? uiFormatDate(date, lang, { month: 'short' }) : 'Th' + (date.getMonth() + 1)}</span></span><span className={'owner-small-icon icon-' + task.icon}><Icon name={task.icon} /></span><span className="owner-task-info"><strong>{demo ? translate(task.name) : task.name}</strong><span>{demo ? translate(task.detail) : task.detail}</span></span></Link>;
     })}</div>
   </DashboardPanel>;
 }

@@ -1329,7 +1329,7 @@ body {
 
 .profile-details .profile-card-header h2 { margin: 0 0 4px; }
 .profile-details dl.profile-info-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   padding: 0;
   background: transparent;
   border: 0;

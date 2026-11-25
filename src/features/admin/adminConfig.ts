@@ -7,7 +7,23 @@ export const roleLabels = { USER: 'Người dùng', OWNER: 'Chủ trang trại',
 export const cropGroups = { LEAFY: 'Rau ăn lá', FRUIT: 'Rau ăn quả', ROOT: 'Rau ăn củ', HERB: 'Rau gia vị' };
 export const areaUnits = { m2: 'Mét vuông (m²)', ha: 'Hecta (ha)', sao: 'Sào (1.000 m²)' };
 export const requirementLabels = { REQUIRED: 'Bắt buộc', RECOMMENDED: 'Khuyến nghị', NOT_APPLICABLE: 'Không áp dụng' };
-export const activityLabels = { ALL: 'Tất cả hoạt động', PLANTING: 'Gieo trồng', FERTILIZING: 'Bón phân', SPRAYING: 'Phun thuốc', WATERING: 'Tưới nước', CARE: 'Chăm sóc', HARVESTING: 'Thu hoạch', OTHER: 'Hoạt động khác' };
+export const activityLabels = {
+  RECORDS_AND_TRAINING: 'Hồ sơ & Tập huấn',
+  INFRASTRUCTURE_EQUIPMENT: 'Cơ sở vật chất & Thiết bị',
+  INPUTS_AND_TESTING: 'Nguyên liệu đầu vào & Kiểm nghiệm',
+  FERTILIZER_PESTICIDE_MANAGEMENT: 'Quản lý phân bón & Thuốc BVTV',
+  HARVEST_STORAGE_TRANSPORT: 'Thu hoạch, Bảo quản & Vận chuyển',
+  TRACEABILITY_PRODUCT: 'Truy xuất nguồn gốc & Sản phẩm',
+  LABOR_SAFETY_ENVIRONMENT: 'An toàn lao động & Môi trường',
+  ALL: 'Tất cả hoạt động',
+  PLANTING: 'Gieo trồng',
+  FERTILIZING: 'Bón phân',
+  SPRAYING: 'Phun thuốc',
+  WATERING: 'Tưới nước',
+  CARE: 'Chăm sóc',
+  HARVESTING: 'Thu hoạch',
+  OTHER: 'Hoạt động khác',
+};
 export const fieldLabels = { ACTIVITY_DATE: 'Ngày thực hiện', RESPONSIBLE_PERSON: 'Người thực hiện', MATERIAL_NAME: 'Tên vật tư', MATERIAL_QUANTITY: 'Lượng vật tư sử dụng', WITHHOLDING_DAYS: 'Thời gian cách ly', HARVEST_QUANTITY: 'Sản lượng thu hoạch' };
 export const ratingLabels = { HELPFUL: 'Hữu ích', NOT_HELPFUL: 'Chưa hữu ích' };
 export const articleCategories = { VIETGAP: 'Tiêu chuẩn VietGAP', DIARY: 'Ghi chép canh tác', SOIL_WATER: 'Đất và nước', MATERIALS: 'Vật tư nông nghiệp' };

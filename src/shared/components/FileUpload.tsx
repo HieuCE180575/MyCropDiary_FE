@@ -1,4 +1,4 @@
-import { useState, type DragEvent } from 'react';
+import { useState, useEffect, useMemo, type DragEvent } from 'react';
 import {
   uploadFileToCloudinary,
   parseEvidenceFiles,
@@ -7,6 +7,7 @@ import {
   type EvidenceFileItem,
 } from '../api/fileUploadService';
 import { FilePreviewModal } from './FilePreviewModal';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Icon } from './Icon';
 import { Button } from './Button';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -21,6 +22,10 @@ export interface FileUploadProps {
   maxSizeMB?: number;
   folder?: string;
   disabled?: boolean;
+  /** When true, selected files are held locally in pendingFiles and only uploaded when the parent form submits */
+  deferred?: boolean;
+  pendingFiles?: File[];
+  onPendingFilesChange?: (files: File[]) => void;
 }
 
 export function FileUpload({
@@ -33,6 +38,9 @@ export function FileUpload({
   maxSizeMB = 15,
   folder = 'mycropdiary/evidence',
   disabled = false,
+  deferred = false,
+  pendingFiles = [],
+  onPendingFilesChange,
 }: FileUploadProps) {
   const { lang } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
@@ -40,9 +48,35 @@ export function FileUpload({
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ kind: 'uploaded' | 'pending'; index: number; name: string } | null>(null);
 
   const fileList = parseEvidenceFiles(value);
-  const totalBytes = fileList.reduce((acc, f) => acc + (f.size || 0), 0);
+
+  // Create local preview object URLs for staged (deferred) files
+  const pendingPreviewItems = useMemo(() => {
+    return pendingFiles.map((file) => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+      size: file.size,
+      type: file.type,
+    }));
+  }, [pendingFiles]);
+
+  useEffect(() => {
+    return () => {
+      pendingPreviewItems.forEach((item) => URL.revokeObjectURL(item.url));
+    };
+  }, [pendingPreviewItems]);
+
+  const allPreviewFiles: EvidenceFileItem[] = useMemo(
+    () => [...fileList, ...pendingPreviewItems],
+    [fileList, pendingPreviewItems]
+  );
+
+  const uploadedBytes = fileList.reduce((acc, f) => acc + (f.size || 0), 0);
+  const pendingBytes = pendingFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+  const totalBytes = uploadedBytes + pendingBytes;
+  const totalCount = fileList.length + pendingFiles.length;
 
   const displayLabel = label ?? (lang === 'en'
     ? 'Supporting Farm Documents & Images (VietGAP, land certificate, farm photos)'
@@ -97,7 +131,6 @@ export function FileUpload({
   const processFiles = async (newFiles: File[]) => {
     setUploadError(null);
 
-    // Kiểm tra tổng dung lượng kết hợp (file cũ + file mới)
     const newFilesBytes = newFiles.reduce((acc, f) => acc + f.size, 0);
     const combinedBytes = totalBytes + newFilesBytes;
     const maxBytes = maxSizeMB * 1024 * 1024;
@@ -108,6 +141,12 @@ export function FileUpload({
           ? `Total file size (${(combinedBytes / (1024 * 1024)).toFixed(1)}MB) exceeds the maximum limit of ${maxSizeMB}MB. Please reduce or select smaller files.`
           : `Tổng dung lượng các tập tin (${(combinedBytes / (1024 * 1024)).toFixed(1)}MB) vượt quá giới hạn tối đa ${maxSizeMB}MB. Vui lòng giảm bớt hoặc chọn file nhỏ hơn.`
       );
+      return;
+    }
+
+    // Deferred mode: stage files locally without uploading until form submit
+    if (deferred && onPendingFilesChange) {
+      onPendingFilesChange([...pendingFiles, ...newFiles]);
       return;
     }
 
@@ -145,14 +184,17 @@ export function FileUpload({
     }
   };
 
-  const handleRemoveFile = (index: number) => {
-    const updated = fileList.filter((_, idx) => idx !== index);
-    if (updated.length === 0) {
-      onChange('');
-    } else {
-      onChange(JSON.stringify(updated));
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.kind === 'uploaded') {
+      const updated = fileList.filter((_, idx) => idx !== deleteTarget.index);
+      onChange(updated.length === 0 ? '' : JSON.stringify(updated));
+    } else if (deleteTarget.kind === 'pending' && onPendingFilesChange) {
+      const updated = pendingFiles.filter((_, idx) => idx !== deleteTarget.index);
+      onPendingFilesChange(updated);
     }
     setUploadError(null);
+    setDeleteTarget(null);
   };
 
   return (
@@ -194,9 +236,13 @@ export function FileUpload({
               )}
             </p>
             <p className="file-upload-prompt-sub">
-              {lang === 'en'
-                ? 'Supports multiple files (JPG, PNG, WEBP images or PDF, DOCX files).'
-                : 'Hỗ trợ nhiều tập tin (ảnh JPG, PNG, WEBP hoặc file PDF, DOCX).'}
+              {deferred
+                ? (lang === 'en'
+                    ? 'Files will only be uploaded after you click Submit.'
+                    : 'Tệp sẽ chỉ được tải lên sau khi bạn bấm xác nhận gửi.')
+                : (lang === 'en'
+                    ? 'Supports multiple files (JPG, PNG, WEBP images or PDF, DOCX files).'
+                    : 'Hỗ trợ nhiều tập tin (ảnh JPG, PNG, WEBP hoặc file PDF, DOCX).')}
             </p>
             <span className="file-upload-prompt-limit">
               {lang === 'en' ? `CLOUDINARY STORAGE • MAX TOTAL ${maxSizeMB}MB` : `LƯU TRỮ CLOUDINARY • TỔNG TỐI ĐA ${maxSizeMB}MB`}
@@ -205,15 +251,15 @@ export function FileUpload({
         )}
       </div>
 
-      {/* Danh sách các tập tin đã tải lên */}
-      {fileList.length > 0 && (
+      {/* Danh sách các tập tin đã tải lên / chờ tải lên */}
+      {totalCount > 0 && (
         <div className="file-upload-list-card">
           <div className="file-upload-list-header">
             <span className="file-upload-list-title">
               <Icon name="check-circle" style={{ color: '#059669', fontSize: '15px' }} />
               {lang === 'en'
-                ? `Uploaded Documents List (${fileList.length} ${fileList.length === 1 ? 'file' : 'files'})`
-                : `Danh sách tài liệu đã tải lên (${fileList.length} tập tin)`}
+                ? `Selected Documents (${totalCount} ${totalCount === 1 ? 'file' : 'files'})`
+                : `Danh sách tài liệu (${totalCount} tập tin)`}
             </span>
             <span className="file-upload-list-badge">
               {lang === 'en' ? 'Total size: ' : 'Tổng dung lượng: '}
@@ -226,7 +272,7 @@ export function FileUpload({
               const typeInfo = getFileTypeInfo(file);
 
               return (
-                <div key={`${file.url}-${idx}`} className="file-upload-item-row">
+                <div key={`uploaded-${file.url}-${idx}`} className="file-upload-item-row">
                   <div className="file-upload-item-main">
                     <span className={`file-upload-item-icon ${typeInfo.badgeClass}`}>
                       <Icon name={typeInfo.iconName} />
@@ -264,7 +310,51 @@ export function FileUpload({
                     <button
                       type="button"
                       className="table-icon-btn danger"
-                      onClick={() => handleRemoveFile(idx)}
+                      onClick={() => setDeleteTarget({ kind: 'uploaded', index: idx, name: file.name })}
+                      disabled={disabled || isUploading}
+                      title={lang === 'en' ? 'Delete this file' : 'Xóa tập tin này'}
+                      aria-label={lang === 'en' ? `Delete ${file.name}` : `Xóa ${file.name}`}
+                    >
+                      <Icon name="trash" size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {pendingPreviewItems.map((file, idx) => {
+              const typeInfo = getFileTypeInfo(file);
+
+              return (
+                <div key={`pending-${file.name}-${idx}`} className="file-upload-item-row">
+                  <div className="file-upload-item-main">
+                    <span className={`file-upload-item-icon ${typeInfo.badgeClass}`}>
+                      <Icon name={typeInfo.iconName} />
+                    </span>
+                    <div className="file-upload-item-details">
+                      <strong className="file-upload-item-name" title={file.name}>
+                        {file.name}
+                      </strong>
+                      <span className="file-upload-item-size">
+                        {formatFileSize(file.size)} • {lang === 'en' ? 'Pending submit' : 'Chờ xác nhận tải lên'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="file-upload-item-actions">
+                    <button
+                      type="button"
+                      className="table-icon-btn primary"
+                      onClick={() => setPreviewIndex(fileList.length + idx)}
+                      title={lang === 'en' ? 'Preview' : 'Xem trước'}
+                      aria-label={lang === 'en' ? `Preview ${file.name}` : `Xem trước ${file.name}`}
+                    >
+                      <Icon name="eye" size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      className="table-icon-btn danger"
+                      onClick={() => setDeleteTarget({ kind: 'pending', index: idx, name: file.name })}
                       disabled={disabled || isUploading}
                       title={lang === 'en' ? 'Delete this file' : 'Xóa tập tin này'}
                       aria-label={lang === 'en' ? `Delete ${file.name}` : `Xóa ${file.name}`}
@@ -285,7 +375,7 @@ export function FileUpload({
               onClick={openFilePicker}
               disabled={disabled || isUploading}
             >
-              <Icon name="plus" size={16} /> {lang === 'en' ? 'Upload more files' : 'Tải thêm tệp khác'}
+              <Icon name="plus" size={16} /> {lang === 'en' ? 'Add more files' : 'Chọn thêm tệp khác'}
             </Button>
           </div>
         </div>
@@ -309,10 +399,25 @@ export function FileUpload({
         </small>
       )}
 
+      {/* Confirm Delete File Popup */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title={lang === 'en' ? 'Confirm delete file' : 'Xác nhận xóa tập tin'}
+        description={
+          lang === 'en'
+            ? <>Are you sure you want to remove file &quot;<strong>{deleteTarget?.name}</strong>&quot;?</>
+            : <>Bạn có chắc chắn muốn xóa tập tin &quot;<strong>{deleteTarget?.name}</strong>&quot; không?</>
+        }
+        confirmLabel={lang === 'en' ? 'Delete file' : 'Xóa tập tin'}
+        tone="danger"
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+      />
+
       {/* In-app Multi-File Preview Modal */}
-      {previewIndex !== null && fileList.length > 0 && (
+      {previewIndex !== null && allPreviewFiles.length > 0 && (
         <FilePreviewModal
-          files={fileList}
+          files={allPreviewFiles}
           initialIndex={previewIndex}
           onClose={() => setPreviewIndex(null)}
         />

@@ -28,8 +28,6 @@ import {
   unassignStaffFromZone,
   deleteZone,
   deleteBlock,
-  fetchZoneRiskRecords,
-  saveRiskRecord,
   fetchZoneRiskHistoryApi,
   fetchZoneRiskDetailsApi,
   recordZoneRiskApi,
@@ -142,26 +140,22 @@ export function ZoneDetailPage() {
       setAssignments(aData);
       try {
         const beRisks = await fetchZoneRiskHistoryApi(zoneId);
-        if (beRisks && beRisks.length > 0) {
-          setRiskRecords(beRisks.map((r) => ({
-            riskId: r.riskId,
-            targetType: 'ZONE',
-            zoneId: r.zoneId,
-            zoneName: r.zoneName || zData.zoneName,
-            assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
-            riskType: r.riskType,
-            riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
-            priorFindings: '',
-            description: r.description || '',
-            controlMeasures: r.mitigationPlan || '',
-            assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
-            status: 'CONTROLLED',
-          })));
-        } else {
-          setRiskRecords(fetchZoneRiskRecords(zoneId));
-        }
+        setRiskRecords((beRisks || []).map((r) => ({
+          riskId: r.riskId,
+          targetType: 'ZONE',
+          zoneId: r.zoneId,
+          zoneName: r.zoneName || zData.zoneName,
+          assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+          riskType: r.riskType,
+          riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+          priorFindings: '',
+          description: r.description || '',
+          controlMeasures: r.mitigationPlan || '',
+          assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
+          status: 'CONTROLLED',
+        })));
       } catch {
-        setRiskRecords(fetchZoneRiskRecords(zoneId));
+        setRiskRecords([]);
       }
       if (silent) setError(null);
     } catch (err) {
@@ -309,45 +303,29 @@ export function ZoneDetailPage() {
         showToast((message("Recorded production area risk \"{value1}\" successfully!", { value1: riskForm.riskType })));
       }
       const beRisks = await fetchZoneRiskHistoryApi(zone.zoneId);
-      if (beRisks && beRisks.length > 0) {
-        setRiskRecords(beRisks.map((r) => ({
-          riskId: r.riskId,
-          targetType: 'ZONE',
-          zoneId: r.zoneId,
-          zoneName: r.zoneName || zone.zoneName,
-          assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
-          riskType: r.riskType,
-          riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
-          priorFindings: '',
-          description: r.description || '',
-          controlMeasures: r.mitigationPlan || '',
-          assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
-          status: 'CONTROLLED',
-        })));
-      }
-    } catch {
-      const saved = saveRiskRecord({
-        riskId: selectedRisk?.riskId,
+      setRiskRecords((beRisks || []).map((r) => ({
+        riskId: r.riskId,
         targetType: 'ZONE',
-        zoneId: zone.zoneId,
-        zoneName: zone.zoneName,
-        assessedAt: riskForm.assessedAt,
-        riskType: riskForm.riskType,
-        riskLevel: riskForm.riskLevel,
-        priorFindings: riskForm.priorFindings,
-        description: riskForm.description,
-        controlMeasures: riskForm.controlMeasures,
-        assessedByName: riskForm.assessedByName,
-        status: riskForm.status,
-      });
-      setRiskRecords(fetchZoneRiskRecords(zone.zoneId));
+        zoneId: r.zoneId,
+        zoneName: r.zoneName || zone.zoneName,
+        assessedAt: r.assessedAt ? r.assessedAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        riskType: r.riskType,
+        riskLevel: (r.riskLevel ? r.riskLevel.toUpperCase() : 'MEDIUM') as 'LOW' | 'MEDIUM' | 'HIGH',
+        priorFindings: '',
+        description: r.description || '',
+        controlMeasures: r.mitigationPlan || '',
+        assessedByName: r.assessedByName || 'Cán bộ kỹ thuật',
+        status: 'CONTROLLED',
+      })));
+      setRiskModalMode(null);
+    } catch (err) {
       showToast(
-        (lang === 'en' ? selectedRisk ? `Updated control measures for "${saved.riskType}"!` : `Added risk record for Zone "${saved.riskType}"!` : selectedRisk
-          ? `Đã cập nhật biện pháp kiểm soát cho "${saved.riskType}"!`
-          : `Đã thêm hồ sơ rủi ro Zone "${saved.riskType}"!`)
+        err instanceof Error
+          ? err.message
+          : (lang === 'en' ? 'Failed to save risk assessment.' : 'Không thể lưu hồ sơ đánh giá rủi ro.'),
+        'error'
       );
     }
-    setRiskModalMode(null);
   };
 
   const handleConfirmDeleteRisk = async () => {
@@ -978,7 +956,8 @@ export function ZoneDetailPage() {
         mode="edit"
         farmId={farmId}
         farmName={farmName}
-        initialZone={zone}
+        farmTotalAreaM2={selectedFarm?.totalAreaM2 || null}
+        initialZone={{ ...zone, blocks }}
         onClose={() => setIsEditZoneOpen(false)}
         onSuccess={(updated) => {
           setZone(updated);
@@ -991,6 +970,7 @@ export function ZoneDetailPage() {
         mode={blockToEdit ? 'edit' : 'create'}
         zoneId={zone.zoneId}
         zoneName={zone.zoneName}
+        availableZones={[{ ...zone, blocks }]}
         lockZone={true}
         initialBlock={blockToEdit}
         onClose={() => setIsBlockModalOpen(false)}

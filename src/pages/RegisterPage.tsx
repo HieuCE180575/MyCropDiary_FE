@@ -107,7 +107,7 @@ const registerBenefits = [
 ];
 
 export function RegisterPage() {
-  const { t: translate } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { isAuthenticated, setSession } = useAuth();
   const [step, setStep] = useState<'register' | 'verify'>('register');
   const [values, setValues] = useState<FormValues>(INITIAL_VALUES);
@@ -605,7 +605,7 @@ export function RegisterPage() {
                   type="button"
                   disabled={pending || googleLoading}
                   onClick={() => void handleGoogleSignInClick()}
-                  title="Đăng ký nhanh bằng Google (Chọn tài khoản trên máy)"
+                  title={lang === 'en' ? 'Quick sign up with Google (Choose an account)' : 'Đăng ký nhanh bằng Google (Chọn tài khoản trên máy)'}
                 >
                   <svg className="google-svg-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
                     <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -613,7 +613,11 @@ export function RegisterPage() {
                     <path fill="#FBBC05" d="M5.28 14.27A7.195 7.195 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.25A11.966 11.966 0 0 0 0 12c0 1.92.45 3.74 1.25 5.42l4.03-3.15z"/>
                     <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                   </svg>
-                  <span>{googleLoading ? 'Đang mở Google...' : 'Đăng ký nhanh bằng Google'}</span>
+                  <span>
+                    {googleLoading
+                      ? (lang === 'en' ? 'Opening Google...' : 'Đang mở Google...')
+                      : (lang === 'en' ? 'Quick Sign Up with Google' : 'Đăng ký nhanh bằng Google')}
+                  </span>
                 </button>
               </>
             )}

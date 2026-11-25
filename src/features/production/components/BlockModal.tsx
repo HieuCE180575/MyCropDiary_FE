@@ -128,13 +128,35 @@ export function BlockModal({
         return;
       }
     }
-    if (targetZone && targetZone.areaValue && areaNum > targetZone.areaValue) {
-      setError(
-        (lang === 'en' ? `Block area (${areaNum} ${values.areaUnit}) must not exceed the zone area ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).` : `Diện tích Block (${areaNum} ${values.areaUnit}) không được lớn hơn diện tích của phân khu ${targetZone.zoneName} (${targetZone.areaValue} ${targetZone.areaUnit}).`)
-      );
-      areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      areaValueRef.current?.focus();
-      return;
+    if (targetZone && targetZone.areaValue) {
+      const toM2 = (val: number | null | undefined, unit?: string | null) =>
+        !val || !Number.isFinite(val) ? 0 : unit?.toLowerCase() === 'ha' ? val * 10000 : val;
+      const zoneAreaM2 = toM2(targetZone.areaValue, targetZone.areaUnit);
+      const newBlockAreaM2 = toM2(areaNum, values.areaUnit);
+      if (newBlockAreaM2 > zoneAreaM2) {
+        setError(
+          (lang === 'en'
+            ? `Block area (${Math.round(newBlockAreaM2).toLocaleString()} m²) must not exceed the zone area ${targetZone.zoneName} (${Math.round(zoneAreaM2).toLocaleString()} m²).`
+            : `Diện tích lô (${Math.round(newBlockAreaM2).toLocaleString()} m²) không được lớn hơn diện tích phân khu ${targetZone.zoneName} (${Math.round(zoneAreaM2).toLocaleString()} m²).`)
+        );
+        areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        areaValueRef.current?.focus();
+        return;
+      }
+      const existingBlocksM2 = (targetZone.blocks || [])
+        .filter((b) => mode === 'create' || b.blockId !== initialBlock?.blockId)
+        .reduce((sum, b) => sum + toM2(b.areaValue, b.areaUnit), 0);
+      const totalBlocksM2 = existingBlocksM2 + newBlockAreaM2;
+      if (totalBlocksM2 > zoneAreaM2) {
+        setError(
+          (lang === 'en'
+            ? `Total area of all blocks (${Math.round(totalBlocksM2).toLocaleString()} m²) exceeds the area of zone ${targetZone.zoneName} (${Math.round(zoneAreaM2).toLocaleString()} m²).`
+            : `Tổng diện tích các lô đất (${Math.round(totalBlocksM2).toLocaleString()} m²) vượt quá diện tích phân khu ${targetZone.zoneName} (${Math.round(zoneAreaM2).toLocaleString()} m²).`)
+        );
+        areaValueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        areaValueRef.current?.focus();
+        return;
+      }
     }
 
     setLoading(true);

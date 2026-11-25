@@ -40,6 +40,7 @@ import {
 import { VietGapInitRunModal } from './VietGapInitRunModal';
 import { VietGapAuditWorkspaceModal } from './VietGapAuditWorkspaceModal';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { farmRole } from '../auth/accessPolicy';
 import { HazardousWasteManager } from './HazardousWasteManager';
 import { EquipmentMaintenanceManager } from './EquipmentMaintenanceManager';
 import { CustomerComplaintManager } from './CustomerComplaintManager';
@@ -50,6 +51,7 @@ interface VietGAPComplianceProps {
 
 export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComplianceProps) {
   const { selectedFarm } = useFarmWorkspace();
+  const isOwner = farmRole(selectedFarm) === 'OWNER';
   const { lang, t: translate } = useLanguage();
   const navigate = useNavigate();
   const waterDetailLoader = useDetailRequest(selectedFarm?.id);
@@ -1998,14 +2000,14 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
       {/* Tab 6: Súc rửa bình phun & Bảo dưỡng thiết bị (Mục 4.9 VietGAP) */}
       {activeTab === 'equipment' && selectedFarm?.id && (
         <div style={{ marginTop: '10px' }}>
-          <EquipmentMaintenanceManager farmId={selectedFarm.id} farmName={selectedFarm.farmName} />
+          <EquipmentMaintenanceManager farmId={selectedFarm.id} farmName={selectedFarm.farmName} isOwner={isOwner} />
         </div>
       )}
 
       {/* Tab 7: Tiếp nhận khiếu nại khách hàng & Thu hồi sản phẩm (Mục 4.10 VietGAP) */}
       {activeTab === 'complaints' && selectedFarm?.id && (
         <div style={{ marginTop: '10px' }}>
-          <CustomerComplaintManager farmId={selectedFarm.id} farmName={selectedFarm.farmName} />
+          <CustomerComplaintManager farmId={selectedFarm.id} farmName={selectedFarm.farmName} isOwner={isOwner} />
         </div>
       )}
 

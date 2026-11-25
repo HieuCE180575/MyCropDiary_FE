@@ -342,6 +342,16 @@ export function CropSeasonsPage() {
       return;
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (modalMode === 'create' && formValues.startDate && formValues.startDate < todayStr) {
+      const msg = lang === 'en'
+        ? 'Season start date cannot be in the past.'
+        : 'Ngày bắt đầu mùa vụ không được chọn trong quá khứ.';
+      setSeasonModalError(msg);
+      showToast(msg, 'error');
+      return;
+    }
+
     if (formValues.endDate && formValues.endDate < formValues.startDate) {
       const msg = message("Season end date ({value1}) cannot be before the start date ({value2}).", { value1: formValues.endDate, value2: formValues.startDate });
       setSeasonModalError(msg);
@@ -557,6 +567,11 @@ export function CropSeasonsPage() {
 
           <form onSubmit={handleSaveSeason} noValidate>
             <div className="modal-body">
+            {seasonModalError && (
+              <div className="form-error-banner" role="alert" style={{ marginBottom: '12px' }}>
+                {typeof seasonModalError === 'string' ? translate(seasonModalError) : translate(seasonModalError)}
+              </div>
+            )}
             <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
@@ -595,8 +610,16 @@ export function CropSeasonsPage() {
                   <input className="ui-input"
                     id="modal-cs-start"
                     type="date"
+                    min={modalMode === 'create' ? new Date().toISOString().split('T')[0] : undefined}
                     value={formValues.startDate}
-                    onChange={(e) => setFormValues({ ...formValues, startDate: e.target.value })}
+                    onChange={(e) => {
+                      const nextStart = e.target.value;
+                      setFormValues((prev) => ({
+                        ...prev,
+                        startDate: nextStart,
+                      }));
+                      setSeasonModalError(null);
+                    }}
                     required
                   />
                 </div>
@@ -613,8 +636,12 @@ export function CropSeasonsPage() {
                   <input className="ui-input"
                     id="modal-cs-end"
                     type="date"
+                    min={formValues.startDate || new Date().toISOString().split('T')[0]}
                     value={formValues.endDate}
-                    onChange={(e) => setFormValues({ ...formValues, endDate: e.target.value })}
+                    onChange={(e) => {
+                      setFormValues({ ...formValues, endDate: e.target.value });
+                      setSeasonModalError(null);
+                    }}
                   />
                 </div>
               </div>

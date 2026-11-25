@@ -1,166 +1,172 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { formatDate, formatNumber } from '../../shared/format/formatters';
 import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
 import { Icon } from '../../shared/components/Icon';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Pencil } from 'lucide-react';
+import {
+  type HazardousWasteResp,
+  fetchHazardousWastesApi,
+  createHazardousWasteApi,
+  updateHazardousWasteApi,
+  deleteHazardousWasteApi,
+} from './vietgapRecordsService';
 
-export interface HazardousWasteLog {
-  id: string;
-  farmId: number;
-  date: string;
-  sourceLocation: string; // Lô vừa phun hoặc kho
-  wasteType: 'pesticide_bottle' | 'fertilizer_bag' | 'chemical_packaging' | 'other';
-  quantity: number;
-  unit: string;
-  storageMethod: 'secure_sealed_tank' | 'handed_over' | 'temporary_bin';
-  disposalPartner?: string;
-  handoverDocNo?: string;
-  recorderName: string;
-  notes?: string;
-}
-
-const STORAGE_KEY = 'mycropdiary_hazardous_waste_logs';
+export type HazardousWasteLog = HazardousWasteResp;
 
 export function HazardousWasteManager({ farmId, farmName }: { farmId: number; farmName: string }) {
   const { lang } = useLanguage();
-  const [logs, setLogs] = useState<HazardousWasteLog[]>([]);
+  const [logs, setLogs] = useState<HazardousWasteResp[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLog, setEditingLog] = useState<HazardousWasteResp | null>(null);
   const [filterType, setFilterType] = useState('ALL');
 
   // Form State
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [sourceLocation, setSourceLocation] = useState('');
-  const [wasteType, setWasteType] = useState<HazardousWasteLog['wasteType']>('pesticide_bottle');
+  const [collectionDate, setCollectionDate] = useState(new Date().toISOString().slice(0, 10));
+  const [wasteType, setWasteType] = useState<'pesticide_bottle' | 'fertilizer_pack' | 'medical' | 'other'>('pesticide_bottle');
   const [quantity, setQuantity] = useState<number | ''>(5);
   const [unit, setUnit] = useState('vỏ chai');
-  const [storageMethod, setStorageMethod] = useState<HazardousWasteLog['storageMethod']>('secure_sealed_tank');
-  const [disposalPartner, setDisposalPartner] = useState('');
-  const [handoverDocNo, setHandoverDocNo] = useState('');
-  const [recorderName, setRecorderName] = useState('Kỹ thuật viên trang trại');
+  const [disposalMethod, setDisposalMethod] = useState<'store_holding' | 'transfer_contractor' | 'incinerate_farm'>('store_holding');
+  const [contractorName, setContractorName] = useState('');
+  const [handoverReceiptNo, setHandoverReceiptNo] = useState('');
+  const [collectorName, setCollectorName] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Initial load from localStorage (scoped by farmId)
-  useEffect(() => {
+  const loadLogs = useCallback(async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
-      const raw = localStorage.getItem(`${STORAGE_KEY}_${farmId}`);
-      if (raw) {
-        setLogs(JSON.parse(raw));
-      } else {
-        // Seed default representative records for demo & audit compliance
-        const defaultLogs: HazardousWasteLog[] = [
-          {
-            id: 'hw-1',
-            farmId,
-            date: '2026-03-28',
-            sourceLocation: 'Lô A1 (Sau đợt phun phòng bọ trĩ)',
-            wasteType: 'pesticide_bottle',
-            quantity: 12,
-            unit: 'vỏ chai',
-            storageMethod: 'secure_sealed_tank',
-            recorderName: 'Nguyễn Văn Minh',
-            notes: 'Đã súc rửa 3 lần theo quy định VietGAP và chuyển vào bể chứa chuyên dụng có khóa nắp.',
-          },
-          {
-            id: 'hw-2',
-            farmId,
-            date: '2026-04-10',
-            sourceLocation: 'Bể rác nguy hại tập trung khu B',
-            wasteType: 'chemical_packaging',
-            quantity: 25,
-            unit: 'kg',
-            storageMethod: 'handed_over',
-            disposalPartner: 'Công ty Môi trường Đô thị & Xử lý Chất thải Nguy hại',
-            handoverDocNo: 'BB-BG-2026/04-CTNH',
-            recorderName: 'Trần Thị Thu Thảo',
-            notes: 'Bàn giao trọn gói xử lý chất thải theo hợp đồng định kỳ kèm biên bản ký nhận 2 bên.',
-          },
-        ];
-        setLogs(defaultLogs);
-        localStorage.setItem(`${STORAGE_KEY}_${farmId}`, JSON.stringify(defaultLogs));
-      }
-    } catch {
-      // fallback
+      const data = await fetchHazardousWastesApi(farmId);
+      setLogs(data);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Không thể tải nhật ký rác thải.');
+    } finally {
+      setLoading(false);
     }
   }, [farmId]);
 
-  const saveLogs = (newLogs: HazardousWasteLog[]) => {
-    setLogs(newLogs);
-    try {
-      localStorage.setItem(`${STORAGE_KEY}_${farmId}`, JSON.stringify(newLogs));
-    } catch {}
-  };
+  useEffect(() => {
+    void loadLogs();
+  }, [loadLogs]);
 
-  const handleAddLog = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sourceLocation.trim() || !quantity) return;
-
-    const newLog: HazardousWasteLog = {
-      id: `hw-${Date.now()}`,
-      farmId,
-      date,
-      sourceLocation: sourceLocation.trim(),
-      wasteType,
-      quantity: Number(quantity),
-      unit: unit.trim(),
-      storageMethod,
-      disposalPartner: disposalPartner.trim() || undefined,
-      handoverDocNo: handoverDocNo.trim() || undefined,
-      recorderName: recorderName.trim(),
-      notes: notes.trim() || undefined,
-    };
-
-    saveLogs([newLog, ...logs]);
-    setIsModalOpen(false);
-    // Reset Form
-    setSourceLocation('');
+  const openCreateModal = () => {
+    setEditingLog(null);
+    setCollectionDate(new Date().toISOString().slice(0, 10));
+    setWasteType('pesticide_bottle');
     setQuantity(5);
+    setUnit('vỏ chai');
+    setDisposalMethod('store_holding');
+    setContractorName('');
+    setHandoverReceiptNo('');
+    setCollectorName('');
     setNotes('');
-    setHandoverDocNo('');
+    setErrorMsg(null);
+    setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm(lang === 'en' ? 'Delete this hazardous waste log?' : 'Xóa bản ghi nhật ký thu gom rác này?')) {
-      saveLogs(logs.filter((l) => l.id !== id));
+  const openEditModal = (log: HazardousWasteResp) => {
+    setEditingLog(log);
+    setCollectionDate(log.collectionDate);
+    setWasteType((log.wasteType as typeof wasteType) || 'other');
+    setQuantity(log.quantity);
+    setUnit(log.unit);
+    setDisposalMethod((log.disposalMethod as typeof disposalMethod) || 'store_holding');
+    setContractorName(log.contractorName || '');
+    setHandoverReceiptNo(log.handoverReceiptNo || '');
+    setCollectorName(log.collectorName);
+    setNotes(log.notes || '');
+    setErrorMsg(null);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quantity || Number(quantity) <= 0 || !collectorName.trim()) return;
+    setSaving(true);
+    setErrorMsg(null);
+    try {
+      const payload = {
+        wasteType,
+        quantity: Number(quantity),
+        unit: unit.trim(),
+        collectionDate,
+        disposalMethod,
+        contractorName: disposalMethod === 'transfer_contractor' ? contractorName.trim() : undefined,
+        handoverReceiptNo: disposalMethod === 'transfer_contractor' ? handoverReceiptNo.trim() : undefined,
+        collectorName: collectorName.trim(),
+        notes: notes.trim() || undefined,
+      };
+      if (editingLog) {
+        const updated = await updateHazardousWasteApi(editingLog.wasteLogId, payload);
+        setLogs((prev) => prev.map((l) => (l.wasteLogId === updated.wasteLogId ? updated : l)));
+      } else {
+        const created = await createHazardousWasteApi(farmId, payload);
+        setLogs((prev) => [created, ...prev]);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Không thể lưu bản ghi rác thải.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const filteredLogs = logs.filter((l) => {
-    if (filterType === 'ALL') return true;
-    return l.wasteType === filterType;
-  });
+  const handleDelete = async (wasteLogId: number) => {
+    if (!window.confirm(lang === 'en' ? 'Delete this hazardous waste log?' : 'Xóa bản ghi nhật ký thu gom rác này?')) return;
+    setErrorMsg(null);
+    try {
+      await deleteHazardousWasteApi(wasteLogId);
+      setLogs((prev) => prev.filter((l) => l.wasteLogId !== wasteLogId));
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Không thể xóa bản ghi rác thải.');
+    }
+  };
+
+  const filteredLogs = logs.filter((l) => (filterType === 'ALL' ? true : l.wasteType === filterType));
 
   const getWasteTypeLabel = (type: string) => {
     switch (type) {
-      case 'pesticide_bottle':
-        return lang === 'en' ? 'Pesticide Bottles' : 'Vỏ chai/lọ thuốc BVTV';
-      case 'fertilizer_bag':
-        return lang === 'en' ? 'Fertilizer Bags' : 'Bao bì phân bón hóa học';
-      case 'chemical_packaging':
-        return lang === 'en' ? 'Chemical Packaging' : 'Vỏ bao gói hóa chất nguy hại';
-      default:
-        return lang === 'en' ? 'Other hazardous waste' : 'Rác thải nguy hại khác';
+      case 'pesticide_bottle': return lang === 'en' ? 'Pesticide Bottles' : 'Vỏ chai/lọ thuốc BVTV';
+      case 'fertilizer_pack': return lang === 'en' ? 'Fertilizer Packaging' : 'Bao bì phân bón hóa học';
+      case 'medical': return lang === 'en' ? 'Medical / Lab Waste' : 'Rác y tế / Kiểm nghiệm';
+      default: return lang === 'en' ? 'Other hazardous waste' : 'Rác thải nguy hại khác';
     }
   };
 
-  const getStorageBadge = (method: string) => {
-    if (method === 'handed_over') {
+  const getDisposalBadge = (method: string) => {
+    if (method === 'transfer_contractor') {
       return (
         <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>
-          ✓ {lang === 'en' ? 'Handed over for disposal' : 'Đã bàn giao đơn vị xử lý'}
+          ✓ {lang === 'en' ? 'Transferred to contractor' : 'Đã bàn giao đơn vị xử lý'}
+        </span>
+      );
+    }
+    if (method === 'incinerate_farm') {
+      return (
+        <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+          {lang === 'en' ? 'On-farm processing' : 'Xử lý tại trang trại'}
         </span>
       );
     }
     return (
       <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a' }}>
-        ⚠️ {lang === 'en' ? 'In Sealed Concrete Tank' : 'Lưu trữ bể chứa có nắp khóa'}
+        ⚠️ {lang === 'en' ? 'Stored in holding tank' : 'Lưu trữ bể chứa có nắp khóa'}
       </span>
     );
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      {errorMsg && (
+        <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '13px', fontWeight: 600 }}>
+          {errorMsg}
+        </div>
+      )}
+
       <div className="panel" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
         <div>
           <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 6px', color: 'var(--color-primary-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -170,12 +176,12 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
             {lang === 'en'
               ? 'Record collection, triple rinsing, and safe disposal/handover of chemical waste containers for '
-              : 'Ghi chép thu gom, súc rửa 3 lần và lưu trữ/bàn giao xử lý chất thải nguy hại trang trại '}
+              : 'Ghi chép thu gom, súc rửa 3 lần và lưu trữ/bàn giao xử lý chất thải nguy hại (UC-47, BR-98) cho '}
             <strong>{farmName}</strong>
           </p>
         </div>
 
-        <Button variant="primary" onClick={() => setIsModalOpen(true)}>
+        <Button variant="primary" onClick={openCreateModal}>
           <Plus size={16} />
           {lang === 'en' ? 'Record Waste Collection' : 'Ghi chép đợt thu gom rác'}
         </Button>
@@ -192,8 +198,9 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
         >
           <option value="ALL">{lang === 'en' ? 'All waste types' : 'Tất cả loại rác thải'}</option>
           <option value="pesticide_bottle">{lang === 'en' ? 'Pesticide Bottles' : 'Vỏ chai/lọ thuốc BVTV'}</option>
-          <option value="fertilizer_bag">{lang === 'en' ? 'Fertilizer Bags' : 'Bao bì phân bón'}</option>
-          <option value="chemical_packaging">{lang === 'en' ? 'Chemical Packaging' : 'Vỏ bao gói hóa chất'}</option>
+          <option value="fertilizer_pack">{lang === 'en' ? 'Fertilizer Packaging' : 'Bao bì phân bón'}</option>
+          <option value="medical">{lang === 'en' ? 'Medical Waste' : 'Rác y tế / Kiểm nghiệm'}</option>
+          <option value="other">{lang === 'en' ? 'Other' : 'Rác thải nguy hại khác'}</option>
         </select>
       </div>
 
@@ -204,17 +211,23 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
             <thead>
               <tr>
                 <th>{lang === 'en' ? 'Date' : 'Ngày thu gom'}</th>
-                <th>{lang === 'en' ? 'Source / Plot' : 'Khu vực phát sinh'}</th>
                 <th>{lang === 'en' ? 'Waste Category' : 'Phân loại rác'}</th>
                 <th>{lang === 'en' ? 'Quantity' : 'Số lượng'}</th>
-                <th>{lang === 'en' ? 'Storage / Disposal Status' : 'Hình thức lưu trữ / Xử lý'}</th>
-                <th>{lang === 'en' ? 'Disposal Unit / Doc #' : 'Đơn vị nhận / Số biên bản'}</th>
-                <th>{lang === 'en' ? 'Recorder' : 'Người ghi chép'}</th>
+                <th>{lang === 'en' ? 'Disposal Status' : 'Hình thức lưu trữ / Xử lý'}</th>
+                <th>{lang === 'en' ? 'Disposal Unit / Receipt #' : 'Đơn vị nhận / Số biên bản'}</th>
+                <th>{lang === 'en' ? 'Collector' : 'Người thực hiện'}</th>
+                <th>{lang === 'en' ? 'Notes' : 'Ghi chú'}</th>
                 <th style={{ textAlign: 'center' }}>{lang === 'en' ? 'Action' : 'Thao tác'}</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.length === 0 ? (
+              {loading && logs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: 'var(--color-muted)' }}>
+                    {lang === 'en' ? 'Loading hazardous waste records...' : 'Đang tải nhật ký rác thải...'}
+                  </td>
+                </tr>
+              ) : filteredLogs.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '30px', color: 'var(--color-muted)' }}>
                     {lang === 'en' ? 'No hazardous waste records logged yet.' : 'Chưa có bản ghi thu gom rác thải nguy hại nào.'}
@@ -222,28 +235,37 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
                 </tr>
               ) : (
                 filteredLogs.map((log) => (
-                  <tr key={log.id}>
-                    <td><strong>{formatDate(log.date, lang)}</strong></td>
-                    <td>{log.sourceLocation}</td>
+                  <tr key={log.wasteLogId}>
+                    <td><strong>{formatDate(log.collectionDate, lang)}</strong></td>
                     <td><span style={{ fontWeight: 600 }}>{getWasteTypeLabel(log.wasteType)}</span></td>
                     <td><strong style={{ color: '#b91c1c' }}>{formatNumber(log.quantity, lang)} {log.unit}</strong></td>
-                    <td>{getStorageBadge(log.storageMethod)}</td>
+                    <td>{getDisposalBadge(log.disposalMethod)}</td>
                     <td>
-                      {log.disposalPartner ? (
+                      {log.contractorName ? (
                         <div>
-                          <strong>{log.disposalPartner}</strong>
-                          {log.handoverDocNo && <div style={{ fontSize: '11px', color: '#047857' }}>Số BB: {log.handoverDocNo}</div>}
+                          <strong>{log.contractorName}</strong>
+                          {log.handoverReceiptNo && <div style={{ fontSize: '11px', color: '#047857' }}>Số BB: {log.handoverReceiptNo}</div>}
                         </div>
                       ) : (
                         <span style={{ color: '#888' }}>Lưu tại bể chứa</span>
                       )}
                     </td>
-                    <td>{log.recorderName}</td>
-                    <td style={{ textAlign: 'center' }}>
+                    <td>{log.collectorName}</td>
+                    <td style={{ maxWidth: '220px' }}>{log.notes || '-'}</td>
+                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <button
+                        type="button"
+                        className="table-icon-btn"
+                        onClick={() => openEditModal(log)}
+                        title={lang === 'en' ? 'Edit' : 'Cập nhật'}
+                        style={{ marginRight: '6px' }}
+                      >
+                        <Pencil size={14} />
+                      </button>
                       <button
                         type="button"
                         className="table-icon-btn danger"
-                        onClick={() => handleDelete(log.id)}
+                        onClick={() => void handleDelete(log.wasteLogId)}
                         title={lang === 'en' ? 'Delete' : 'Xóa'}
                       >
                         <Icon name="trash" size={15} />
@@ -257,14 +279,16 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
         </div>
       </div>
 
-      {/* Creation Modal */}
+      {/* Create / Edit Modal */}
       <Modal
         open={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={lang === 'en' ? 'Log Hazardous Waste & Container Disposal' : 'Ghi chép thu gom vỏ bao bì & Rác thải nguy hại'}
+        title={editingLog
+          ? (lang === 'en' ? 'Update Hazardous Waste Record' : 'Cập nhật nhật ký rác thải nguy hại')
+          : (lang === 'en' ? 'Log Hazardous Waste & Container Disposal' : 'Ghi chép thu gom vỏ bao bì & Rác thải nguy hại')}
         style={{ maxWidth: '650px', width: '95vw' }}
       >
-        <form onSubmit={handleAddLog} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={(e) => void handleSubmit(e)} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
@@ -274,8 +298,8 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
                 className="ui-input"
                 type="date"
                 required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                value={collectionDate}
+                onChange={(e) => setCollectionDate(e.target.value)}
               />
             </div>
 
@@ -286,28 +310,14 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
               <select
                 className="ui-select"
                 value={wasteType}
-                onChange={(e) => setWasteType(e.target.value as HazardousWasteLog['wasteType'])}
+                onChange={(e) => setWasteType(e.target.value as typeof wasteType)}
               >
                 <option value="pesticide_bottle">Vỏ chai/lọ thuốc BVTV</option>
-                <option value="fertilizer_bag">Bao bì phân bón hóa học</option>
-                <option value="chemical_packaging">Vỏ bao gói hóa chất nguy hại</option>
+                <option value="fertilizer_pack">Bao bì phân bón hóa học</option>
+                <option value="medical">Rác thải y tế / kiểm nghiệm</option>
                 <option value="other">Rác thải nguy hại khác</option>
               </select>
             </div>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-              {lang === 'en' ? 'Source plot or collection point' : 'Nguồn gốc phát sinh (Lô đất / Kho)'} *
-            </label>
-            <input
-              className="ui-input"
-              type="text"
-              required
-              placeholder="VD: Lô A1 (sau đợt phun thuốc trừ sâu), Kho vật tư..."
-              value={sourceLocation}
-              onChange={(e) => setSourceLocation(e.target.value)}
-            />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
@@ -318,7 +328,7 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
               <input
                 className="ui-input"
                 type="number"
-                min="0.1"
+                min="0.01"
                 step="any"
                 required
                 value={quantity}
@@ -345,41 +355,41 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
             </label>
             <select
               className="ui-select"
-              value={storageMethod}
-              onChange={(e) => setStorageMethod(e.target.value as HazardousWasteLog['storageMethod'])}
+              value={disposalMethod}
+              onChange={(e) => setDisposalMethod(e.target.value as typeof disposalMethod)}
             >
-              <option value="secure_sealed_tank">Bể chứa bê tông kín có khóa nắp (Quy chuẩn VietGAP)</option>
-              <option value="handed_over">Đã bàn giao đơn vị dịch vụ xử lý chất thải độc hại</option>
-              <option value="temporary_bin">Thùng rác phân loại tạm thời tại đồng ruộng</option>
+              <option value="store_holding">Lưu trữ bể chứa bê tông kín có khóa nắp (Quy chuẩn VietGAP)</option>
+              <option value="transfer_contractor">Đã bàn giao đơn vị dịch vụ xử lý chất thải độc hại (BR-98)</option>
+              <option value="incinerate_farm">Xử lý tại trang trại theo quy định</option>
             </select>
           </div>
 
-          {storageMethod === 'handed_over' && (
+          {disposalMethod === 'transfer_contractor' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Disposal company' : 'Đơn vị tiếp nhận xử lý'} *
+                  {lang === 'en' ? 'Disposal contractor (BR-98)' : 'Đơn vị tiếp nhận xử lý (BR-98)'} *
                 </label>
                 <input
                   className="ui-input"
                   type="text"
                   required
                   placeholder="VD: Cty Môi trường Đô thị..."
-                  value={disposalPartner}
-                  onChange={(e) => setDisposalPartner(e.target.value)}
+                  value={contractorName}
+                  onChange={(e) => setContractorName(e.target.value)}
                 />
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-                  {lang === 'en' ? 'Handover Doc No.' : 'Số biên bản bàn giao'} *
+                  {lang === 'en' ? 'Handover Receipt No. (BR-98)' : 'Số biên bản bàn giao (BR-98)'} *
                 </label>
                 <input
                   className="ui-input"
                   type="text"
                   required
                   placeholder="VD: BB-BG-2026/01"
-                  value={handoverDocNo}
-                  onChange={(e) => setHandoverDocNo(e.target.value)}
+                  value={handoverReceiptNo}
+                  onChange={(e) => setHandoverReceiptNo(e.target.value)}
                 />
               </div>
             </div>
@@ -387,35 +397,36 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
 
           <div>
             <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-              {lang === 'en' ? 'Recorder / Technical staff' : 'Người thực hiện / Ghi chép'} *
+              {lang === 'en' ? 'Collector / Technical staff' : 'Người thực hiện / Ghi chép'} *
             </label>
             <input
               className="ui-input"
               type="text"
               required
-              value={recorderName}
-              onChange={(e) => setRecorderName(e.target.value)}
+              placeholder="VD: Nguyễn Văn Minh"
+              value={collectorName}
+              onChange={(e) => setCollectorName(e.target.value)}
             />
           </div>
 
           <div>
             <label style={{ fontSize: '13px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
-              {lang === 'en' ? 'Notes' : 'Ghi chú / Quy trình súc rửa'}
+              {lang === 'en' ? 'Notes / Source location' : 'Ghi chú / Khu vực phát sinh & Quy trình súc rửa'}
             </label>
             <textarea
               className="ui-input"
               rows={2}
-              placeholder="Ghi chú thêm về việc súc rửa 3 lần hoặc vị trí bể chứa..."
+              placeholder="VD: Lô A1 - Đã súc rửa 3 lần theo quy định VietGAP và lưu vào bể chứa..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
-            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)}>
+            <Button variant="secondary" type="button" onClick={() => setIsModalOpen(false)} disabled={saving}>
               {lang === 'en' ? 'Cancel' : 'Hủy'}
             </Button>
-            <Button variant="primary" type="submit">
+            <Button variant="primary" type="submit" loading={saving}>
               {lang === 'en' ? 'Save record' : 'Lưu bản ghi'}
             </Button>
           </div>
