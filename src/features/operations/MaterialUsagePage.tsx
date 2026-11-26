@@ -752,6 +752,7 @@ function MaterialUsageContent() {
               <Button
                 type="button"
                 variant="primary"
+                className="ui-edit-action"
                 disabled={detailLoading || deletingId !== null}
                 onClick={() => {
                   const id = selectedDetail.materialUsageId;

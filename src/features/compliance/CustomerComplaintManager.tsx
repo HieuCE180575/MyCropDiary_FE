@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { validateVietnamPhone } from '../../shared/validation/phoneValidation';
 import { formatDate, formatNumber } from '../../shared/format/formatters';
 import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
@@ -103,6 +104,11 @@ export function CustomerComplaintManager({ farmId, farmName, isOwner = false }: 
   const handleCreateComplaint = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !issueDescription.trim()) return;
+    const phoneErr = validateVietnamPhone(customerPhone, lang);
+    if (phoneErr) {
+      setErrorMsg(phoneErr);
+      return;
+    }
     setSavingCreate(true);
     setErrorMsg(null);
     try {
@@ -473,11 +479,18 @@ export function CustomerComplaintManager({ farmId, farmName, isOwner = false }: 
               </label>
               <input
                 className="ui-input"
-                type="text"
+                type="tel"
+                inputMode="tel"
                 placeholder="09xx..."
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
               />
+              {(() => {
+                const phoneErr = validateVietnamPhone(customerPhone, lang);
+                return phoneErr ? (
+                  <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{phoneErr}</p>
+                ) : null;
+              })()}
             </div>
           </div>
 

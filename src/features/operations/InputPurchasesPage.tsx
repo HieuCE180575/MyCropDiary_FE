@@ -754,7 +754,6 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 </div>
                 <input id="input-purchases-page-control-1" className="ui-input"
                   type="date"
-                  min={new Date().toISOString().split('T')[0]}
                   required
                   value={newPurchaseDate}
                   onChange={(e) => setNewPurchaseDate(e.target.value)}

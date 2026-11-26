@@ -307,8 +307,8 @@ export async function respondFarmInvitation(memberId: number, action: 'approve' 
 export interface FarmWorkerResp {
   workerId: number;
   farmId: number;
-  farmMemberId: number;
-  userId: number;
+  farmMemberId?: number | null;
+  userId?: number | null;
   fullName: string;
   phoneNumber?: string | null;
   email?: string | null;
@@ -320,7 +320,9 @@ export interface FarmWorkerResp {
 }
 
 export interface FarmWorkerReq {
-  farmMemberId: number;
+  farmMemberId?: number | null;
+  fullName?: string;
+  phoneNumber?: string;
   workerCode: string;
   jobTitle?: string;
   employmentStatus?: string;

@@ -11,6 +11,7 @@ import { Modal } from '../../shared/components/Modal';
 import { formatDate as uiFormatDate } from '../../shared/format/formatters';
 
 import { usePagination } from '../../shared/hooks/usePagination';
+import { validateVietnamPhone } from '../../shared/validation/phoneValidation';
 
 import { useEffect, useState, useMemo } from 'react';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
@@ -68,6 +69,7 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
     notes: '',
   });
   const [submittingUpdate, setSubmittingUpdate] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ supplierName?: string; contactName?: string; phone?: string; email?: string }>({});
 
   // Delete Supplier Modal
   const [deletingSupplier, setDeletingSupplier] = useState<SupplierItem | null>(null);
@@ -118,44 +120,56 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
       address: '',
       notes: '',
     });
+    setFieldErrors({});
     setIsCreateOpen(true);
   };
 
-  const validateSupplierForm = (form: { supplierName: string; contactName?: string; phone?: string; email?: string }): string | null => {
+  const getSupplierFieldErrors = (form: { supplierName: string; contactName?: string; phone?: string; email?: string }) => {
+    const errors: { supplierName?: string; contactName?: string; phone?: string; email?: string } = {};
     const name = form.supplierName.trim();
     if (!name) {
-      return lang === 'en' ? 'Enter a supplier name.' : 'Vui lòng nhập tên nhà cung cấp.';
-    }
-    if (/\d/.test(name)) {
-      return lang === 'en' ? 'Supplier name must not contain numbers.' : 'Tên nhà cung cấp không được chứa chữ số.';
+      errors.supplierName = lang === 'en' ? 'Enter a supplier name.' : 'Vui lòng nhập tên nhà cung cấp.';
+    } else if (/\d/.test(name)) {
+      errors.supplierName = lang === 'en' ? 'Supplier name must not contain numbers.' : 'Tên nhà cung cấp không được chứa chữ số.';
     }
     const contact = (form.contactName || '').trim();
     if (contact && /\d/.test(contact)) {
-      return lang === 'en' ? 'Contact person name must not contain numbers.' : 'Tên người liên hệ không được chứa chữ số.';
+      errors.contactName = lang === 'en' ? 'Contact person name must not contain numbers.' : 'Tên người liên hệ không được chứa chữ số.';
     }
-    const phone = (form.phone || '').trim();
-    if (phone) {
-      if (/[a-zA-Z]/.test(phone) || !/^[0-9+\s.-]+$/.test(phone)) {
-        return lang === 'en' ? 'Phone number must contain digits only (no letters).' : 'Số điện thoại chỉ được chứa chữ số (không được nhập chữ cái).';
-      }
-      const digits = phone.replace(/[\s.-]/g, '');
-      if (!/^(0|\+84)\d{8,10}$/.test(digits)) {
-        return lang === 'en' ? 'Phone number must be 9–11 digits starting with 0 or +84.' : 'Số điện thoại phải gồm 9–11 chữ số và bắt đầu bằng 0 hoặc +84.';
-      }
+    const phoneErr = validateVietnamPhone(form.phone || '', lang);
+    if (phoneErr) {
+      errors.phone = phoneErr;
     }
     const email = (form.email || '').trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return lang === 'en' ? 'Please enter a valid email address.' : 'Địa chỉ email không đúng định dạng.';
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      errors.email = lang === 'en' ? 'Please enter a valid email address.' : 'Địa chỉ email không đúng định dạng.';
     }
-    return null;
+    return errors;
+  };
+
+  const validateSingleField = (field: 'supplierName' | 'contactName' | 'phone' | 'email', value: string) => {
+    const trimmed = value.trim();
+    let err: string | undefined;
+    if (field === 'supplierName' && trimmed && /\d/.test(trimmed)) {
+      err = lang === 'en' ? 'Supplier name must not contain numbers.' : 'Tên nhà cung cấp không được chứa chữ số.';
+    } else if (field === 'contactName' && trimmed && /\d/.test(trimmed)) {
+      err = lang === 'en' ? 'Contact person name must not contain numbers.' : 'Tên người liên hệ không được chứa chữ số.';
+    } else if (field === 'phone') {
+      err = validateVietnamPhone(value, lang) || undefined;
+    } else if (field === 'email' && trimmed && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed)) {
+      err = lang === 'en' ? 'Please enter a valid email address.' : 'Địa chỉ email không đúng định dạng.';
+    }
+    setFieldErrors((prev) => ({ ...prev, [field]: err }));
   };
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!farmId) return;
-    const validationError = validateSupplierForm(createForm);
-    if (validationError) {
-      setNotification({ text: validationError, type: 'error' });
+    const errors = getSupplierFieldErrors(createForm);
+    setFieldErrors(errors);
+    const firstError = Object.values(errors).find(Boolean);
+    if (firstError) {
+      setNotification({ text: firstError, type: 'error' });
       return;
     }
     setNotification(null);
@@ -189,6 +203,7 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
   const handleOpenEdit = (supplier: SupplierItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setNotification(null);
+    setFieldErrors({});
     setEditingSupplier(supplier);
     setUpdateForm({
       supplierName: supplier.supplierName,
@@ -203,9 +218,11 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSupplier) return;
-    const validationError = validateSupplierForm(updateForm);
-    if (validationError) {
-      setNotification({ text: validationError, type: 'error' });
+    const errors = getSupplierFieldErrors(updateForm);
+    setFieldErrors(errors);
+    const firstError = Object.values(errors).find(Boolean);
+    if (firstError) {
+      setNotification({ text: firstError, type: 'error' });
       return;
     }
     setNotification(null);
@@ -588,8 +605,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                 required
                 placeholder={lang === 'en' ? 'e.g. Green Agriculture JSC...' : 'Ví dụ: Công ty Cổ phần Nông nghiệp Xanh...'}
                 value={createForm.supplierName}
-                onChange={(e) => setCreateForm({ ...createForm, supplierName: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCreateForm({ ...createForm, supplierName: val });
+                  validateSingleField('supplierName', val);
+                }}
               />
+              {fieldErrors.supplierName && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.supplierName}</p>}
             </div>
 
             <div className="ui-form-grid" style={{ gap: '16px' }}>
@@ -604,8 +626,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                   type="text"
                   placeholder={lang === 'en' ? 'Full name...' : 'Họ và tên...'}
                   value={createForm.contactName || ''}
-                  onChange={(e) => setCreateForm({ ...createForm, contactName: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCreateForm({ ...createForm, contactName: val });
+                    validateSingleField('contactName', val);
+                  }}
                 />
+                {fieldErrors.contactName && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.contactName}</p>}
               </div>
 
               <div className="structured-field-card">
@@ -617,10 +644,16 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
               </div>
                 <input id="suppliers-page-field-3" className="ui-input"
                   type="tel"
+                  inputMode="tel"
                   placeholder="09xx..."
                   value={createForm.phone || ''}
-                  onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCreateForm({ ...createForm, phone: val });
+                    validateSingleField('phone', val);
+                  }}
                 />
+                {fieldErrors.phone && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.phone}</p>}
               </div>
             </div>
 
@@ -635,8 +668,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                 type="email"
                 placeholder="supplier@example.com..."
                 value={createForm.email || ''}
-                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCreateForm({ ...createForm, email: val });
+                  validateSingleField('email', val);
+                }}
               />
+              {fieldErrors.email && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.email}</p>}
             </div>
 
             <div className="structured-field-card">
@@ -704,8 +742,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                 type="text"
                 required
                 value={updateForm.supplierName}
-                onChange={(e) => setUpdateForm({ ...updateForm, supplierName: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setUpdateForm({ ...updateForm, supplierName: val });
+                  validateSingleField('supplierName', val);
+                }}
               />
+              {fieldErrors.supplierName && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.supplierName}</p>}
             </div>
 
             <div className="ui-form-grid" style={{ gap: '16px' }}>
@@ -719,8 +762,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
                 <input id="suppliers-page-field-8" className="ui-input"
                   type="text"
                   value={updateForm.contactName || ''}
-                  onChange={(e) => setUpdateForm({ ...updateForm, contactName: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setUpdateForm({ ...updateForm, contactName: val });
+                    validateSingleField('contactName', val);
+                  }}
                 />
+                {fieldErrors.contactName && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.contactName}</p>}
               </div>
 
               <div className="structured-field-card">
@@ -732,9 +780,15 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
               </div>
                 <input id="suppliers-page-field-9" className="ui-input"
                   type="tel"
+                  inputMode="tel"
                   value={updateForm.phone || ''}
-                  onChange={(e) => setUpdateForm({ ...updateForm, phone: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setUpdateForm({ ...updateForm, phone: val });
+                    validateSingleField('phone', val);
+                  }}
                 />
+                {fieldErrors.phone && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.phone}</p>}
               </div>
             </div>
 
@@ -748,8 +802,13 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
               <input id="suppliers-page-field-10" className="ui-input"
                 type="email"
                 value={updateForm.email || ''}
-                onChange={(e) => setUpdateForm({ ...updateForm, email: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setUpdateForm({ ...updateForm, email: val });
+                  validateSingleField('email', val);
+                }}
               />
+              {fieldErrors.email && <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{fieldErrors.email}</p>}
             </div>
 
             <div className="structured-field-card">

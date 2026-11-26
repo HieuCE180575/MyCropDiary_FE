@@ -6,6 +6,7 @@ import { ChangePasswordPanel } from './ChangePasswordPanel';
 
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { validateVietnamPhone } from '../../shared/validation/phoneValidation';
 import { useState, useEffect, useRef, type FormEvent, type ChangeEvent } from 'react';
 
 
@@ -16,7 +17,7 @@ import { getUserProfile, updateUserProfile, type UserProfile } from './authApi';
 const cleanFullName = (raw?: string | null) => (raw || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
 
 export function UserProfilePanel() {
-  const { t: translate } = useLanguage();
+  const { lang, t: translate } = useLanguage();
   const { user, updateUser } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -85,6 +86,12 @@ export function UserProfilePanel() {
     setSaving(true);
     setMessage(null);
     try {
+      const phoneErr = validateVietnamPhone(phone, lang);
+      if (phoneErr) {
+        setMessage({ type: 'error', text: phoneErr });
+        setSaving(false);
+        return;
+      }
       const updated = await updateUserProfile({
         fullName: fullName.trim(),
         phone: phone.trim() || undefined,
@@ -256,10 +263,16 @@ export function UserProfilePanel() {
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+84 912 345 678"
+                placeholder="0912345678"
                 style={{ width: '100%', padding: '9px 12px' }}
                 disabled={saving}
               />
+              {(() => {
+                const phoneErr = validateVietnamPhone(phone, lang);
+                return phoneErr ? (
+                  <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{phoneErr}</p>
+                ) : null;
+              })()}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', alignItems: 'center' }}>

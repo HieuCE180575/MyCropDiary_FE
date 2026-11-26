@@ -512,6 +512,7 @@ button, input, select, textarea { font-family: inherit; }
   flex-wrap: wrap;
 }
 .ui-modal.modal-form-layout .modal-footer > :is(.form-error-banner, .admin-form-error) {
+  order: -2;
   flex: 0 0 100%;
   margin: 0 0 12px;
 }
@@ -1361,7 +1362,7 @@ body {
   font-size: 12px;
 }
 .admin-required-note > span { color: var(--color-danger); }
-.ui-modal .admin-modal-footer > .form-error-banner { flex: 0 0 100%; margin: 0; }
+.ui-modal .admin-modal-footer > .form-error-banner { order: -2; flex: 0 0 100%; margin: 0; }
 .ui-modal .admin-detail-heading { display: grid; gap: 12px; margin-bottom: 16px; }
 .ui-modal .admin-detail-heading > .status-badge { justify-self: start; }
 .ui-modal .admin-crop-name-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

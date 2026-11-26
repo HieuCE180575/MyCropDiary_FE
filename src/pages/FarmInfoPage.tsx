@@ -300,8 +300,8 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       setIsEditOpen(false);
       showToast(
         lang === 'en'
-          ? 'Farm information updated and submitted to Admin for review!'
-          : 'Đã cập nhật thông tin trang trại và gửi yêu cầu đến Quản trị viên xét duyệt!'
+          ? 'Farm edit request submitted to Admin for approval. Changes will take effect once approved!'
+          : 'Đã gửi yêu cầu chỉnh sửa trang trại đến Quản trị viên xét duyệt. Thay đổi sẽ được áp dụng sau khi Admin phê duyệt!'
       );
       retry();
     } catch (err) {

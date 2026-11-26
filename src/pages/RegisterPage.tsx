@@ -7,7 +7,6 @@ import { signInWithGoogleDirect, initializeGoogleOneTap } from '../features/auth
 import { Icon } from '../shared/components/Icon';
 
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-const PHONE_CHARS_REGEX = /^[0-9+\s-]*$/;
 
 interface FormValues {
   fullName: string;
@@ -45,15 +44,14 @@ function validateField(field: keyof FormValues, value: string, values: FormValue
     case 'phoneNumber': {
       const raw = value.trim();
       if (!raw) return ''; // Phone number is optional
-      if (/[a-zA-Z]/.test(raw)) {
-        return 'Phone number must only contain digits, not letters.';
+      if (/\D/.test(raw)) {
+        return 'Phone number must contain digits only (no letters or special characters).';
       }
-      if (!PHONE_CHARS_REGEX.test(raw)) {
-        return 'Phone number can only contain digits and + sign.';
+      if (!raw.startsWith('0')) {
+        return 'Phone number must start with 0.';
       }
-      const cleaned = raw.replace(/[\s.-]/g, '');
-      if (!/^(0|\+84)\d{9}$/.test(cleaned)) {
-        return 'Phone number must be a valid 10-digit number starting with 0 or +84.';
+      if (raw.length !== 10) {
+        return 'Phone number must be exactly 10 digits.';
       }
       return '';
     }
@@ -421,7 +419,10 @@ export function RegisterPage() {
                       maxLength={20}
                       placeholder="e.g. 0912345678"
                       value={values.phoneNumber}
-                      onChange={(e) => handleChange('phoneNumber', e.target.value)}
+                      onChange={(e) => {
+                        handleChange('phoneNumber', e.target.value);
+                        if (e.target.value.trim()) setTouched((prev) => ({ ...prev, phoneNumber: true }));
+                      }}
                       onBlur={() => handleBlur('phoneNumber')}
                       className={touched.phoneNumber && errors.phoneNumber ? 'is-invalid' : undefined}
                       aria-invalid={Boolean(touched.phoneNumber && errors.phoneNumber)}

@@ -31,6 +31,7 @@ import {
 import type { Zone, StaffZoneAssignment } from '../production/types';
 import { useRealtimeSync } from '../../shared/realtime/realtimeSync';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
+import { validateVietnamPhone } from '../../shared/validation/phoneValidation';
 
 interface FarmStaffDataCache {
   staffList: FarmStaffRecord[];
@@ -63,7 +64,9 @@ export function StaffManagementPage() {
   const [viewingStaff, setViewingStaff] = useState<FarmStaffRecord | null>(null);
   const [viewingWorker, setViewingWorker] = useState<FarmWorkerResp | null>(null);
   const [workerForm, setWorkerForm] = useState<FarmWorkerReq>({
-    farmMemberId: 0,
+    farmMemberId: undefined,
+    fullName: '',
+    phoneNumber: '',
     workerCode: '',
     jobTitle: '',
     employmentStatus: 'active',
@@ -210,8 +213,11 @@ export function StaffManagementPage() {
   const handleOpenAddWorker = () => {
     setEditingWorker(null);
     setWorkerMemberSearch('');
+    setNotification(null);
     setWorkerForm({
-      farmMemberId: staffList.length > 0 ? staffList[0].farmMemberId : 0,
+      farmMemberId: undefined,
+      fullName: '',
+      phoneNumber: '',
       workerCode: `CN-${String(workers.length + 1).padStart(3, '0')}`,
       jobTitle: 'Công nhân lao động',
       employmentStatus: 'active',
@@ -223,8 +229,11 @@ export function StaffManagementPage() {
 
   const handleOpenEditWorker = (w: FarmWorkerResp) => {
     setEditingWorker(w);
+    setNotification(null);
     setWorkerForm({
-      farmMemberId: w.farmMemberId,
+      farmMemberId: w.farmMemberId ?? undefined,
+      fullName: w.fullName || '',
+      phoneNumber: w.phoneNumber || '',
       workerCode: w.workerCode,
       jobTitle: w.jobTitle || '',
       employmentStatus: w.employmentStatus || 'active',
@@ -236,14 +245,57 @@ export function StaffManagementPage() {
 
   const handleSaveWorker = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!farmId || !workerForm.workerCode.trim()) return;
+    if (!farmId) return;
+    const trimmedName = (workerForm.fullName || '').trim();
+    const trimmedPhone = (workerForm.phoneNumber || '').trim();
+    const trimmedCode = workerForm.workerCode.trim();
+
+    if (!trimmedName && !workerForm.farmMemberId) {
+      setNotification({
+        text: lang === 'en' ? 'Enter the worker full name.' : 'Vui lòng nhập họ tên công nhân.',
+        type: 'error',
+      });
+      return;
+    }
+    if (trimmedName && /\d/.test(trimmedName)) {
+      setNotification({
+        text: lang === 'en' ? 'Worker name must not contain numbers.' : 'Họ tên công nhân không được chứa chữ số.',
+        type: 'error',
+      });
+      return;
+    }
+    const workerPhoneErr = validateVietnamPhone(trimmedPhone, lang);
+    if (workerPhoneErr) {
+      setNotification({
+        text: workerPhoneErr,
+        type: 'error',
+      });
+      return;
+    }
+    if (!trimmedCode) {
+      setNotification({
+        text: lang === 'en' ? 'Enter a worker code.' : 'Vui lòng nhập mã công nhân.',
+        type: 'error',
+      });
+      return;
+    }
+
+    const payload: FarmWorkerReq = {
+      ...workerForm,
+      farmMemberId: workerForm.farmMemberId && workerForm.farmMemberId > 0 ? workerForm.farmMemberId : undefined,
+      fullName: trimmedName || undefined,
+      phoneNumber: trimmedPhone || undefined,
+      workerCode: trimmedCode,
+    };
+
     setSavingWorker(true);
+    setNotification(null);
     try {
       if (editingWorker) {
-        await updateFarmWorkerApi(farmId, editingWorker.workerId, workerForm);
+        await updateFarmWorkerApi(farmId, editingWorker.workerId, payload);
         setNotification({ text: (lang === 'en' ? "Worker profile updated successfully." : 'Cập nhật hồ sơ công nhân thành công.'), type: 'success' });
       } else {
-        await createFarmWorkerApi(farmId, workerForm);
+        await createFarmWorkerApi(farmId, payload);
         setNotification({ text: (lang === 'en' ? "Worker profile added successfully." : 'Thêm hồ sơ công nhân mới thành công.'), type: 'success' });
       }
       setIsWorkerModalOpen(false);
@@ -1581,7 +1633,7 @@ export function StaffManagementPage() {
       >
         <form onSubmit={handleSaveWorker} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
-          {editingWorker ? (
+          {editingWorker && (
             <div className="staff-profile-summary ui-form-context">
               <StatusBadge
                 tone={workerForm.employmentStatus === 'active' ? 'success' : 'neutral'}
@@ -1589,43 +1641,115 @@ export function StaffManagementPage() {
                   ? (workerForm.employmentStatus === 'active' ? 'Active' : workerForm.employmentStatus === 'seasonal' ? 'Seasonal' : 'Left')
                   : (workerForm.employmentStatus === 'active' ? 'Đang làm việc' : workerForm.employmentStatus === 'seasonal' ? 'Thời vụ' : 'Đã nghỉ')}
               />
-              <h3>{parseStaffName(editingWorker.fullName).displayName}</h3>
+              <h3>{parseStaffName(workerForm.fullName || editingWorker.fullName).displayName}</h3>
               <small>
                 {workerForm.workerCode || '—'} · {workerForm.jobTitle || (lang === 'en' ? 'Worker' : 'Công nhân')}
               </small>
             </div>
-          ) : <div className="structured-field-card">
-            <div className="structured-field-header"><label className="structured-field-label" htmlFor="staff-management-page-field-1">
-              {lang === 'en' ? 'Farm member' : 'Thành viên trang trại'} <span style={{ color: 'var(--color-danger)' }}>*</span>
-            </label><span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span></div>
-            <input
-              type="search"
-              className="ui-input"
-              placeholder={lang === 'en' ? 'Type name or email to filter members...' : 'Nhập tên hoặc email để tìm nhanh thành viên...'}
-              value={workerMemberSearch}
-              onChange={(e) => setWorkerMemberSearch(e.target.value)}
-              style={{ width: '100%', padding: '8px 12px', marginBottom: '8px' }}
-            />
-            <select id="staff-management-page-field-1" className="ui-select"
-              required
-              value={workerForm.farmMemberId}
-              onChange={(e) => setWorkerForm((p) => ({ ...p, farmMemberId: Number(e.target.value) }))}
-              style={{ width: '100%', padding: '9px 12px' }}
-            >
-              <option value={0}>{(lang === 'en' ? "-- Select staff member --" : "-- Chọn thành viên nhân sự --")}</option>
-              {staffList
-                .filter((s) => {
-                  const q = workerMemberSearch.trim().toLowerCase();
-                  if (!q) return true;
-                  return s.fullName.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
-                })
-                .map((s) => (
-                  <option key={s.farmMemberId} value={s.farmMemberId}>
-                    {s.fullName} ({s.email}) - {s.jobTitle || translate(s.roleLabel)}
-                  </option>
-                ))}
-            </select>
-          </div>}
+          )}
+
+          <div className="ui-form-grid">
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="worker-full-name">
+                  {lang === 'en' ? 'Worker full name' : 'Họ và tên công nhân'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
+              </div>
+              <input
+                id="worker-full-name"
+                className="ui-input"
+                type="text"
+                required
+                maxLength={120}
+                value={workerForm.fullName || ''}
+                onChange={(e) => setWorkerForm((p) => ({ ...p, fullName: e.target.value }))}
+                placeholder={lang === 'en' ? 'e.g. Nguyen Van B' : 'VD: Nguyễn Văn B'}
+                style={{ width: '100%', padding: '9px 12px' }}
+              />
+            </div>
+
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="worker-phone-number">
+                  {lang === 'en' ? 'Phone number' : 'Số điện thoại'}
+                </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
+              <input
+                id="worker-phone-number"
+                className="ui-input"
+                type="tel"
+                inputMode="tel"
+                maxLength={30}
+                value={workerForm.phoneNumber || ''}
+                onChange={(e) => setWorkerForm((p) => ({ ...p, phoneNumber: e.target.value }))}
+                placeholder={lang === 'en' ? 'e.g. 0912345678' : 'VD: 0912345678'}
+                style={{ width: '100%', padding: '9px 12px' }}
+              />
+              {(() => {
+                const phoneErr = validateVietnamPhone(workerForm.phoneNumber || '', lang);
+                return phoneErr ? (
+                  <p className="field-error" style={{ color: 'var(--color-danger)', fontSize: 12.5, margin: '4px 0 0' }}>{phoneErr}</p>
+                ) : null;
+              })()}
+            </div>
+          </div>
+
+          {!editingWorker && (
+            <div className="structured-field-card">
+              <div className="structured-field-header">
+                <label className="structured-field-label" htmlFor="staff-management-page-field-1">
+                  {lang === 'en' ? 'Link existing farm member' : 'Liên kết thành viên hệ thống'}
+                </label>
+                <span className="structured-field-badge">{lang === 'en' ? 'Optional' : 'Tùy chọn'}</span>
+              </div>
+              <input
+                type="search"
+                className="ui-input"
+                placeholder={lang === 'en' ? 'Type name or email to filter members (optional)...' : 'Tìm thành viên nếu muốn liên kết tài khoản (không bắt buộc)...'}
+                value={workerMemberSearch}
+                onChange={(e) => setWorkerMemberSearch(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', marginBottom: '8px' }}
+              />
+              <select
+                id="staff-management-page-field-1"
+                className="ui-select"
+                value={workerForm.farmMemberId ?? 0}
+                onChange={(e) => {
+                  const selectedId = Number(e.target.value);
+                  if (!selectedId) {
+                    setWorkerForm((p) => ({ ...p, farmMemberId: undefined }));
+                    return;
+                  }
+                  const matched = staffList.find((s) => s.farmMemberId === selectedId);
+                  setWorkerForm((p) => ({
+                    ...p,
+                    farmMemberId: selectedId,
+                    fullName: matched ? parseStaffName(matched.fullName).displayName : p.fullName,
+                    phoneNumber: matched?.phoneNumber || p.phoneNumber,
+                  }));
+                }}
+                style={{ width: '100%', padding: '9px 12px' }}
+              >
+                <option value={0}>
+                  {lang === 'en' ? '-- External / seasonal worker (no account required) --' : '-- Công nhân bên ngoài / thời vụ (không cần tài khoản) --'}
+                </option>
+                {staffList
+                  .filter((s) => !workers.some((w) => w.farmMemberId === s.farmMemberId))
+                  .filter((s) => {
+                    const q = workerMemberSearch.trim().toLowerCase();
+                    if (!q) return true;
+                    return s.fullName.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+                  })
+                  .map((s) => (
+                    <option key={s.farmMemberId} value={s.farmMemberId}>
+                      {parseStaffName(s.fullName).displayName} ({s.email}) - {s.jobTitle || translate(s.roleLabel)}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           <div className="ui-form-grid" >
             <div className="structured-field-card">

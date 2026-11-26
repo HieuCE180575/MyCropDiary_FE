@@ -31,6 +31,15 @@ import {
 } from './cropSeasonService';
 import { VoiceActivityButton } from './VoiceActivityButton';
 import type { VoiceParsedActivity } from '../ai/aiService';
+import { getFarmWorkersApi, type FarmWorkerResp } from '../staff/staffService';
+
+interface ActivityWorkerItem {
+  workerId: number;
+  workerCode?: string;
+  fullName?: string;
+  workHours?: number | null;
+  notes?: string | null;
+}
 
 interface FarmingActivity {
   id: number;
@@ -50,6 +59,7 @@ interface FarmingActivity {
   supervisorFullName?: string;
   workerCount?: number;
   totalWorkers?: number;
+  workers?: ActivityWorkerItem[];
 }
 
 const activitiesMemoryCache = new Map<number, FarmingActivity[]>();
@@ -84,6 +94,24 @@ export function FarmingActivitiesPage() {
   const [description, setDescription] = useState('');
   const [resultNotes, setResultNotes] = useState('');
   const [weatherNotes, setWeatherNotes] = useState('Trời nắng nhẹ, độ ẩm 75%');
+  const [farmWorkers, setFarmWorkers] = useState<FarmWorkerResp[]>([]);
+  const [selectedWorkerIds, setSelectedWorkerIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!selectedFarm?.id) {
+      setFarmWorkers([]);
+      return;
+    }
+    void getFarmWorkersApi(selectedFarm.id)
+      .then((list) => setFarmWorkers(list.filter((w) => w.employmentStatus !== 'inactive')))
+      .catch(() => setFarmWorkers([]));
+  }, [selectedFarm?.id]);
+
+  const toggleWorkerSelection = (workerId: number) => {
+    setSelectedWorkerIds((prev) =>
+      prev.includes(workerId) ? prev.filter((id) => id !== workerId) : [...prev, workerId]
+    );
+  };
 
   const handleVoiceParsed = (parsed: VoiceParsedActivity) => {
     if (parsed.activityName) {
@@ -230,7 +258,8 @@ export function FarmingActivitiesPage() {
     id: item.farmingActivityId ?? item.id,
     cropSeasonId: item.cropSeasonId ?? fallbackSeasonId,
     recorderName: item.supervisorFullName ?? item.recorderFullName ?? item.recorderName ?? 'Nhân viên kỹ thuật',
-    workerCount: item.totalWorkers ?? item.workerCount ?? 1,
+    workers: Array.isArray(item.workers) ? item.workers : undefined,
+    workerCount: (Array.isArray(item.workers) && item.workers.length > 0 ? item.workers.length : undefined) ?? item.totalWorkers ?? item.workerCount ?? 0,
   });
 
   const loadActivities = async (silent = false) => {
@@ -299,6 +328,7 @@ export function FarmingActivitiesPage() {
       description: description.trim(),
       resultNotes: resultNotes.trim(),
       weatherNotes: weatherNotes.trim(),
+      workers: selectedWorkerIds.map((workerId) => ({ workerId })),
     };
 
     try {
@@ -377,6 +407,7 @@ export function FarmingActivitiesPage() {
     setActName('');
     setDescription('');
     setResultNotes('');
+    setSelectedWorkerIds([]);
     setActivityModalError(null);
     if (seasonBlocks.length > 0 && !selectedBlockId) {
       setSelectedBlockId(seasonBlocks[0].blockId);
@@ -867,8 +898,18 @@ export function FarmingActivitiesPage() {
                                 setDescription(act.description || '');
                                 setResultNotes(act.resultNotes || '');
                                 setWeatherNotes(act.weatherNotes || 'Trời nắng nhẹ, độ ẩm 75%');
+                                setSelectedWorkerIds(act.workers?.map((w) => w.workerId) ?? []);
                                 setActivityModalError(null);
                                 setIsModalOpen(true);
+                                if (!act.workers) {
+                                  void apiRequest<ApiResponse<FarmingActivity>>(`/farming-activities/${act.id}`)
+                                    .then((resp) => {
+                                      if (Array.isArray(resp?.data?.workers)) {
+                                        setSelectedWorkerIds(resp.data.workers.map((w) => w.workerId));
+                                      }
+                                    })
+                                    .catch(() => {});
+                                }
                               }}
                             >
                               <Icon name="edit" size={15} />
@@ -1088,6 +1129,71 @@ export function FarmingActivitiesPage() {
             </div>
           </div>
 
+          {/* Công nhân thực hiện (1 hoặc nhiều người) */}
+          <div className="structured-field-card" style={{ marginBottom: 0 }}>
+            <div className="structured-field-header">
+              <span className="structured-field-label">
+                {lang === 'en' ? 'Farm Workers (Performers)' : 'Công nhân thực hiện'}
+              </span>
+              <span className="structured-field-badge">
+                {selectedWorkerIds.length > 0
+                  ? (lang === 'en' ? `${selectedWorkerIds.length} selected` : `Đã chọn ${selectedWorkerIds.length}`)
+                  : (lang === 'en' ? '1 or more · Optional' : '1 hoặc nhiều người · Tùy chọn')}
+              </span>
+            </div>
+            {farmWorkers.length === 0 ? (
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-muted)' }}>
+                {lang === 'en'
+                  ? 'No active worker profiles yet. You can add workers in Staff & Assignments → Worker Profiles.'
+                  : 'Chưa có hồ sơ công nhân nào. Bạn có thể thêm tại Nhân sự & Phân công → Hồ sơ công nhân.'}
+              </p>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+                  gap: '8px',
+                  maxHeight: '160px',
+                  overflowY: 'auto',
+                  padding: '2px',
+                }}
+              >
+                {farmWorkers.map((w) => {
+                  const checked = selectedWorkerIds.includes(w.workerId);
+                  return (
+                    <label
+                      key={w.workerId}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        border: `1px solid ${checked ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                        background: checked ? 'var(--color-success-bg)' : 'var(--color-surface)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleWorkerSelection(w.workerId)}
+                        style={{ accentColor: 'var(--color-primary)', flexShrink: 0 }}
+                      />
+                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <strong>{w.fullName || w.workerCode}</strong>
+                        <span style={{ color: 'var(--color-muted)', fontSize: '11.5px', display: 'block' }}>
+                          {w.workerCode}{w.jobTitle ? ` · ${w.jobTitle}` : ''}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           {/* Thời tiết & Kết quả */}
           <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
             <div className="structured-field-card" style={{ marginBottom: 0 }}>
@@ -1212,8 +1318,34 @@ export function FarmingActivitiesPage() {
                 </div>
                 <div>
                   <dt>{lang === 'en' ? 'Total Workers' : 'Tổng nhân công'}</dt>
-                  <dd>{selectedActivity.workerCount || 1} {(lang === 'en' ? " people" : " người")}</dd>
+                  <dd>
+                    {selectedActivity.workers && selectedActivity.workers.length > 0
+                      ? `${selectedActivity.workers.length} ${lang === 'en' ? 'people' : 'người'}`
+                      : `${selectedActivity.workerCount || 0} ${lang === 'en' ? 'people' : 'người'}`}
+                  </dd>
                 </div>
+                {selectedActivity.workers && selectedActivity.workers.length > 0 && (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <dt>{lang === 'en' ? 'Assigned Farm Workers' : 'Công nhân thực hiện'}</dt>
+                    <dd style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                      {selectedActivity.workers.map((w) => (
+                        <span
+                          key={w.workerId}
+                          className="crop-cat-pill"
+                          style={{
+                            background: 'var(--color-success-bg)',
+                            color: 'var(--color-primary-text)',
+                            fontSize: '12.5px',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {w.fullName || w.workerCode || `#${w.workerId}`}
+                          {w.workerCode ? ` (${w.workerCode})` : ''}
+                        </span>
+                      ))}
+                    </dd>
+                  </div>
+                )}
                 <div style={{ gridColumn: '1 / -1' }}>
                   <dt>{lang === 'en' ? 'Result Assessment' : 'Đánh giá kết quả'}</dt>
                   <dd style={{ color: 'var(--color-primary-text)', fontWeight: 600 }}>
