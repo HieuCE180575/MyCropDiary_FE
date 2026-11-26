@@ -96,11 +96,14 @@ export interface AdminFarmDirectoryItem {
   latitude?: number | null;
   longitude?: number | null;
   boundaryCoordinates?: string | null;
+  coverImageUrl?: string | null;
+  farmMapUrl?: string | null;
   status: string;
   ownerId?: number | null;
   ownerName: string;
   ownerEmail: string;
   ownerPhone: string;
+  staffIds?: number[];
   zoneCount: number;
   blockCount: number;
   memberCount: number;

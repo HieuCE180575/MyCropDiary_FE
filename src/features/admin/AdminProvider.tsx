@@ -109,9 +109,11 @@ function farmToRecord(item: AdminFarmDirectoryItem): AdminRecord {
     name: item.farmName,
     status: rawStatus === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE',
     createdAt: new Date().toISOString(),
+    ownerId: item.ownerId != null ? String(item.ownerId) : '',
     ownerName: item.ownerName || 'Chưa xác định',
     ownerEmail: item.ownerEmail || '—',
     ownerPhone: item.ownerPhone || '—',
+    staffIds: JSON.stringify(item.staffIds ?? []),
     address: item.address || 'Chưa cập nhật địa chỉ',
     scaleSummary: item.scaleSummary || `${item.zoneCount ?? 0} phân khu · ${item.blockCount ?? 0} lô đất`,
     zoneSummary: item.zoneSummary || 'Chưa có phân khu',
@@ -120,6 +122,7 @@ function farmToRecord(item: AdminFarmDirectoryItem): AdminRecord {
     latitude: item.latitude != null ? String(item.latitude) : '',
     longitude: item.longitude != null ? String(item.longitude) : '',
     boundaryCoordinates: item.boundaryCoordinates ?? '',
+    document: item.farmMapUrl ?? '',
   };
 }
 
@@ -593,11 +596,32 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       }
 
       if (command.type === 'save' && command.collection === 'farms') {
-        const payload = {
+        let parsedStaffIds: number[] | undefined;
+        if (command.values.staffIds) {
+          try {
+            const arr = JSON.parse(command.values.staffIds);
+            if (Array.isArray(arr)) {
+              parsedStaffIds = arr.map(Number).filter((n) => Number.isFinite(n) && n > 0);
+            }
+          } catch {
+            // ignore
+          }
+        }
+        const payload: Record<string, unknown> = {
           farmName: command.values.name,
           address: command.values.address,
+          province: command.values.province || undefined,
+          district: command.values.district || undefined,
+          ward: command.values.ward || undefined,
           description: command.values.description,
-          ownerEmail: command.values.ownerEmail,
+          status: command.values.status ? command.values.status.toLowerCase() : 'active',
+          latitude: command.values.latitude ? Number(command.values.latitude) : null,
+          longitude: command.values.longitude ? Number(command.values.longitude) : null,
+          boundaryCoordinates: command.values.boundaryCoordinates || null,
+          farmMapUrl: command.values.document || null,
+          ...(command.values.ownerId ? { ownerId: Number(command.values.ownerId) } : {}),
+          ...(command.values.ownerEmail ? { ownerEmail: command.values.ownerEmail } : {}),
+          ...(parsedStaffIds !== undefined ? { staffUserIds: parsedStaffIds } : {}),
         };
         if (command.id && /^\d+$/.test(command.id)) {
           const updated = farmToRecord(await updateAdminFarm(command.id, payload));
@@ -605,6 +629,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             ...previous,
             farms: previous.farms.map((record) => (record.id === updated.id ? updated : record)),
           }));
+          reloadUsers();
           showNotice('Đã cập nhật thông tin trang trại thành công.');
           return;
         }
@@ -614,6 +639,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
             ...previous,
             farms: [created, ...previous.farms],
           }));
+          reloadUsers();
           showNotice('Đã thêm trang trại mới thành công.');
           return;
         }

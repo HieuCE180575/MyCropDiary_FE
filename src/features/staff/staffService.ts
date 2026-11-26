@@ -36,14 +36,13 @@ export interface FarmStaffRecord {
 function mapDtoToStaffRecord(dto: BackendFarmMemberResp): FarmStaffRecord {
   const rawStatus = (dto.status || 'active').toUpperCase();
   const isActive = rawStatus === 'ACTIVE' || rawStatus === 'INVITED';
-  const rawRole = (dto.farmRole || 'staff').toLowerCase();
+  const rawRole = (dto.farmRole || 'member').toLowerCase();
+  const isOwnerRole = rawRole === 'owner';
   const roleLabel =
-    dto.jobTitle?.trim() ||
-    (rawRole === 'owner'
-      ? 'Chủ trang trại'
-      : rawRole === 'staff'
-        ? 'Nhân viên kỹ thuật'
-        : 'Thành viên trang trại');
+    (dto.jobTitle && dto.jobTitle.trim() && dto.jobTitle.trim().toLowerCase() !== rawRole
+      ? dto.jobTitle.trim()
+      : null) ||
+    (isOwnerRole ? 'Chủ trang trại' : 'Nhân viên kỹ thuật');
 
   return {
     farmMemberId: dto.id,
@@ -53,7 +52,7 @@ function mapDtoToStaffRecord(dto: BackendFarmMemberResp): FarmStaffRecord {
     phoneNumber: dto.phoneNumber ?? undefined,
     status: isActive ? 'ACTIVE' : 'SUSPENDED',
     membershipStatus: dto.status || 'active',
-    farmRole: rawRole.toUpperCase(),
+    farmRole: isOwnerRole ? 'OWNER' : 'STAFF',
     roleLabel,
     jobTitle: dto.jobTitle?.trim() || undefined,
     joinedAt: dto.joinedAt || new Date().toISOString(),
@@ -110,7 +109,7 @@ export async function addFarmStaffMember(
     method: 'POST',
     data: {
       email: payload.email.trim(),
-      farmRole: payload.farmRole?.toLowerCase() === 'owner' ? 'owner' : 'staff',
+      farmRole: payload.farmRole?.toLowerCase() === 'owner' ? 'owner' : 'member',
       jobTitle: payload.jobTitle?.trim() || undefined,
     },
   });
@@ -128,9 +127,13 @@ export async function updateFarmStaffMember(
   memberId: number,
   payload: { farmRole?: 'OWNER' | 'STAFF'; jobTitle?: string; status?: 'INVITED' | 'ACTIVE' | 'INACTIVE' }
 ): Promise<FarmStaffRecord> {
+  const normalizedPayload = {
+    ...payload,
+    ...(payload.farmRole ? { farmRole: payload.farmRole === 'OWNER' ? 'owner' : 'member' } : {}),
+  };
   const res = await apiRequest<ApiResponse<BackendFarmMemberResp>>(`/farms/${farmId}/members/${memberId}`, {
     method: 'PUT',
-    data: payload,
+    data: normalizedPayload,
   });
   if (!res?.success || !res.data) {
     throw new Error(res?.message || 'Không thể cập nhật thông tin nhân viên.');

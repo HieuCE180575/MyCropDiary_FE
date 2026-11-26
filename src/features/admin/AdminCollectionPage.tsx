@@ -2,6 +2,7 @@ import { Button } from '../../shared/components/Button';
 import { Pagination } from '../../shared/components/Pagination';
 import { Icon } from '../../shared/components/Icon';
 import { AdminBadge, AdminEmpty, AdminField, AdminModal, AdminPageHeading, adminStatusTone } from './AdminComponents';
+import { AdminFarmModal } from './AdminFarmModal';
 import { FarmGoongMap } from '../farm-management/components/FarmGoongMap';
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
@@ -377,6 +378,9 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
 
   if (dialog.mode === 'create' || dialog.mode === 'edit') {
     if (!isEditableCollection(collection)) return null;
+    if (collection === 'farms') {
+      return <AdminFarmModal mode={dialog.mode} record={record} close={close} />;
+    }
     const isUserModal = collection === 'users';
     return <AdminModal title={(lang === 'en' ? `${((dialog.mode === 'create' ? "Add" : "Edit"))} ${translate(config.singular)}` : `${((dialog.mode === 'create' ? 'Thêm' : 'Chỉnh sửa'))} ${translate(config.singular)}`)} close={() => { if (!submitting) close(); }} wide={!isUserModal}><form onSubmit={(event) => { event.preventDefault(); submit({ type: 'save', collection, id: record?.id, values }); }}><div className="admin-modal-body">
       {collection === 'users' && record && <div className="structured-field-card ui-form-context admin-user-email">
