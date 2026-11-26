@@ -13,7 +13,7 @@ import { formatDate as uiFormatDate } from '../../shared/format/formatters';
 
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFarmWorkspace } from '../farm-management/FarmWorkspace';
 import '../../styles/ai.css';
@@ -76,12 +76,22 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
   const [deletingConversation, setDeletingConversation] = useState(false);
 
   const { isListening, transcript, startListening, stopListening, isSupported } = useVoiceRecognition();
+  const voiceBaseInputRef = useRef('');
 
   useEffect(() => {
-    if (transcript) {
-      setInputQuestion(transcript);
-    }
+    if (!transcript) return;
+    const base = voiceBaseInputRef.current;
+    setInputQuestion(base ? `${base} ${transcript}` : transcript);
   }, [transcript]);
+
+  const handleToggleVoice = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      voiceBaseInputRef.current = inputQuestion.trim();
+      startListening();
+    }
+  };
 
   // Reporting / Feedback state
   const [feedbackHistory, setFeedbackHistory] = useState<AIFeedbackItem[]>([]);
@@ -194,6 +204,8 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     const q = inputQuestion.trim();
     if (!q || isTyping) return;
 
+    if (isListening) stopListening();
+    voiceBaseInputRef.current = '';
     setInputQuestion('');
     setIsTyping(true);
 
@@ -522,7 +534,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                 <button
                   type="button"
                   className={`button button-outline ${isListening ? 'ai-chatbox-voice-btn--listening' : ''}`}
-                  onClick={isListening ? stopListening : startListening}
+                  onClick={handleToggleVoice}
                   title={isListening ? (lang === 'en' ? 'Stop listening' : 'Dừng nghe') : (lang === 'en' ? 'Ask by voice' : 'Hỏi bằng giọng nói')}
                   disabled={isTyping}
                   style={{

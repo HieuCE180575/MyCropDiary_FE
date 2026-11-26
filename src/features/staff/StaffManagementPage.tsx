@@ -307,7 +307,9 @@ export function StaffManagementPage() {
         jobTitle: jobTitle.trim() || undefined,
       });
       setNotification({
-        text: (message("Added member \"{value1}\" ({value2}) to the farm successfully!", { value1: created.fullName, value2: created.email })),
+        text: lang === 'en'
+          ? `Sent farm invitation to "${created.fullName}" (${created.email}). Waiting for them to accept.`
+          : `Đã gửi lời mời tham gia trang trại đến "${created.fullName}" (${created.email}). Đang chờ nhân viên đồng ý.`,
         type: 'success',
       });
       setIsAddStaffOpen(false);
@@ -747,6 +749,7 @@ export function StaffManagementPage() {
                       ) : (
                         staffPagination.items.map((staff) => {
                         const isActive = staff.status === 'ACTIVE';
+                        const isInvited = staff.status === 'INVITED';
                         const { displayName, initials } = parseStaffName(staff.fullName);
 
                         return (
@@ -828,9 +831,11 @@ export function StaffManagementPage() {
                             </td>
 
                             <td style={{ textAlign: 'center', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
-                              <span className={`status-dot-badge ${isActive ? 'active' : 'completed'}`}>
+                              <span className={`status-dot-badge ${isActive ? 'active' : isInvited ? 'planned' : 'completed'}`}>
                                 <span className="dot" />
-                                {(lang === 'en' ? isActive ? "Active" : "Inactive" : isActive ? 'Đang hoạt động' : 'Đã ngưng')}
+                                {isInvited
+                                  ? (lang === 'en' ? 'Pending Invite' : 'Chờ xác nhận')
+                                  : (lang === 'en' ? (isActive ? 'Active' : 'Inactive') : (isActive ? 'Đang hoạt động' : 'Đã ngưng'))}
                               </span>
                             </td>
 
@@ -869,7 +874,7 @@ export function StaffManagementPage() {
                                         <Icon name="close" size={14} />
                                         <span className="sr-only">{lang === 'en' ? "Suspend" : "Tạm ngưng"}</span>
                                       </button>
-                                    ) : (
+                                    ) : !isInvited ? (
                                       <button
                                         type="button"
                                         className="table-icon-btn assign"
@@ -880,7 +885,7 @@ export function StaffManagementPage() {
                                         <Icon name="check" size={14} />
                                         <span className="sr-only">{lang === 'en' ? "Activate" : "Kích hoạt"}</span>
                                       </button>
-                                    )}
+                                    ) : null}
                                     <button
                                       type="button"
                                       className="table-icon-btn danger"
@@ -1716,9 +1721,11 @@ export function StaffManagementPage() {
         >
           <div className="staff-profile-content">
             <div className="staff-profile-summary ui-detail-primary">
-                  <span className={`status-dot-badge ${viewingStaff.status === 'ACTIVE' ? 'active' : 'completed'}`}>
+                  <span className={`status-dot-badge ${viewingStaff.status === 'ACTIVE' ? 'active' : viewingStaff.status === 'INVITED' ? 'planned' : 'completed'}`}>
                     <span className="dot" />
-                    {lang === 'en' ? (viewingStaff.status === 'ACTIVE' ? 'Active' : 'Inactive') : (viewingStaff.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã ngưng')}
+                    {viewingStaff.status === 'INVITED'
+                      ? (lang === 'en' ? 'Pending Invite' : 'Chờ xác nhận')
+                      : (lang === 'en' ? (viewingStaff.status === 'ACTIVE' ? 'Active' : 'Inactive') : (viewingStaff.status === 'ACTIVE' ? 'Đang hoạt động' : 'Đã ngưng'))}
                   </span>
                 <h3>{parseStaffName(viewingStaff.fullName).displayName}</h3>
                 <small>{viewingStaff.farmRole === 'OWNER' ? (lang === 'en' ? 'Farm Owner' : 'Chủ trang trại') : (lang === 'en' ? 'Technical Staff' : 'Nhân sự kỹ thuật')}

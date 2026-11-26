@@ -28,16 +28,26 @@ export function FloatingAIChatbox() {
   const [conversationId, setConversationId] = useState<number | null>(null);
 
   const { isListening, transcript, startListening, stopListening, isSupported } = useVoiceRecognition();
+  const voiceBaseInputRef = useRef('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Khi có kết quả giọng nói, cập nhật vào ô input
+  // Khi có kết quả giọng nói, nối tiếp vào nội dung hiện có thay vì xóa form
   useEffect(() => {
-    if (transcript) {
-      setInputQuestion(transcript);
-    }
+    if (!transcript) return;
+    const base = voiceBaseInputRef.current;
+    setInputQuestion(base ? `${base} ${transcript}` : transcript);
   }, [transcript]);
+
+  const handleToggleVoice = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      voiceBaseInputRef.current = inputQuestion.trim();
+      startListening();
+    }
+  };
 
   // Chỉ hiển thị cho các role: USER, OWNER, STAFF (tức người dùng trong hệ thống nông trại, không hiển thị khi chưa đăng nhập)
   // Nếu là ADMIN hệ thống thì trang /admin đã có trang riêng hoặc theo mong muốn của user là: staff, owner, user
@@ -98,6 +108,8 @@ export function FloatingAIChatbox() {
     if (!text || isTyping) return;
 
     if (!customText) {
+      if (isListening) stopListening();
+      voiceBaseInputRef.current = '';
       setInputQuestion('');
     }
     setIsTyping(true);
@@ -276,10 +288,7 @@ export function FloatingAIChatbox() {
                 <button
                   type="button"
                   className={`ai-chatbox-voice-btn ${isListening ? 'ai-chatbox-voice-btn--listening' : ''}`}
-                  onClick={() => {
-                    if (isListening) stopListening();
-                    else startListening();
-                  }}
+                  onClick={handleToggleVoice}
                   title={
                     isListening
                       ? (lang === 'en' ? 'Stop listening' : 'Dừng nghe')

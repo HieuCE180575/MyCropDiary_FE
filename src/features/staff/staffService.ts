@@ -35,7 +35,8 @@ export interface FarmStaffRecord {
 
 function mapDtoToStaffRecord(dto: BackendFarmMemberResp): FarmStaffRecord {
   const rawStatus = (dto.status || 'active').toUpperCase();
-  const isActive = rawStatus === 'ACTIVE' || rawStatus === 'INVITED';
+  const mappedStatus: 'ACTIVE' | 'SUSPENDED' | 'INVITED' =
+    rawStatus === 'INVITED' ? 'INVITED' : rawStatus === 'ACTIVE' ? 'ACTIVE' : 'SUSPENDED';
   const rawRole = (dto.farmRole || 'member').toLowerCase();
   const isOwnerRole = rawRole === 'owner';
   const roleLabel =
@@ -50,7 +51,7 @@ function mapDtoToStaffRecord(dto: BackendFarmMemberResp): FarmStaffRecord {
     fullName: dto.fullName || dto.email,
     email: dto.email,
     phoneNumber: dto.phoneNumber ?? undefined,
-    status: isActive ? 'ACTIVE' : 'SUSPENDED',
+    status: mappedStatus,
     membershipStatus: dto.status || 'active',
     farmRole: isOwnerRole ? 'OWNER' : 'STAFF',
     roleLabel,
