@@ -206,14 +206,14 @@ export function ManageFarmsPage() {
                     <div style={{ color: 'var(--color-muted)', fontSize: 12 }}>
                       {t(row.kind)}
                       {row.invitation?.ownerName && (
-                        <> · {lang === 'en' ? `Invited by ${row.invitation.ownerName}` : `Người mời: ${row.invitation.ownerName}`}</>
+                        <> · {lang === 'en' ? `Invited by ${row.invitation.ownerName.replace(/\s*\([^)]*\)\s*$/, '').trim()}` : `Người mời: ${row.invitation.ownerName.replace(/\s*\([^)]*\)\s*$/, '').trim()}`}</>
                       )}
                     </div>
                   </td>
                   <td>{row.address || t('farms.notProvided')}</td>
-                  <td>{row.date ? formatDate(row.date, lang) : t('farms.notProvided')}</td>
-                  <td><StatusBadge tone={registrationTones[row.status] ?? 'neutral'} label={t(`farms.status.${row.status}`)} /></td>
-                  <td><div className="table-action-btns">
+                  <td style={{ whiteSpace: 'nowrap' }}>{row.date ? formatDate(row.date, lang) : t('farms.notProvided')}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}><StatusBadge tone={registrationTones[row.status] ?? 'neutral'} label={t(`farms.status.${row.status}`)} /></td>
+                  <td style={{ whiteSpace: 'nowrap', overflowWrap: 'normal' }}><div className="table-action-btns" style={{ flexWrap: 'nowrap', gap: 8 }}>
                     {row.invitation ? (
                       <>
                         <Button
@@ -221,20 +221,40 @@ export function ManageFarmsPage() {
                           variant="primary"
                           disabled={respondingId === row.invitation.memberId}
                           onClick={() => void handleRespondInvitation(row.invitation!, 'approve')}
-                          style={{ padding: '6px 12px', fontSize: 13 }}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: 13,
+                            minHeight: 34,
+                            width: 'auto',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                          }}
                         >
                           <Icon name="check" size={14} />
-                          {lang === 'en' ? 'Accept' : 'Đồng ý'}
+                          <span>{lang === 'en' ? 'Accept' : 'Đồng ý'}</span>
                         </Button>
                         <Button
                           type="button"
                           variant="danger"
                           disabled={respondingId === row.invitation.memberId}
                           onClick={() => void handleRespondInvitation(row.invitation!, 'reject')}
-                          style={{ padding: '6px 12px', fontSize: 13 }}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: 13,
+                            minHeight: 34,
+                            width: 'auto',
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                          }}
                         >
                           <Icon name="close" size={14} />
-                          {lang === 'en' ? 'Decline' : 'Không đồng ý'}
+                          <span>{lang === 'en' ? 'Decline' : 'Từ chối'}</span>
                         </Button>
                       </>
                     ) : (

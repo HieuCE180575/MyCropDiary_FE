@@ -749,6 +749,18 @@ function MaterialUsageContent() {
               >
                 <Icon name="trash" /> {(lang === 'en' ? " Delete record" : " Xóa bản ghi")}
               </Button>
+              <Button
+                type="button"
+                variant="primary"
+                disabled={detailLoading || deletingId !== null}
+                onClick={() => {
+                  const id = selectedDetail.materialUsageId;
+                  setSelectedDetail(null);
+                  void openUsage(id, true);
+                }}
+              >
+                <Icon name="edit" size={15} /> {(lang === 'en' ? "Edit" : "Chỉnh sửa")}
+              </Button>
               <Button className={'ui-close-action'} type="button" variant="secondary" onClick={() => setSelectedDetail(null)}>
                 {(lang === 'en' ? "Close" : "Đóng")}
               </Button>

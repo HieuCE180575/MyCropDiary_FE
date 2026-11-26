@@ -232,9 +232,15 @@ export function TasksPage() {
       return;
     }
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    if (!editingTask && formStartsAt && formStartsAt.slice(0, 10) < todayStr) {
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    if (formStartsAt && formStartsAt.slice(0, 10) < todayStr) {
       setTaskModalError(lang === 'en' ? 'Start date cannot be in the past.' : 'Ngày bắt đầu không được chọn trong quá khứ.');
+      return;
+    }
+
+    if (formDueAt && formDueAt.slice(0, 10) < todayStr) {
+      setTaskModalError(lang === 'en' ? 'Due date cannot be in the past.' : 'Hạn hoàn thành không được chọn trong quá khứ.');
       return;
     }
 
@@ -999,7 +1005,7 @@ export function TasksPage() {
               <input className="ui-input"
                 id="task-start"
                 type="datetime-local"
-                min={!editingTask ? `${new Date().toISOString().split('T')[0]}T00:00` : undefined}
+                min={`${(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()}T00:00`}
                 value={formStartsAt}
                 onChange={(e) => setFormStartsAt(e.target.value)}
               />
@@ -1013,7 +1019,7 @@ export function TasksPage() {
               <input className="ui-input"
                 id="task-due"
                 type="datetime-local"
-                min={formStartsAt || (!editingTask ? `${new Date().toISOString().split('T')[0]}T00:00` : undefined)}
+                min={(() => { const d = new Date(); const minToday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T00:00`; return formStartsAt && formStartsAt >= minToday ? formStartsAt : minToday; })()}
                 value={formDueAt}
                 onChange={(e) => setFormDueAt(e.target.value)}
               />
