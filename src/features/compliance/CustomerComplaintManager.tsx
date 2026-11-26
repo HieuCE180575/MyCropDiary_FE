@@ -340,32 +340,32 @@ export function CustomerComplaintManager({ farmId, farmName, isOwner = false }: 
                     <td>{getStatusBadge(log)}</td>
                     {isOwner && (
                       <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <button
-                          type="button"
-                          className="table-icon-btn"
-                          onClick={() => openResolveModal(log)}
-                          title={lang === 'en' ? 'Resolve Complaint (UC-48.4)' : 'Giải quyết khiếu nại (UC-48.4)'}
-                          style={{ marginRight: '6px', color: '#047857' }}
-                        >
-                          <CheckCircle2 size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="table-icon-btn"
-                          onClick={() => openRecallModal(log)}
-                          title={lang === 'en' ? 'Record Product Recall (UC-48.5)' : 'Thu hồi lô sản phẩm (UC-48.5)'}
-                          style={{ marginRight: '6px', color: '#b45309' }}
-                        >
-                          <RotateCcw size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          className="table-icon-btn danger"
-                          onClick={() => void handleDelete(log.complaintId)}
-                          title={lang === 'en' ? 'Delete' : 'Xóa'}
-                        >
-                          <Icon name="trash" size={15} />
-                        </button>
+                        <div className="table-action-btns" style={{ justifyContent: 'center' }}>
+                          <button
+                            type="button"
+                            className="table-icon-btn primary"
+                            onClick={() => openResolveModal(log)}
+                            title={lang === 'en' ? 'Resolve Complaint (UC-48.4)' : 'Giải quyết khiếu nại (UC-48.4)'}
+                          >
+                            <CheckCircle2 size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="table-icon-btn edit"
+                            onClick={() => openRecallModal(log)}
+                            title={lang === 'en' ? 'Record Product Recall (UC-48.5)' : 'Thu hồi lô sản phẩm (UC-48.5)'}
+                          >
+                            <RotateCcw size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="table-icon-btn danger"
+                            onClick={() => void handleDelete(log.complaintId)}
+                            title={lang === 'en' ? 'Delete' : 'Xóa'}
+                          >
+                            <Icon name="trash" size={15} />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>

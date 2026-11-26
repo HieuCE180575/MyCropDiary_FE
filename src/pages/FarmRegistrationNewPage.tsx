@@ -4,6 +4,7 @@ import { FarmRegistrationForm } from '../features/farm-management/components/Far
 import { submitFarmRegistration } from '../features/farm-management/registrationService';
 import type { FarmRegistrationFormValues } from '../features/farm-management/types';
 import { PageHeading } from '../shared/components/PageHeading';
+import { Icon } from '../shared/components/Icon';
 import { useLanguage } from '../shared/i18n/LanguageContext';
 
 export function FarmRegistrationNewPage() {
@@ -26,7 +27,10 @@ export function FarmRegistrationNewPage() {
   }
   return <section className="farm-registration-page">
     <PageHeading title={t('farm.registration.newTitle')}>
-      <Link className="ui-button ui-button--secondary" to="/farms">{t('farms.back')}</Link>
+      <Link className="ui-button ui-button--secondary ui-navigation-action" to="/farms">
+        <Icon name="arrow-left" size={16} />
+        {t('farms.back')}
+      </Link>
     </PageHeading>
     <FarmRegistrationForm submitting={submitting} submitError={error} onSubmit={submit} onCancel={() => navigate('/farms')} />
   </section>;

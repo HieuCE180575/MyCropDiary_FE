@@ -993,6 +993,7 @@ function HarvestContent() {
               <input className="ui-input"
                 id="harvest-date"
                 type="datetime-local"
+                min={`${new Date().toISOString().split('T')[0]}T00:00`}
                 step="any"
                 required
                 value={harvestedAt}

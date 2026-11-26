@@ -567,12 +567,33 @@ export function CropSeasonsPage() {
 
           <form onSubmit={handleSaveSeason} noValidate>
             <div className="modal-body">
-            {seasonModalError && (
-              <div className="form-error-banner" role="alert" style={{ marginBottom: '12px' }}>
-                {typeof seasonModalError === 'string' ? translate(seasonModalError) : translate(seasonModalError)}
-              </div>
-            )}
             <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+              <div className="structured-field-card" style={{ marginBottom: 0 }}>
+                <div className="structured-field-header">
+                  <label htmlFor="modal-cs-name" className="structured-field-label">
+                    {lang === 'en' ? 'Crop Season Name' : 'Tên mùa vụ canh tác'} <span style={{ color: 'var(--color-danger)' }}>*</span>
+                  </label>
+                  <label htmlFor="modal-cs-name" className="structured-field-badge">
+                    {formValues.seasonName.length}/120
+                  </label>
+                </div>
+                <div className="form-field" style={{ marginBottom: 0 }}>
+                  <input
+                    className="ui-input"
+                    id="modal-cs-name"
+                    type="text"
+                    maxLength={120}
+                    required
+                    placeholder={lang === 'en' ? 'e.g. Summer-Autumn 2026 Cantaloupe Season' : 'VD: Vụ Hè Thu 2026 - Dưa lưới VietGAP'}
+                    value={formValues.seasonName}
+                    onChange={(e) => {
+                      setFormValues((prev) => ({ ...prev, seasonName: e.target.value }));
+                      setSeasonModalError(null);
+                    }}
+                  />
+                </div>
+              </div>
+
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="modal-cs-cat" className="structured-field-label">
@@ -860,6 +881,7 @@ export function CropSeasonsPage() {
                               </label>
                               <input id="crop-seasons-page-field-2" className="ui-input"
                                 type="date"
+                                min={formValues.startDate || (modalMode === 'create' ? new Date().toISOString().split('T')[0] : undefined)}
                                 value={cfg.plantedAt}
                                 onChange={(e) =>
                                   updateSelectedBlockConfig(block.blockId, { plantedAt: e.target.value })

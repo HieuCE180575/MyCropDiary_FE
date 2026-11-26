@@ -13,6 +13,7 @@ import {
   fetchDistrictsForProvince,
   fetchWardsForDistrict,
   findProvinceOption,
+  formatAdminLocationName,
   generateSampleFarmPolygon,
   geocodeAddress,
   parseBoundaryCoordinates,
@@ -271,7 +272,7 @@ export function AdminFarmModal({ mode, record, close }: AdminFarmModalProps) {
             <div className="structured-field-card admin-field">
               <div className="structured-field-header">
                 <label className="structured-field-label" htmlFor="admin-farm-name">
-                  {lang === 'en' ? 'Farm Name' : 'Tên trang trại'} <b aria-hidden="true">*</b>
+                  {lang === 'en' ? 'Farm Name' : 'Tên trang trại'} <span style={{ color: 'var(--color-danger)' }} aria-hidden="true">*</span>
                 </label>
                 <span className="structured-field-badge">{farmName.length}/160 · {lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
               </div>
@@ -312,7 +313,7 @@ export function AdminFarmModal({ mode, record, close }: AdminFarmModalProps) {
             <div className="structured-field-card admin-field">
               <div className="structured-field-header">
                 <label className="structured-field-label" htmlFor="admin-farm-owner">
-                  {lang === 'en' ? 'Farm Owner' : 'Chủ sở hữu (Owner)'} <b aria-hidden="true">*</b>
+                  {lang === 'en' ? 'Farm Owner' : 'Chủ sở hữu (Owner)'} <span style={{ color: 'var(--color-danger)' }} aria-hidden="true">*</span>
                 </label>
                 <span className="structured-field-badge">{activeUsers.length} {lang === 'en' ? 'accounts' : 'tài khoản'}</span>
               </div>
@@ -425,7 +426,7 @@ export function AdminFarmModal({ mode, record, close }: AdminFarmModalProps) {
               >
                 <option value="">{lang === 'en' ? '-- Select Province --' : '-- Chọn Tỉnh / TP --'}</option>
                 {VIETNAM_PROVINCES.map((p) => (
-                  <option key={p.code} value={p.name}>{p.name}</option>
+                  <option key={p.code} value={p.name}>{formatAdminLocationName(p.name, lang)}</option>
                 ))}
               </select>
             </div>
@@ -449,7 +450,7 @@ export function AdminFarmModal({ mode, record, close }: AdminFarmModalProps) {
                     : (lang === 'en' ? '-- Select District --' : '-- Chọn Quận / Huyện --')}
                 </option>
                 {districtOptions.map((d) => (
-                  <option key={d.code} value={d.name}>{d.name}</option>
+                  <option key={d.code} value={d.name}>{formatAdminLocationName(d.name, lang)}</option>
                 ))}
               </select>
             </div>
@@ -473,7 +474,7 @@ export function AdminFarmModal({ mode, record, close }: AdminFarmModalProps) {
                     : (lang === 'en' ? '-- Select Ward --' : '-- Chọn Phường / Xã --')}
                 </option>
                 {wardOptions.map((w) => (
-                  <option key={w.code} value={w.name}>{w.name}</option>
+                  <option key={w.code} value={w.name}>{formatAdminLocationName(w.name, lang)}</option>
                 ))}
               </select>
             </div>
@@ -482,7 +483,7 @@ export function AdminFarmModal({ mode, record, close }: AdminFarmModalProps) {
           <div className="structured-field-card admin-field full">
             <div className="structured-field-header">
               <label className="structured-field-label" htmlFor="admin-farm-address">
-                {lang === 'en' ? 'Detailed Cultivation Address' : 'Địa chỉ canh tác chi tiết'} <b aria-hidden="true">*</b>
+                {lang === 'en' ? 'Detailed Cultivation Address' : 'Địa chỉ canh tác chi tiết'} <span style={{ color: 'var(--color-danger)' }} aria-hidden="true">*</span>
               </label>
               <span className="structured-field-badge">{address.length}/255 · {lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
             </div>

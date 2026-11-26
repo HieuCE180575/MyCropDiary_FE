@@ -8,6 +8,7 @@ import { Button } from '../../shared/components/Button';
 import { TablePagination } from '../../shared/components/TablePagination';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
+import { EditableSelectCombobox } from '../../shared/components/EditableSelectCombobox';
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
@@ -228,6 +229,12 @@ export function TasksPage() {
     const trimmedTaskName = formTaskName.trim();
     if (!trimmedTaskName) {
       setTaskModalError((lang === 'en' ? "Enter a task name." : 'Vui lòng nhập tên tasks / nhiệm vụ.'));
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (!editingTask && formStartsAt && formStartsAt.slice(0, 10) < todayStr) {
+      setTaskModalError(lang === 'en' ? 'Start date cannot be in the past.' : 'Ngày bắt đầu không được chọn trong quá khứ.');
       return;
     }
 
@@ -851,20 +858,24 @@ export function TasksPage() {
                 <label htmlFor="task-type" className="structured-field-label">{(lang === 'en' ? "Task type" : "Loại công việc")}{' '}<span style={{ color: 'var(--color-danger)' }}>*</span></label>
                 <span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span>
               </div>
-              <select className="ui-select"
+              <EditableSelectCombobox
                 id="task-type"
+                required
+                maxLength={60}
                 value={formTaskType}
-                onChange={(e) => setFormTaskType(e.target.value)}
-              >
-                <option value="Làm đất">{(lang === 'en' ? "Soil Preparation & Substrate Treatment" : "Làm đất & Xử lý giá thể")}</option>
-                <option value="Gieo trồng">{(lang === 'en' ? "Seeding & Transplanting" : "Gieo hạt & Cấy cây con")}</option>
-                <option value="Bón phân & Tưới">{(lang === 'en' ? "Fertilization & Irrigation" : "Bón phân & Tưới tiêu")}</option>
-                <option value="Growth Monitoring">{(lang === 'en' ? "Growth Monitoring & Pruning" : "Theo dõi sinh trưởng và tỉa cành")}</option>
-                <option value="Plant Protection">{(lang === 'en' ? "Plant Protection & Biological Spraying" : "Bảo vệ thực vật và phun vi sinh")}</option>
-                <option value="Thu hoạch">{(lang === 'en' ? "Harvesting & Packing" : "Thu hoạch & Đóng gói")}</option>
-                <option value="VietGAP Compliance">{(lang === 'en' ? "Monitoring & VietGAP Compliance" : "Giám sát và tuân thủ VietGAP")}</option>
-                <option value="Khác">{(lang === 'en' ? "Other tasks" : "Công việc khác")}</option>
-              </select>
+                onChange={setFormTaskType}
+                placeholder={lang === 'en' ? 'Select or type task type...' : 'Chọn hoặc nhập loại công việc...'}
+                options={[
+                  { value: 'Làm đất', label: lang === 'en' ? 'Soil Preparation & Substrate Treatment' : 'Làm đất & Xử lý giá thể' },
+                  { value: 'Gieo trồng', label: lang === 'en' ? 'Seeding & Transplanting' : 'Gieo hạt & Cấy cây con' },
+                  { value: 'Bón phân & Tưới', label: lang === 'en' ? 'Fertilization & Irrigation' : 'Bón phân & Tưới tiêu' },
+                  { value: 'Growth Monitoring', label: lang === 'en' ? 'Growth Monitoring & Pruning' : 'Theo dõi sinh trưởng và tỉa cành' },
+                  { value: 'Plant Protection', label: lang === 'en' ? 'Plant Protection & Biological Spraying' : 'Bảo vệ thực vật và phun vi sinh' },
+                  { value: 'Thu hoạch', label: lang === 'en' ? 'Harvesting & Packing' : 'Thu hoạch & Đóng gói' },
+                  { value: 'VietGAP Compliance', label: lang === 'en' ? 'Monitoring & VietGAP Compliance' : 'Giám sát và tuân thủ VietGAP' },
+                  { value: 'Khác', label: lang === 'en' ? 'Other tasks' : 'Công việc khác' },
+                ]}
+              />
             </div>
 
             <div className="task-form-field structured-field-card">
@@ -988,6 +999,7 @@ export function TasksPage() {
               <input className="ui-input"
                 id="task-start"
                 type="datetime-local"
+                min={!editingTask ? `${new Date().toISOString().split('T')[0]}T00:00` : undefined}
                 value={formStartsAt}
                 onChange={(e) => setFormStartsAt(e.target.value)}
               />
@@ -1001,6 +1013,7 @@ export function TasksPage() {
               <input className="ui-input"
                 id="task-due"
                 type="datetime-local"
+                min={formStartsAt || (!editingTask ? `${new Date().toISOString().split('T')[0]}T00:00` : undefined)}
                 value={formDueAt}
                 onChange={(e) => setFormDueAt(e.target.value)}
               />

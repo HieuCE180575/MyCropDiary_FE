@@ -197,7 +197,6 @@ export function ChangePasswordPanel({
         />
 
         <div className="confirm-dialog-actions" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '10px' }}>
-          <small style={{ order: -2, marginRight: 'auto', color: 'var(--color-muted)' }}><span style={{ color: 'var(--color-danger)' }}>*</span> {lang === 'en' ? 'Required information' : 'Thông tin bắt buộc'}</small>
           {onCancel && <Button type="button" variant="secondary" className="ui-cancel-button" disabled={loading} onClick={onCancel}>{translate('Cancel')}</Button>}
           <Button variant="primary" type="submit" disabled={loading} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
             {loading ? translate("Saving password...") : translate("Save New Password")}

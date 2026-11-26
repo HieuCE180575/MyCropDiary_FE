@@ -253,23 +253,24 @@ export function HazardousWasteManager({ farmId, farmName }: { farmId: number; fa
                     <td>{log.collectorName}</td>
                     <td style={{ maxWidth: '220px' }}>{log.notes || '-'}</td>
                     <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      <button
-                        type="button"
-                        className="table-icon-btn"
-                        onClick={() => openEditModal(log)}
-                        title={lang === 'en' ? 'Edit' : 'Cập nhật'}
-                        style={{ marginRight: '6px' }}
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        className="table-icon-btn danger"
-                        onClick={() => void handleDelete(log.wasteLogId)}
-                        title={lang === 'en' ? 'Delete' : 'Xóa'}
-                      >
-                        <Icon name="trash" size={15} />
-                      </button>
+                      <div className="table-action-btns" style={{ justifyContent: 'center' }}>
+                        <button
+                          type="button"
+                          className="table-icon-btn edit"
+                          onClick={() => openEditModal(log)}
+                          title={lang === 'en' ? 'Edit' : 'Cập nhật'}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          className="table-icon-btn danger"
+                          onClick={() => void handleDelete(log.wasteLogId)}
+                          title={lang === 'en' ? 'Delete' : 'Xóa'}
+                        >
+                          <Icon name="trash" size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

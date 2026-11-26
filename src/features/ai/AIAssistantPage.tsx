@@ -20,6 +20,8 @@ import '../../styles/ai.css';
 
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { apiRequest } from '../../shared/api/httpClient';
+import type { ApiResponse } from '../../shared/types/api';
+import { fetchCropSeasonsByFarm, type CropSeasonResp } from '../operations/cropSeasonService';
 import { FormattedAIMessage } from './FormattedAIMessage';
 import { useVoiceRecognition } from '../../shared/hooks/useVoiceRecognition';
 import {
@@ -96,21 +98,26 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   // Drafts state (UC automation)
+  const [draftSeasons, setDraftSeasons] = useState<CropSeasonResp[]>([]);
+  const [draftSeasonId, setDraftSeasonId] = useState<number | ''>('');
+  const [approvingDraftId, setApprovingDraftId] = useState<string | null>(null);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const tomorrowIso = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
   const [drafts, setDrafts] = useState<AIDraft[]>([
     {
       id: 'df-1',
-      activityType: 'Bón phân',
+      activityType: 'Fertilizing',
       title: 'Bón thúc đợt 3 phân hữu cơ kali sinh học đón quả',
-      recommendedDate: '2026-03-31',
+      recommendedDate: todayIso,
       suggestedMaterial: 'Phân hữu cơ khoáng Kali hữu cơ 0.2kg/gốc',
       reason: 'Cây đang bước vào giai đoạn tạo ngọt (Brix), cần bổ sung kali tự nhiên để quả chắc và thơm.',
       status: 'PENDING',
     },
     {
       id: 'df-2',
-      activityType: 'Tưới nước',
+      activityType: 'Irrigation',
       title: 'Giảm lượng nước tưới trước thu hoạch 5 ngày',
-      recommendedDate: '2026-04-02',
+      recommendedDate: tomorrowIso,
       suggestedMaterial: 'Nước lọc tinh khiết không pha phân',
       reason: 'Giảm độ ẩm gốc để tránh nứt quả và cô đọng lượng đường theo chuẩn VietGAP.',
       status: 'PENDING',
@@ -304,30 +311,66 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
     setTimeout(() => setFeedbackSent(false), 3000);
   };
 
+  useEffect(() => {
+    if (!selectedFarm?.id) {
+      setDraftSeasons([]);
+      setDraftSeasonId('');
+      return;
+    }
+    let cancelled = false;
+    void fetchCropSeasonsByFarm(selectedFarm.id)
+      .then((list) => {
+        if (cancelled) return;
+        setDraftSeasons(list);
+        const preferred = list.find((s) => s.seasonStatus === 'active') ?? list[0];
+        setDraftSeasonId(preferred ? preferred.cropSeasonId : '');
+      })
+      .catch(() => {
+        if (!cancelled) setDraftSeasons([]);
+      });
+    return () => { cancelled = true; };
+  }, [selectedFarm?.id]);
+
   const handleApproveDraft = async (draftId: string) => {
     const draft = drafts.find((d) => d.id === draftId);
-    if (!draft) return;
-
-    try {
-      if (selectedFarm?.id) {
-        await apiRequest('/farming-activities', {
-          method: 'POST',
-          data: {
-            farmId: selectedFarm.id,
-            activityType: draft.activityType,
-            description: `${draft.title} - ${draft.reason} (Vật tư gợi ý: ${draft.suggestedMaterial})`,
-            activityDate: draft.recommendedDate,
-          },
-        });
-      }
-    } catch {
-      // Allow seamless offline / local approval fallback
+    if (!draft || approvingDraftId) return;
+    if (!selectedFarm?.id || !draftSeasonId) {
+      showToast(
+        lang === 'en'
+          ? 'Please select a farm and crop season before confirming an AI draft.'
+          : 'Vui lòng chọn trang trại và mùa vụ canh tác trước khi xác nhận bản nháp AI.',
+        'error',
+      );
+      return;
     }
 
-    setDrafts((prev) =>
-      prev.map((d) => (d.id === draftId ? { ...d, status: 'APPROVED' } : d))
-    );
-    showToast((lang === 'en' ? "AI draft confirmed and added to the farming diary!" : 'Đã xác nhận và chuyển bản nháp AI vào Nhật ký canh tác!'));
+    setApprovingDraftId(draftId);
+    try {
+      const res = await apiRequest<ApiResponse<unknown>>('/farming-activities', {
+        method: 'POST',
+        data: {
+          cropSeasonId: Number(draftSeasonId),
+          activityType: draft.activityType,
+          activityName: draft.title,
+          startedAt: `${draft.recommendedDate}T08:00:00`,
+          description: `${draft.reason} (Vật tư gợi ý: ${draft.suggestedMaterial})`,
+        },
+      });
+      if (!res?.success) {
+        throw new Error(res?.message || (lang === 'en' ? 'Unable to save AI draft to farming diary.' : 'Không thể lưu bản nháp AI vào nhật ký canh tác.'));
+      }
+      setDrafts((prev) =>
+        prev.map((d) => (d.id === draftId ? { ...d, status: 'APPROVED' } : d))
+      );
+      showToast((lang === 'en' ? "AI draft confirmed and saved to the farming diary!" : 'Đã xác nhận và lưu bản nháp AI vào Nhật ký canh tác!'));
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : (lang === 'en' ? 'Failed to confirm AI draft.' : 'Không thể xác nhận bản nháp AI.'),
+        'error',
+      );
+    } finally {
+      setApprovingDraftId(null);
+    }
   };
 
   const handleRejectDraft = (draftId: string) => {
@@ -769,11 +812,33 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
          ========================================================= */}
       {activeTab === 'ai-drafts' && (
         <div {...tabPanelProps('ai', 'ai-drafts')} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="panel" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', padding: '16px 20px' }}>
-            <strong style={{ color: 'var(--color-success)', fontSize: '14.5px' }}>{(lang === 'en' ? "AI farming draft suggestions:" : "Bản nháp canh tác do AI đề xuất:")}</strong>
-            <p style={{ margin: '4px 0 0', color: 'var(--color-success)', fontSize: '13px' }}>
-              {(lang === 'en' ? "The system analyzes weather and crop stages to suggest tasks. Drafts become official diary records only after you confirm them." : "Hệ thống tự động phân tích thời tiết và giai đoạn mùa vụ để gợi ý công việc. Bản nháp chỉ trở thành Nhật ký chính thức khi bạn bấm Xác nhận.")}
-            </p>
+          <div className="panel" style={{ background: 'var(--color-success-bg)', borderColor: 'var(--color-border)', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <strong style={{ color: 'var(--color-success)', fontSize: '14.5px' }}>{(lang === 'en' ? "AI farming draft suggestions:" : "Bản nháp canh tác do AI đề xuất:")}</strong>
+              <p style={{ margin: '4px 0 0', color: 'var(--color-success)', fontSize: '13px' }}>
+                {(lang === 'en' ? "The system analyzes weather and crop stages to suggest tasks. Drafts become official diary records only after you confirm them." : "Hệ thống tự động phân tích thời tiết và giai đoạn mùa vụ để gợi ý công việc. Bản nháp chỉ trở thành Nhật ký chính thức khi bạn bấm Xác nhận.")}
+              </p>
+            </div>
+            <div style={{ minWidth: '240px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--color-primary-text)', marginBottom: '4px' }}>
+                {lang === 'en' ? 'Target Crop Season' : 'Mùa vụ nhận nhật ký'}
+              </label>
+              <select
+                className="ui-select"
+                value={draftSeasonId}
+                onChange={(e) => setDraftSeasonId(e.target.value ? Number(e.target.value) : '')}
+              >
+                {draftSeasons.length === 0 ? (
+                  <option value="">{lang === 'en' ? 'No crop seasons available' : 'Chưa có mùa vụ canh tác'}</option>
+                ) : (
+                  draftSeasons.map((s) => (
+                    <option key={s.cropSeasonId} value={s.cropSeasonId}>
+                      {s.seasonName}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
           </div>
 
           {drafts.map((d) => (
@@ -800,7 +865,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
                   <Button type="button" variant="secondary" className="ui-cancel-button" onClick={() => handleRejectDraft(d.id)}>
                     {(lang === 'en' ? "Discard" : "Hủy bỏ")}
                   </Button>
-                  <Button type="button" variant="primary" onClick={() => handleApproveDraft(d.id)}>
+                  <Button type="button" variant="primary" loading={approvingDraftId === d.id} disabled={!draftSeasonId || approvingDraftId !== null} onClick={() => { void handleApproveDraft(d.id); }}>
                     <Icon name="check" size={16} />
                     {lang === 'en' ? 'Confirm diary entry' : 'Xác nhận ghi nhật ký'}
                   </Button>

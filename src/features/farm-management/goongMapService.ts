@@ -85,6 +85,45 @@ export function saveGoongKeys(apiKey: string, maptilesKey: string): void {
   }
 }
 
+export function stripVietnameseAccents(str: string): string {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+}
+
+export function formatAdminLocationName(name: string, lang: 'vi' | 'en'): string {
+  if (!name || lang !== 'en') return name;
+  const trimmed = name.trim();
+  const normalizedLower = stripVietnameseAccents(trimmed).toLowerCase();
+  if (normalizedLower === 'thanh pho ho chi minh' || normalizedLower === 'tp ho chi minh' || normalizedLower === 'ho chi minh') {
+    return 'Ho Chi Minh City';
+  }
+  if (normalizedLower === 'thanh pho ha noi' || normalizedLower === 'ha noi') {
+    return 'Hanoi City';
+  }
+  const plain = stripVietnameseAccents(trimmed);
+  const rules: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+    [/^Thanh pho\s+(.+)$/i, (m) => `${m[1].trim()} City`],
+    [/^TP\.?\s+(.+)$/i, (m) => `${m[1].trim()} City`],
+    [/^Tinh\s+(.+)$/i, (m) => `${m[1].trim()} Province`],
+    [/^Quan\s+(\d+)$/i, (m) => `District ${m[1]}`],
+    [/^Quan\s+(.+)$/i, (m) => `${m[1].trim()} District`],
+    [/^Huyen\s+(.+)$/i, (m) => `${m[1].trim()} District`],
+    [/^Thi xa\s+(.+)$/i, (m) => `${m[1].trim()} Town`],
+    [/^Phuong\s+(\d+)$/i, (m) => `Ward ${m[1]}`],
+    [/^Phuong\s+(.+)$/i, (m) => `${m[1].trim()} Ward`],
+    [/^Xa\s+(.+)$/i, (m) => `${m[1].trim()} Commune`],
+    [/^Thi tran\s+(.+)$/i, (m) => `${m[1].trim()} Township`],
+  ];
+  for (const [re, fmt] of rules) {
+    const match = plain.match(re);
+    if (match) return fmt(match);
+  }
+  return plain;
+}
+
 export function normalizeVietnamese(str: string): string {
   return str
     .normalize('NFD')

@@ -118,6 +118,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
   const [newMemberEmail, setNewMemberEmail] = useState('');
   const [newMemberRole, setNewMemberRole] = useState<'STAFF' | 'OWNER'>('STAFF');
   const [addingMember, setAddingMember] = useState(false);
+  const [addMemberError, setAddMemberError] = useState<string | null>(null);
   const [removeMemberTarget, setRemoveMemberTarget] = useState<{ id: number; name: string; farmId: number } | null>(null);
   const [removingMember, setRemovingMember] = useState(false);
 
@@ -297,7 +298,11 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       });
       setFarmDetail(updated);
       setIsEditOpen(false);
-      showToast('Cập nhật thông tin và bản đồ trang trại thành công!');
+      showToast(
+        lang === 'en'
+          ? 'Farm information updated and submitted to Admin for review!'
+          : 'Đã cập nhật thông tin trang trại và gửi yêu cầu đến Quản trị viên xét duyệt!'
+      );
       retry();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Cập nhật thất bại', 'error');
@@ -334,8 +339,13 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeFarmId || !isOwner || !newMemberEmail.trim()) return;
+    if (!activeFarmId || !isOwner) return;
+    if (!newMemberEmail.trim()) {
+      setAddMemberError(lang === 'en' ? 'Please enter an account email address.' : 'Vui lòng nhập địa chỉ email tài khoản.');
+      return;
+    }
     setAddingMember(true);
+    setAddMemberError(null);
     try {
       const newMember = await addFarmMember(activeFarmId, {
         email: newMemberEmail.trim(),
@@ -343,10 +353,12 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       });
       setMembers((prev) => [...prev, newMember]);
       setNewMemberEmail('');
+      setAddMemberError(null);
       setIsAddMemberOpen(false);
       showToast(message("Member added {value1}", { value1: (newMember.fullName || newMember.email) }));
     } catch (err) {
-      showToast(err instanceof Error ? err.message : (lang === 'en' ? 'Failed to add member' : 'Thêm thành viên thất bại'), 'error');
+      const msg = err instanceof Error ? err.message : (lang === 'en' ? 'Failed to add member' : 'Thêm thành viên thất bại');
+      setAddMemberError(msg);
     } finally {
       setAddingMember(false);
     }
@@ -447,14 +459,16 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           {viewMode === 'detail' && (
-            <Button className="ui-back-action" type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-               {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
+            <Button className="ui-back-action ui-navigation-action" type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="arrow-left" size={16} />
+              {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
             </Button>
           )}
 
           {viewMode === 'register' && farms.length > 0 && (
-            <Button className="ui-back-action" type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-               {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
+            <Button className="ui-back-action ui-navigation-action" type="button" variant="secondary" onClick={() => navigate('/farms')} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+              <Icon name="arrow-left" size={16} />
+              {lang === 'en' ? 'Back to Farm List' : 'Danh sách trang trại'}
             </Button>
           )}
 
@@ -914,7 +928,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
                           </p>
                         </div>
                         {isOwner && (
-                          <Button type="button" variant="primary" onClick={() => setIsAddMemberOpen(true)} style={{ padding: '6px 12px', fontSize: '13px' }}>
+                          <Button type="button" variant="primary" onClick={() => { setAddMemberError(null); setIsAddMemberOpen(true); }} style={{ padding: '6px 12px', fontSize: '13px' }}>
                             <Icon name="plus" size={15} /> {lang === 'en' ? 'Add Member' : 'Thêm thành viên'}
                           </Button>
                         )}
@@ -1155,13 +1169,18 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
       {/* Add Member Modal */}
       <Modal structured
         open={isAddMemberOpen}
-        onClose={() => setIsAddMemberOpen(false)}
+        onClose={() => { setIsAddMemberOpen(false); setAddMemberError(null); }}
         title={lang === 'en' ? 'Add Member' : 'Thêm thành viên mới'}
         style={{ width: 'min(460px, 100%)' }}
       >
         <form onSubmit={handleAddMember} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {addMemberError && (
+            <p className="form-error-banner" role="alert" style={{ margin: 0 }}>
+              {translate(addMemberError)}
+            </p>
+          )}
           <div className="structured-field-card">
-            <label htmlFor="farm-field-4">{lang === 'en' ? 'Account Email' : 'Email tài khoản'}</label>
+            <label htmlFor="farm-field-4">{lang === 'en' ? 'Account Email' : 'Email tài khoản'} <span style={{ color: 'var(--color-danger)' }}>*</span></label>
             <input
               id="farm-field-4"
               className="ui-input"
@@ -1169,7 +1188,7 @@ export function FarmInfoPage({ defaultTab }: FarmInfoPageProps = {}) {
               required
               placeholder="nhanvien@example.com"
               value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.target.value)}
+              onChange={(e) => { setNewMemberEmail(e.target.value); setAddMemberError(null); }}
               style={{ width: '100%', padding: '10px 14px' }}
             />
           </div>

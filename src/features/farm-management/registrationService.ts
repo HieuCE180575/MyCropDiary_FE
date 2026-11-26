@@ -114,6 +114,23 @@ export function getAdminRegistrationById(id: string, signal?: AbortSignal): Prom
   return request<RegistrationResponse>(`/admin/farm-registrations/${id}`, { signal });
 }
 
+export function updateAdminRegistration(
+  id: string,
+  payload: {
+    farmName?: string;
+    addressLine?: string;
+    province?: string;
+    district?: string;
+    ward?: string;
+    description?: string;
+  },
+): Promise<RegistrationResponse> {
+  return request<RegistrationResponse>(`/admin/farm-registrations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    data: payload,
+  });
+}
+
 export function handleFarmRegistration(id: string, action: 'APPROVED' | 'REJECTED', reason: string) {
   if (action === 'REJECTED' && !reason.trim()) throw new Error('Vui lòng nhập lý do từ chối.');
   return request<RegistrationResponse>(`/admin/farm-registrations/${id}/handle`, {

@@ -381,7 +381,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
               <tr style={{ background: 'var(--color-page)' }}>
 
                 <th scope="col">
-                  {lang === 'en' ? 'PURCHASE / INVOICE NO.' : 'MÃ PHIẾU / SỐ HĐ'}
+                  {lang === 'en' ? 'MATERIAL / INVOICE NO.' : 'TÊN VẬT TƯ / MÃ PHIẾU'}
                 </th>
                 <th scope="col">
                   {lang === 'en' ? 'SUPPLIER' : 'NHÀ CUNG CẤP'}
@@ -435,8 +435,15 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                           onMouseEnter={(e) => ((e.target as HTMLElement).style.color = 'var(--color-primary-text)')}
                           onMouseLeave={(e) => ((e.target as HTMLElement).style.color = 'var(--color-text)')}
                         >
-                          {purchase.referenceNo || (lang === 'en' ? 'Material purchase' : 'Phiếu mua vật tư')}
+                          {purchase.items && purchase.items.length > 0
+                            ? purchase.items.map((i) => i.materialName).filter(Boolean).join(', ')
+                            : (purchase.referenceNo || (lang === 'en' ? 'Material purchase' : 'Phiếu mua vật tư'))}
                         </span>
+                        {purchase.referenceNo && purchase.items && purchase.items.length > 0 && (
+                          <span style={{ fontSize: '12px', color: 'var(--color-muted)', display: 'block', marginTop: '2px' }}>
+                            {purchase.referenceNo}
+                          </span>
+                        )}
                       </td>
                       <td style={{ color: 'var(--color-body)', fontSize: '13.5px', fontWeight: 500 }}>
                         {purchase.supplierName || '—'}
@@ -747,6 +754,7 @@ export function InputPurchasesPage({ embedded = false }: { embedded?: boolean })
                 </div>
                 <input id="input-purchases-page-control-1" className="ui-input"
                   type="date"
+                  min={new Date().toISOString().split('T')[0]}
                   required
                   value={newPurchaseDate}
                   onChange={(e) => setNewPurchaseDate(e.target.value)}

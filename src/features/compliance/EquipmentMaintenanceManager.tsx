@@ -302,23 +302,24 @@ export function EquipmentMaintenanceManager({ farmId, farmName, isOwner = false 
                     <td style={{ maxWidth: '280px' }}>{eq.notes || '-'}</td>
                     {isOwner && (
                       <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                        <button
-                          type="button"
-                          className="table-icon-btn"
-                          onClick={() => openEditEquipment(eq)}
-                          title={lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
-                          style={{ marginRight: '6px' }}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="table-icon-btn danger"
-                          onClick={() => void handleDeleteEquipment(eq)}
-                          title={lang === 'en' ? 'Delete' : 'Xóa'}
-                        >
-                          <Icon name="trash" size={15} />
-                        </button>
+                        <div className="table-action-btns" style={{ justifyContent: 'center' }}>
+                          <button
+                            type="button"
+                            className="table-icon-btn edit"
+                            onClick={() => openEditEquipment(eq)}
+                            title={lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+                          >
+                            <Pencil size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            className="table-icon-btn danger"
+                            onClick={() => void handleDeleteEquipment(eq)}
+                            title={lang === 'en' ? 'Delete' : 'Xóa'}
+                          >
+                            <Icon name="trash" size={15} />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>

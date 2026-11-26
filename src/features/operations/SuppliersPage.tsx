@@ -121,11 +121,41 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
     setIsCreateOpen(true);
   };
 
+  const validateSupplierForm = (form: { supplierName: string; contactName?: string; phone?: string; email?: string }): string | null => {
+    const name = form.supplierName.trim();
+    if (!name) {
+      return lang === 'en' ? 'Enter a supplier name.' : 'Vui lòng nhập tên nhà cung cấp.';
+    }
+    if (/\d/.test(name)) {
+      return lang === 'en' ? 'Supplier name must not contain numbers.' : 'Tên nhà cung cấp không được chứa chữ số.';
+    }
+    const contact = (form.contactName || '').trim();
+    if (contact && /\d/.test(contact)) {
+      return lang === 'en' ? 'Contact person name must not contain numbers.' : 'Tên người liên hệ không được chứa chữ số.';
+    }
+    const phone = (form.phone || '').trim();
+    if (phone) {
+      if (/[a-zA-Z]/.test(phone) || !/^[0-9+\s.-]+$/.test(phone)) {
+        return lang === 'en' ? 'Phone number must contain digits only (no letters).' : 'Số điện thoại chỉ được chứa chữ số (không được nhập chữ cái).';
+      }
+      const digits = phone.replace(/[\s.-]/g, '');
+      if (!/^(0|\+84)\d{8,10}$/.test(digits)) {
+        return lang === 'en' ? 'Phone number must be 9–11 digits starting with 0 or +84.' : 'Số điện thoại phải gồm 9–11 chữ số và bắt đầu bằng 0 hoặc +84.';
+      }
+    }
+    const email = (form.email || '').trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return lang === 'en' ? 'Please enter a valid email address.' : 'Địa chỉ email không đúng định dạng.';
+    }
+    return null;
+  };
+
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!farmId) return;
-    if (!createForm.supplierName.trim()) {
-      setNotification({ text: lang === 'en' ? 'Enter a supplier name.' : 'Vui lòng nhập tên nhà cung cấp.', type: 'error' });
+    const validationError = validateSupplierForm(createForm);
+    if (validationError) {
+      setNotification({ text: validationError, type: 'error' });
       return;
     }
     setNotification(null);
@@ -173,8 +203,9 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSupplier) return;
-    if (!updateForm.supplierName.trim()) {
-      setNotification({ text: lang === 'en' ? 'Supplier name is required.' : 'Tên nhà cung cấp không được để trống.', type: 'error' });
+    const validationError = validateSupplierForm(updateForm);
+    if (validationError) {
+      setNotification({ text: validationError, type: 'error' });
       return;
     }
     setNotification(null);
@@ -541,7 +572,7 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             <h2 style={{ margin: 0 }}>{lang === 'en' ? 'Add New Supplier' : 'Thêm mới nhà cung cấp vật tư'}</h2>
             <button type="button" className="modal-close" disabled={submittingCreate} onClick={() => setIsCreateOpen(false)} aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}><Icon name="close" /></button>
           </div>
-          <form onSubmit={handleCreateSubmit}>
+          <form onSubmit={handleCreateSubmit} noValidate>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="structured-field-card">
@@ -658,7 +689,7 @@ export function SuppliersPage({ embedded = false }: { embedded?: boolean }) {
             <h2 style={{ margin: 0 }}>{lang === 'en' ? 'Update Supplier' : 'Cập nhật nhà cung cấp'}</h2>
             <button type="button" className="modal-close" disabled={submittingUpdate} onClick={() => setEditingSupplier(null)} aria-label={lang === 'en' ? 'Close dialog' : 'Đóng cửa sổ'}><Icon name="close" /></button>
           </div>
-          <form onSubmit={handleUpdateSubmit}>
+          <form onSubmit={handleUpdateSubmit} noValidate>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {notification?.type === 'error' && !isDeleteError(translate(notification.text), notification.type) && <p role="alert" className="form-error-banner">{translate(notification.text)}</p>}
             <div className="structured-field-card">

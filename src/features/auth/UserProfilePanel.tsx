@@ -13,6 +13,8 @@ import { useAuth } from './AuthProvider';
 import { getUserProfile, updateUserProfile, type UserProfile } from './authApi';
 
 
+const cleanFullName = (raw?: string | null) => (raw || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+
 export function UserProfilePanel() {
   const { t: translate } = useLanguage();
   const { user, updateUser } = useAuth();
@@ -39,13 +41,13 @@ export function UserProfilePanel() {
     try {
       const data = await getUserProfile();
       setProfile(data);
-      setFullName(data.fullName || '');
+      setFullName(cleanFullName(data.fullName));
       setPhone(data.phone || '');
       setAvatarUrl(data.avatarUrl || '');
     } catch {
       // Fallback from auth context
       if (user) {
-        setFullName(user.fullName || '');
+        setFullName(cleanFullName(user.fullName));
         setPhone(user.phone || '');
         setAvatarUrl(user.avatarUrl || '');
       }
@@ -108,7 +110,7 @@ export function UserProfilePanel() {
 
   const handleCancel = () => {
     if (profile) {
-      setFullName(profile.fullName || '');
+      setFullName(cleanFullName(profile.fullName));
       setPhone(profile.phone || '');
       setAvatarUrl(profile.avatarUrl || '');
     }
@@ -120,32 +122,14 @@ export function UserProfilePanel() {
 
   return (
     <>
-      <section className="panel profile-details" aria-label={translate("Personal Information")} style={{ width: '100%' }}>
-        <div className="profile-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+      <section className="panel profile-details" aria-label={translate("Personal Information")} style={{ width: '100%', maxWidth: '760px', margin: '0 auto' }}>
+        <div className="profile-card-header" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: '12px', textAlign: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
             <span className="shortcut-icon"><Icon name="user" /></span>
             <div>
               <h2>{translate("Account Information")}</h2>
               <p className="profile-section-sub">{translate("Identity and login information of your account")}</p>
             </div>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-            {!isEditing && (
-              <>
-                <Button type="button" variant="secondary" onClick={() => setIsChangePasswordOpen(true)}><Icon name="lock" size={17} />{translate("Change Password")}</Button>
-                <Button
-                  type="button"
-                  variant="secondary" className="ui-edit-action"
-                  onClick={() => { setIsEditing(true); setMessage(null); }}
-                  title={translate("Edit Profile")}
-                  aria-label={translate("Edit Profile")}
-                >
-                  <Icon name="edit" size={17} />
-                  {translate("Edit Profile")}
-                </Button>
-              </>
-            )}
           </div>
         </div>
 
@@ -174,7 +158,7 @@ export function UserProfilePanel() {
         {loading ? (
           <p style={{ color: "var(--color-muted)", padding: '16px 0' }}>{translate("Loading profile information...")}</p>
         ) : isEditing ? (
-          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '640px', margin: '18px auto 0' }}>
             {/* Avatar */}
             <div className="structured-field-card">
               <label>{translate("Profile Avatar")}</label>
@@ -230,7 +214,7 @@ export function UserProfilePanel() {
                       >{translate("✕ Remove Photo")}</button>
                     )}
                   </div>
-                  <label htmlFor="user-profile-panel-control-1" style={{ fontSize: '11.5px', color: "var(--color-muted)" }}>{translate("JPG, PNG format or paste direct image link (max 2MB)")}</label>
+                  <label htmlFor="user-profile-panel-control-1" style={{ fontSize: '11.5px', color: "var(--color-muted)" }}>{translate("JPG, PNG format (max 2MB)")}</label>
                   <input id="user-profile-panel-control-1"
                     ref={fileInputRef}
                     type="file"
@@ -240,19 +224,10 @@ export function UserProfilePanel() {
                   />
                 </div>
               </div>
-
-              <input aria-label={translate("https://example.com/photo.jpg or direct image URL...")} className="ui-input"
-                type="text"
-                value={avatarUrl}
-                onChange={(e) => setAvatarUrl(e.target.value)}
-                placeholder={translate("https://example.com/photo.jpg or direct image URL...")}
-                style={{ width: '100%', padding: '9px 12px' }}
-                disabled={saving}
-              />
             </div>
 
             <div className="structured-field-card">
-              <label htmlFor="user-profile-panel-field-1">{translate("Full Name *")}</label>
+              <label htmlFor="user-profile-panel-field-1">{translate("Full Name")} <span style={{ color: 'var(--color-danger)' }}>*</span></label>
               <input id="user-profile-panel-field-1" className="ui-input"
                 type="text"
                 required
@@ -307,12 +282,31 @@ export function UserProfilePanel() {
             </div>
           </form>
         ) : (
-          <dl className="profile-info-grid">
-            <div><dt>{translate('Full Name')}</dt><dd>{profile?.fullName || user?.fullName || translate('Not specified')}</dd></div>
-            <div><dt>Email</dt><dd>{profile?.email || user?.email || translate('Not specified')}</dd></div>
-            <div><dt>{translate('Phone Number')}</dt><dd>{profile?.phone || user?.phone || translate('Not specified')}</dd></div>
-            <div><dt>{translate('Status')}</dt><dd><StatusBadge tone={profile?.accountStatus && profile.accountStatus !== 'ACTIVE' ? 'neutral' : 'success'} label={profile?.accountStatus && profile.accountStatus !== 'ACTIVE' ? translate(profile.accountStatus) : translate('Active')} /></dd></div>
-          </dl>
+          <>
+            <dl className="profile-info-grid" style={{ maxWidth: '640px', margin: '18px auto 0' }}>
+              <div><dt>{translate('Full Name')}</dt><dd>{cleanFullName(profile?.fullName || user?.fullName) || translate('Not specified')}</dd></div>
+              <div><dt>Email</dt><dd>{profile?.email || user?.email || translate('Not specified')}</dd></div>
+              <div><dt>{translate('Phone Number')}</dt><dd>{profile?.phone || user?.phone || translate('Not specified')}</dd></div>
+              <div><dt>{translate('Status')}</dt><dd><StatusBadge tone={profile?.accountStatus && profile.accountStatus !== 'ACTIVE' ? 'neutral' : 'success'} label={profile?.accountStatus && profile.accountStatus !== 'ACTIVE' ? translate(profile.accountStatus) : translate('Active')} /></dd></div>
+            </dl>
+            <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '12px', marginTop: '24px', paddingTop: '18px', borderTop: '1px solid var(--color-border)' }}>
+              <Button type="button" variant="secondary" onClick={() => setIsChangePasswordOpen(true)}>
+                <Icon name="lock" size={17} />
+                {translate("Change Password")}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="ui-edit-action"
+                onClick={() => { setIsEditing(true); setMessage(null); }}
+                title={translate("Edit Profile")}
+                aria-label={translate("Edit Profile")}
+              >
+                <Icon name="edit" size={17} />
+                {translate("Edit Profile")}
+              </Button>
+            </div>
+          </>
         )}
       </section>
 

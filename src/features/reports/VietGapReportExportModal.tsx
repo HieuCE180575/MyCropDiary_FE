@@ -7,7 +7,7 @@ import { formatNumber } from '../../shared/format/formatters';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 import { Button } from '../../shared/components/Button';
 import { Modal } from '../../shared/components/Modal';
-import { Printer } from 'lucide-react';
+import { Download, Printer } from 'lucide-react';
 import {
   fetchHazardousWastesApi,
   fetchEquipmentMaintenancesApi,
@@ -98,6 +98,8 @@ export function VietGapReportExportModal({
   const [equipmentLogs, setEquipmentLogs] = useState<EquipmentMaintenanceResp[]>([]);
   const [complaintLogs, setComplaintLogs] = useState<CustomerComplaintResp[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -156,6 +158,97 @@ export function VietGapReportExportModal({
     window.print();
   };
 
+  const handleDownloadPdf = async () => {
+    const element = document.getElementById('vietgap-print-area');
+    if (!element || exportingPdf) return;
+    setExportingPdf(true);
+    setPdfError(null);
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: element.scrollWidth,
+      });
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const contentWidth = pageWidth - margin * 2;
+      const contentHeight = pageHeight - margin * 2;
+
+      const pxPerMm = canvas.width / contentWidth;
+      const pageCanvasHeightPx = Math.floor(contentHeight * pxPerMm);
+
+      let offsetY = 0;
+      let pageIndex = 0;
+
+      while (offsetY < canvas.height) {
+        const sliceHeightPx = Math.min(pageCanvasHeightPx, canvas.height - offsetY);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeightPx;
+
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0,
+            offsetY,
+            canvas.width,
+            sliceHeightPx,
+            0,
+            0,
+            canvas.width,
+            sliceHeightPx,
+          );
+        }
+
+        const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+        const sliceHeightMm = sliceHeightPx / pxPerMm;
+
+        if (pageIndex > 0) {
+          pdf.addPage();
+        }
+        pdf.addImage(imgData, 'JPEG', margin, margin, contentWidth, sliceHeightMm);
+
+        offsetY += sliceHeightPx;
+        pageIndex += 1;
+      }
+
+      const safeSeason = (seasonName || `season-${cropSeasonId}`)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9-_]+/g, '_')
+        .replace(/^_+|_+$/g, '')
+        .slice(0, 60);
+      const today = new Date().toISOString().slice(0, 10);
+      pdf.save(`VietGAP_Dossier_${safeSeason || cropSeasonId}_${today}.pdf`);
+    } catch {
+      setPdfError(
+        lang === 'en'
+          ? 'Unable to generate the PDF file. Please try again or use Print.'
+          : 'Không thể tạo file PDF. Vui lòng thử lại hoặc sử dụng nút In.',
+      );
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   // Format date DD/MM/YYYY helper
@@ -190,14 +283,27 @@ export function VietGapReportExportModal({
       title={(lang === 'en' ? "VietGAP Cultivation Diary & Compliance Dossier (TCVN 11892-1:2017)" : "Hồ sơ Nhật ký Canh tác & Đánh giá Tiêu chuẩn VietGAP (TCVN 11892-1:2017)")}
       style={{ maxWidth: '1000px', width: '95vw' }}
     >
-      <div className="vietgap-modal-actions no-print" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--color-border)' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <Button variant="secondary" onClick={onClose}>
+      <div className="vietgap-modal-actions no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '16px', paddingBottom: '14px', borderBottom: '1px solid var(--color-border)' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {pdfError && (
+            <span role="alert" style={{ color: 'var(--color-danger)', fontSize: '13px', fontWeight: 600 }}>
+              {pdfError}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <Button variant="secondary" onClick={onClose} disabled={exportingPdf}>
             {(lang === 'en' ? "Close" : "Đóng")}
           </Button>
-          <Button variant="primary" onClick={handlePrint} disabled={loading || !dataLoaded}>
+          <Button variant="secondary" onClick={handlePrint} disabled={loading || !dataLoaded || exportingPdf}>
             <Printer size={16} />
-            {(lang === 'en' ? "Print Dossier / Save as PDF (A4)" : "In Hồ sơ / Lưu file PDF (A4)")}
+            {(lang === 'en' ? "Print" : "In hồ sơ")}
+          </Button>
+          <Button variant="primary" onClick={() => { void handleDownloadPdf(); }} disabled={loading || !dataLoaded} loading={exportingPdf}>
+            <Download size={16} />
+            {exportingPdf
+              ? (lang === 'en' ? 'Generating PDF...' : 'Đang tạo file PDF...')
+              : (lang === 'en' ? 'Download PDF (A4)' : 'Tải file PDF (A4)')}
           </Button>
         </div>
       </div>

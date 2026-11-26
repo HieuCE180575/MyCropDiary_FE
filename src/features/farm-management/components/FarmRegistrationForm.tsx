@@ -14,6 +14,7 @@ import {
   fetchDistrictsForProvince,
   fetchWardsForDistrict,
   findProvinceOption,
+  formatAdminLocationName,
   generateSampleFarmPolygon,
   geocodeAddress,
   normalizeVietnamese,
@@ -394,7 +395,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
       {submitError ? <p role="alert" className="form-error-banner">{translate(submitError)}</p> : null}
 
       <label className="form-field structured-field-card">
-        <span>{lang === 'en' ? 'Proposed Farm Name *' : 'Tên trang trại dự kiến *'}</span>
+        <span>{lang === 'en' ? 'Proposed Farm Name' : 'Tên trang trại dự kiến'} <span style={{ color: 'var(--color-danger)' }}>*</span></span>
         <input className="ui-input"
           type="text"
           maxLength={160}
@@ -408,7 +409,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
 
       {/* Địa chỉ chi tiết */}
       <label className="form-field structured-field-card">
-        <span>{lang === 'en' ? 'Detailed Address *' : 'Địa chỉ chi tiết *'}</span>
+        <span>{lang === 'en' ? 'Detailed Address' : 'Địa chỉ chi tiết'} <span style={{ color: 'var(--color-danger)' }}>*</span></span>
         <input className="ui-input"
           type="text"
           value={values.address}
@@ -430,7 +431,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
               <input className="ui-input"
                 type="text"
                 readOnly
-                value={values.province ?? ''}
+                value={formatAdminLocationName(values.province ?? '', lang)}
                 maxLength={100}
                 onFocus={() => {
                   setOpenDropdown('province');
@@ -523,7 +524,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
                       borderBottom: '1px solid var(--color-page)',
                     }}
                   >
-                    {prov.name}
+                    {formatAdminLocationName(prov.name, lang)}
                   </div>
                 ))
               )}
@@ -539,7 +540,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
               <input className="ui-input"
                 type="text"
                 readOnly
-                value={values.district ?? ''}
+                value={formatAdminLocationName(values.district ?? '', lang)}
                 maxLength={100}
                 onFocus={() => {
                   setOpenDropdown('district');
@@ -641,7 +642,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
                           borderBottom: '1px solid var(--color-page)',
                         }}
                       >
-                        {dist.name}
+                        {formatAdminLocationName(dist.name, lang)}
                       </div>
                     ))
                   )}
@@ -659,7 +660,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
               <input className="ui-input"
                 type="text"
                 readOnly
-                value={values.ward ?? ''}
+                value={formatAdminLocationName(values.ward ?? '', lang)}
                 maxLength={100}
                 onFocus={() => {
                   setOpenDropdown('ward');
@@ -756,7 +757,7 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
                           borderBottom: '1px solid var(--color-page)',
                         }}
                       >
-                        {w.name}
+                        {formatAdminLocationName(w.name, lang)}
                       </div>
                     ))
                   )}

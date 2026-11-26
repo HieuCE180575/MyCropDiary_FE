@@ -10,6 +10,7 @@ import { Button } from '../../shared/components/Button';
 import { TablePagination } from '../../shared/components/TablePagination';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
+import { EditableSelectCombobox } from '../../shared/components/EditableSelectCombobox';
 
 import { formatDate as displayDate } from '../../shared/format/formatters';
 import { usePagination } from '../../shared/hooks/usePagination';
@@ -70,6 +71,7 @@ export function StaffManagementPage() {
     notes: '',
   });
   const [savingWorker, setSavingWorker] = useState(false);
+  const [workerMemberSearch, setWorkerMemberSearch] = useState('');
   const [staffList, setStaffList] = useState<FarmStaffRecord[]>(initialCache?.staffList || []);
   const [zones, setZones] = useState<Zone[]>(initialCache?.zones || []);
   const [assignments, setAssignments] = useState<StaffZoneAssignment[]>(initialCache?.assignments || []);
@@ -207,6 +209,7 @@ export function StaffManagementPage() {
 
   const handleOpenAddWorker = () => {
     setEditingWorker(null);
+    setWorkerMemberSearch('');
     setWorkerForm({
       farmMemberId: staffList.length > 0 ? staffList[0].farmMemberId : 0,
       workerCode: `CN-${String(workers.length + 1).padStart(3, '0')}`,
@@ -1151,11 +1154,19 @@ export function StaffManagementPage() {
                 <p>{(lang === 'en' ? "Loading worker profiles..." : "Đang tải danh sách hồ sơ công nhân...")}</p>
               </div>
             ) : workerLoadError ? (<LoadError message={workerLoadError} onRetry={() => { void loadWorkers(); }} />) : workers.length === 0 ? (
-              <div className="zone-clean-empty">
-                <Icon name="users" size={48} />
-                <h3>{(lang === 'en' ? "No worker profiles yet" : "Chưa có hồ sơ công nhân")}</h3>
-                <p>{(lang === 'en' ? "Click \"Add worker profile\" to create worker records under VietGAP standards." : "Nhấn nút \"Thêm hồ sơ công nhân\" để thiết lập hồ sơ người lao động theo tiêu chuẩn VietGAP.")}</p>
-              </div>
+              <EmptyState
+                className="panel"
+                style={{ border: 'none', margin: '12px 0' }}
+                icon={<Icon name="users" size={40} />}
+                title={lang === 'en' ? 'No worker profiles yet' : 'Chưa có hồ sơ công nhân'}
+                description={lang === 'en' ? 'Click "Add worker profile" to create worker records under VietGAP standards.' : 'Nhấn nút "Thêm hồ sơ công nhân" để thiết lập hồ sơ người lao động theo tiêu chuẩn VietGAP.'}
+                action={isOwner ? (
+                  <Button type="button" variant="primary" onClick={handleOpenAddWorker}>
+                    <Icon name="plus" size={16} />
+                    {lang === 'en' ? 'Add worker profile' : 'Thêm hồ sơ công nhân'}
+                  </Button>
+                ) : undefined}
+              />
             ) : (
               <>
               <div className="zone-table-wrap worker-profile-table-wrap ui-table-scroll" tabIndex={0}>
@@ -1372,13 +1383,21 @@ export function StaffManagementPage() {
               <span className="structured-field-badge">{editJobTitle.length}/100</span>
             </div>
             <div className="form-field" style={{ marginBottom: 0 }}>
-              <input className="ui-input"
+              <EditableSelectCombobox
                 id="edit-staff-job-title"
-                type="text"
                 maxLength={100}
-                placeholder={(lang === 'en' ? "Example: Agronomist / Nutrition manager..." : "VD: Kỹ sư nông học / Quản lý dinh dưỡng...")}
                 value={editJobTitle}
-                onChange={(e) => setEditJobTitle(e.target.value)}
+                onChange={setEditJobTitle}
+                placeholder={(lang === 'en' ? "Select or type professional title..." : "Chọn hoặc nhập chức danh chuyên môn...")}
+                options={[
+                  { value: lang === 'en' ? 'Agronomist' : 'Kỹ sư nông nghiệp', label: lang === 'en' ? 'Agronomist' : 'Kỹ sư nông nghiệp' },
+                  { value: lang === 'en' ? 'Plant Protection Specialist' : 'Chuyên viên bảo vệ thực vật', label: lang === 'en' ? 'Plant Protection Specialist' : 'Chuyên viên bảo vệ thực vật' },
+                  { value: lang === 'en' ? 'Irrigation & Nutrition Manager' : 'Quản lý dinh dưỡng & tưới tiêu', label: lang === 'en' ? 'Irrigation & Nutrition Manager' : 'Quản lý dinh dưỡng & tưới tiêu' },
+                  { value: lang === 'en' ? 'VietGAP Compliance Supervisor' : 'Giám sát tuân thủ VietGAP', label: lang === 'en' ? 'VietGAP Compliance Supervisor' : 'Giám sát tuân thủ VietGAP' },
+                  { value: lang === 'en' ? 'Greenhouse Technician' : 'Kỹ thuật viên nhà màng', label: lang === 'en' ? 'Greenhouse Technician' : 'Kỹ thuật viên nhà màng' },
+                  { value: lang === 'en' ? 'Warehouse & Materials Officer' : 'Quản lý kho vật tư', label: lang === 'en' ? 'Warehouse & Materials Officer' : 'Quản lý kho vật tư' },
+                  { value: lang === 'en' ? 'Harvest & Packing Coordinator' : 'Nhân viên thu hoạch & đóng gói', label: lang === 'en' ? 'Harvest & Packing Coordinator' : 'Nhân viên thu hoạch & đóng gói' },
+                ]}
               />
             </div>
           </div>
@@ -1504,6 +1523,7 @@ export function StaffManagementPage() {
                 <input className="ui-input"
                   id="assign-start-date"
                   type="date"
+                  min={new Date().toISOString().split('T')[0]}
                   required
                   value={assignedAtDate}
                   onChange={(e) => setAssignedAtDate(e.target.value)}
@@ -1571,8 +1591,16 @@ export function StaffManagementPage() {
             </div>
           ) : <div className="structured-field-card">
             <div className="structured-field-header"><label className="structured-field-label" htmlFor="staff-management-page-field-1">
-              {(lang === 'en' ? "Farm member *" : "Thành viên trang trại *")}
+              {lang === 'en' ? 'Farm member' : 'Thành viên trang trại'} <span style={{ color: 'var(--color-danger)' }}>*</span>
             </label><span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span></div>
+            <input
+              type="search"
+              className="ui-input"
+              placeholder={lang === 'en' ? 'Type name or email to filter members...' : 'Nhập tên hoặc email để tìm nhanh thành viên...'}
+              value={workerMemberSearch}
+              onChange={(e) => setWorkerMemberSearch(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', marginBottom: '8px' }}
+            />
             <select id="staff-management-page-field-1" className="ui-select"
               required
               value={workerForm.farmMemberId}
@@ -1580,18 +1608,24 @@ export function StaffManagementPage() {
               style={{ width: '100%', padding: '9px 12px' }}
             >
               <option value={0}>{(lang === 'en' ? "-- Select staff member --" : "-- Chọn thành viên nhân sự --")}</option>
-              {staffList.map((s) => (
-                <option key={s.farmMemberId} value={s.farmMemberId}>
-                  {s.fullName} ({s.email}) - {s.jobTitle || translate(s.roleLabel)}
-                </option>
-              ))}
+              {staffList
+                .filter((s) => {
+                  const q = workerMemberSearch.trim().toLowerCase();
+                  if (!q) return true;
+                  return s.fullName.toLowerCase().includes(q) || s.email.toLowerCase().includes(q);
+                })
+                .map((s) => (
+                  <option key={s.farmMemberId} value={s.farmMemberId}>
+                    {s.fullName} ({s.email}) - {s.jobTitle || translate(s.roleLabel)}
+                  </option>
+                ))}
             </select>
           </div>}
 
           <div className="ui-form-grid" >
             <div className="structured-field-card">
               <div className="structured-field-header"><label className="structured-field-label" htmlFor="staff-management-page-control-1">
-                {(lang === 'en' ? "Worker code *" : "Mã công nhân *")}
+                {lang === 'en' ? 'Worker code' : 'Mã công nhân'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label><span className="structured-field-badge">{lang === 'en' ? 'Required' : 'Bắt buộc'}</span></div>
               <input id="staff-management-page-control-1" className="ui-input"
                 type="text"
@@ -1619,7 +1653,7 @@ export function StaffManagementPage() {
           <div className="ui-form-grid" >
             <div className="structured-field-card">
               <div className="structured-field-header"><label className="structured-field-label" htmlFor="staff-management-page-field-3">
-                {(lang === 'en' ? "Employment status *" : "Tình trạng làm việc *")}
+                {lang === 'en' ? 'Employment status' : 'Tình trạng làm việc'} <span style={{ color: 'var(--color-danger)' }}>*</span>
               </label><span className="structured-field-badge">{lang === 'en' ? 'Status' : 'Trạng thái'}</span></div>
               <select id="staff-management-page-field-3" className="ui-select"
                 required
@@ -1638,6 +1672,7 @@ export function StaffManagementPage() {
               </label><span className="structured-field-badge">{lang === 'en' ? 'Date' : 'Ngày'}</span></div>
               <input id="staff-management-page-field-4" className="ui-input"
                 type="date"
+                min={!editingWorker ? new Date().toISOString().split('T')[0] : undefined}
                 value={workerForm.hiredAt || ''}
                 onChange={(e) => setWorkerForm((p) => ({ ...p, hiredAt: e.target.value }))}
                 style={{ width: '100%', padding: '9px 12px' }}

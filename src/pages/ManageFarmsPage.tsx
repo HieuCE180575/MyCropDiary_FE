@@ -85,7 +85,12 @@ export function ManageFarmsPage() {
                   <td>{row.address || t('farms.notProvided')}</td>
                   <td>{row.date ? formatDate(row.date, lang) : t('farms.notProvided')}</td>
                   <td><StatusBadge tone={registrationTones[row.status] ?? 'neutral'} label={t(`farms.status.${row.status}`)} /></td>
-                  <td><div className="table-action-btns"><Link className="table-icon-btn primary" to={row.href} title={t('farms.view')} aria-label={`${t('farms.view')}: ${row.name}`}><Icon name="eye" /></Link></div></td>
+                  <td><div className="table-action-btns">
+                    <Link className="table-icon-btn primary" to={row.href} title={t('farms.view')} aria-label={`${t('farms.view')}: ${row.name}`}><Icon name="eye" size={15} /></Link>
+                    {row.role === 'OWNER' && row.key.startsWith('farm-') && (
+                      <Link className="table-icon-btn edit" to={`${row.href}?edit=1`} title={lang === 'en' ? 'Edit farm' : 'Chỉnh sửa trang trại'} aria-label={`${lang === 'en' ? 'Edit' : 'Chỉnh sửa'}: ${row.name}`}><Icon name="edit" size={15} /></Link>
+                    )}
+                  </div></td>
                 </tr>)}{!filtered.length && <tr><td colSpan={6}><EmptyState title={t('farms.noMatches')} /></td></tr>}</tbody>
               </table>
             </div>

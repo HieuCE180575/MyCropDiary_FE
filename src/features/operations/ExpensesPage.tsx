@@ -673,6 +673,7 @@ export function ExpensesPage({ embedded = false }: { embedded?: boolean }) {
             </div>
               <input id="expenses-page-control-2" className="ui-input"
                 type="date"
+                min={new Date().toISOString().split('T')[0]}
                 value={recordForm.expenseDate}
                 onChange={(e) => setRecordForm({ ...recordForm, expenseDate: e.target.value })}
                 style={{ width: '100%', padding: '9px 12px', outline: 'none' }}

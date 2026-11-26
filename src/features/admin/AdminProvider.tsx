@@ -2,7 +2,7 @@ import { Icon } from '../../shared/components/Icon';
 import { useLanguage } from '../../shared/i18n/LanguageContext';
 
 import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
-import { getAdminRegistrations, getAdminRegistrationById, handleFarmRegistration, type RegistrationResponse } from '../farm-management/registrationService';
+import { getAdminRegistrations, getAdminRegistrationById, handleFarmRegistration, updateAdminRegistration, type RegistrationResponse } from '../farm-management/registrationService';
 import { getAdminUsers, getAdminUserById, updateAdminUserStatus, updateAdminUserProfile, createAdminUser, type AdminUserResponse } from './adminUserService';
 import {
   fetchAdminAIFeedbacks,
@@ -555,6 +555,25 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           showNotice('Đã gửi phản hồi và cập nhật trạng thái ý kiến thành công.');
           return;
         }
+      }
+
+      if (command.type === 'save' && command.collection === 'registrations' && command.id && /^\d+$/.test(command.id)) {
+        const updated = toRecord(
+          await updateAdminRegistration(command.id, {
+            farmName: command.values.name,
+            addressLine: command.values.address,
+            province: command.values.province,
+            district: command.values.district,
+            ward: command.values.ward,
+            description: command.values.description,
+          }),
+        );
+        setState((previous) => ({
+          ...previous,
+          registrations: previous.registrations.map((record) => (record.id === updated.id ? updated : record)),
+        }));
+        showNotice('Đã cập nhật hồ sơ đăng ký trang trại thành công.');
+        return;
       }
 
       if (command.type === 'save' && command.collection === 'users' && !command.id) {

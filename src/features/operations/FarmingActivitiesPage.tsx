@@ -7,6 +7,7 @@ import { TablePagination } from '../../shared/components/TablePagination';
 import { Link } from 'react-router-dom';
 import { Icon } from '../../shared/components/Icon';
 import { Modal } from '../../shared/components/Modal';
+import { EditableSelectCombobox } from '../../shared/components/EditableSelectCombobox';
 import { formatDateTime as uiFormatDateTime } from '../../shared/format/formatters';
 
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
@@ -291,7 +292,7 @@ export function FarmingActivitiesPage() {
       cropSeasonId: targetSeasonId,
       ...(selectedBlockId ? { blockId: Number(selectedBlockId) } : {}),
       ...(chosenBlock?.zoneId ? { zoneId: chosenBlock.zoneId } : {}),
-      activityType: actType,
+      activityType: actType.trim() || 'Fertilizing',
       activityName: actName.trim(),
       startedAt: normalizedStart || new Date().toISOString().slice(0, 19),
       endedAt: normalizedEnd,
@@ -582,6 +583,9 @@ export function FarmingActivitiesPage() {
               <option value="Spraying">{(lang === 'en' ? "Pesticide spraying" : "Spraying BVTV")}</option>
               <option value="Làm cỏ">{(lang === 'en' ? "Weeding & Pruning" : "Làm cỏ & Tỉa cành")}</option>
               <option value="Harvest">{translate("Harvest")}</option>
+              {Array.from(new Set(activities.map((a) => a.activityType).filter((t) => t && !['Soil Preparation', 'Gieo cấy', 'Fertilizing', 'Irrigation', 'Spraying', 'Làm cỏ', 'Harvest'].includes(t)))).map((customType) => (
+                <option key={customType} value={customType}>{customType}</option>
+              ))}
             </select>
             <span className="select-arrow">
               <Icon name="chevron" size={16} />
@@ -1005,19 +1009,23 @@ export function FarmingActivitiesPage() {
                 <label htmlFor="act-type-select" className="structured-field-badge">{lang === 'en' ? 'Process' : 'Quy trình'}</label>
               </div>
               <div className="form-field" style={{ marginBottom: 0 }}>
-                <select className="ui-select"
+                <EditableSelectCombobox
                   id="act-type-select"
+                  required
+                  maxLength={60}
                   value={actType}
-                  onChange={(e) => setActType(e.target.value)}
-                >
-                  <option value="Soil Preparation">{(lang === 'en' ? "Soil Preparation & Substrate Treatment" : "Làm đất & Xử lý giá thể")}</option>
-                  <option value="Gieo cấy">{(lang === 'en' ? "Seeding & Transplanting" : "Gieo hạt & Cấy cây con")}</option>
-                  <option value="Fertilizing">{(lang === 'en' ? "Basal & Top-dress Fertilization" : "Bón lót & Bón thúc phân bón")}</option>
-                  <option value="Irrigation">{(lang === 'en' ? "Irrigation & Fertigation" : "Tưới tiêu & Châm phân")}</option>
-                  <option value="Spraying">{(lang === 'en' ? "Biological Pest Control Spraying" : "Phun thuốc bảo vệ thực vật sinh học")}</option>
-                  <option value="Làm cỏ">{(lang === 'en' ? "Weeding & Pruning" : "Làm cỏ & Tỉa cành")}</option>
-                  <option value="Harvest">{(lang === 'en' ? "Crop Harvesting" : "Thu hoạch nông sản")}</option>
-                </select>
+                  onChange={setActType}
+                  placeholder={lang === 'en' ? 'Select or type activity type...' : 'Chọn hoặc nhập loại hoạt động...'}
+                  options={[
+                    { value: 'Soil Preparation', label: lang === 'en' ? 'Soil Preparation & Substrate Treatment' : 'Làm đất & Xử lý giá thể' },
+                    { value: 'Gieo cấy', label: lang === 'en' ? 'Seeding & Transplanting' : 'Gieo hạt & Cấy cây con' },
+                    { value: 'Fertilizing', label: lang === 'en' ? 'Basal & Top-dress Fertilization' : 'Bón lót & Bón thúc phân bón' },
+                    { value: 'Irrigation', label: lang === 'en' ? 'Irrigation & Fertigation' : 'Tưới tiêu & Châm phân' },
+                    { value: 'Spraying', label: lang === 'en' ? 'Biological Pest Control Spraying' : 'Phun thuốc bảo vệ thực vật sinh học' },
+                    { value: 'Làm cỏ', label: lang === 'en' ? 'Weeding & Pruning' : 'Làm cỏ & Tỉa cành' },
+                    { value: 'Harvest', label: lang === 'en' ? 'Crop Harvesting' : 'Thu hoạch nông sản' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -1032,6 +1040,7 @@ export function FarmingActivitiesPage() {
                 <input className="ui-input"
                   id="act-started-at"
                   type="datetime-local"
+                  min={!editingActivity ? `${new Date().toISOString().split('T')[0]}T00:00` : undefined}
                   required
                   value={startedAt}
                   onChange={(e) => setStartedAt(e.target.value)}
