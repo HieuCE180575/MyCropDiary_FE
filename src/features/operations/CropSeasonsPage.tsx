@@ -208,7 +208,19 @@ export function CropSeasonsPage() {
     setModalMode('create');
   };
 
+  const canEditSeason = (season: CropSeasonResp) =>
+    (season.seasonStatus || '').toLowerCase() === 'planned';
+
   const openEditModal = async (season: CropSeasonResp) => {
+    if (!canEditSeason(season)) {
+      showToast(
+        lang === 'en'
+          ? 'Cannot edit a season that is already active, completed, or cancelled.'
+          : 'Không thể chỉnh sửa mùa vụ đang diễn ra, đã kết thúc hoặc đã hủy.',
+        'error',
+      );
+      return;
+    }
     setSelectedSeason(season);
     const defaultStart = season.startDate || new Date().toISOString().split('T')[0];
     setFormValues({
@@ -567,7 +579,7 @@ export function CropSeasonsPage() {
 
           <form onSubmit={handleSaveSeason} noValidate>
             <div className="modal-body">
-            <div className="farm-registration-location-fields" style={{ gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="structured-field-card" style={{ marginBottom: 0 }}>
                 <div className="structured-field-header">
                   <label htmlFor="modal-cs-name" className="structured-field-label">
@@ -1006,41 +1018,7 @@ export function CropSeasonsPage() {
           <span className="current">{selectedSeason.seasonName}</span>
         </nav>
 
-        <PageHeading   title={<>
-              {selectedSeason.seasonName}
-            </>}><div className="dashboard-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <Link to="/crop-seasons" className="ui-button ui-button--secondary ui-back-action" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-               {lang === 'en' ? 'Back to Seasons' : 'Danh sách mùa vụ'}
-            </Link>
-            <Button className={'ui-edit-action'}
-              type="button"
-              variant="secondary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-              onClick={() => void openEditModal(selectedSeason)}
-            >
-              <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit & Allocate Blocks' : 'Chỉnh sửa & Chọn lô đất'}
-            </Button>
-            {selectedSeason.seasonStatus !== 'completed' && (
-              <Button
-                type="button"
-                variant="primary"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                onClick={() => handleStatusChange(selectedSeason.cropSeasonId, 'completed')}
-              >
-                <Icon name="check" size={15} /> {lang === 'en' ? 'Mark as Completed' : 'Đánh dấu hoàn thành'}
-              </Button>
-            )}
-            {isOwner && (
-              <Button
-                type="button"
-                variant="danger"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                onClick={() => setSeasonToDelete(selectedSeason)}
-              >
-                <Icon name="trash" size={15} /> {lang === 'en' ? 'Delete Season' : 'Xóa mùa vụ'}
-              </Button>
-            )}
-          </div></PageHeading>
+        <PageHeading title={<>{selectedSeason.seasonName}</>} />
 
         {/* Summary Stat Cards - Hidden per user request */}
         <div className="zone-stats-grid" style={{ display: 'none' }}>
@@ -1130,6 +1108,41 @@ export function CropSeasonsPage() {
                 <dd>{(lang === 'en' ? selectedSeason.notes || "No additional notes." : selectedSeason.notes || 'Không có ghi chú bổ sung.')}</dd>
               </div>
             </dl>
+            <div className="dashboard-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
+              <Link to="/crop-seasons" className="ui-button ui-button--secondary ui-back-action" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                {lang === 'en' ? 'Back to Seasons' : 'Danh sách mùa vụ'}
+              </Link>
+              {isOwner && canEditSeason(selectedSeason) && (
+                <Button className={'ui-edit-action'}
+                  type="button"
+                  variant="secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => void openEditModal(selectedSeason)}
+                >
+                  <Icon name="edit" size={15} /> {lang === 'en' ? 'Edit & Allocate Blocks' : 'Chỉnh sửa & Chọn lô đất'}
+                </Button>
+              )}
+              {selectedSeason.seasonStatus !== 'completed' && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => handleStatusChange(selectedSeason.cropSeasonId, 'completed')}
+                >
+                  <Icon name="check" size={15} /> {lang === 'en' ? 'Mark as Completed' : 'Đánh dấu hoàn thành'}
+                </Button>
+              )}
+              {isOwner && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => setSeasonToDelete(selectedSeason)}
+                >
+                  <Icon name="trash" size={15} /> {lang === 'en' ? 'Delete Season' : 'Xóa mùa vụ'}
+                </Button>
+              )}
+            </div>
           </article>
 
           {/* Cultivated Blocks in this Crop Season */}
@@ -1146,17 +1159,19 @@ export function CropSeasonsPage() {
                 <Link to="/harvests" className="ui-button ui-button--secondary ui-navigation-action" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <Icon name="qr" size={15} /> {(lang === 'en' ? " Harvest & QR" : " Thu hoạch & QR")}
                 </Link>
-                <Button
-                  type="button"
-                  variant="primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                  onClick={() => void openEditModal(selectedSeason)}
-                >
-                  <Icon name="plus" size={15} />{' '}
-                  {seasonBlocks.length === 0
-                    ? (lang === 'en' ? 'Select blocks' : 'Chọn lô trồng')
-                    : (lang === 'en' ? 'Add blocks' : 'Thêm lô trồng')}
-                </Button>
+                {isOwner && canEditSeason(selectedSeason) && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => void openEditModal(selectedSeason)}
+                  >
+                    <Icon name="plus" size={15} />{' '}
+                    {seasonBlocks.length === 0
+                      ? (lang === 'en' ? 'Select blocks' : 'Chọn lô trồng')
+                      : (lang === 'en' ? 'Add blocks' : 'Thêm lô trồng')}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -1528,7 +1543,7 @@ export function CropSeasonsPage() {
                             <Icon name="eye" size={16} />
                           </button>
 
-                          {isOwner && (
+                          {isOwner && canEditSeason(s) && (
                             <button
                               type="button"
                               className="table-icon-btn edit"

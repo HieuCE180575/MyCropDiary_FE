@@ -35,6 +35,15 @@ const EDITABLE_COLLECTIONS: EditableCollection[] = [
   'articles',
 ];
 
+const NO_EDIT_COLLECTIONS: Collection[] = [
+  'farms',
+  'registrations',
+  'crops',
+  'zones',
+  'blocks',
+  'compliance',
+];
+
 function isEditableCollection(collection: Collection): collection is EditableCollection {
   return EDITABLE_COLLECTIONS.includes(collection as EditableCollection);
 }
@@ -220,7 +229,7 @@ export function AdminCollectionPage({ collection }: { collection: Collection }) 
     );
   }
 
-  const canRowEdit = Boolean(config.createLabel || config.allowEdit);
+  const canRowEdit = !NO_EDIT_COLLECTIONS.includes(collection) && Boolean(config.createLabel || config.allowEdit);
 
   return <section className={`admin-page${collection === 'farms' ? ' admin-spatial-page admin-farm-page' : collection === 'zones' ? ' admin-spatial-page admin-zone-page' : collection === 'blocks' ? ' admin-spatial-page admin-block-page' : collection === 'compliance' ? ' admin-compliance-page' : ['crops', 'rules'].includes(collection) ? ' admin-spatial-page admin-catalog-page' : ['articles', 'feedback', 'audit'].includes(collection) ? ' admin-content-page' : ''}`}>
     <AdminPageHeading hideEyebrow={useCompactLayout} title={translate(config.title)} description={translate(config.description)}>
@@ -378,6 +387,7 @@ function RecordDialog({ collection, dialog, close, change }: { collection: Colle
 
   if (dialog.mode === 'create' || dialog.mode === 'edit') {
     if (!isEditableCollection(collection)) return null;
+    if (dialog.mode === 'edit' && NO_EDIT_COLLECTIONS.includes(collection)) return null;
     if (collection === 'farms') {
       return <AdminFarmModal mode={dialog.mode} record={record} close={close} />;
     }
@@ -796,7 +806,6 @@ function RecordActions({ collection, record, change, hideEdit = false }: { colle
   const action = (status: string) => change({ mode: 'action', id: record.id, status });
   if (collection === 'registrations') {
     return <>
-      {!hideEdit && <Button className="ui-edit-action" variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
       {record.status === 'PENDING' ? <>
         <Button variant="danger" type="button" onClick={() => action('REJECTED')}><Icon name="close" />{(lang === 'en' ? "Reject" : "Từ chối")}</Button>
         <Button variant="primary" type="button" onClick={() => action('APPROVED')}><Icon name="check-circle" />{(lang === 'en' ? "Approve registration" : "Duyệt hồ sơ")}</Button>
@@ -820,7 +829,6 @@ function RecordActions({ collection, record, change, hideEdit = false }: { colle
   }
   if (collection === 'compliance') {
     return <>
-      {!hideEdit && <Button className="ui-edit-action" variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
       {record.status !== 'NEEDS_REVIEW' && (
         <Button variant="danger" type="button" onClick={() => action('NEEDS_REVIEW')}><Icon name="warning" />{(lang === 'en' ? "Flag for VietGAP review" : "Cần rà soát VietGAP")}</Button>
       )}
@@ -843,7 +851,7 @@ function RecordActions({ collection, record, change, hideEdit = false }: { colle
     const actLabelVi = 'Kích hoạt';
 
     return <>
-      {!hideEdit && <Button className="ui-edit-action" variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
+      {!hideEdit && collection === 'rules' && <Button className="ui-edit-action" variant="secondary" type="button" onClick={() => change({ mode: 'edit', id: record.id })}><Icon name="edit" />{(lang === 'en' ? "Edit" : "Chỉnh sửa")}</Button>}
       <Button
         variant={isAct ? 'danger' : 'primary'}
         type="button"
