@@ -18,6 +18,7 @@ interface FarmRegistrationStatusProps {
   evidenceOnly?: boolean;
   cancelling: boolean;
   cancelError: string | null;
+  onEdit?: () => void;
   onCancel: () => void;
   onStartNew: () => void;
 }
@@ -31,6 +32,7 @@ export function FarmRegistrationStatus({
   evidenceOnly = false,
   cancelling,
   cancelError,
+  onEdit,
   onCancel,
   onStartNew,
 }: FarmRegistrationStatusProps) {
@@ -175,7 +177,7 @@ export function FarmRegistrationStatus({
         </p>
       ) : null}
 
-      <div className="farm-registration-actions">
+      <div className="farm-registration-actions" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
         {canCancel ? (
           <Button className="ui-cancel-button"
             type="button"
@@ -184,6 +186,18 @@ export function FarmRegistrationStatus({
             disabled={cancelling}
           >
             {lang === 'en' ? 'Cancel Registration' : 'Hủy đăng ký'}
+          </Button>
+        ) : null}
+        {canCancel && onEdit ? (
+          <Button
+            className="ui-edit-action"
+            type="button"
+            variant="primary"
+            onClick={onEdit}
+            disabled={cancelling}
+          >
+            <Icon name="edit" size={15} />
+            {lang === 'en' ? 'Edit Registration' : 'Chỉnh sửa đăng ký'}
           </Button>
         ) : null}
         {canStartNew ? (

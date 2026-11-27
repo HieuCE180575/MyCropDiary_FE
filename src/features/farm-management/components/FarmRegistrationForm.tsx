@@ -43,6 +43,9 @@ const INITIAL_VALUES: FarmRegistrationFormValues = {
 };
 
 interface FarmRegistrationFormProps {
+  initialValues?: Partial<FarmRegistrationFormValues>;
+  submitLabel?: string;
+  submittingLabel?: string;
   submitting: boolean;
   submitError: string | null;
   onSubmit: (values: FarmRegistrationFormValues) => void;
@@ -51,9 +54,20 @@ interface FarmRegistrationFormProps {
 
 type FieldName = keyof FarmRegistrationFormValues;
 
-export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCancel }: FarmRegistrationFormProps) {
+export function FarmRegistrationForm({
+  initialValues,
+  submitLabel,
+  submittingLabel,
+  submitting,
+  submitError,
+  onSubmit,
+  onCancel,
+}: FarmRegistrationFormProps) {
   const { lang, t: translate } = useLanguage();
-  const [values, setValues] = useState<FarmRegistrationFormValues>(INITIAL_VALUES);
+  const [values, setValues] = useState<FarmRegistrationFormValues>(() => ({
+    ...INITIAL_VALUES,
+    ...initialValues,
+  }));
   const [errors, setErrors] = useState<FarmRegistrationFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -822,8 +836,8 @@ export function FarmRegistrationForm({ submitting, submitError, onSubmit, onCanc
           {uploadingFiles
             ? (lang === 'en' ? 'Uploading documents...' : 'Đang tải tài liệu lên...')
             : submitting
-              ? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...')
-              : (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký')}
+              ? (submittingLabel ?? (lang === 'en' ? 'Submitting registration...' : 'Đang gửi đăng ký...'))
+              : (submitLabel ?? (lang === 'en' ? 'Submit Registration' : 'Gửi đăng ký'))}
         </Button>
       </div>
     </form>

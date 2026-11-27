@@ -96,6 +96,31 @@ export async function submitFarmRegistration(values: FarmRegistrationFormValues)
   }));
 }
 
+export async function updateMyRegistration(
+  registrationId: string,
+  values: FarmRegistrationFormValues,
+): Promise<FarmRegistration> {
+  const payload: Record<string, unknown> = {
+    farmName: values.proposedFarmName.trim(),
+    addressLine: values.address.trim(),
+  };
+  if (values.province?.trim()) payload.province = values.province.trim();
+  if (values.district?.trim()) payload.district = values.district.trim();
+  if (values.ward?.trim()) payload.ward = values.ward.trim();
+  if (values.description?.trim()) payload.description = values.description.trim();
+  if (values.documentUrl?.trim()) payload.documentUrl = values.documentUrl.trim();
+  if (values.latitude != null && values.longitude != null) {
+    payload.latitude = values.latitude;
+    payload.longitude = values.longitude;
+  }
+  if (values.boundaryCoordinates?.trim()) payload.boundaryCoordinates = values.boundaryCoordinates.trim();
+
+  return toRegistration(await request<RegistrationResponse>(`/farm-registrations/${encodeURIComponent(registrationId)}`, {
+    method: 'PUT',
+    data: payload,
+  }));
+}
+
 export async function cancelFarmRegistration(registrationId: string): Promise<FarmRegistration> {
   return toRegistration(await request<RegistrationResponse>(`/farm-registrations/${registrationId}/cancel`, { method: 'PATCH' }));
 }

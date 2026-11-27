@@ -260,8 +260,17 @@ export function ManageFarmsPage() {
                     ) : (
                       <>
                         <Link className="table-icon-btn primary" to={row.href} title={t('farms.view')} aria-label={`${t('farms.view')}: ${row.name}`}><Icon name="eye" size={15} /></Link>
-                        {row.role === 'OWNER' && row.key.startsWith('farm-') && (
-                          <Link className="table-icon-btn edit" to={`${row.href}?edit=1`} title={lang === 'en' ? 'Edit farm' : 'Chỉnh sửa trang trại'} aria-label={`${lang === 'en' ? 'Edit' : 'Chỉnh sửa'}: ${row.name}`}><Icon name="edit" size={15} /></Link>
+                        {((row.role === 'OWNER' && row.key.startsWith('farm-')) || (row.key.startsWith('registration-') && row.status === 'pending')) && (
+                          <Link
+                            className="table-icon-btn edit"
+                            to={`${row.href}?edit=1`}
+                            title={row.key.startsWith('registration-')
+                              ? (lang === 'en' ? 'Edit registration' : 'Chỉnh sửa đơn đăng ký')
+                              : (lang === 'en' ? 'Edit farm' : 'Chỉnh sửa trang trại')}
+                            aria-label={`${lang === 'en' ? 'Edit' : 'Chỉnh sửa'}: ${row.name}`}
+                          >
+                            <Icon name="edit" size={15} />
+                          </Link>
                         )}
                       </>
                     )}
