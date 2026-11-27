@@ -12,14 +12,14 @@ const { moduleDefinitions } = await loadTypescript('src/app/routes/moduleDefinit
 const keys = (systemRole, farm = null) => moduleDefinitions.filter(module => canAccessModule(module, systemRole, farm)).map(module => module.key);
 const farm = (role, status = 'ACTIVE') => ({ id: 1, currentUserRole: role, status });
 
-test('User without farm membership gets only account, registration, public knowledge and personal AI features', () => {
-  assert.deepEqual(keys('USER'), ['farm-registration', 'knowledge', 'ai', 'ai-history', 'ai-feedback', 'profile', 'password']);
+test('User without farm membership gets only account, farm management entry, public knowledge and personal AI features', () => {
+  assert.deepEqual(keys('USER'), ['farm', 'knowledge', 'ai', 'ai-history', 'ai-feedback', 'profile', 'password']);
 });
 
-test('Staff has operational access but no owner-only expenses, purchases or staff administration', () => {
+test('Staff has operational access including staff/worker views but no owner-only suppliers, purchases, expenses or admin', () => {
   const allowed = keys('USER', farm('STAFF'));
-  for (const key of ['farm', 'workers', 'production', 'seasons', 'tasks', 'activities', 'materials', 'harvests', 'training', 'checklists', 'assessments', 'reports', 'ai-drafts']) assert.ok(allowed.includes(key), key);
-  for (const key of ['members', 'suppliers', 'purchases', 'expenses', 'admin']) assert.ok(!allowed.includes(key), key);
+  for (const key of ['farm', 'members', 'production', 'seasons', 'tasks', 'activities', 'materials', 'harvests', 'training', 'checklists', 'standards', 'assessments', 'environment', 'reports', 'ai-drafts']) assert.ok(allowed.includes(key), key);
+  for (const key of ['suppliers', 'purchases', 'expenses', 'admin']) assert.ok(!allowed.includes(key), key);
 });
 
 test('Owner permissions are specific to the selected farm and disappear in personal or staff workspaces', () => {
@@ -39,7 +39,10 @@ test('Pending, inactive, missing and unknown farm roles never unlock operational
 test('System admin does not inherit farm operational privileges', () => {
   const allowed = keys('ADMIN', farm('ADMIN'));
   for (const key of ['knowledge', 'profile', 'password', 'admin', 'admin-registrations', 'admin-users', 'admin-crops', 'admin-rules', 'admin-articles', 'admin-feedback', 'admin-statistics', 'admin-audit']) assert.ok(allowed.includes(key), key);
-  for (const key of ['farm', 'activities', 'expenses', 'members', 'farm-registration', 'ai-drafts']) assert.ok(!allowed.includes(key), key);
+  for (const key of ['farm', 'activities', 'expenses', 'members', 'ai-drafts']) assert.ok(!allowed.includes(key), key);
   assert.deepEqual(keys(undefined), []);
-  assert.deepEqual(keys('OWNER'), []);
+  assert.deepEqual(keys('GUEST'), []);
+  // Non-admin OWNER/STAFF system roles without a selected active farm only see personal/farm-list screens
+  assert.deepEqual(keys('OWNER'), keys('USER'));
+  assert.deepEqual(keys('STAFF'), keys('USER'));
 });
