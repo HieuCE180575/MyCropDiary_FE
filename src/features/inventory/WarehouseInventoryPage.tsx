@@ -39,6 +39,7 @@ import type { ApiResponse } from '../../shared/types/api';
 export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolean }) {
   const { lang, t: translate } = useLanguage();
   const { selectedFarm } = useFarmWorkspace();
+  const isOwner = selectedFarm?.currentUserRole?.toUpperCase() === 'OWNER';
   const [activeSubTab, setActiveSubTab] = useState<'warehouses' | 'inventory'>('warehouses');
   const [deleteTarget, setDeleteTarget] = useState<{ kind: 'warehouse' | 'inventory'; id: number; farmId: number | undefined } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -389,7 +390,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
           : (lang === 'en'
             ? `${inventories.length} stock items · Threshold tracking`
             : `${inventories.length} mặt hàng tồn kho · Giám sát định mức`)}
-      </>}><div>
+      </>}>{isOwner && (<div>
           {activeSubTab === 'warehouses' ? (
             <Button
               type="button"
@@ -409,7 +410,7 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               <Icon name="plus" size={17} /> {lang === 'en' ? 'Add to Inventory' : 'Thêm vào kho'}
             </Button>
           )}
-        </div></PageHeading>
+        </div>)}</PageHeading>
 
       {/* Main Unified Clean Card Container matching Mockup */}
       <div className="zone-clean-card">
@@ -455,9 +456,9 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 <p>{lang === 'en' ? '⏳ Loading warehouses list...' : '⏳ Đang tải danh sách kho hàng...'}</p>
               </div>
             ) : warehouseLoadError ? (<LoadError message={warehouseLoadError} onRetry={() => { void loadWarehouses(); }} />) : filteredWarehouses.length === 0 ? (
-              <EmptyState className="panel" title={<>{lang === 'en' ? 'No Warehouses Found' : 'Chưa có kho hàng nào'}</>} description={<>{lang === 'en' ? 'Click "Add Warehouse" to create storage facilities for inputs and produce.' : 'Nhấn "Thêm kho hàng" để khởi tạo cơ sở lưu trữ vật tư và nông sản cho trang trại.'}</>} icon={<>🏢</>} action={<><Button type="button" variant="primary" onClick={() => setIsCreateWarehouseOpen(true)}>
+              <EmptyState className="panel" title={<>{lang === 'en' ? 'No Warehouses Found' : 'Chưa có kho hàng nào'}</>} description={<>{isOwner ? (lang === 'en' ? 'Click "Add Warehouse" to create storage facilities for inputs and produce.' : 'Nhấn "Thêm kho hàng" để khởi tạo cơ sở lưu trữ vật tư và nông sản cho trang trại.') : (lang === 'en' ? 'No warehouses have been set up for this farm yet.' : 'Trang trại chưa có kho hàng nào.')}</>} icon={<>🏢</>} action={isOwner ? <><Button type="button" variant="primary" onClick={() => setIsCreateWarehouseOpen(true)}>
                 <Icon name="plus" size={16} /> {lang === 'en' ? 'Add Warehouse' : 'Thêm kho hàng'}
-              </Button></>} />
+              </Button></> : undefined} />
             ) : (
               <div className="zone-table-wrap ui-table-scroll" style={{ margin: 0, border: 'none', borderRadius: 0 }} tabIndex={0}>
                 <table className="ui-data-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
@@ -523,15 +524,17 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                             >
                               <Icon name="eye" size={15} />
                             </button>
-                            <button
-                              type="button"
-                              className="table-icon-btn edit"
-                              title={lang === 'en' ? 'Edit Warehouse' : 'Chỉnh sửa kho hàng'}
-                              aria-label={translate("Edit") + " " + (w.warehouseName)}
-                              onClick={() => handleStartEditWarehouse(w)}
-                            >
-                              <Icon name="edit" size={15} />
-                            </button>
+                            {isOwner && (
+                              <button
+                                type="button"
+                                className="table-icon-btn edit"
+                                title={lang === 'en' ? 'Edit Warehouse' : 'Chỉnh sửa kho hàng'}
+                                aria-label={translate("Edit") + " " + (w.warehouseName)}
+                                onClick={() => handleStartEditWarehouse(w)}
+                              >
+                                <Icon name="edit" size={15} />
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="table-icon-btn assign"
@@ -544,15 +547,17 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                             >
                               <Icon name="layers" size={15} />
                             </button>
-                            <button
-                              type="button"
-                              className="table-icon-btn danger"
-                              title={lang === 'en' ? 'Delete Warehouse' : 'Xóa kho hàng'}
-                              aria-label={translate("Delete") + " " + (w.warehouseName)}
-                              onClick={() => setDeleteTarget({ kind: 'warehouse', id: w.warehouseId, farmId: selectedFarm?.id })}
-                            >
-                              <Icon name="trash" size={15} />
-                            </button>
+                            {isOwner && (
+                              <button
+                                type="button"
+                                className="table-icon-btn danger"
+                                title={lang === 'en' ? 'Delete Warehouse' : 'Xóa kho hàng'}
+                                aria-label={translate("Delete") + " " + (w.warehouseName)}
+                                onClick={() => setDeleteTarget({ kind: 'warehouse', id: w.warehouseId, farmId: selectedFarm?.id })}
+                              >
+                                <Icon name="trash" size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -645,23 +650,29 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                 }
                 description={
                   <>
-                    {lang === 'en'
-                      ? 'Click "Add to Inventory" to store fertilizers, pesticides, or seeds in the warehouse.'
-                      : 'Nhấn "Thêm vào kho" để lưu trữ phân bón, thuốc BVTV hoặc hạt giống vào kho.'}
+                    {isOwner
+                      ? (lang === 'en'
+                        ? 'Click "Add to Inventory" to store fertilizers, pesticides, or seeds in the warehouse.'
+                        : 'Nhấn "Thêm vào kho" để lưu trữ phân bón, thuốc BVTV hoặc hạt giống vào kho.')
+                      : (lang === 'en'
+                        ? 'No inventory items have been recorded for this warehouse yet.'
+                        : 'Chưa có vật tư tồn kho nào được ghi nhận trong kho này.')}
                   </>
                 }
                 icon={<>📦</>}
                 action={
-                  <>
-                    <Button
-                      type="button"
-                      variant="primary"
-                      onClick={() => void handleOpenCreateInventory()}
-                    >
-                      <Icon name="plus" size={16} />
-                      {lang === 'en' ? 'Add to Inventory' : 'Thêm vào kho'}
-                    </Button>
-                  </>
+                  isOwner ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="primary"
+                        onClick={() => void handleOpenCreateInventory()}
+                      >
+                        <Icon name="plus" size={16} />
+                        {lang === 'en' ? 'Add to Inventory' : 'Thêm vào kho'}
+                      </Button>
+                    </>
+                  ) : undefined
                 }
               />
             ) : (
@@ -853,62 +864,66 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
                                 </span>
                               </button>
 
-                              {/* Edit Inventory */}
-                              <button
-                                type="button"
-                                className="table-icon-btn edit"
-                                title={
-                                  lang === 'en'
-                                    ? 'Edit Inventory'
-                                    : 'Chỉnh sửa tồn kho'
-                                }
-                                aria-label={
-                                  translate("Edit") + " " + it.materialName
-                                }
-                                onClick={() => {
-                                  setEditingInventory(it);
+                              {isOwner && (
+                                <>
+                                  {/* Edit Inventory */}
+                                  <button
+                                    type="button"
+                                    className="table-icon-btn edit"
+                                    title={
+                                      lang === 'en'
+                                        ? 'Edit Inventory'
+                                        : 'Chỉnh sửa tồn kho'
+                                    }
+                                    aria-label={
+                                      translate("Edit") + " " + it.materialName
+                                    }
+                                    onClick={() => {
+                                      setEditingInventory(it);
 
-                                  setUpdateInventoryForm({
-                                    quantityOnHand: String(
-                                      it.quantityOnHand ?? ''
-                                    ),
-                                    reorderLevel: String(
-                                      it.reorderLevel ?? ''
-                                    ),
-                                  });
-                                }}
-                              >
-                                <Icon name="edit" size={15} />
-                                <span className="sr-only">
-                                  {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
-                                </span>
-                              </button>
+                                      setUpdateInventoryForm({
+                                        quantityOnHand: String(
+                                          it.quantityOnHand ?? ''
+                                        ),
+                                        reorderLevel: String(
+                                          it.reorderLevel ?? ''
+                                        ),
+                                      });
+                                    }}
+                                  >
+                                    <Icon name="edit" size={15} />
+                                    <span className="sr-only">
+                                      {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+                                    </span>
+                                  </button>
 
-                              {/* Delete Inventory */}
-                              <button
-                                type="button"
-                                className="table-icon-btn danger"
-                                title={
-                                  lang === 'en'
-                                    ? 'Delete Inventory'
-                                    : 'Xóa bản ghi tồn kho'
-                                }
-                                aria-label={
-                                  translate("Delete") + " " + it.materialName
-                                }
-                                onClick={() =>
-                                  setDeleteTarget({
-                                    kind: 'inventory',
-                                    id: it.inventoryId,
-                                    farmId: selectedFarm?.id
-                                  })
-                                }
-                              >
-                                <Icon name="trash" size={15} />
-                                <span className="sr-only">
-                                  {lang === 'en' ? 'Delete' : 'Xóa'}
-                                </span>
-                              </button>
+                                  {/* Delete Inventory */}
+                                  <button
+                                    type="button"
+                                    className="table-icon-btn danger"
+                                    title={
+                                      lang === 'en'
+                                        ? 'Delete Inventory'
+                                        : 'Xóa bản ghi tồn kho'
+                                    }
+                                    aria-label={
+                                      translate("Delete") + " " + it.materialName
+                                    }
+                                    onClick={() =>
+                                      setDeleteTarget({
+                                        kind: 'inventory',
+                                        id: it.inventoryId,
+                                        farmId: selectedFarm?.id
+                                      })
+                                    }
+                                  >
+                                    <Icon name="trash" size={15} />
+                                    <span className="sr-only">
+                                      {lang === 'en' ? 'Delete' : 'Xóa'}
+                                    </span>
+                                  </button>
+                                </>
+                              )}
 
                             </div>
                           </td>
@@ -1041,41 +1056,45 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
           </div>
 
           <div className="modal-footer wh-footer" style={{ gap: '15px' }}>
-            <Button
-              type="button"
-              variant="secondary"
-              className="edit"
-              onClick={() => {
-                const warehouse = warehouses.find(
-                  w => w.warehouseId === selectedWarehouse.warehouseId
-                );
+            {isOwner && (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="edit"
+                  onClick={() => {
+                    const warehouse = warehouses.find(
+                      w => w.warehouseId === selectedWarehouse.warehouseId
+                    );
 
-                if (warehouse) {
-                  setSelectedWarehouse(null);
-                  handleStartEditWarehouse(warehouse);
-                }
-              }}
-            >
-              <Icon name="edit" size={14} />
-              {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              onClick={() => {
-                const warehouse = warehouses.find(
-                  w => w.warehouseId === selectedWarehouse.warehouseId
-                );
+                    if (warehouse) {
+                      setSelectedWarehouse(null);
+                      handleStartEditWarehouse(warehouse);
+                    }
+                  }}
+                >
+                  <Icon name="edit" size={14} />
+                  {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => {
+                    const warehouse = warehouses.find(
+                      w => w.warehouseId === selectedWarehouse.warehouseId
+                    );
 
-                if (warehouse) {
-                  setSelectedWarehouse(null);
-                  setDeleteTarget({ kind: 'warehouse', id: warehouse.warehouseId, farmId: selectedFarm?.id })
-                }
-              }}
-            >
-              <Icon name="trash" size={14} />
-              {lang === 'en' ? 'Delete' : 'Xóa kho'}
-            </Button>
+                    if (warehouse) {
+                      setSelectedWarehouse(null);
+                      setDeleteTarget({ kind: 'warehouse', id: warehouse.warehouseId, farmId: selectedFarm?.id })
+                    }
+                  }}
+                >
+                  <Icon name="trash" size={14} />
+                  {lang === 'en' ? 'Delete' : 'Xóa kho'}
+                </Button>
+              </>
+            )}
             <Button
               type="button"
               variant="primary"
@@ -1258,44 +1277,48 @@ export function WarehouseInventoryPage({ embedded = false }: { embedded?: boolea
               borderTop: '2px solid var(--color-border)',
             }}>
 
-              {/* EDIT INVENTORY */}
-              <Button
-                type="button"
-                variant="secondary"
-                className="edit"
-                onClick={() => {
-                  const inventory = inventories.find(
-                    i => i.inventoryId === selectedInventoryItem.inventoryId
-                  );
+              {isOwner && (
+                <>
+                  {/* EDIT INVENTORY */}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="edit"
+                    onClick={() => {
+                      const inventory = inventories.find(
+                        i => i.inventoryId === selectedInventoryItem.inventoryId
+                      );
 
-                  if (inventory) {
-                    setSelectedInventoryItem(null);
-                    setEditingInventory(inventory);
-                  }
-                }}
-              >
-                <Icon name="edit" size={14} />
-                {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
-              </Button>
+                      if (inventory) {
+                        setSelectedInventoryItem(null);
+                        setEditingInventory(inventory);
+                      }
+                    }}
+                  >
+                    <Icon name="edit" size={14} />
+                    {lang === 'en' ? 'Edit' : 'Chỉnh sửa'}
+                  </Button>
 
-              {/* DELETE INVENTORY */}
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => {
-                  const inventory = selectedInventoryItem;
+                  {/* DELETE INVENTORY */}
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={() => {
+                      const inventory = selectedInventoryItem;
 
-                  setSelectedInventoryItem(null);
-                  setDeleteTarget({
-                    kind: 'inventory',
-                    id: inventory.inventoryId,
-                    farmId: selectedFarm?.id,
-                  });
-                }}
-              >
-                <Icon name="trash" size={14} />
-                {lang === 'en' ? 'Delete' : 'Xóa tồn kho'}
-              </Button>
+                      setSelectedInventoryItem(null);
+                      setDeleteTarget({
+                        kind: 'inventory',
+                        id: inventory.inventoryId,
+                        farmId: selectedFarm?.id,
+                      });
+                    }}
+                  >
+                    <Icon name="trash" size={14} />
+                    {lang === 'en' ? 'Delete' : 'Xóa tồn kho'}
+                  </Button>
+                </>
+              )}
 
               {/* CLOSE */}
               <Button

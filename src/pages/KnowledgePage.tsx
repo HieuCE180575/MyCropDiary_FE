@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../shared/components/EmptyState';
 import { Button } from '../shared/components/Button';
 import { Pagination } from '../shared/components/Pagination';
@@ -23,6 +24,15 @@ const EMPTY_RESULT: PagedResult<KnowledgeArticle> = {
 
 export function KnowledgePage() {
   const { lang, t: translate } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const traceCode = searchParams.get('code')?.trim() || '';
+  const traceLot = searchParams.get('lot')?.trim() || '';
+  const traceFarm = searchParams.get('farm')?.trim() || '';
+  const traceSeason = searchParams.get('season')?.trim() || '';
+  const traceBlock = searchParams.get('block')?.trim() || '';
+  const traceDate = searchParams.get('date')?.trim() || '';
+  const traceQty = searchParams.get('qty')?.trim() || '';
+  const traceGrade = searchParams.get('grade')?.trim() || '';
   const [searchInput, setSearchInput] = useState('');
   const debouncedSearch = useDebounce(searchInput, 350);
   const [category, setCategory] = useState<KnowledgeCategory | 'all'>('all');
@@ -77,6 +87,87 @@ export function KnowledgePage() {
     <div className="public-knowledge-view">
       <div className="public-container">
         <section className="knowledge-page-content">
+          {traceCode && (
+            <div
+              className="panel"
+              role="region"
+              aria-label={lang === 'en' ? 'Harvest Lot Traceability' : 'Thông tin truy xuất nguồn gốc lô thu hoạch'}
+              style={{
+                marginBottom: '20px',
+                padding: '20px 24px',
+                border: '1.5px solid var(--color-primary)',
+                borderRadius: '14px',
+                background: 'var(--color-success-bg)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                <div>
+                  <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-primary-text)' }}>
+                    {lang === 'en' ? 'QR HARVEST LOT TRACEABILITY' : 'TRUY XUẤT NGUỒN GỐC LÔ THU HOẠCH (QR)'}
+                  </span>
+                  <h2 style={{ margin: '4px 0 0', fontSize: '20px', color: 'var(--color-text)' }}>
+                    {traceCode}
+                  </h2>
+                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setSearchParams({})}
+                >
+                  {lang === 'en' ? 'Close traceability card' : 'Đóng thông tin truy xuất'}
+                </Button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                {traceLot && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Harvest Lot Code' : 'Mã lô thu hoạch'}</div>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{traceLot}</strong>
+                  </div>
+                )}
+                {traceFarm && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Farm' : 'Trang trại'}</div>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{traceFarm}</strong>
+                  </div>
+                )}
+                {traceSeason && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Crop Season' : 'Mùa vụ'}</div>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{traceSeason}</strong>
+                  </div>
+                )}
+                {traceBlock && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Production Block' : 'Lô sản xuất'}</div>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{traceBlock}</strong>
+                  </div>
+                )}
+                {traceDate && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Harvest Date' : 'Ngày thu hoạch'}</div>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{traceDate.slice(0, 10)}</strong>
+                  </div>
+                )}
+                {traceQty && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Harvested Yield' : 'Sản lượng'}</div>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{traceQty}</strong>
+                  </div>
+                )}
+                {traceGrade && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-muted)' }}>{lang === 'en' ? 'Quality Grade' : 'Phân loại chất lượng'}</div>
+                    <strong style={{ fontSize: '14px', color: 'var(--color-text)' }}>{traceGrade}</strong>
+                  </div>
+                )}
+              </div>
+              <p style={{ margin: '12px 0 0', fontSize: '12.5px', color: 'var(--color-muted)' }}>
+                {lang === 'en'
+                  ? 'Traceability data recorded in the farm digital diary on MyCropDiary.'
+                  : 'Thông tin truy xuất được ghi nhận từ nhật ký canh tác điện tử trên hệ thống MyCropDiary.'}
+              </p>
+            </div>
+          )}
           {/* Header trung tâm tri thức nông nghiệp chuẩn mực có ảnh Banner */}
           <header className="knowledge-hero-header">
             <div className="knowledge-hero-grid">

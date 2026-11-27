@@ -12,6 +12,7 @@ import { formatDateTime as uiFormatDateTime } from '../../shared/format/formatte
 import { formatDate as uiFormatDate } from '../../shared/format/formatters';
 
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
+import { getLocalDateInput } from '../../shared/format/localDateTime';
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -107,32 +108,76 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
   const [submittingEdit, setSubmittingEdit] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // Drafts state (UC automation)
+  // Drafts state (UC automation) — generated dynamically from selected crop season & persisted in localStorage
   const [draftSeasons, setDraftSeasons] = useState<CropSeasonResp[]>([]);
   const [draftSeasonId, setDraftSeasonId] = useState<number | ''>('');
   const [approvingDraftId, setApprovingDraftId] = useState<string | null>(null);
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const tomorrowIso = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-  const [drafts, setDrafts] = useState<AIDraft[]>([
-    {
-      id: 'df-1',
-      activityType: 'Fertilizing',
-      title: 'Bón thúc đợt 3 phân hữu cơ kali sinh học đón quả',
-      recommendedDate: todayIso,
-      suggestedMaterial: 'Phân hữu cơ khoáng Kali hữu cơ 0.2kg/gốc',
-      reason: 'Cây đang bước vào giai đoạn tạo ngọt (Brix), cần bổ sung kali tự nhiên để quả chắc và thơm.',
-      status: 'PENDING',
-    },
-    {
-      id: 'df-2',
-      activityType: 'Irrigation',
-      title: 'Giảm lượng nước tưới trước thu hoạch 5 ngày',
-      recommendedDate: tomorrowIso,
-      suggestedMaterial: 'Nước lọc tinh khiết không pha phân',
-      reason: 'Giảm độ ẩm gốc để tránh nứt quả và cô đọng lượng đường theo chuẩn VietGAP.',
-      status: 'PENDING',
-    },
-  ]);
+  const [submittingGeneralFeedback, setSubmittingGeneralFeedback] = useState(false);
+
+  const getDraftStorageKey = (farmId?: number | null) => `mcd_ai_draft_statuses_${farmId ?? 'none'}`;
+  const loadSavedDraftStatuses = (farmId?: number | null): Record<string, 'PENDING' | 'APPROVED' | 'REJECTED'> => {
+    try {
+      const raw = window.localStorage?.getItem(getDraftStorageKey(farmId));
+      return raw ? (JSON.parse(raw) as Record<string, 'PENDING' | 'APPROVED' | 'REJECTED'>) : {};
+    } catch {
+      return {};
+    }
+  };
+  const persistDraftStatus = (farmId: number | null | undefined, draftId: string, status: 'APPROVED' | 'REJECTED') => {
+    try {
+      const next = { ...loadSavedDraftStatuses(farmId), [draftId]: status };
+      window.localStorage?.setItem(getDraftStorageKey(farmId), JSON.stringify(next));
+    } catch {
+      // Ignore storage errors
+    }
+  };
+
+  const [drafts, setDrafts] = useState<AIDraft[]>([]);
+
+  useEffect(() => {
+    const selectedSeason = draftSeasons.find((s) => s.cropSeasonId === Number(draftSeasonId));
+    if (!selectedFarm?.id || !selectedSeason) {
+      setDrafts([]);
+      return;
+    }
+    const savedStatuses = loadSavedDraftStatuses(selectedFarm.id);
+    const todayLocal = getLocalDateInput();
+    const tomorrowLocal = getLocalDateInput(new Date(Date.now() + 86400000));
+    const cropLabel = selectedSeason.cropCategoryName || selectedSeason.seasonName || (lang === 'en' ? 'current crop' : 'cây trồng hiện tại');
+    const seasonLabel = selectedSeason.seasonName || `#${selectedSeason.cropSeasonId}`;
+    const d1Id = `draft-${selectedFarm.id}-${selectedSeason.cropSeasonId}-fert`;
+    const d2Id = `draft-${selectedFarm.id}-${selectedSeason.cropSeasonId}-inspect`;
+
+    const generated: AIDraft[] = [
+      {
+        id: d1Id,
+        activityType: 'Fertilizing',
+        title: lang === 'en'
+          ? `Balanced fertilization check for ${cropLabel} (${seasonLabel})`
+          : `Bón phân cân đối & kiểm tra dinh dưỡng cho ${cropLabel} (${seasonLabel})`,
+        recommendedDate: todayLocal,
+        suggestedMaterial: lang === 'en' ? 'Organic / NPK balanced fertilizer per VietGAP dosage' : 'Phân hữu cơ / NPK cân đối theo định mức VietGAP',
+        reason: lang === 'en'
+          ? `Suggested for active season "${seasonLabel}" (${selectedSeason.startDate} → ${selectedSeason.endDate || 'ongoing'}) to maintain steady crop nutrition.`
+          : `Đề xuất theo mùa vụ "${seasonLabel}" (${selectedSeason.startDate} → ${selectedSeason.endDate || 'đang canh tác'}) nhằm duy trì dinh dưỡng ổn định cho cây trồng.`,
+        status: savedStatuses[d1Id] ?? 'PENDING',
+      },
+      {
+        id: d2Id,
+        activityType: 'Monitoring',
+        title: lang === 'en'
+          ? `Pest & irrigation inspection for ${cropLabel} (${seasonLabel})`
+          : `Kiểm tra sâu bệnh & độ ẩm tưới cho ${cropLabel} (${seasonLabel})`,
+        recommendedDate: tomorrowLocal,
+        suggestedMaterial: lang === 'en' ? 'Field monitoring checklist (no chemical spray)' : 'Phiếu kiểm tra đồng ruộng (không dùng hóa chất)',
+        reason: lang === 'en'
+          ? `Routine VietGAP IPM scouting for "${seasonLabel}" to detect early pest pressure and verify pre-harvest safety intervals.`
+          : `Kiểm tra IPM định kỳ theo chuẩn VietGAP cho mùa vụ "${seasonLabel}" để phát hiện sớm sâu bệnh và đảm bảo thời gian cách ly.`,
+        status: savedStatuses[d2Id] ?? 'PENDING',
+      },
+    ];
+    setDrafts(generated);
+  }, [selectedFarm?.id, draftSeasonId, draftSeasons, lang]);
 
   // Load conversations on mount
   useEffect(() => {
@@ -316,11 +361,52 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
 
   const handleGeneralFeedback = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!feedbackText.trim()) return;
-    setFeedbackSent(true);
-    setFeedbackText('');
-    showToast((lang === 'en' ? "Thank you for your feedback on the AI Assistant!" : 'Cảm ơn đóng góp ý kiến của bạn về Trợ lý AI!'));
-    setTimeout(() => setFeedbackSent(false), 3000);
+    const trimmed = feedbackText.trim();
+    if (!trimmed || submittingGeneralFeedback) return;
+
+    setSubmittingGeneralFeedback(true);
+    try {
+      let targetAssistantMsg = [...messages]
+        .reverse()
+        .find((m) => m.senderType === 'assistant' && m.messageId > 0);
+
+      if (!targetAssistantMsg && conversations.length > 0) {
+        const detail = await fetchAIConversationDetail(conversations[0].conversationId);
+        targetAssistantMsg = [...(detail.messages || [])]
+          .reverse()
+          .find((m) => m.senderType === 'assistant' && m.messageId > 0);
+      }
+
+      if (!targetAssistantMsg) {
+        showToast(
+          lang === 'en'
+            ? 'Please ask the AI Assistant at least one question before submitting feedback so it can be saved to your feedback history.'
+            : 'Vui lòng trò chuyện với Trợ lý AI ít nhất 1 câu trước khi gửi góp ý để hệ thống lưu vào lịch sử phản hồi.',
+          'error'
+        );
+        return;
+      }
+
+      await reportAIMessage(targetAssistantMsg.messageId, 5, trimmed);
+      setFeedbackSent(true);
+      setFeedbackText('');
+      await loadFeedbackHistory();
+      showToast(
+        lang === 'en'
+          ? 'Your feedback has been saved and submitted to the AI advisory team!'
+          : 'Đã gửi và lưu đóng góp ý kiến của bạn thành công!'
+      );
+      setTimeout(() => setFeedbackSent(false), 3000);
+    } catch (err) {
+      showToast(
+        lang === 'en'
+          ? (err instanceof Error ? translate(err.message) : 'Unable to submit feedback.')
+          : (err instanceof Error ? err.message : 'Không thể gửi đóng góp ý kiến.'),
+        'error'
+      );
+    } finally {
+      setSubmittingGeneralFeedback(false);
+    }
   };
 
   useEffect(() => {
@@ -371,6 +457,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
       if (!res?.success) {
         throw new Error(res?.message || (lang === 'en' ? 'Unable to save AI draft to farming diary.' : 'Không thể lưu bản nháp AI vào nhật ký canh tác.'));
       }
+      persistDraftStatus(selectedFarm?.id, draftId, 'APPROVED');
       setDrafts((prev) =>
         prev.map((d) => (d.id === draftId ? { ...d, status: 'APPROVED' } : d))
       );
@@ -386,6 +473,7 @@ export function AIAssistantPage({ initialTab = 'ai' }: AIAssistantPageProps) {
   };
 
   const handleRejectDraft = (draftId: string) => {
+    persistDraftStatus(selectedFarm?.id, draftId, 'REJECTED');
     setDrafts((prev) =>
       prev.map((d) => (d.id === draftId ? { ...d, status: 'REJECTED' } : d))
     );

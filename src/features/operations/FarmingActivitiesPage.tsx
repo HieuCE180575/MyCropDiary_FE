@@ -11,6 +11,7 @@ import { EditableSelectCombobox } from '../../shared/components/EditableSelectCo
 import { formatDateTime as uiFormatDateTime } from '../../shared/format/formatters';
 
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
+import { getLocalDateTimeInput } from '../../shared/format/localDateTime';
 import { usePagination } from '../../shared/hooks/usePagination';
 
 import { useEffect, useState } from 'react';
@@ -89,7 +90,7 @@ export function FarmingActivitiesPage() {
   const [selectedBlockId, setSelectedBlockId] = useState<number | ''>('');
   const [actType, setActType] = useState('Fertilizing');
   const [actName, setActName] = useState('');
-  const [startedAt, setStartedAt] = useState(new Date().toISOString().slice(0, 16));
+  const [startedAt, setStartedAt] = useState(() => getLocalDateTimeInput());
   const [endedAt, setEndedAt] = useState('');
   const [description, setDescription] = useState('');
   const [resultNotes, setResultNotes] = useState('');
@@ -1081,7 +1082,6 @@ export function FarmingActivitiesPage() {
                 <input className="ui-input"
                   id="act-started-at"
                   type="datetime-local"
-                  min={!editingActivity ? `${new Date().toISOString().split('T')[0]}T00:00` : undefined}
                   required
                   value={startedAt}
                   onChange={(e) => setStartedAt(e.target.value)}

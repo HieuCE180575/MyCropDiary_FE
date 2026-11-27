@@ -12,6 +12,7 @@ import { EditableSelectCombobox } from '../../shared/components/EditableSelectCo
 import { ConfirmDialog } from '../../shared/components/ConfirmDialog';
 
 import { formatDate as displayDate, formatDateTime as displayDateTime } from '../../shared/format/formatters';
+import { getLocalDateInput, getLocalDateTimeInput } from '../../shared/format/localDateTime';
 import { usePagination } from '../../shared/hooks/usePagination';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -198,8 +199,8 @@ export function TasksPage() {
     setFormZoneId('');
     setFormBlockId('');
     setFormWorkerIds([]);
-    setFormStartsAt(new Date().toISOString().slice(0, 16));
-    setFormDueAt(new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 16));
+    setFormStartsAt(getLocalDateTimeInput());
+    setFormDueAt(getLocalDateTimeInput(new Date(Date.now() + 2 * 86400000)));
     setFormDescription('');
     setTaskModalError(null);
     setIsCreateModalOpen(true);
@@ -232,14 +233,18 @@ export function TasksPage() {
       return;
     }
 
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    if (formStartsAt && formStartsAt.slice(0, 10) < todayStr) {
+    const todayStr = getLocalDateInput();
+    const originalStartsAt = editingTask?.startsAt ? editingTask.startsAt.slice(0, 16) : '';
+    const originalDueAt = editingTask?.dueAt ? editingTask.dueAt.slice(0, 16) : '';
+    const startsAtChanged = !editingTask || formStartsAt !== originalStartsAt;
+    const dueAtChanged = !editingTask || formDueAt !== originalDueAt;
+
+    if (startsAtChanged && formStartsAt && formStartsAt.slice(0, 10) < todayStr) {
       setTaskModalError(lang === 'en' ? 'Start date cannot be in the past.' : 'Ngày bắt đầu không được chọn trong quá khứ.');
       return;
     }
 
-    if (formDueAt && formDueAt.slice(0, 10) < todayStr) {
+    if (dueAtChanged && formDueAt && formDueAt.slice(0, 10) < todayStr) {
       setTaskModalError(lang === 'en' ? 'Due date cannot be in the past.' : 'Hạn hoàn thành không được chọn trong quá khứ.');
       return;
     }
@@ -1005,7 +1010,7 @@ export function TasksPage() {
               <input className="ui-input"
                 id="task-start"
                 type="datetime-local"
-                min={`${(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()}T00:00`}
+                min={!editingTask ? `${getLocalDateInput()}T00:00` : undefined}
                 value={formStartsAt}
                 onChange={(e) => setFormStartsAt(e.target.value)}
               />
@@ -1019,7 +1024,7 @@ export function TasksPage() {
               <input className="ui-input"
                 id="task-due"
                 type="datetime-local"
-                min={(() => { const d = new Date(); const minToday = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T00:00`; return formStartsAt && formStartsAt >= minToday ? formStartsAt : minToday; })()}
+                min={!editingTask ? (formStartsAt && formStartsAt >= `${getLocalDateInput()}T00:00` ? formStartsAt : `${getLocalDateInput()}T00:00`) : (formStartsAt || undefined)}
                 value={formDueAt}
                 onChange={(e) => setFormDueAt(e.target.value)}
               />

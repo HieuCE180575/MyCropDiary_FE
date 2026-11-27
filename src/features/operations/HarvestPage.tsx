@@ -103,6 +103,7 @@ function HarvestContent() {
     safetyIntervalDays?: number | null;
   }
   const [seasonMaterials, setSeasonMaterials] = useState<PhiMaterialUsage[]>([]);
+  const [phiLoadError, setPhiLoadError] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -188,6 +189,7 @@ function HarvestContent() {
         .catch(() => {});
 
       // Load activities and material usages to verify Pre-Harvest Interval (PHI)
+      setPhiLoadError(false);
       Promise.all([
         apiRequest<ApiResponse<{ items?: Array<{ id: number; farmingActivityId?: number; blockId?: number | null }> }>>(
           `/farming-activities?cropSeasonId=${id}&size=200`,
@@ -199,6 +201,11 @@ function HarvestContent() {
         ).catch(() => null),
       ]).then(([actRes, matRes]) => {
         if (controller.signal.aborted) return;
+        if (!matRes || !matRes.success) {
+          setPhiLoadError(true);
+          setSeasonMaterials([]);
+          return;
+        }
         const actMap = new Map<number, number | null>();
         (actRes?.data?.items || []).forEach((a) => {
           const aId = a.id || a.farmingActivityId;
@@ -211,7 +218,12 @@ function HarvestContent() {
           blockId: m.farmingActivityId ? (actMap.get(m.farmingActivityId) ?? null) : null,
         }));
         setSeasonMaterials(enrichedMats);
-      }).catch(() => {});
+      }).catch(() => {
+        if (!controller.signal.aborted) {
+          setPhiLoadError(true);
+          setSeasonMaterials([]);
+        }
+      });
     } catch (error) {
       if (!controller.signal.aborted) {
         setLoadError((lang === 'en' ? error instanceof Error ? translate(error.message) : "Unable to load harvest history." : error instanceof Error ? error.message : 'Lỗi tải lịch sử thu hoạch.'));
@@ -993,7 +1005,6 @@ function HarvestContent() {
               <input className="ui-input"
                 id="harvest-date"
                 type="datetime-local"
-                min={`${new Date().toISOString().split('T')[0]}T00:00`}
                 step="any"
                 required
                 value={harvestedAt}
@@ -1008,14 +1019,23 @@ function HarvestContent() {
               style={{
                 padding: '12px 16px',
                 borderRadius: '10px',
-                border: currentFormPhiViolation ? '1.5px solid #ef4444' : '1px solid #10b981',
-                backgroundColor: currentFormPhiViolation ? '#fef2f2' : '#f0fdf4',
-                color: currentFormPhiViolation ? '#991b1b' : '#166534',
+                border: currentFormPhiViolation ? '1.5px solid #ef4444' : phiLoadError ? '1.5px solid #d97706' : '1px solid #10b981',
+                backgroundColor: currentFormPhiViolation ? '#fef2f2' : phiLoadError ? '#fffbeb' : '#f0fdf4',
+                color: currentFormPhiViolation ? '#991b1b' : phiLoadError ? '#92400e' : '#166534',
                 fontSize: '13px',
                 lineHeight: 1.5,
               }}
             >
-              {currentFormPhiViolation ? (
+              {phiLoadError ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>⚠️</span>
+                  <span>
+                    {lang === 'en'
+                      ? 'Unable to verify Pre-Harvest Interval (PHI): failed to load material usage records for this season. Please check Material Usage manually before harvesting.'
+                      : 'Không thể kiểm tra thời gian cách ly (PHI) do lỗi tải dữ liệu vật tư của mùa vụ. Vui lòng kiểm tra thủ công mục Sử dụng vật tư trước khi thu hoạch.'}
+                  </span>
+                </div>
+              ) : currentFormPhiViolation ? (
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, fontSize: '13.5px', marginBottom: '4px' }}>
                     <span style={{ fontSize: '16px' }}>⚠️</span>
@@ -1193,7 +1213,7 @@ function HarvestContent() {
         <Modal structured open onClose={() => setSelectedTraceRecord(null)} title={lang === 'en' ? 'Harvest Batch & Traceability Details' : 'Chi tiết thu hoạch & Tem truy xuất'}>
           <div style={{ textAlign: 'center' }}>
             <span style={{ fontSize: '36px', display: 'block', marginBottom: '6px' }}>🏷️</span>
-            <h3 style={{ margin: '0 0 4px', fontSize: '19px', color: 'var(--color-text)' }}>{(lang === 'en' ? "VietGAP traceability label" : "Tem truy xuất nguồn gốc VietGAP")}</h3>
+            <h3 style={{ margin: '0 0 4px', fontSize: '19px', color: 'var(--color-text)' }}>{(lang === 'en' ? "Harvest Lot Traceability Label" : "Thông tin truy xuất nguồn gốc lô thu hoạch")}</h3>
             <p className="muted" style={{ margin: '0 0 18px', fontSize: '13.5px' }}>
               {(lang === 'en' ? "Harvest batch information is transparently sourced from season diaries and production blocks" : "Thông tin lô thu hoạch được trích xuất minh bạch từ nhật ký mùa vụ và lô đất sản xuất")}
             </p>
@@ -1214,11 +1234,21 @@ function HarvestContent() {
               }}
             >
               <QRCodeSVG
-                value={
-                  selectedTraceRecord.traceabilityCode
-                    ? `${window.location.origin}/knowledge?code=${encodeURIComponent(selectedTraceRecord.traceabilityCode)}`
-                    : `${window.location.origin}/harvest`
-                }
+                value={(() => {
+                  const code = selectedTraceRecord.traceabilityCode;
+                  if (!code) return `${window.location.origin}/knowledge`;
+                  const params = new URLSearchParams();
+                  params.set('code', code);
+                  if (selectedTraceRecord.harvestLotCode) params.set('lot', selectedTraceRecord.harvestLotCode);
+                  if (selectedFarm?.farmName) params.set('farm', selectedFarm.farmName);
+                  const seasonLabel = selectedTraceRecord.seasonName || currentSeason?.seasonName;
+                  if (seasonLabel) params.set('season', seasonLabel);
+                  if (selectedTraceRecord.blockName) params.set('block', selectedTraceRecord.blockName);
+                  if (selectedTraceRecord.harvestedAt) params.set('date', selectedTraceRecord.harvestedAt);
+                  params.set('qty', `${selectedTraceRecord.quantity} ${selectedTraceRecord.unit || 'kg'}`);
+                  if (selectedTraceRecord.qualityGrade) params.set('grade', selectedTraceRecord.qualityGrade);
+                  return `${window.location.origin}/knowledge?${params.toString()}`;
+                })()}
                 size={148}
                 level="M"
                 includeMargin={false}
@@ -1245,7 +1275,7 @@ function HarvestContent() {
                 lineHeight: 1.55,
               }}
             >
-              <strong>{(lang === 'en' ? "✓ VietGAP traceability certification:" : "✓ Chứng nhận truy xuất VietGAP:")}</strong> {(lang === 'en' ? " This produce batch belongs to" : " Lô nông sản thuộc")}{' '}
+              <strong>{(lang === 'en' ? "Traceability record (farm diary):" : "Thông tin truy xuất nguồn gốc (theo nhật ký):")}</strong> {(lang === 'en' ? " This produce batch belongs to" : " Lô nông sản thuộc")}{' '}
               <strong>
                 {(lang === 'en' ? (selectedTraceRecord.seasonName ||
                     currentSeason?.seasonName) || `Season` : selectedTraceRecord.seasonName || currentSeason?.seasonName || `Mùa vụ`)}
