@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'vite';
 import {JSDOM} from 'jsdom';
@@ -15,6 +15,10 @@ test('activity editor uses fixed context and keeps rejected saves in its fixed f
   globalThis.__activityFormTest = {
     seasons: async () => [{cropSeasonId: 43, seasonName: 'Fixture season', seasonStatus: 'active'}],
     blocks: async () => [{blockId: 3, zoneId: 2, blockName: 'Fixture block'}],
+    workers: async () => [
+      {workerId: 201, farmMemberId: null, workerCode: 'CN-EXT-01', fullName: 'External Worker 1', employmentStatus: 'seasonal'},
+      {workerId: 202, farmMemberId: null, workerCode: 'CN-EXT-02', fullName: 'External Worker 2', employmentStatus: 'active'},
+    ],
     request: async (url, options) => {
       if (options?.method === 'PUT') { calls.push([url, options]); throw Error('Server rejected activity update'); }
       return {success: true, data: {items: [activity]}};
@@ -24,13 +28,14 @@ test('activity editor uses fixed context and keeps rejected saves in its fixed f
     name: 'activity-form-test', enforce: 'pre',
     resolveId(source, importer) {
       if (!importer?.includes('FarmingActivitiesPage')) return;
-      for (const [suffix, id] of [['cropSeasonService', 'api'], ['httpClient', 'http'], ['FarmWorkspace', 'farm'], ['realtimeSync', 'realtime']]) if(source.endsWith('/'+suffix)) return '\0activity-form-'+id;
+      for (const [suffix, id] of [['cropSeasonService', 'api'], ['httpClient', 'http'], ['FarmWorkspace', 'farm'], ['realtimeSync', 'realtime'], ['staffService', 'staff']]) if(source.endsWith('/'+suffix)) return '\0activity-form-'+id;
     },
     load(id) {
       if (id === '\0activity-form-api') return 'export const fetchCropSeasonsByFarm = (...args) => globalThis.__activityFormTest.seasons(...args); export const fetchBlocksInSeason = (...args) => globalThis.__activityFormTest.blocks(...args);';
       if (id === '\0activity-form-http') return 'export const apiRequest = (...args) => globalThis.__activityFormTest.request(...args);';
       if (id === '\0activity-form-farm') return 'export const useFarmWorkspace = () => ({selectedFarm: {id: 1}});';
       if (id === '\0activity-form-realtime') return 'export const useRealtimeSync = () => {};';
+      if (id === '\0activity-form-staff') return 'export const getFarmWorkersApi = (...args) => globalThis.__activityFormTest.workers(...args);';
     },
   }]});
   let root;
@@ -45,8 +50,12 @@ test('activity editor uses fixed context and keeps rejected saves in its fixed f
     await act(async () => edit.click());
     const dialog = document.querySelector('dialog');
     assert.ok(dialog.classList.contains('modal-form-layout'));
-    assert.match(dialog.querySelector('.ui-form-context').textContent, /Fixture season/);
-    assert.doesNotMatch(dialog.querySelector('#act-type-select').textContent, /Soil Preparation|Seeding|Spraying|Harvest/);
+    assert.match(dialog.querySelector('#act-season-select').textContent, /Fixture season/);
+    const workerCheckboxes = [...dialog.querySelectorAll('input[type="checkbox"]')];
+    assert.equal(workerCheckboxes.length, 2);
+    for (const cb of workerCheckboxes) {
+      await act(async () => cb.click());
+    }
     const form = dialog.querySelector('form');
     const footer = form.querySelector(':scope > .modal-body + .modal-footer');
     assert.ok(footer?.querySelector('button[type="submit"]'));
@@ -55,6 +64,7 @@ test('activity editor uses fixed context and keeps rejected saves in its fixed f
     assert.equal(calls.length, 1);
     assert.equal(calls[0][0], '/farming-activities/77');
     assert.equal(calls[0][1].data.description, 'Keep this description');
+    assert.deepEqual(calls[0][1].data.workers, [{workerId: 201}, {workerId: 202}]);
     assert.match(footer.querySelector('[role="alert"]').textContent, /Server rejected activity update/);
     assert.equal(form.querySelector('.modal-body [role="alert"]'), null);
     assert.ok(document.querySelector('dialog'));
