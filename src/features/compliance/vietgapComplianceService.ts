@@ -38,6 +38,7 @@ export interface ChecklistRunResp {
   blockName?: string | null;
   assignedToMemberId?: number | null;
   assignedToName?: string | null;
+  checklistVersion?: string | null;
   runStatus: 'open' | 'in_progress' | 'completed' | 'cancelled' | string;
   scheduledAt?: string | null;
   completedAt?: string | null;

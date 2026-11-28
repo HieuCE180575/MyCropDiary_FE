@@ -171,7 +171,8 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
       const id = `#${run.runId}`;
       const auditor = (run.assignedToName || '').toLowerCase();
       const block = (run.blockName || '').toLowerCase();
-      const matchKw = !q || season.includes(q) || rule.includes(q) || id.includes(q) || auditor.includes(q) || block.includes(q);
+      const version = (run.checklistVersion || 'v1').toLowerCase();
+      const matchKw = !q || season.includes(q) || rule.includes(q) || id.includes(q) || auditor.includes(q) || block.includes(q) || version.includes(q);
 
       const isCompleted = run.runStatus === 'completed';
       const matchStatus =
@@ -679,9 +680,26 @@ export function VietGAPCompliancePage({ initialTab = 'checklists' }: VietGAPComp
                                 >
                                   {run.seasonName || (lang === 'en' ? 'General Season Audit' : 'Đợt tự đánh giá mùa vụ')}
                                 </button>
-                                <span style={{ fontSize: '11.5px', color: '#94a3b8', fontWeight: 600, display: 'block', marginTop: '2px', fontFamily: 'ui-monospace, monospace' }}>
-                                  {run.ruleName || 'TCVN 11892-1:2017'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
+                                  <span
+                                    style={{
+                                      fontSize: '11px',
+                                      fontWeight: 700,
+                                      padding: '1px 7px',
+                                      borderRadius: '999px',
+                                      background: '#eef2ff',
+                                      color: '#4338ca',
+                                      border: '1px solid #c7d2fe',
+                                      fontFamily: 'ui-monospace, monospace',
+                                    }}
+                                    title={lang === 'en' ? 'Checklist version used for this assessment' : 'Phiên bản bộ tiêu chí áp dụng cho đợt đánh giá này'}
+                                  >
+                                    {run.checklistVersion || 'V1'}
+                                  </span>
+                                  <span style={{ fontSize: '11.5px', color: '#94a3b8', fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>
+                                    {run.ruleName || 'TCVN 11892-1:2017'}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           </td>

@@ -145,9 +145,23 @@ export function AuditHeader({
                     <strong style={{ color: '#334155', fontWeight: 600 }}>{run.assignedToName}</strong>
                   </span>
                 )}
-                {run.scheduledAt && (
-                  <span>({run.scheduledAt.split('T')[0]})</span>
+                {(run.completedAt || run.scheduledAt || run.createdAt) && (
+                  <span>({(run.completedAt || run.scheduledAt || run.createdAt)!.split('T')[0]})</span>
                 )}
+                <span
+                  style={{
+                    color: '#4338ca',
+                    fontWeight: 700,
+                    background: '#eef2ff',
+                    border: '1px solid #c7d2fe',
+                    padding: '1px 7px',
+                    borderRadius: '999px',
+                    fontSize: '11.5px',
+                  }}
+                  title={lang === 'en' ? 'Checklist criteria version locked for this run' : 'Phiên bản bộ tiêu chí được chốt cho đợt đánh giá này'}
+                >
+                  {lang === 'en' ? 'Checklist' : 'Phiên bản tiêu chí'}: {run.checklistVersion || 'V1'}
+                </span>
                 <span style={{ color: '#059669', fontWeight: 600, background: '#f0fdf4', padding: '1px 6px', borderRadius: '4px', fontSize: '11.5px' }}>
                   TCVN 11892-1:2017
                 </span>
